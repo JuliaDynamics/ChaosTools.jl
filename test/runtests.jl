@@ -2,11 +2,6 @@ using ChaosTools
 
 ti = time()
 
-# Mathematics:
-include("math_tests.jl")
-# System Evolution:
-include(joinpath("systems", "discrete_systems.jl"))
-include(joinpath("systems", "continuous_systems.jl"))
 # lyapunov Exponents:
 include(joinpath("lyapunovs", "discrete_lyapunov.jl"))
 include(joinpath("lyapunovs", "continuous_lyapunov.jl"))

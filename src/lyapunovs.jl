@@ -1,4 +1,5 @@
 export lyapunovs, lyapunov
+using StaticArrays
 #####################################################################################
 #                                    Discrete                                       #
 #####################################################################################
@@ -79,7 +80,7 @@ function lyapunovs(ds::BigDiscreteDS, N::Real; Ttr::Real = 100)
         ds.jacob!(J, u)
         A_mul_B!(K, J, Q)
 
-        Q, R = qr_sq(K)
+        Q, R = DynamicalSystemsDef.qr_sq(K)
         for i in 1:D
             λ[i] += log(abs(R[i, i]))
         end
@@ -280,7 +281,7 @@ function lyapunovs(ds::ContinuousDynamicalSystem, N::Real=1000;
             step!(integ)
         end
         # Perform QR (on the tangent flow):
-        Q, R = qr_sq(view(integ.u, :, 2:D+1))
+        Q, R = DynamicalSystemsDef.qr_sq(view(integ.u, :, 2:D+1))
         # Add correct (positive) numbers to Lyapunov spectrum
         for j in 1:D
             λ[j] += log(abs(R[j,j]))
@@ -301,7 +302,7 @@ function lyapunov(ds::ContinuousDynamicalSystem,
                   inittest = inittest_default(dimension(ds)),
                   )
 
-    check_tolerances(d0, diff_eq_kwargs)
+    DynamicalSystemsDef.check_tolerances(d0, diff_eq_kwargs)
     S = eltype(ds)
 
     T = convert(eltype(ds.state), T)

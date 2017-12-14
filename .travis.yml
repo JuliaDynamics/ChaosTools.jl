@@ -11,5 +11,6 @@ notifications:
     on_failure: always
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+  - julia -e 'Pkg.clone("https://github.com/JuliaDynamics/DynamicalSystemsDef.jl")'
   - julia -e 'Pkg.clone(pwd())'
   - julia -e 'Pkg.test("ChaosTools")'

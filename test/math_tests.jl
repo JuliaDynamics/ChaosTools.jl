@@ -11,7 +11,7 @@ println("\nTesting custom QR-decomposition...")
              1  0 1;
              0  1 1]
 
-        QA, RA = ChaosTools.qr_sq(A)
+        QA, RA = ChaosTools.DynamicalSystemsDef.qr_sq(A)
         QtA =  [1/√2   1/√6  -1/√3;
                 1/√2  -1/√6   1/√3;
                 0      2/√6   1/√3]
@@ -27,7 +27,7 @@ println("\nTesting custom QR-decomposition...")
         for i in 1:10
 
             A = rand(5,5)
-            QA, RA = ChaosTools.qr_sq(A)
+            QA, RA = ChaosTools.DynamicalSystemsDef.qr_sq(A)
             QtA, RtA = qr(A)
             for i in length(QA)
                 @test isapprox(abs(QA[i]), abs(QtA[i]), rtol = tol)

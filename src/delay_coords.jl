@@ -6,7 +6,7 @@ import NearestNeighbors: KDTree
 
 export reconstruct, Cityblock, Euclidean, AbstractNeighborhood
 export FixedMassNeighborhood, FixedSizeNeighborhood, numericallyapunov
-export estimate_delay, neighborhood, Reconstruction, KDTree
+export neighborhood, KDTree
 #####################################################################################
 #                            Reconstruction Object                                  #
 #####################################################################################

@@ -30,15 +30,15 @@ of `inds` *must be unique* such that the resulting matrix is orthogonal
 and represents the group of special reflections and permutations.
 
 Deciding the appropriate values for `λ, inds, sings` is not trivial. However, in
-ref. [^2] there is a lot of information that can help with that decision. Also,
+ref. [2] there is a lot of information that can help with that decision. Also,
 by appropriately choosing various values for `λ`, one can sort periodic
-orbits from e.g. least unstable to most unstable, see [^3] for details.
+orbits from e.g. least unstable to most unstable, see [3] for details.
 
 ## References
 
-[^2] : D. Pingel *et al.*, Phys. Rev. E **62**, pp 2119 (2000)
+[2] : D. Pingel *et al.*, Phys. Rev. E **62**, pp 2119 (2000)
 
-[^3] : F. K. Diakonos *et al.*, Phys. Rev. Lett. **81**, pp 4349 (1998)
+[3] : F. K. Diakonos *et al.*, Phys. Rev. Lett. **81**, pp 4349 (1998)
 """
 function lambdamatrix(λ::Real, inds::AbstractVector{<:Integer},
     sings::AbstractVector{<:Real})

@@ -72,6 +72,9 @@ then these two regions belong to the same linear region.
 
 Return the indices of `x` that correspond to linear regions, `lrs`,
 and the approximated `tangents` at each region. `lrs` is a vector of `Int`.
+
+A function `plot_linear_regions` visualizes the result of using this `linear_regions`
+(requires `PyPlot`).
 """
 function linear_regions(x::AbstractVector, y::AbstractVector;
     dxi::Int = 1, tol::Real = 0.2)

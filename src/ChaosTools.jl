@@ -1,12 +1,12 @@
 __precompile__()
 
 """
-Tools for the exploration of chaos and nonlinear dynamics 
+Tools for the exploration of chaos and nonlinear dynamics
 """
 module ChaosTools
 
 using Reexport
-@reexport using DynamicalSystemsDef
+@reexport using DynamicalSystemsBase
 
 # Lyapunovs:
 include("lyapunovs.jl")

@@ -81,7 +81,7 @@ function gali(ds::ContinuousDS, k::Int, tmax::Real,
         pop!(diff_eq_kwargs, :saveat)
     end
 
-    ws = DynamicalSystemsDef.to_matrix(wss)
+    ws = DynamicalSystemsBase.to_matrix(wss)
     W = cat(2, ds.state, ws)
 
     integrator = variational_integrator(ds, k, oftype(dt, tmax), W;
@@ -135,7 +135,7 @@ function gali(ds::DiscreteDS{D, S, F, JJ}, k::Int, tmax,
     Ws = qr(rand(D, D))[1][:, 1:k];
     threshold = 1e-12) where {D,S,F,JJ}
 
-    ws = DynamicalSystemsDef.to_vectorSvector(Ws)
+    ws = DynamicalSystemsBase.to_vectorSvector(Ws)
     return gali(ds, k, tmax, ws; threshold = threshold)
 end
 
@@ -177,7 +177,7 @@ end
 function gali(ds::BigDiscreteDS, k::Int, tmax,
     Ws = qr(rand(dimension(ds), dimension(ds)))[1][:, 1:k]; threshold = 1e-12)
 
-    ws = DynamicalSystemsDef.to_matrix(Ws)
+    ws = DynamicalSystemsBase.to_matrix(Ws)
     return gali(ds, k, tmax, ws; threshold = threshold)
 end
 

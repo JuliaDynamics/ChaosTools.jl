@@ -129,7 +129,7 @@ end
 magnitude(x::Real) = round(log10(x))
 
 """
-    estimate_boxsizes(dataset; k::Int = 12, z = 0, w = 1)
+    estimate_boxsizes(dataset::AbstractDataset; k::Int = 12, z = 0, w = 1)
 Return a `k`-element `logspace` from the magnitude + `z` of the biggest absolute
 value of the dataset, to the magnitude + `w` of the
 minimum pair-wise distance between datapoints.
@@ -154,7 +154,7 @@ estimate_boxsizes(ts::AbstractMatrix; kwargs...) =
 estimate_boxsizes(convert(Dataset, ts); kwargs...)
 
 """
-    generalized_dim(α, dataset [, sizes]) -> D_α
+    generalized_dim(α, dataset::AbstractDataset [, sizes]) -> D_α
 Return the `α` order generalized dimension of the `dataset`, by calculating
 the [`genentropy`](@ref) for each `ε ∈ sizes`.
 

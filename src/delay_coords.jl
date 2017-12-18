@@ -195,7 +195,7 @@ function numericallyapunov(R::Reconstruction{D, T, τ},
     for n in ℜ
         # The ⋓(n) can be evaluated on the spot instead of being pre-calculated
         # for all reference states. (it would take too much memory)
-        # Since U[n] doesn't depend on `k` one can then interchange the loops:
+        # Since ⋓[n] doesn't depend on `k` one can then interchange the loops:
         # Instead of k being the outermost loop, it becomes the innermost loop!
         point = data[n]
         ⋓ = neighborhood(n, point, tree, method)
@@ -224,7 +224,7 @@ function numericallyapunov(R::Reconstruction{D, T, τ},
     end
     #plot E[k] versus k and boom, you got lyapunov in the linear scaling region.
     if skippedn >= length(ℜ)
-        ers = "skippedn == length(ℜ)\n"
+        ers = "skippedn ≥ length(ℜ)\n"
         ers*= "Could happen because all the neighbors fall within the Theiler "
         ers*= "window. Fix: increase neighborhood size."
         error(ers)

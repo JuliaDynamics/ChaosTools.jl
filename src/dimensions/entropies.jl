@@ -2,7 +2,7 @@ export non0hist, genentropy, renyi, shannon, hartley
 
 """
 ```julia
-non0hist(ε, dataset)
+non0hist(ε, dataset::AbstractDataset)
 ```
 Partition a dataset into tabulated intervals (boxes) of
 size `ε` and return the sum-normalized histogram in an unordered 1D form,
@@ -12,7 +12,8 @@ discarding all zero elements.
 This method is effecient in both memory
 and speed, because it uses a dictionary to collect the information of bins with
 elements, while it completely disregards empty bins. This allows
-computation of entropies of high-dimensional datasets without memory overflow.
+computation of entropies of high-dimensional datasets and
+with small box sizes `ε` without memory overflow.
 
 Use e.g. `fit(Histogram, ...)` from
 [`StatsBase`](http://juliastats.github.io/StatsBase.jl/stable/) if you
@@ -46,20 +47,22 @@ non0hist(ε::Real, matrix) = non0hist(ε, convert(Dataset, matrix))
 
 """
 ```julia
-genentropy(α, ε, dataset)
+genentropy(α, ε, dataset::AbstractDataset)
 ```
 Compute the `α` order generalized (Rényi) entropy [1] of a dataset,
 by first partitioning it into boxes of length `ε` using [`non0hist`](@ref).
 ```julia
 genentropy(α, p::AbstractArray)
 ```
-Compute the entropy of an Array `p` directly, assuming that `p` is
-sum-normalized. *log base-e is used in both cases, i.e. units of "nat".*
+Compute the entropy of an array `p` directly, assuming that `p` is
+sum-normalized.
+
+*log base-e is used in both cases, i.e. units of "nat".*
 
 ## Description
 The Rényi entropy
 ```math
-D_\\alpha(p) = \\frac{1}{1-\\alpha}\\sum_i p_i^\\alpha
+R_\\alpha(p) = \\frac{1}{1-\\alpha}\\sum_i p[i]^\\alpha
 ```
 generalizes other known entropies,
 like e.g. the information entropy

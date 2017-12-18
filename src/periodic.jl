@@ -7,8 +7,8 @@ export lambdamatrix, lambdaperms, periodicorbits
 """
     lambdamatrix(λ, inds::Vector{Int}, sings) -> Λk
 Return the matrix ``\\mathbf{\\Lambda}_k`` used to create a new
-dynamical system with some unstable fixed points turned to stable
-(see [`periodicorbits`](@ref)).
+dynamical system with some unstable fixed points turned to stable in the function
+[`periodicorbits`](@ref).
 
 ## Arguments
 
@@ -22,7 +22,7 @@ dynamical system with some unstable fixed points turned to stable
 Calling `lambdamatrix(λ, D::Int)`
 creates a random ``\\mathbf{\\Lambda}_k`` by randomly generating
 an `inds` and a `signs` from all possible combinations. The *collections*
-of all these combinations can be obtained from the function [`lambdaperms`](@ref)
+of all these combinations can be obtained from the function [`lambdaperms`](@ref).
 
 ## Description
 Each element
@@ -104,8 +104,8 @@ a random permutation will be chosen for them, with `λ=0.001`.
    to `roundtol` digits before pushed into the list of returned fixed points `FP`,
    *if* they are not already contained in `FP`.
    This is done so that `FP` doesn't contain duplicate fixed points (notice
-   that this has nothing to do with `disttol`). Turn this to `16` to get the full
-   precision of the algorithm.
+   that this has nothing to do with `disttol`). Turn this to `typemax(Int)`
+   to get the full precision of the algorithm.
 
 ## Description
 The algorithm used can detect stable/unstable periodic orbits
@@ -191,22 +191,4 @@ function iterate(state, f, i::Integer=1)
         state = f(state)
     end
     return state
-end
-
-
-# Plotting utilities, used only for testing:
-function _plot_phasespace(ds; xs = linspace(0, 2π, 20), ys = linspace(0, 2π, 20),
-    maxiters = 1000)
-    f = ds.eom
-    dataset = trajectory(ds, maxiters)
-    for x in xs
-        for y in ys
-            ds.state = SVector{2}(x, y)
-            append!(dataset, trajectory(ds, maxiters))
-        end
-    end
-    m = Matrix(dataset)
-    PyPlot.scatter(view(m, :, 1), view(m, :, 2), s= 1, color = "black")
-    PyPlot.xlim(xs[1], xs[end])
-    PyPlot.ylim(ys[1], ys[end])
 end

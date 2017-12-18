@@ -47,7 +47,7 @@ function lyapunovs(ds::DiscreteDS, N::Real; Ttr::Real = 100)
     D = length(u)
     eom = ds.eom
     jac = ds.jacob
-    λ = zeros(eltype(u), D)
+    λ = @SVector zeros(eltype(u), D)
     Q = @SMatrix eye(eltype(u), D)
     K = copy(Q)
     # Main algorithm
@@ -56,11 +56,9 @@ function lyapunovs(ds::DiscreteDS, N::Real; Ttr::Real = 100)
         K = jac(u)*Q
 
         Q, R = qr(K)
-        for i in 1:D
-            λ[i] += log(abs(R[i, i]))
-        end
+        λ += log.(abs.(diag(R)))
     end
-    λ./N
+    return λ/N
 end
 
 

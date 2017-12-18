@@ -107,7 +107,7 @@ a random permutation will be chosen for them, with `λ=0.001`.
    that this has nothing to do with `disttol`). Turn this to `16` to get the full
    precision of the algorithm.
 
-## Descritption
+## Description
 The algorithm used can detect stable/unstable periodic orbits
 by turning stable/unstable fixed points of the original
 map `ds` to dissipatively stable ones, through the transformation

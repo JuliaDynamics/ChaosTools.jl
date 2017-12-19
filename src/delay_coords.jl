@@ -111,7 +111,7 @@ nearby states that are evolved in time for `k` steps (`k` must be integer).
 
 ## Description
 If the reconstruction
-exhibits exponential divergence of nearby states, then it should clearly hold:
+exhibits exponential divergence of nearby states, then it should clearly hold
 ```math
 E(k) \\approx \\lambda\\Delta t k + E(0)
 ```
@@ -146,7 +146,7 @@ the distances used are defined in the package
 [Distances.jl](https://github.com/JuliaStats/Distances.jl), but are re-exported here
 for ease-of-use.
 
-This function assumes that the Theiler window (see [1]) is the same as the delay time:
+This function assumes that the Theiler window (see [1]) is the same as the delay time, 
 ``w  = \\tau``.
 
 ## References

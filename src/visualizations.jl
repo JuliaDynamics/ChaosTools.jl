@@ -53,11 +53,14 @@ function _plot_lrs(x, y, lrs, tangents)
 end
 
 """
-    plot_linear_regions(x, y; dxi = 1, tol = 0.2)
+    plot_linear_regions(x, y; dxi = 1, tol = 0.2, kwargs...)
 Visualize the outcome of calling `linear_regions` by plotting each
 linear segment with a different color (on the current axes).
+
+`kwargs` are passed into `PyPlot.plot`, the call that plots the datapoints
+as a scatter plot.
 """
-function plot_linear_regions(x, y; dxi = 1, tol = 0.2)
-    PyPlot.plot(x,y, lw=0, ms= 5, marker="o", color = "black")
-  _plot_lrs(x, y, linear_regions(x, y;  dxi = dxi, tol = tol)...)
+function plot_linear_regions(x, y; dxi = 1, tol = 0.2, kwargs...)
+    PyPlot.plot(x, y; ms= 5, marker="o", color = "black", kwargs..., lw=0)
+    _plot_lrs(x, y, linear_regions(x, y;  dxi = dxi, tol = tol)...)
 end

@@ -11,6 +11,9 @@ using Reexport
 # Lyapunovs:
 include("lyapunovs.jl")
 
+# Phase space related:
+include("orbitdiagram.jl")
+
 # Entropies and Dimension Estimation:
 include("dimensions/entropies.jl")
 include("dimensions/dims.jl")

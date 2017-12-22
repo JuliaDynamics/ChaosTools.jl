@@ -13,6 +13,8 @@ include("nlts_tests.jl")
 include("periodicity_tests.jl")
 # Chaos Detection:
 include("chaos_detection_tests.jl")
+# Orbit Diagrams:
+include("orbitdiagram_tests.jl")
 
 ti = time() - ti
 println("\nTest took total time of:")

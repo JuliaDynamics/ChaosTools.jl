@@ -115,7 +115,7 @@ Paris: Gauthier-Villars (1892)
 
 See also [`orbitdiagram`](@ref), [`produce_orbitdiagram`](@ref).
 """
-function poincaresos(ds::ContinuousDS, i::Int, tfinal = 100.0;
+function poincaresos(ds::ContinuousDS, j::Int, tfinal = 100.0;
     direction = +1, offset::Real = 0,
     diff_eq_kwargs = Dict(), callback_kwargs = Dict(:abstol=>1e-6),
     Ttr::Real = 0.0)
@@ -129,16 +129,15 @@ function poincaresos(ds::ContinuousDS, i::Int, tfinal = 100.0;
 
     prob = ODEProblem(ds, tfinal, state)
 
-    # Enforce callback to operate on index only:
-    callback_kwargs[:idxs] = j
-
+    # Prepare callback:
     s = sign(direction)
     cond = (t,u,integrator) -> s*(u - offset)
     affect! = (integrator) -> nothing
     cb = DiffEqBase.ContinuousCallback(cond, affect!, nothing; callback_kwargs...,
-    save_positions = (true,false))
+    save_positions = (true,false), idxs = j)
 
     solver, newkw = DynamicalSystemsBase.get_solver(diff_eq_kwargs)
+
     sol = solve(prob, solver; newkw...,
     save_everystep=false, callback = cb, save_start=false, save_end=false)
 
@@ -166,7 +165,7 @@ of the `j`-th variable of the system for the given parameter values.
 ## Keyword Arguments
 * `direction`, `offset`, `diff_eq_kwargs`, `callback_kwargs`, `Ttr` : Passed into
   [`poincaresos`](@ref).
-* `printparams::Bool = true` : Whether to print the parameter used during computation
+* `printparams::Bool = false` : Whether to print the parameter used during computation
   in order to keep track of running time.
 * `ics = [ds.state]` : Collection of initial conditions. For every `state ∈ ics` a PSOS
   will be produced.
@@ -201,26 +200,22 @@ function produce_orbitdiagram(
     direction = +1,
     offset::Real = 0,
     diff_eq_kwargs = Dict(),
-    callback_kwargs = Dict(:abstol=>1e-6),
-    printparams::Bool = true,
+    callback_kwargs = Dict{Symbol, Any}(:abstol=>1e-6),
+    printparams::Bool = false,
     Ttr::Real = 0.0
     )
 
     T = eltype(ds.state)
     output = Vector{Vector{T}}(length(pvalues))
 
-    # Enforce callback to operate on index only:
-    callback_kwargs[:idxs] = j
-
+    # Prepare callback:
     s = sign(direction)
     cond = (t,u,integrator) -> s*(u - offset)
     affect! = (integrator) -> nothing
     cb = DiffEqBase.ContinuousCallback(cond, affect!, nothing; callback_kwargs...,
-    save_positions = (true,false))
+    save_positions = (true,false), idxs = j)
 
     solver, newkw = DynamicalSystemsBase.get_solver(diff_eq_kwargs)
-
-
 
     for (n, p) in enumerate(pvalues)
         setfield!(ds.eom!, parameter, p)

@@ -27,7 +27,7 @@ using Base.Test, StaticArrays, OrdinaryDiffEq
     n = 50
     Ttr = 5000
     output = orbitdiagram(ds, i, parameter, pvalues; n = n, Ttr = Ttr)
-    @test length(output[1]) = length(ics)*n
+    @test length(output[1]) == n
   end
 
   @testset "BigDiscreteDS" begin
@@ -39,6 +39,62 @@ using Base.Test, StaticArrays, OrdinaryDiffEq
     n = 50
     Ttr = 5000
     output = orbitdiagram(ds, i, parameter, pvalues; n = n, Ttr = Ttr)
-    @test length(output[1]) = length(ics)*n
+    @test length(output[1]) == n
+  end
+end
+
+@testset "Poincare SOS" begin
+  @testset "Henon Helies" begin
+    ds = Systems.henonhelies([0, .483000, .278980390, 0] )
+    psos = poincaresos(ds, 2, 1000.0)
+    xcross = psos[:, 1]
+    @test length(xcross) > 1
+    @test xcross[1] != xcross[2]
+  end
+  @testset "Duffing" begin
+    ds = Systems.duffing()
+    psos = poincaresos(ds, 2)
+    xcross = psos[:, 1]
+    @test length(xcross) > 1
+    @test xcross[1] != xcross[2]
+  end
+end
+
+@testset "Produce OD" begin
+  @testset "Duffing" begin
+    ds = Systems.duffing()
+    ds.state .= [0.1, 0.1, 0]
+
+    pvalues = 2.348:-0.2:1.124
+    parameter = :ω
+    i = 1
+    j = 2
+    tf = 200.0
+    ics = [vcat(2rand(2), 0.0) for i in 1:5]
+
+    output = produce_orbitdiagram(ds, i, j, parameter, pvalues; tfinal = tf,
+    Ttr = 100.0, ics = ics)
+
+    @test length(output) == length(pvalues)
+    for out in output
+      @test length(out) > 1
+    end
+  end
+  @testset "Shinriki" begin
+    ds = Systems.shinriki([-2, 0, 0.2])
+
+    pvalues = linspace(19,22,11)
+    parameter = :R1
+    i = 1
+    j = 2
+    tf = 200.0
+
+    de = Dict(:abstol=>1e-9, :reltol => 1e-9)
+    output = produce_orbitdiagram(ds, j, i, parameter, pvalues; tfinal = tf,
+    Ttr = 100.0, diff_eq_kwargs = de, direction = -1)
+    @test length(output) == length(pvalues)
+    for out in output
+      @test length(out) > 1
+    end
   end
 end

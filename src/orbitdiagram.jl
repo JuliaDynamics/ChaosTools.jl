@@ -24,26 +24,6 @@ of the parameter is used to set `ds.eom.parameter` or `ds.eom!.parameter`.
 The returned `output` is a vector of vectors. `output[j]` are the orbit points of the
 `i`-th variable of the system, at parameter value `pvalues[j]`.
 
-## Example
-```julia
-using ChaosTools
-ds = Systems.standardmap()
-i = 2
-parameter = :k
-pvalues = 0:0.005:2
-ics = [0.001rand(2) for m in 1:10]
-n = 50
-Ttr = 5000
-output = orbitdiagram(ds, i, parameter, pvalues; n = n, Ttr = Ttr)
-
-using PyPlot
-figure()
-for (j, p) in enumerate(pvalues)
-    plot(p .* ones(output[j]), output[j], lw = 0,
-    marker = "o", ms = 0.5, color = "black")
-end
-```
-
 See also [`poincaresos`](@ref) and [`produce_orbitdiagram`](@ref).
 """
 function orbitdiagram(ds::DiscreteDynamicalSystem, i::Int, parameter::Symbol, pvalues;

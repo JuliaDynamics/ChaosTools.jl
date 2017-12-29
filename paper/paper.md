@@ -73,9 +73,9 @@ nonlinear time series analysis and is implemented in MATLAB (which unfortunately
 
 The second, E&F chaos [@Diks2008], is implemented in LUA with a partial C/Pascal backend
 and is aimed at nonlinear dynamics in economics and finance. Features that E&F chaos has that we do not offer are basin boundary plots, cobwebs and parameter basins.
-E&F chaos is the only software mentioned here that allows definition of new systems through equations of motion, although only through external text files and not interactively.
+E&F chaos is the only software mentioned here that allows definition of new systems through equations of motion.
 
-LP-VIcode [@Carpintero2014] is a suite devoted solely for computing variational indicators of chaos and is written in FORTRAN77. ChaosTools.jl offers only the latest  indicator from all the ones available in LP-VIcode, namely GALI [@Skokos2007]. In addition, LP-VIcode places the severe constrain that all systems must not only be Hamiltonian, but must also have parabolic kinetic energy term. This leads to having to completely re-write FORTRAN77 source code almost from scratch to add any new system to the package.
+Lastly, LP-VIcode [@Carpintero2014] is a suite devoted solely for computing variational indicators of chaos and is written in FORTRAN77. ChaosTools.jl offers only the latest  indicator from all the ones available in LP-VIcode, namely GALI [@Skokos2007]. In addition, LP-VIcode places the severe constrain that all systems must not only be Hamiltonian, but must also have parabolic kinetic energy term. This leads to having to completely re-write FORTRAN77 source code from scratch to add any new system to the package, since differential equation solvers are bundled into the library.
 
 ## ChaosTools.jl advantages vs other packages
 * It is written in purely in Julia [@Bezanson2017].
@@ -84,14 +84,14 @@ LP-VIcode [@Carpintero2014] is a suite devoted solely for computing variational 
 * Transparent and small source code.
 * It is concise, intuitive and general: all functions work just as well
   with any defined dynamical system.
-* Extendable; adding completely new systems or algorithms requires small effort.
+* Extendable; adding completely new systems or algorithms requires minimal effort.
 * Well-documented.
 * Actively maintained and constantly growing.
 * Hosted on GitHub, making interaction of users and developers easy and straightforward.
 
 # Examples
-In the following examples we want to demonstrate how easy and general it is to use ChaosTools.jl. In the first example will show how one can find the maximum Lyapunov exponent and GALI for a continuous system, while the second will show how to use delay coordinates embedding to calculate the attractor dimension of a timeseries.
-Both examples are benchmarked with a laptop with Intel Core i7-4710MQ CPU @ 2.50GHz, 16GB RAM, and 64-bit Windows 10 operating system.
+In the following examples we want to demonstrate the capabilities of ChaosTools.jl. In the first example will show how one can find the maximum Lyapunov exponent and GALI for a continuous system, while the second will show how to use delay coordinates embedding to calculate the attractor dimension of a timeseries.
+Both examples are benchmarked on a laptop with Intel Core i7-4710MQ CPU @ 2.50GHz, 16GB RAM, 64-bit Windows 10 operating system on Julia version v0.6.0.
 ## Lyapunov & GALI of a continuous system
 ```julia
 # Pkg.add("ChaosTools")
@@ -113,12 +113,14 @@ function jacobian_henon(J::EomMatrix, u::EomVector)
 end
 # typical chaotic initial condition:
 u0=[0, -0.25, 0.42081, 0]
-# Initialize Jacobian matrix
+# Initialize Jacobian matrix; also not necessary if
+# automatic differentiation was used for the Jacobian
 J = zeros(eltype(u0), 4, 4)
 J[1,:] = [0,    0,     1,    0]
 J[2,:] = [0,    0,     0,    1]
 J[3,:] = [ -1 - 2*u0[2],   -2*u0[1],   0,   0]
 J[4,:] = [-2*u0[1],  -1 + 2*u0[2],  0,   0]
+
 # Create the dynamical system structure
 # Simply pass equations of motion and Jacobian to ContinuousDS
 henon = ContinuousDS(u0, eom_henon, jacobian_henon, J)
@@ -130,23 +132,23 @@ println("MLE ≈ $(round(ml, 5))")
 # Benchmark
 @time lyapunov(henon, 1000.0; dt = 1.0);
 ```
-The code prints `LE ≈ 0.05152` (specific numbers change from machine to machine) and the benchmark clocks at ~0.039704 seconds.
+The code prints `MLE ≈ 0.05152` (specific numbers change from machine to machine) and the benchmark clocks at ~0.039704 seconds.
 
 For GALI of rank `k` we do
 ```julia
 k = 4 # rank of desired gali
 total_t = 1000.0
-# Get gali and accompanying time vector:
 g, t = gali(henon, k, total_t; threshold = 1e-12)
-println("GALI4 reached 1e-12 at time $(t[end]), with value $(g[end])")
+
+println("GALI4 reached 1e-12 at time $(t[end])")
 
 # Benchmark
 @time gali(henon, k, total_t; threshold = 1e-12);
 ```
-The code prints `GALI4 reached 1e-12 at time 102.0, with value 8.191377735674049e-13`
+The code prints `GALI4 reached 1e-12 at time 102.0`
 which again changes from machine to machine, while the benchmark clocks at ~0.002683 seconds.
 
-We want to stress that both functions `gali`, `lyapunov` (and in fact, all functions offered by ChaosTools.jl) work with any system type, continuous or discrete. See the documentation page for more.
+We want to stress that both functions `gali`, `lyapunov` (and in fact, all functions offered by ChaosTools.jl) work with any system type, continuous or discrete. See the [documentation page](https://juliadynamics.github.io/DynamicalSystems.jl/latest/chaos/overview/) for more.
 
 ## Information Dimension from Delay Coordinates Embedding
 Here we show how one can handle numerical data with ChaosTools.jl. Because this is a publication and loading data from disk is not possible, we will first produce some timeseries of the Hénon map [@Henon1976].
@@ -169,9 +171,9 @@ id = information_dim(R)
 # which is equivalent with:
 sizes = estimate_boxsizes(R)
 dd = zeros(sizes)
-  for i in 1:length(sizes)
-      dd[i] = genentropy(1, sizes[i], data)
-  end
+for i in 1:length(sizes)
+    dd[i] = genentropy(1, sizes[i], data)
+end
 id = linear_region(-log.(sizes), dd)[2]
 
 # For reference, we can compute the information dimension of the

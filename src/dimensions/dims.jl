@@ -126,35 +126,48 @@ end
 #######################################################################################
 # Dimensions
 #######################################################################################
-magnitude(x::Real) = round(log10(x))
-
 """
-    estimate_boxsizes(dataset::AbstractDataset; k::Int = 12, z = 0, w = 1)
-Return a `k`-element `logspace` from the magnitude + `z` of the biggest absolute
-value of the dataset, to the magnitude + `w` of the
-minimum pair-wise distance between datapoints.
+    estimate_boxsizes(dataset::AbstractDataset; k::Int = 12, z = -1, w = 1)
+Return a `k`-element `logspace` from:
+
+* `lower + w` where `lower` is the magnitude of the
+  minimum pair-wise distance between datapoints.
+
+to:
+
+* `upper + z` where `upper` is the magnitude of the maximum difference between
+  greatest and smallest number among each dimension.
+
+"Magnitude" here stands for order of magnitude, i.e. `round(log10(x))`.
 """
 function estimate_boxsizes(data::AbstractDataset{D, T};
-    k::Int = 12, z = 0, w = 1) where {D, T<:Number}
+    k::Int = 12, z = -1, w = 1) where {D, T<:Number}
+
+    mi, ma = minmaxima(data)
+    upper = round(Int, log10(maximum(ma - mi)))
 
     mindist = min_pairwise_distance(data)[2]
-    maxv = -Inf
-    for point in data
-        ma = maximum(point)
-        maxv = (ma > maxv) ? ma : maxv
+    lower = ceil(Int, log10(mindist)) # ceil necessary to not use smaller distance.
+
+    if lower ≥ upper
+        error(
+        "Boxsize estimation failed: `upper` was found ≥ than "*
+        "`lower`. Adjust keywords or provide a bigger dataset.")
     end
-    lower = magnitude(mindist)
-    if 10.0^lower < mindist
-        lower += 1
+    if lower + w + 2 > upper + z
+        warn(
+        "Boxsizes limits do not differ by 2 orders of magnitude or more. "*
+        "Adjust keywords or provide a bigger dataset.")
     end
-    logspace(magnitude(maxv)+z, lower+w, k)
+
+    logspace(lower+w, upper+z, k)
 end
 
 estimate_boxsizes(ts::AbstractMatrix; kwargs...) =
 estimate_boxsizes(convert(Dataset, ts); kwargs...)
 
 """
-    generalized_dim(α, dataset::AbstractDataset [, sizes]) -> D_α
+    generalized_dim(α, dataset [, sizes]) -> D_α
 Return the `α` order generalized dimension of the `dataset`, by calculating
 the [`genentropy`](@ref) for each `ε ∈ sizes`.
 

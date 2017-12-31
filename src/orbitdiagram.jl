@@ -8,6 +8,10 @@ Compute the orbit diagram (also called bifurcation diagram) of the given system
 for the `i`-th variable for parameter values `pvalues`. The `parameter` specifies
 which parameter of the equations of motion is to be changed.
 
+This function assumes that you have created the `ContinuousDS` using functors; see the
+[official documentation](https://juliadynamics.github.io/DynamicalSystems.jl/latest/)
+for more.
+
 ## Keyword Arguments
 * `ics = [ds.state]` : container of initial conditions that
   are used at each parameter value
@@ -75,13 +79,17 @@ for total time of `tfinal`.
 
 Returns a [`Dataset`](@ref) of the points that are on the surface of section.
 
+This function assumes that you have created the `ContinuousDS` using functors; see the
+[official documentation](https://juliadynamics.github.io/DynamicalSystems.jl/latest/)
+for more.
+
 ## Keyword Arguments
 * `direction = 1` and `offset = 0.0` : The surface of section is defined as the
   (hyper-) plane where `state[j] = offset`. Only crossings of the plane that
   have direction `sign(direction)` are considered to belong to the surface of section.
 * `Ttr = 0.0` : Transient time to evolve the system before starting
   to compute the PSOS.
-* `diff_eq_kwargs = Dict()` : See [`trajectory`](@ref)
+* `diff_eq_kwargs = Dict()` : See [`trajectory`](@ref).
 * `callback_kwargs = Dict(:abstol=>1e-6)` : Keyword arguments passed into
   the `ContinuousCallback` type of `DifferentialEquations`. The option
   `callback_kwargs[:idxs] = j` is enforced.
@@ -142,6 +150,10 @@ for the `i`-th variable of the given continuous
 system by computing Poincaré surfaces of section
 of the `j`-th variable of the system for the given parameter values.
 
+This funtion assumes that you have created the `ContinuousDS` using functors; see the
+[official documentation](https://juliadynamics.github.io/DynamicalSystems.jl/latest/)
+for more.
+
 ## Keyword Arguments
 * `direction`, `offset`, `diff_eq_kwargs`, `callback_kwargs`, `Ttr` : Passed into
   [`poincaresos`](@ref).
@@ -201,7 +213,6 @@ function produce_orbitdiagram(
         setfield!(ds.eom!, parameter, p)
         printparams && println(parameter, " = $p")
         for (m, state) in enumerate(ics)
-
 
             if Ttr > 0
                 state = evolve(ds, Ttr, state, diff_eq_kwargs = diff_eq_kwargs)

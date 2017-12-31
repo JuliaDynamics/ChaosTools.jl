@@ -1,5 +1,4 @@
 using NearestNeighbors, Requires, StaticArrays
-using LsqFit: curve_fit
 using StatsBase: autocor
 using Distances: Metric, Cityblock, Euclidean
 import NearestNeighbors: KDTree
@@ -146,7 +145,7 @@ the distances used are defined in the package
 [Distances.jl](https://github.com/JuliaStats/Distances.jl), but are re-exported here
 for ease-of-use.
 
-This function assumes that the Theiler window (see [1]) is the same as the delay time, 
+This function assumes that the Theiler window (see [1]) is the same as the delay time,
 ``w  = \\tau``.
 
 ## References

@@ -1,3 +1,7 @@
+# v0.3.0
+## BREAKING
+* Overhauled the way `estimate_boxsizes` works.
+
 # v0.2.0
 * added method for Poincare surface of section
 * added orbit diagram for maps

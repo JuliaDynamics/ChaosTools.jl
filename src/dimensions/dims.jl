@@ -128,15 +128,12 @@ end
 #######################################################################################
 """
     estimate_boxsizes(dataset::AbstractDataset; k::Int = 12, z = -1, w = 1)
-Return a `k`-element `logspace` from:
+Return a `k`-element `logspace` from `lower + w` to `upper + z`,
 
-* `lower + w` where `lower` is the magnitude of the
-  minimum pair-wise distance between datapoints.
-
-to:
-
-* `upper + z` where `upper` is the magnitude of the maximum difference between
-  greatest and smallest number among each dimension.
+`lower` is the magnitude of the
+minimum pair-wise distance between datapoints while `upper` is the magnitude
+of the maximum difference between
+greatest and smallest number among each timeseries.
 
 "Magnitude" here stands for order of magnitude, i.e. `round(log10(x))`.
 """

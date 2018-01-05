@@ -259,14 +259,14 @@ function lyapunovs(ds::ContinuousDynamicalSystem, N::Real=1000;
     # Initialize
     tstops = dt:dt:N*dt
     D = dimension(ds)
-    λ = zeros(eltype(ds.state), D)
-    Q = eye(eltype(ds.state), D)
+    λ = zeros(eltype(ds), D)
+    Q = eye(eltype(ds), D)
     # Transient evolution:
     if Ttr != 0
-        ds.state  .= evolve(ds, Ttr; diff_eq_kwargs = diff_eq_kwargs)
+        ds.prob.u0 .= evolve(ds, Ttr; diff_eq_kwargs = diff_eq_kwargs)
     end
     # Create integrator for dynamics and tangent space:
-    S = [ds.state eye(eltype(ds.state), D)]
+    S = [ds.prob.u0 eye(eltype(ds), D)]
     integ = variational_integrator(
     ds, D, tstops[end], S; diff_eq_kwargs = diff_eq_kwargs)
 
@@ -303,22 +303,22 @@ function lyapunov(ds::ContinuousDynamicalSystem,
     DynamicalSystemsBase.check_tolerances(d0, diff_eq_kwargs)
     S = eltype(ds)
 
-    T = convert(eltype(ds.state), T)
+    T = convert(eltype(ds), T)
     threshold <= d0 && throw(ArgumentError("Threshold must be bigger than d0!"))
 
     # Transient evolution:
     if Ttr != 0
-        ds.state .= evolve(ds, Ttr; diff_eq_kwargs = diff_eq_kwargs)
+        ds.prob.u0 .= evolve(ds, Ttr; diff_eq_kwargs = diff_eq_kwargs)
     end
 
     # Initialize:
-    st1 = copy(ds.state)
+    st1 = copy(ds.prob.u0)
     integ1 = ODEIntegrator(ds, T; diff_eq_kwargs=diff_eq_kwargs)
     integ1.opts.advance_to_tstop=true
-    ds.state .= inittest(st1, d0)
+    ds.prob.u0 .= inittest(st1, d0)
     integ2 = ODEIntegrator(ds, T; diff_eq_kwargs=diff_eq_kwargs)
     integ2.opts.advance_to_tstop=true
-    ds.state .= st1
+    ds.prob.u0 .= st1
     dist = d0
     λ::eltype(integ1.u) = 0.0
     i = 0;

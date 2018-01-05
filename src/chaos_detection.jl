@@ -82,7 +82,7 @@ function gali(ds::ContinuousDS, k::Int, tmax::Real,
     end
 
     ws = DynamicalSystemsBase.to_matrix(wss)
-    W = cat(2, ds.state, ws)
+    W = cat(2, ds.prob.u0, ws)
 
     integrator = variational_integrator(ds, k, oftype(dt, tmax), W;
     diff_eq_kwargs = diff_eq_kwargs)

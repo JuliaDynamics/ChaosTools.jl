@@ -3,6 +3,7 @@ if current_module() != ChaosTools
 end
 using Base.Test, StaticArrays
 using LsqFit: curve_fit
+using OrdinaryDiffEq
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
@@ -75,19 +76,19 @@ end
         ds = Systems.henonhelies()
         diffeq = Dict(:abstol=>1e-9, :reltol=>1e-9, :solver => Tsit5())
         @testset "regular" begin
-            ds.state .= sp
+            ds.prob.u0 .= sp
             for k in [2,3,4]
                 g, t = gali(ds, k, tt; diff_eq_kwargs = diffeq)
                 @test t[end] ≥ tt
             end
-            ds.state .= qp
+            ds.prob.u0 .= qp
             for k in [2,3,4]
                 g, t = gali(ds, k, tt; diff_eq_kwargs = diffeq)
                 @test t[end] ≥ tt
             end
         end
         @testset "chaotic" begin
-            ds.state .= ch
+            ds.prob.u0 .= ch
             for k in [2,3,4]
                 g, t = gali(ds, k, tt; diff_eq_kwargs = diffeq)
                 @test t[end] < tt

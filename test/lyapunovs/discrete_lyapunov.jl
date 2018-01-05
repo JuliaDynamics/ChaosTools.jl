@@ -16,7 +16,7 @@ println("\nTesting discrete system lyapunov exponents...")
 
   @testset "lyapunovs ForwardDiff" begin
     ds = Systems.towel()
-    ds = DiscreteDS(ds.state, ds.eom)
+    ds = DiscreteDS(state(ds), ds.eom)
     λ1 = lyapunovs(ds, 1e5)
     @test 0.42 < λ1[1] < 0.44
     @test 0.36 < λ1[2] < 0.38
@@ -58,7 +58,7 @@ end
 
   @testset "lyapunovs ForwardDiff" begin
     ds = Systems.henon()
-    ds = DiscreteDS(ds.state, ds.eom)
+    ds = DiscreteDS(state(ds), ds.eom)
     λ1 = lyapunovs(ds, 1e6)
     @test 0.418 < λ1[1] < 0.422
     @test -1.63 < λ1[2] < -1.61

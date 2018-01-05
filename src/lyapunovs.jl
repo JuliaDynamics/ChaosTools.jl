@@ -229,7 +229,7 @@ end
 
 function lyapunovs(ds::DiscreteDS1D, N::Real = 10000; Ttr::Int = 0)
 
-    x = ds.state
+    x = state(ds)
 
     #transient system evolution
     for i in 1:Ttr

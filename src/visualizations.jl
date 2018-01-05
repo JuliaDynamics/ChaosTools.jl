@@ -21,7 +21,7 @@ function phasespace(ds::DiscreteDS{2, T, F, J}, limits,
     data = Dataset{2, T}()
     for x in linspace(limits[1][1], limits[1][2], density)
         for y in linspace(limits[2][1], limits[2][2], density)
-            ds.state = SVector{2,T}(x,y)
+            state(ds) = SVector{2,T}(x,y)
             append!(data, trajectory(ds, t))
         end
     end
@@ -35,7 +35,7 @@ function phasespace(ds::DiscreteDS{2, T, F, J}, ics::Vector{<:SVector}, t;
 
     data = Dataset{2, T}()
     for ic in ics
-        ds.state = ic
+        state(ds) = ic
         append!(data, trajectory(ds, t))
     end
     ax[:plot](data[:,1], data[:,2];

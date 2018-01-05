@@ -3,7 +3,7 @@ export poincaresos, orbitdiagram, produce_orbitdiagram
 
 """
     orbitdiagram(ds::DiscreteDynamicalSystem, i::Int, parameter::Symbol, pvalues;
-    n::Int = 100, Ttr::Int = 1000, ics = [ds.state]) -> output
+    n::Int = 100, Ttr::Int = 1000, ics = [state(ds)]) -> output
 Compute the orbit diagram (also called bifurcation diagram) of the given system
 for the `i`-th variable for parameter values `pvalues`. The `parameter` specifies
 which parameter of the equations of motion is to be changed.
@@ -13,7 +13,7 @@ This function assumes that you have created the `ContinuousDS` using functors; s
 for more.
 
 ## Keyword Arguments
-* `ics = [ds.state]` : container of initial conditions that
+* `ics = [state(ds)]` : container of initial conditions that
   are used at each parameter value
   to evolve orbits.
 * `Ttr::Int = 1000` : Transient steps;
@@ -31,14 +31,14 @@ The returned `output` is a vector of vectors. `output[j]` are the orbit points o
 See also [`poincaresos`](@ref) and [`produce_orbitdiagram`](@ref).
 """
 function orbitdiagram(ds::DiscreteDynamicalSystem, i::Int, parameter::Symbol, pvalues;
-    n::Int = 100, Ttr::Int = 1000, ics = [ds.state])
+    n::Int = 100, Ttr::Int = 1000, ics = [state(ds)])
 
     if typeof(ds) <: DiscreteDS1D
         i != 1 &&
         error("You have a 1D system and yet you gave `i=$i`. What's up with that!?")
     end
 
-    T = eltype(ds.state)
+    T = eltype(state(ds))
     output = Vector{Vector{T}}(length(pvalues))
 
     for (j, p) in enumerate(pvalues)
@@ -110,12 +110,12 @@ function poincaresos(ds::ContinuousDS, j::Int, tfinal = 100.0;
 
     # Transient
     if Ttr > 0
-        state = evolve(ds, Ttr; diff_eq_kwargs = diff_eq_kwargs)
+        st = evolve(ds, Ttr; diff_eq_kwargs = diff_eq_kwargs)
     else
-        state = ds.state
+        st = state(ds)
     end
 
-    prob = ODEProblem(ds, tfinal, state)
+    prob = ODEProblem(ds, tfinal, st)
 
     # Prepare callback:
     s = sign(direction)
@@ -159,11 +159,12 @@ for more.
   [`poincaresos`](@ref).
 * `printparams::Bool = false` : Whether to print the parameter used during computation
   in order to keep track of running time.
-* `ics = [ds.state]` : Collection of initial conditions. For every `state ∈ ics` a PSOS
+* `ics = [state(ds)]` : Collection of initial conditions. For every `state ∈ ics` a PSOS
   will be produced.
 
 ## Description
-`parameter` is a symbol that indicates which parameter of `ds.eom!` should be updated.
+`parameter` is a symbol that indicates which
+parameter of `ds.prob.f` should be updated.
 `pvalues` is a collection with all the parameter values that the orbit diagram
 will be computed for.
 
@@ -188,7 +189,7 @@ function produce_orbitdiagram(
     parameter::Symbol,
     pvalues;
     tfinal::Real = 100.0,
-    ics = [ds.state],
+    ics = [state(ds)],
     direction = +1,
     offset::Real = 0,
     diff_eq_kwargs = Dict(),
@@ -197,7 +198,7 @@ function produce_orbitdiagram(
     Ttr::Real = 0.0
     )
 
-    T = eltype(ds.state)
+    T = eltype(ds)
     output = Vector{Vector{T}}(length(pvalues))
 
     # Prepare callback:
@@ -210,15 +211,15 @@ function produce_orbitdiagram(
     solver, newkw = DynamicalSystemsBase.get_solver(diff_eq_kwargs)
 
     for (n, p) in enumerate(pvalues)
-        setfield!(ds.eom!, parameter, p)
+        setfield!(ds.prob.f, parameter, p)
         printparams && println(parameter, " = $p")
-        for (m, state) in enumerate(ics)
+        for (m, st) in enumerate(ics)
 
             if Ttr > 0
-                state = evolve(ds, Ttr, state, diff_eq_kwargs = diff_eq_kwargs)
+                st = evolve(ds, Ttr, st, diff_eq_kwargs = diff_eq_kwargs)
             end
 
-            prob = ODEProblem(ds, tfinal, state)
+            prob = ODEProblem(ds, tfinal, st)
 
             sol = solve(prob, solver; diff_eq_kwargs...,
             save_everystep=false, callback = cb, save_start=false, save_end=false)

@@ -28,7 +28,7 @@ behavior type in ``D``-dimensional Hamiltonian systems
 (``D`` is number of variables). The *asymptotic* behavior of
 ``\\text{GALI}_k(t)`` depends critically of
 the type of orbit resulting
-from the initial condition `ds.state`. If it is a chaotic orbit, then
+from the initial condition `state(ds)`. If it is a chaotic orbit, then
 ```math
 \\text{GALI}_k(t) \\sim
 \\exp\\left[\\sum_{j=1}^k (\\lambda_1 - \\lambda_j)t \\right]
@@ -144,7 +144,7 @@ end
 
     f = ds.eom
     J = ds.jacob
-    x = ds.state
+    x = state(ds)
 
     rett = 0:Int(tmax)
     gali_k = ones(S, length(rett))
@@ -186,7 +186,7 @@ end
     f! = ds.eom!
     jacob! = ds.jacob!
     J = ds.J
-    x = copy(ds.state)
+    x = copy(state(ds))
     xprev = copy(x)
     wsdummy = copy(ws)
 

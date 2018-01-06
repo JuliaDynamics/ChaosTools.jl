@@ -80,3 +80,10 @@ end
 
   end
 end
+
+@testset "Stroboscopic" begin
+  ds = Systems.duffing(β = -1, ω = 1, f = 0.3)
+  a = trajectory(ds, 100000.0, dt = 2π)
+  D = information_dim(a)
+  @test 1.4 < D < 1.5
+end

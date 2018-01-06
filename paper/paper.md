@@ -88,16 +88,17 @@ Lastly, LP-VIcode [@Carpintero2014] is a suite devoted solely for computing vari
 * Well-documented.
 * Actively maintained and constantly growing.
 * Hosted on GitHub, making interaction of users and developers easy and straightforward.
+* Integrates excellently with other Julia ecosystems, like DifferentialEquations.jl [@Rackauckas2017].
 
 # Examples
-In the following examples we want to demonstrate the capabilities of ChaosTools.jl. In the first example will show how one can find the maximum Lyapunov exponent and GALI for a continuous system, while the second will show how to use delay coordinates embedding to calculate the attractor dimension of a timeseries.
+In the following examples we want to demonstrate some of the capabilities of ChaosTools.jl. In the first example will show how one can find the maximum Lyapunov exponent and GALI for a continuous system, while the second will show how to use delay coordinates embedding to calculate the attractor dimension of a timeseries.
 Both examples are benchmarked on a laptop with Intel Core i7-4710MQ CPU @ 2.50GHz, 16GB RAM, 64-bit Windows 10 operating system on Julia version v0.6.0.
 ## Lyapunov & GALI of a continuous system
 ```julia
 # Pkg.add("ChaosTools")
 using ChaosTools
-# Define Hénon-Heiles system
-function eom_henon(du::EomVector, u::EomVector)
+# Define Hénon-Heiles system: equations in the form (t, u, du)
+function eom_henon(t, u, du)
     du[1] = u[3]
     du[2] = u[4]
     du[3] = -u[1] - 2*u[1]*u[2]
@@ -106,7 +107,7 @@ function eom_henon(du::EomVector, u::EomVector)
 end
 # A function for the Jacobian is useful but not necessary;
 # If it is not given, automatic differentiation is used
-function jacobian_henon(J::EomMatrix, u::EomVector)
+function jacobian_henon(t, u, J::AbstractMatrix) # annotate for dispatch
     J[3,1] = -1 - 2*u[2]; J[3,2] = -2*u[1]
     J[4,1] = -2*u[1]; J[4,2] =  -1 + 2*u[2]
     return nothing
@@ -150,6 +151,11 @@ which again changes from machine to machine, while the benchmark clocks at ~0.00
 
 We want to stress that both functions `gali`, `lyapunov` (and in fact, all functions offered by ChaosTools.jl) work with any system type, continuous or discrete. See the [documentation page](https://juliadynamics.github.io/DynamicalSystems.jl/latest/chaos/overview/) for more.
 
+In addition, because of the excellent interaction of our ecosystem with
+the DifferentialEquations.jl [@Rackauckas2017] ecosystem, it is very straight forward
+to use a different evolution algorithm that conserves the energy of the system. See the
+documentation for a tutorial.
+
 ## Information Dimension from Delay Coordinates Embedding
 Here we show how one can handle numerical data with ChaosTools.jl. Because this is a publication and loading data from disk is not possible, we will first produce some timeseries of the Hénon map [@Henon1976].
 
@@ -166,19 +172,12 @@ ts = traj[:, 1]
 R = Reconstruction(ts, 2, 2)
 
 # Now e.g. calculate the Information dimension
-id = information_dim(R)
-
-# which is equivalent with:
-sizes = estimate_boxsizes(R)
-dd = zeros(sizes)
-for i in 1:length(sizes)
-    dd[i] = genentropy(1, sizes[i], data)
-end
-id = linear_region(-log.(sizes), dd)[2]
+sizes = estimate_boxsizes(R, w = 2)
+id = information_dim(R, sizes)
 
 # For reference, we can compute the information dimension of the
 # Henon attractor directly, because we have a trajectory
-id_direct = information_dim(traj)
+id_direct = information_dim(traj, sizes)
 
 println("Dimensions: $(round(id, 4)), $(round(id_direct, 4))")
 
@@ -186,8 +185,9 @@ println("Dimensions: $(round(id, 4)), $(round(id_direct, 4))")
 @time Reconstruction(ts, 2, 2);
 @time information_dim(traj);
 ```
-The code prints: `Dimensions: 1.233, 1.2292`. Performing the reconstruction clocks at
+The code prints: `Dimensions: 1.2001, 1.2008`. Performing the reconstruction clocks at
 0.000822 seconds and calculating the dimension of the dataset clocks at 0.603827 seconds. We note that the function `information_dim` (and other similar ones) computes
-a lot of automated steps by measuring entropies at many different partition sizes. That is the reason for being "slow".
+a lot of automated steps by measuring entropies at many different partition sizes
+and deducing a scaling slope. That is the reason for being "slow".
 
 # References

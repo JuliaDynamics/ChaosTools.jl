@@ -1,3 +1,10 @@
+# v0.4.0
+## Breaking
+* Updated everything to be on par with Base 0.3.1
+* Added more tests
+* Propagate callbacks etc in orbit diagrams
+
+
 # v0.3.0
 ## BREAKING
 * Overhauled the way `estimate_boxsizes` works.

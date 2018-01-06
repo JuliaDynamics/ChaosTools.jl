@@ -74,9 +74,9 @@ end
     @test s[1] == -0.856
 
     v = round.(output[4], 4)
-    s = collect(Set(v))
+    s = Set(v)
     @test length(s) == 2
-    @test s == [-0.376, -1.2887]
+    @test s == Set([-0.376, -1.2887])
 
   end
 end

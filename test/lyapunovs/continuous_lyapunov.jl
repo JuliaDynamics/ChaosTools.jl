@@ -75,24 +75,24 @@ end
   ds2 = ContinuousDS(ds.prob)
   @testset "lyapunovs" begin
     λ = lyapunovs(ds, 5e4)
-    @test 0.14 < λ[1] < 0.17
-    @test -0.37 < λ[2] < -0.34
+    @test 0.14 < λ[1] < 0.18
+    @test -0.38 < λ[2] < -0.34
 
     λ = lyapunovs(ds, 5e4; dt = 0.1, Ttr = 10.0,
     diff_eq_kwargs = Dict(:abstol=>1e-9, :solver => DP5()))
-    @test 0.14 < λ[1] < 0.17
-    @test -0.37 < λ[2] < -0.34
+    @test 0.14 < λ[1] < 0.18
+    @test -0.38 < λ[2] < -0.34
   end
 
   @testset "lyapunovs FD" begin
     λ = lyapunovs(ds2, 5e4; dt = 0.1, Ttr = 10.0,
     diff_eq_kwargs = Dict(:abstol=>1e-9, :solver => DP5()))
-    @test 0.14 < λ[1] < 0.17
-    @test -0.37 < λ[2] < -0.34
+    @test 0.14 < λ[1] < 0.18
+    @test -0.38 < λ[2] < -0.34
   end
 
   @testset "lyapunov" begin
     λ1 = lyapunov(ds, 10000.0, dt =  1.0, Ttr = 10.0)
-    @test 0.14 < λ1 < 0.17
+    @test 0.14 < λ1 < 0.18
   end
 end

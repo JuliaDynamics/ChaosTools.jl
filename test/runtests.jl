@@ -1,3 +1,5 @@
+using ChaosTools
+
 ti = time()
 
 # lyapunov Exponents:

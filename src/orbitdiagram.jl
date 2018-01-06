@@ -126,8 +126,15 @@ function poincaresos(ds::ContinuousDS, j::Int, tfinal = 100.0;
 
     solver, newkw = DynamicalSystemsBase.get_solver(diff_eq_kwargs)
 
-    sol = solve(prob, solver; newkw...,
-    save_everystep=false, callback = cb, save_start=false, save_end=false)
+    if ds.prob.callback != nothing
+        totalcb = CallbackSet(cb, ds.prob.callback)
+        sol = solve(prob, solver; newkw...,
+        save_everystep=false, callback = totalcb, save_start=false, save_end=false)
+    else
+        sol = solve(prob, solver; newkw...,
+        save_everystep=false, callback = cb, save_start=false, save_end=false)
+    end
+
 
     if length(sol.u) == 0
         error("The poincare s.o.s. did not have any points!"*
@@ -208,6 +215,10 @@ function produce_orbitdiagram(
     cb = DiffEqBase.ContinuousCallback(cond, affect!, nothing; callback_kwargs...,
     save_positions = (true,false), idxs = j)
 
+    if ds.prob.callback != nothing
+        totalcb = CallbackSet(cb, ds.prob.callback)
+    end
+
     solver, newkw = DynamicalSystemsBase.get_solver(diff_eq_kwargs)
 
     for (n, p) in enumerate(pvalues)
@@ -221,8 +232,15 @@ function produce_orbitdiagram(
 
             prob = ODEProblem(ds, tfinal, st)
 
-            sol = solve(prob, solver; diff_eq_kwargs...,
-            save_everystep=false, callback = cb, save_start=false, save_end=false)
+            if ds.prob.callback != nothing
+                sol = solve(prob, solver; diff_eq_kwargs...,
+                save_everystep=false, callback = totalcb,
+                save_start=false, save_end=false)
+            else
+                sol = solve(prob, solver; diff_eq_kwargs...,
+                save_everystep=false, callback = cb,
+                save_start=false, save_end=false)
+            end
 
             if length(sol.u) == 0
                 error("The poincare s.o.s. did not have any points!"*

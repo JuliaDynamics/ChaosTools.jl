@@ -185,7 +185,7 @@ The returned `output` is a vector of vectors. `output[k]` are the
 
 
 ## Performance Notes
-The total amount of PSOS produced will be `length(ics)×length(pvalues)`.
+The total amount of PSOS produced will be `length(ics)*length(pvalues)`.
 
 See also [`poincaresos`](@ref), [`orbitdiagram`](@ref).
 """

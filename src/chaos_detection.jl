@@ -73,7 +73,7 @@ set-up the `integrator` and `W` for the first time.
 (section 5.3.1 and ref. [85] therein), Lecture Notes in Physics **915**,
 Springer (2016)
 """
-function gali(ds::ContinuousDS, k::Int, tmax::Real,
+function gali(ds::ContinuousDynamicalSystem, k::Int, tmax::Real,
     wss = qr(rand((dimension(ds)), dimension(ds)))[1][:, 1:k];
     threshold = 1e-12, dt = 1.0, diff_eq_kwargs = Dict())
 

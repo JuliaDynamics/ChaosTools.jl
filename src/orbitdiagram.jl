@@ -103,7 +103,7 @@ Paris: Gauthier-Villars (1892)
 
 See also [`orbitdiagram`](@ref), [`produce_orbitdiagram`](@ref).
 """
-function poincaresos(ds::ContinuousDS, j::Int, tfinal = 100.0;
+function poincaresos(ds::ContinuousDynamicalSystem, j::Int, tfinal = 100.0;
     direction = +1, offset::Real = 0,
     diff_eq_kwargs = Dict(), callback_kwargs = Dict(:abstol=>1e-6),
     Ttr::Real = 0.0)
@@ -190,7 +190,7 @@ The total amount of PSOS produced will be `length(ics)×length(pvalues)`.
 See also [`poincaresos`](@ref), [`orbitdiagram`](@ref).
 """
 function produce_orbitdiagram(
-    ds::ContinuousDS,
+    ds::ContinuousDynamicalSystem,
     j::Int,
     i::Int,
     parameter::Symbol,

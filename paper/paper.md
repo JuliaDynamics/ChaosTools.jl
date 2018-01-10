@@ -41,7 +41,7 @@ Our goals with this package can be summarized in the following three:
 
 ## Features
 
-* Intuitive and general system definition.
+* System definition interface without restrictions.
 * Dedicated interface for datasets, including IO.
 * Delay coordinates embedding interface.
 

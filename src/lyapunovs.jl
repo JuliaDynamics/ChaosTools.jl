@@ -262,11 +262,9 @@ function lyapunovs(ds::ContinuousDynamicalSystem, N::Real=1000;
     λ = zeros(eltype(ds), D)
     Q = eye(eltype(ds), D)
     # Transient evolution:
-    if Ttr != 0
-        ds.prob.u0 .= evolve(ds, Ttr; diff_eq_kwargs = diff_eq_kwargs)
-    end
+    st = Ttr != 0 ? evolve(ds, Ttr; diff_eq_kwargs = diff_eq_kwargs) : ds.prob.u0
     # Create integrator for dynamics and tangent space:
-    S = [ds.prob.u0 eye(eltype(ds), D)]
+    S = [st eye(eltype(ds), D)]
     integ = variational_integrator(
     ds, D, tstops[end], S; diff_eq_kwargs = diff_eq_kwargs)
 

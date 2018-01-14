@@ -61,7 +61,7 @@ end
     E = [Hhh(p) for p in psos]
 
     @test std(E) < 1e-10
-    @test max(@. E - E[1]) < 1e-10
+    @test maximum(@. E - E[1]) < 1e-10
   end
 end
 

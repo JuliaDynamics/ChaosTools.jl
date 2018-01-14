@@ -50,7 +50,7 @@ end
     xcross = psos[:, 2]
     @test length(xcross) > 1
     for x in xcross
-      @test abs(x) < 1e-12
+      @test abs(x) < 1e-10
     end
 
     @inline Vhh(q1, q2) = 1//2 * (q1^2 + q2^2 + 2q1^2 * q2 - 2//3 * q2^3)

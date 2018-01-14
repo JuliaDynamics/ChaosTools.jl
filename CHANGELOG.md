@@ -1,3 +1,6 @@
+# v0.4.1
+* Many bugfixes relating evolution of continuous systems and correct
+  callback propagation.
 # v0.4.0
 ## Breaking
 * Updated everything to be on par with Base 0.3.1

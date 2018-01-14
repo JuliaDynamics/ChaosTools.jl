@@ -47,9 +47,21 @@ end
   @testset "Henon Helies" begin
     ds = Systems.henonhelies([0, .483000, .278980390, 0] )
     psos = poincaresos(ds, 2, 1000.0)
-    xcross = psos[:, 1]
+    xcross = psos[:, 2]
     @test length(xcross) > 1
-    @test xcross[1] != xcross[2]
+    for x in xcross
+      @test abs(x) < 1e-12
+    end
+
+    @inline Vhh(q1, q2) = 1//2 * (q1^2 + q2^2 + 2q1^2 * q2 - 2//3 * q2^3)
+    @inline Thh(p1, p2) = 1//2 * (p1^2 + p2^2)
+    @inline Hhh(q1, q2, p1, p2) = Thh(p1, p2) + Vhh(q1, q2)
+    @inline Hhh(u::AbstractVector) = Hhh(u...)
+
+    E = [Hhh(p) for p in psos]
+
+    @test std(E) < 1e-12
+    @test max(@. E - E[1]) < 1e-12
   end
 end
 

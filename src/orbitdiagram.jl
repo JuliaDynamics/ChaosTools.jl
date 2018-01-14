@@ -67,15 +67,18 @@ function orbitdiagram(ds::DiscreteDynamicalSystem, i::Int, parameter::Symbol, pv
 end
 
 
-
+const PSOS_ERROR =
+"The Poincaré surface of section did not have any points!"*
+" Check: If the variable chosen crosses the `offset`,"*
+" if the parameters used make it happen"*
+" and be sure you have integrated for enough time."
 
 
 """
     poincaresos(ds::ContinuousDS, j, tfinal = 100.0; kwargs...)
-Calculate the Poincaré surface of section (also called Poincaré map) [1,2]
-of the given
-system on the plane of the `j`-th variable of the system. The system is evolved
-for total time of `tfinal`.
+Calculate the Poincaré surface of section (also called Poincaré map) [1, 2]
+of the given system on the plane of the `j`-th variable of the system.
+The system is evolved for total time of `tfinal`.
 
 Returns a [`Dataset`](@ref) of the points that are on the surface of section.
 
@@ -90,7 +93,7 @@ for more.
 * `Ttr = 0.0` : Transient time to evolve the system before starting
   to compute the PSOS.
 * `diff_eq_kwargs = Dict()` : See [`trajectory`](@ref).
-* `callback_kwargs = Dict(:abstol=>1e-6)` : Keyword arguments passed into
+* `callback_kwargs = Dict(:abstol=>1e-9)` : Keyword arguments passed into
   the `ContinuousCallback` type of `DifferentialEquations`. The option
   `callback_kwargs[:idxs] = j` is enforced.
 
@@ -105,45 +108,38 @@ See also [`orbitdiagram`](@ref), [`produce_orbitdiagram`](@ref).
 """
 function poincaresos(ds::ContinuousDynamicalSystem, j::Int, tfinal = 100.0;
     direction = +1, offset::Real = 0,
-    diff_eq_kwargs = Dict(), callback_kwargs = Dict(:abstol=>1e-6),
+    diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
+    callback_kwargs = Dict{Symbol, Any}(:abstol=>1e-9),
     Ttr::Real = 0.0)
 
-    # Transient
+    pcb = psos_callback(j, direction, offset, callback_kwargs)
+
     if Ttr > 0
-        st = evolve(ds, Ttr; diff_eq_kwargs = diff_eq_kwargs)
+        u0 = evolve(ds, Ttr, diff_eq_kwargs = diff_eq_kwargs)
     else
-        st = state(ds)
+        u0 = state(ds)
     end
 
-    prob = ODEProblem(ds, tfinal, st)
+    extra_kw = Dict(:save_start=>false, :save_end=>false)
+
+    psos_prob = ODEProblem(ds, tfinal, u0, pcb)
+
+    solu, tvec = get_sol(psos_prob, diff_eq_kwargs, extra_kw)
+    length(solu) == 0 && error(PSOS_ERROR)
+
+    return Dataset(solu)
+end
+
+function psos_callback(j, direction = +1, offset::Real = 0,
+    callback_kwargs = Dict{Symbol, Any}(:abstol=>1e-9))
 
     # Prepare callback:
     s = sign(direction)
     cond = (t,u,integrator) -> s*(u - offset)
     affect! = (integrator) -> nothing
+
     cb = DiffEqBase.ContinuousCallback(cond, affect!, nothing; callback_kwargs...,
     save_positions = (true,false), idxs = j)
-
-    solver, newkw = DynamicalSystemsBase.get_solver(diff_eq_kwargs)
-
-    if ds.prob.callback != nothing
-        totalcb = CallbackSet(cb, ds.prob.callback)
-        sol = solve(prob, solver; newkw...,
-        save_everystep=false, callback = totalcb, save_start=false, save_end=false)
-    else
-        sol = solve(prob, solver; newkw...,
-        save_everystep=false, callback = cb, save_start=false, save_end=false)
-    end
-
-
-    if length(sol.u) == 0
-        error("The poincare s.o.s. did not have any points!"*
-        " Check: If the variable chosen crosses the `offset`,"*
-        " if the parameters used make it happen"*
-        " and be sure you have integrated for enough time.")
-    end
-
-    return Dataset(sol.u)
 end
 
 
@@ -151,7 +147,8 @@ end
 
 
 """
-    produce_orbitdiagram(ds::ContinuousDS, j, i, parameter::Symbol, pvalues; kwargs...)
+    produce_orbitdiagram(ds::ContinuousDynamicalSystem, j, i,
+                         parameter::Symbol, pvalues; kwargs...)
 Produce an orbit diagram (also called bifurcation diagram)
 for the `i`-th variable of the given continuous
 system by computing Poincaré surfaces of section
@@ -183,7 +180,6 @@ The returned `output` is a vector of vectors. `output[k]` are the
 "orbit diagram" points of the
 `i`-th variable of the system, at parameter value `pvalues[k]`.
 
-
 ## Performance Notes
 The total amount of PSOS produced will be `length(ics)*length(pvalues)`.
 
@@ -202,54 +198,33 @@ function produce_orbitdiagram(
     diff_eq_kwargs = Dict(),
     callback_kwargs = Dict{Symbol, Any}(:abstol=>1e-6),
     printparams::Bool = false,
-    Ttr::Real = 0.0
-    )
+    Ttr::Real = 0.0)
 
+    p0 = getfield(ds.prob.f, parameter)
     T = eltype(ds)
     output = Vector{Vector{T}}(length(pvalues))
+    extra_kw = Dict(:save_start=>false, :save_end=>false)
 
-    # Prepare callback:
-    s = sign(direction)
-    cond = (t,u,integrator) -> s*(u - offset)
-    affect! = (integrator) -> nothing
-    cb = DiffEqBase.ContinuousCallback(cond, affect!, nothing; callback_kwargs...,
-    save_positions = (true,false), idxs = j)
-
-    if ds.prob.callback != nothing
-        totalcb = CallbackSet(cb, ds.prob.callback)
-    end
-
-    solver, newkw = DynamicalSystemsBase.get_solver(diff_eq_kwargs)
+    # Prepare callback problem
+    pcb = psos_callback(j, direction, offset, callback_kwargs)
+    psos_prob = ODEProblem(ds, tfinal, deepcopy(ds.prob.u0), pcb)
 
     for (n, p) in enumerate(pvalues)
+        # This sets the parameter on both the ds problem
+        # as well as the psosprob:
         setfield!(ds.prob.f, parameter, p)
         printparams && println(parameter, " = $p")
+
         for (m, st) in enumerate(ics)
 
-            if Ttr > 0
-                st = evolve(ds, Ttr, st, diff_eq_kwargs = diff_eq_kwargs)
-            end
+            Ttr > 0 && (st = evolve(ds, Ttr, st; diff_eq_kwargs = diff_eq_kwargs))
 
-            prob = ODEProblem(ds, tfinal, st)
+            psos_prob.u0 .= st
 
-            if ds.prob.callback != nothing
-                sol = solve(prob, solver; diff_eq_kwargs...,
-                save_everystep=false, callback = totalcb,
-                save_start=false, save_end=false)
-            else
-                sol = solve(prob, solver; diff_eq_kwargs...,
-                save_everystep=false, callback = cb,
-                save_start=false, save_end=false)
-            end
+            solu, tvec = get_sol(psos_prob, diff_eq_kwargs, extra_kw)
+            length(solu) == 0 && error(PSOS_ERROR)
 
-            if length(sol.u) == 0
-                error("The poincare s.o.s. did not have any points!"*
-                " Check: If the variable chosen crosses the `offset`,"*
-                " if the parameters used make it happen"*
-                " and be sure you have integrated for enough time.")
-            end
-
-            out = sol[i, :]
+            out = [a[i] for a in solu]
 
             if m == 1
                 output[n] = out
@@ -259,5 +234,7 @@ function produce_orbitdiagram(
 
         end
     end
+    # Reset the field parameter of the system:
+    setfield!(ds.prob.f, parameter, p0)
     return output
 end

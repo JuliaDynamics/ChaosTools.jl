@@ -81,8 +81,8 @@ Finally, LP-VIcode [@Carpintero2014] is a suite devoted solely for computing var
 ### ChaosTools.jl advantages vs other packages
 * It is written in purely in Julia [@Bezanson2017].
   * Julia is (currently) the only open sourced & dynamic language that has performance equal to C/Fortran, allowing interactivity without adding computational costs.
-* Fully exposes the differential equation solvers of continuous systems, and giving
-  the user the (possible) full control over them, made possible by the DifferentialEquations.jl suite [@Rackauckas2017].
+* Fully exposes the differential equation solvers of continuous systems, and gives
+  the user the (possible) full control over them through the DifferentialEquations.jl suite [@Rackauckas2017].
 * Offers the widest range of methods.
 * Transparent and small source code.
 * It is concise, intuitive and general: all functions work just as well
@@ -94,7 +94,7 @@ Finally, LP-VIcode [@Carpintero2014] is a suite devoted solely for computing var
 # Examples
 In the following examples we want to demonstrate some of the capabilities of ChaosTools.jl.
 In the first example will show how one can find the maximum Lyapunov exponent and GALI for a continuous system, while the second will show how to use delay coordinates embedding to calculate the attractor dimension of a timeseries.
-Both examples are benchmarked on a laptop with Intel Core i7-4710MQ CPU @ 2.50GHz, 16GB RAM, 64-bit Windows 10 operating system on Julia version v0.6.0.
+Both examples are benchmarked on a laptop with Intel(R) Core(TM) i5-6200U CPU @ 2.30 Ghz, 8GB RAM, 64-bit Windows 10 operating system and Julia version v0.6.0.
 ## Lyapunov & GALI of a continuous system
 ```julia
 # Pkg.add("ChaosTools")
@@ -135,8 +135,8 @@ println("MLE ≈ $(round(ml, 5))")
 # Benchmark
 @time lyapunov(henon, 1000.0; dt = 1.0);
 ```
-The code prints `MLE ≈ 0.05152` (specific numbers change from machine to machine) and
-benchmarks at ~0.039704 seconds.
+The code prints `MLE ≈ 0.06955` (specific numbers change from machine to machine) and
+benchmarks at ~0.032997 seconds.
 
 It is worth noting that the default differential equation solver used for
 continuous systems is a 9th order Vernier algorithm, with absolute and relative
@@ -154,7 +154,7 @@ println("GALI4 reached 1e-12 at time $(t[end])")
 # Benchmark
 @time gali(henon, k, total_t; threshold = 1e-12);
 ```
-The code prints `GALI4 reached 1e-12 at time 102.0`, while it benchmarks at ~0.002683 seconds.
+The code prints `GALI4 reached 1e-12 at time 103.0`, while it benchmarks at ~0.00386 seconds.
 
 We want to stress that both functions `gali`, `lyapunov` (and in fact, all functions offered by ChaosTools.jl) work with any system type, continuous or discrete. See the [documentation page](https://juliadynamics.github.io/DynamicalSystems.jl/latest/chaos/overview/) for more.
 
@@ -193,7 +193,7 @@ println("Dimensions: $(round(id, 4)), $(round(id_direct, 4))")
 @time information_dim(traj);
 ```
 The code prints: `Dimensions: 1.2001, 1.2008`. Performing the reconstruction benchmarks at
-0.000822 seconds and calculating the dimension of the dataset benchmarks at 0.603827 seconds. We note that the function `information_dim`, and other similar ones, computes
+0.000849 seconds and calculating the dimension of the dataset benchmarks at 1.132887 seconds. We note that the function `information_dim`, and other similar ones, computes
 a lot of automated steps by measuring entropies at many different partition sizes
 (by default 12) and deducing a scaling slope.
 

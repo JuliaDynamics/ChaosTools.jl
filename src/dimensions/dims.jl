@@ -178,13 +178,13 @@ Calling this function performs a lot of automated steps:
   1. A vector of box sizes is decided by calling `sizes = estimate_boxsizes(dataset)`,
      if `sizes` is not given.
   2. For each element of `sizes` the appropriate entropy is
-     calculated, through `d[i] = genentropy(α, sizes[i], dataset)`.
+     calculated, through `d = genentropy.(α, sizes, dataset)`.
      Let `x = -log.(sizes)`.
   3. The curve `d(x)` is decomposed into linear regions,
      using [`linear_regions`](@ref)`(x, d)`.
   4. The biggest linear region is chosen, and a fit for the slope of that
      region is performed using the function [`linear_region`](@ref).
-  5. This fitted slope is returned.
+     This slope is the return value of `generalized_dim`.
 
 By doing these steps one by one yourself, you can adjust the keyword arguments
 given to each of these function calls, refining the accuracy of the result.
@@ -196,10 +196,7 @@ The following aliases are provided:
   * α = 2 : `correlation_dim`
 """
 function generalized_dim(α, data::AbstractDataset, sizes = estimate_boxsizes(data))
-    dd = zeros(sizes)
-    for i in 1:length(sizes)
-        dd[i] = genentropy(α, sizes[i], data)
-    end
+    dd = genentropy.(α, sizes, data)
     return linear_region(-log.(sizes), dd)[2]
 end
 generalized_dim(α, matrix::AbstractMatrix, args...) =

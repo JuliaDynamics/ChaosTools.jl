@@ -330,7 +330,7 @@ function trajectory_matrix(x::AbstractArray, d::Int)
     X = zeros(N-d+1, d)
     for j in 1:d
         for i in 0:(N-d)
-            @inbounds X[i+1, j] =  (x[j+i] - xdash)/sqN
+            @inbounds X[i+1, j] = (x[j+i] - xdash)/sqN
         end
     end
     return X
@@ -345,7 +345,7 @@ by performing `svd` on the so-called trajectory matrix with dimension `d`.
 Broomhead and King coordinates is a method proposed in [1] that applies the
 Karhunen–Loève theorem to delay coordinates embedding.
 
-The function performes singular value decomposition
+The function performs singular value decomposition
 on the `d`-dimensional trajectory matrix ``X`` of ``x``,
 ```math
 X = \\frac{1}{\\sqrt{N}}\\left(

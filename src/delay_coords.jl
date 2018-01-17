@@ -135,10 +135,7 @@ If the `Metric` is `Euclidean()` then use the Euclidean distance of the
 full `D`-dimensional points (distance ``d_E`` in ref. [1]).
 If however the `Metric` is `Cityblock()`, calculate
 the absolute distance of *only the first elements* of the `m+k` and `n+k` points
-of the
-reconstruction `R`(distance
-``d_F`` in
-ref. [1]). Notice that
+of the reconstruction `R`(distance ``d_F`` in ref. [1]). Notice that
 the distances used are defined in the package
 [Distances.jl](https://github.com/JuliaStats/Distances.jl), but are re-exported here
 for ease-of-use.
@@ -219,9 +216,9 @@ function numericallyapunov(R::Reconstruction{D, T, τ},
         skippedm = 0
         fill!(E_n, zero(T)) #reset distances for n reference state
     end
-    #plot E[k] versus k and boom, you got lyapunov in the linear scaling region.
+
     if skippedn >= length(ℜ)
-        ers = "skippedn ≥ length(ℜ)\n"
+        ers = "skippedn ≥ length(R)\n"
         ers*= "Could happen because all the neighbors fall within the Theiler "
         ers*= "window. Fix: increase neighborhood size."
         error(ers)
@@ -327,30 +324,29 @@ end
 #####################################################################################
 #                                  Broomhead-King                                   #
 #####################################################################################
-@inbounds function trajectory_matrix(x::AbstractArray, d::Int)
+function trajectory_matrix(x::AbstractArray, d::Int)
     xdash = mean(x)
-    N = length(x)
+    N = length(x); sqN = √N
     X = zeros(N-d+1, d)
     for j in 1:d
         for i in 0:(N-d)
-            @inbounds X[i+1, j] =  x[j+i] - xdash
+            @inbounds X[i+1, j] =  (x[j+i] - xdash)/sqN
         end
     end
-    X ./= sqrt(N)
     return X
 end
 
 """
     broomhead_king(x::AbstractArray, d::Int) -> U, S, Vtr
-Return the Broomhead-King [1] coordinates `U` and corresponding singular values
-`S` by performing `svd` on the so-called trajectory matrix with dimension `d`.
+Return the Broomhead-King [1] coordinates of a timeseries `x`
+by performing `svd` on the so-called trajectory matrix with dimension `d`.
 
 ## Description
 Broomhead and King coordinates is a method proposed in [1] that applies the
 Karhunen–Loève theorem to delay coordinates embedding.
 
 The function performes singular value decomposition
-on the trajectory matrix ``X`` of the timeseries ``x``,
+on the `d`-dimensional trajectory matrix ``X`` of ``x``,
 ```math
 X = \\frac{1}{\\sqrt{N}}\\left(
 \\begin{array}{cccc}
@@ -359,11 +355,11 @@ x_2 & x_3 & \\ldots & x_{d+1}\\\\
 \\vdots & \\vdots & \\vdots & \\vdots \\\\
 x_{N-d+1} & x_{N-d+2} &\\ldots & x_N
 \\end{array}
-\\right) = U\\cdot S \\cdot V^{tr}
+\\right) = U\\cdot S \\cdot V^{tr}.
 ```
-The columns of ``U`` can then be used as a new coordinate system.
-One then considers the values of the singular values ``S`` to decide how many
-columns of ``U`` are important.
+The columns of ``U`` can then be used as a new coordinate system, and by
+considering the values of the singular values ``S`` you can decide how many
+columns of ``U`` are "important".
 
 ## References
 [1] :  D. S. Broomhead, R. Jones and G. P. King, J. Phys A **20**, 9, pp L563 (1987)
@@ -371,5 +367,5 @@ columns of ``U`` are important.
 function broomhead_king(x::AbstractArray, d::Int)
     X = trajectory_matrix(x, d)
     F = svdfact(X)
-    return F[:U], F[:S], F[:Vtr]
+    return F[:U], F[:S], F[:Vt]
 end

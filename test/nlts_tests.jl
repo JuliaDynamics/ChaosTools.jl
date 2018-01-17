@@ -3,10 +3,11 @@ if current_module() != ChaosTools
 end
 using Base.Test
 using Distances: Cityblock, Euclidean
+using Distributions: Normal
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
-println("\nTesting delay coordinates reconstruction...")
+println("\nTesting nonlinear timeseries analysis...")
 @testset "Henon Reconstruction" begin
     ds = Systems.henon()
     data = trajectory(ds, 100000)
@@ -43,4 +44,28 @@ println("\nTesting delay coordinates reconstruction...")
             end
         end
     end
+end
+
+@testset "Broomhead-King" begin
+    ds = Systems.gissinger()
+    data = trajectory(ds, 1000.0)
+    x = data[1:end-1, 1] # "exactly" 20000 points
+    distrib = Normal(0, 0.1)
+    s = x .+ rand(distrib, 20000)
+
+    Ux, Σx = broomhead_king(x, 40)
+    Us, Σs = broomhead_king(s, 40)
+    R = Reconstruction(x, 2, 30)
+    newcoords = Dataset(Us[:, 1], Us[:, 2])
+    newcoordsclean = Dataset(Ux[:, 1], Ux[:, 2])
+
+    for j in 10:40
+        @test Σx[end-10:end] < Σs[end-10:end]
+    end
+
+    Dnew = information_dim(newcoords)
+    DR = information_dim(R)
+    DC = information_dim(newcoordsclean)
+    @test abs(Dnew - 0.1 - DR) < 0.1 # subtract 0.1 for "added dimensionality"
+    @test abs(DC - DR) < 0.1
 end

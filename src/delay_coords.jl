@@ -343,7 +343,7 @@ by performing `svd` on the so-called trajectory matrix with dimension `d`.
 
 ## Description
 Broomhead and King coordinates is a method proposed in [1] that applies the
-Karhunen–Loève theorem to delay coordinates embedding.
+Karhunen–Loève theorem to delay coordinates embedding with smallest possible delay.
 
 The function performs singular value decomposition
 on the `d`-dimensional trajectory matrix ``X`` of ``x``,
@@ -359,10 +359,10 @@ x_{N-d+1} & x_{N-d+2} &\\ldots & x_N
 ```
 The columns of ``U`` can then be used as a new coordinate system, and by
 considering the values of the singular values ``S`` you can decide how many
-columns of ``U`` are "important".
+columns of ``U`` are "important". See the documentation page for example application.
 
 ## References
-[1] :  D. S. Broomhead, R. Jones and G. P. King, J. Phys A **20**, 9, pp L563 (1987)
+[1] :  D. S. Broomhead, R. Jones and G. P. King, J. Phys. A **20**, 9, pp L563 (1987)
 """
 function broomhead_king(x::AbstractArray, d::Int)
     X = trajectory_matrix(x, d)

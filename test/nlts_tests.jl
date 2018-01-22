@@ -60,7 +60,7 @@ end
     newcoordsclean = Dataset(Ux[:, 1], Ux[:, 2])
 
     for j in 10:40
-        @test Σx[end-10:end] < Σs[end-10:end]
+        @test Σx[j] < Σs[j]
     end
 
     Dnew = information_dim(newcoords)

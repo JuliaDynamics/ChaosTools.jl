@@ -67,5 +67,5 @@ end
     DR = information_dim(R)
     DC = information_dim(newcoordsclean)
     @test abs(Dnew - 0.1 - DR) < 0.1 # subtract 0.1 for "added dimensionality"
-    @test abs(DC - DR) < 0.1
+    @test abs(DC - DR) < 0.2
 end

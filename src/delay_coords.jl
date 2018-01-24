@@ -2,6 +2,7 @@ using NearestNeighbors, Requires, StaticArrays
 using StatsBase: autocor
 using Distances: Metric, Cityblock, Euclidean
 import NearestNeighbors: KDTree
+using LsqFit: curve_fit
 
 export Cityblock, Euclidean, AbstractNeighborhood
 export FixedMassNeighborhood, FixedSizeNeighborhood, numericallyapunov

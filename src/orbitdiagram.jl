@@ -2,35 +2,32 @@ using OrdinaryDiffEq
 export poincaresos, orbitdiagram, produce_orbitdiagram
 
 """
-    orbitdiagram(ds::DiscreteDynamicalSystem, i::Int, parameter::Symbol, pvalues;
-    n::Int = 100, Ttr::Int = 1000, ics = [state(ds)]) -> output
+    orbitdiagram(ds::DiscreteDynamicalSystem, i, p_index, pvalues; kwargs...)
 Compute the orbit diagram (also called bifurcation diagram) of the given system
-for the `i`-th variable for parameter values `pvalues`. The `parameter` specifies
-which parameter of the equations of motion is to be changed.
-
-This function assumes that you have created the `ContinuousDS` using functors; see the
-[official documentation](https://juliadynamics.github.io/DynamicalSystems.jl/latest/)
-for more.
+for the `i`-th variable for parameter values `pvalues`. The `p_index` specifies
+which parameter of the equations of motion is to be changed, through
+`ds.p[p_index]`.
 
 ## Keyword Arguments
 * `ics = [state(ds)]` : container of initial conditions that
-  are used at each parameter value
-  to evolve orbits.
+  are used at each parameter value to evolve orbits.
 * `Ttr::Int = 1000` : Transient steps;
   each orbit is evolved for `Ttr` first before saving output.
 * `n::Int = 100` : Amount of points to save for each initial condition.
 
 ## Description
 The method works by computing orbits at each parameter value in `pvalues` for each
-initial condition in `ics`. The symbol
-of the parameter is used to set `ds.eom.parameter` or `ds.eom!.parameter`.
+initial condition in `ics`.
+
+The parameter change is done as `ds.p[p_index] = ...` and thus you must use
+a parameter container that supports this (either `Array`, `LMArray` or other).
 
 The returned `output` is a vector of vectors. `output[j]` are the orbit points of the
 `i`-th variable of the system, at parameter value `pvalues[j]`.
 
 See also [`poincaresos`](@ref) and [`produce_orbitdiagram`](@ref).
 """
-function orbitdiagram(ds::DiscreteDynamicalSystem, i::Int, parameter::Symbol, pvalues;
+function orbitdiagram(ds::DiscreteDynamicalSystem, i::Int, p_index, pvalues;
     n::Int = 100, Ttr::Int = 1000, ics = [state(ds)])
 
     if typeof(ds) <: DiscreteDS1D
@@ -38,23 +35,17 @@ function orbitdiagram(ds::DiscreteDynamicalSystem, i::Int, parameter::Symbol, pv
         error("You have a 1D system and yet you gave `i=$i`. What's up with that!?")
     end
 
+    u0 = deepcopy(state(ds))
     T = eltype(state(ds))
     output = Vector{Vector{T}}(length(pvalues))
 
     for (j, p) in enumerate(pvalues)
 
-        if isa(ds, Union{DiscreteDS, DiscreteDS1D})
-            setfield!(ds.eom, parameter, p)
-        else
-            setfield!(ds.eom!, parameter, p)
-        end
+        ds.p[p_index] = p
 
-        for (m, state) in enumerate(ics)
-            if isa(ds, Union{DiscreteDS, DiscreteDS1D})
-                ds.state = evolve(ds, Ttr, state)
-            else
-                ds.state .= evolve(ds, Ttr, state)
-            end
+        for (m, st) in enumerate(ics)
+            st = evolve(ds, Ttr, st)
+            set_state!(ds, st)
 
             if m == 1
                 output[j] = trajectory(ds, n)[:, i]
@@ -63,6 +54,7 @@ function orbitdiagram(ds::DiscreteDynamicalSystem, i::Int, parameter::Symbol, pv
             end
         end
     end
+    set_state!(ds, u0)
     return output
 end
 

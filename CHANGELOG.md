@@ -1,3 +1,10 @@
+# v0.5.0
+## Breaking
+* Updated everything to be on par with the changes of DynamicalSystemsBase
+
+## Non-breaking
+* Minor bug fixes resulting from misstypos.
+
 # v0.4.3
 * Added Broomhead King function
 * Estimate_delay and other functions about reconstructions are now in this repo.

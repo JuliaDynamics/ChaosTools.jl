@@ -86,6 +86,7 @@ end
     for i in 1:M
       @test abs(ls[i] + ls[2M - i + 1]) < 0.01
     end
+    @test sum(ls) < 1e-12
   end
   @testset "lyapunov" begin
     l = lyapunov(ds, 10000)

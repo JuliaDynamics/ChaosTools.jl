@@ -314,10 +314,10 @@ function estimate_delay(x::AbstractVector)
     return round(Int, τ)
 end
 
-function estimate_dimension(s::AbstractVector)
+# function estimate_dimension(s::AbstractVector)
   # Estimate number of “false nearest neighbors” due to
   # projection into a too low dimension reconstruction space
-end
+# end
 
 
 

@@ -140,7 +140,8 @@ function periodicorbits(ds::DiscreteDS{D, T, F, J},
                         disttol::Real = 1e-10,
                         inftol::Real = 10.0,
                         roundtol::Int = 4) where {D, T, F, J}
-    f = ds.eom
+
+    f = (x) -> ds.eom(x, ds.p)
     FP = SVector{D, T}[]
     for λ in λs
         for inds in indss
@@ -160,7 +161,8 @@ function periodicorbits(ds::DiscreteDS{D, T, F, J},
                         disttol::Real = 1e-10,
                         inftol::Real = 10.0,
                         roundtol::Int = 4) where {D, T, F, J}
-    f = ds.eom
+
+    f = (x) -> ds.eom(x, ds.p)
     FP = SVector{D, T}[]
     Λ = lambdamatrix(0.001, dimension(ds))
     _periodicorbits!(FP, f, o, ics, Λ, maxiters, disttol, inftol, roundtol)

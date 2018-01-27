@@ -7,6 +7,7 @@ include(joinpath("lyapunovs", "discrete_lyapunov.jl"))
 include(joinpath("lyapunovs", "continuous_lyapunov.jl"))
 # Entropies (and attractor dimensions)
 include("entropy_dimension.jl")
+include("permentropy.jl")
 # Nonlinear Timeseries Analysis:
 include("nlts_tests.jl")
 # Periodicity:

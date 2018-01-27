@@ -314,10 +314,10 @@ function estimate_delay(x::AbstractVector)
     return round(Int, τ)
 end
 
-function estimate_dimension(s::AbstractVector)
+# function estimate_dimension(s::AbstractVector)
   # Estimate number of “false nearest neighbors” due to
   # projection into a too low dimension reconstruction space
-end
+# end
 
 
 
@@ -338,8 +338,8 @@ function trajectory_matrix(x::AbstractArray, d::Int)
 end
 
 """
-    broomhead_king(x::AbstractArray, d::Int) -> U, S, Vtr
-Return the Broomhead-King [1] coordinates of a timeseries `x`
+    broomhead_king(x::AbstractVector, d::Int) -> U, S, Vtr
+Return the Broomhead-King coordinates of a timeseries `x`
 by performing `svd` on the so-called trajectory matrix with dimension `d`.
 
 ## Description

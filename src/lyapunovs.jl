@@ -51,8 +51,8 @@ function lyapunovs(ds::DiscreteDS{D, T, F, J}, N::Real;
     K = copy(Q)
     # Main algorithm
     for i in 1:N
-        u = ds.eom(u)
-        K = ds.jacob(u)*Q
+        u = ds.eom(u, ds.p)
+        K = ds.jacob(u, ds.p)*Q
 
         Q, R = qr(K)
         λ += log.(abs.(diag(R)))
@@ -74,8 +74,8 @@ function lyapunovs(ds::BigDiscreteDS, N::Real; Ttr::Real = 100)
     # Main algorithm
     for i in 1:N
         ds.dummystate .= u
-        ds.eom!(u, ds.dummystate)
-        ds.jacob!(J, u)
+        ds.eom!(u, ds.dummystate, ds.p)
+        ds.jacob!(J, u, ds.p)
         A_mul_B!(K, J, Q)
 
         Q, R = DynamicalSystemsBase.qr_sq(K)
@@ -159,7 +159,7 @@ function lyapunov(ds::DiscreteDS,
 
     st1 = evolve(ds, Ttr)
     st2 = inittest(st1, d0)
-    eom = ds.eom
+    eom = (x) -> ds.eom(x, ds.p)
     dist = d0
     λ = zero(eltype(st1))
     i = 0
@@ -206,9 +206,9 @@ function lyapunov(ds::BigDiscreteDS,
         #evolve until rescaling:
         while dist < threshold
             ds.dummystate .= st1
-            ds.eom!(st1, ds.dummystate);
+            ds.eom!(st1, ds.dummystate, ds.p);
             ds.dummystate .= st2
-            ds.eom!(st2, ds.dummystate);
+            ds.eom!(st2, ds.dummystate, ds.p);
             ds.dummystate .= st1 .- st2
             dist = norm(ds.dummystate)
             i+=1
@@ -229,18 +229,14 @@ end
 
 function lyapunovs(ds::DiscreteDS1D, N::Real = 10000; Ttr::Int = 0)
 
-    x = state(ds)
-
     #transient system evolution
-    for i in 1:Ttr
-        x = ds.eom(x)
-    end
+    x = Ttr > 0 ? evolve(ds, Ttr) : state(ds)
 
     # The case for 1D systems is trivial: you add log(abs(der(x))) at each step
-    λ = log(abs(ds.deriv(x)))
+    λ = log(abs(ds.deriv(x, ds.p)))
     for i in 1:N
-        x = ds.eom(x)
-        λ += log(abs(ds.deriv(x)))
+        x = ds.eom(x, ds.p)
+        λ += log(abs(ds.deriv(x, ds.p)))
     end
     λ/N
 end
@@ -305,6 +301,7 @@ function lyapunov(ds::ContinuousDynamicalSystem,
     threshold <= d0 && throw(ArgumentError("Threshold must be bigger than d0!"))
 
     # Transient evolution:
+    initu0 = deepcopy(ds.prob.u0)
     if Ttr != 0
         ds.prob.u0 .= evolve(ds, Ttr; diff_eq_kwargs = diff_eq_kwargs)
     end
@@ -345,5 +342,6 @@ function lyapunov(ds::ContinuousDynamicalSystem,
             dist = d0
         end
     end
+    ds.prob.u0 .= initu0
     return λ/finalτ
 end

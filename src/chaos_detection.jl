@@ -142,8 +142,8 @@ end
     tmax, ws::Vector{SVector{D,S}};
     threshold = 1e-12) where {D,S,F,JJ}
 
-    f = ds.eom
-    J = ds.jacob
+    f = (x) -> ds.eom(x, ds.p)
+    J = (x) -> ds.jacob(x, ds.p)
     x = state(ds)
 
     rett = 0:Int(tmax)
@@ -183,8 +183,8 @@ end
 @inbounds function gali(ds::BigDiscreteDS, k::Int,
     tmax, ws::Matrix; threshold = 1e-12)
 
-    f! = ds.eom!
-    jacob! = ds.jacob!
+    f! = (dx, x) -> ds.eom!(dx, x, ds.p)
+    jacob! = (J, x) -> ds.jacob!(J, x, ds.p)
     J = ds.J
     x = copy(state(ds))
     xprev = copy(x)

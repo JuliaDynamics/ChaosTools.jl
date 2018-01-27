@@ -116,18 +116,16 @@ shannon(args...) = genentropy(1, args...)
 hartley(args...) = genentropy(0, args...)
 
 """
-    permutation_entropy(time_series, order [, interval=1]; base=e)
+    permutation_entropy(x::AbstractVector, order [, interval=1]; base=e)
 
 Compute the permutation entropy (Bandt & Pompe, 2002) of given `order`
-from the `time_series`.  Optionally, `interval` can be specified to
+from the `x` timeseries.  Optionally, `interval` can be specified to
 use `time_series[t0:interval:t1]` when calculating permutation of the
 sliding windows between `t0` and `t1 = t0 + interval * (order - 1)`.
 
 ## References
 
-[1] : Bandt, C., & Pompe, B. (2002). *Permutation entropy: a natural
-complexity measure for time series.* Physical Review Letters, 88(17),
-174102. <http://doi.org/10.1103/PhysRevLett.88.174102>
+[1] : Bandt, C., & Pompe, B., Phys. Rev. Lett. **88** (17), pp 174102 (2002)
 """
 function permutation_entropy(
         time_series::AbstractArray{T, 1}, order::UInt8,

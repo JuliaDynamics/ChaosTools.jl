@@ -118,8 +118,8 @@ hartley(args...) = genentropy(0, args...)
 """
     permentropy(x::AbstractVector, order [, interval=1]; base = e)
 
-Compute the permutation entropy (Bandt & Pompe, 2002) of given `order`
-from the `x` timeseries.  
+Compute the permutation entropy [1] of given `order`
+from the `x` timeseries.
 
 Optionally, `interval` can be specified to
 use `x[t0:interval:t1]` when calculating permutation of the
@@ -129,7 +129,7 @@ Optionally use `base` for the logarithms.
 
 ## References
 
-[1] : Bandt, C., & Pompe, B., [Phys. Rev. Lett. **88** (17), pp 174102 (2002)](http://doi.org/10.1103/PhysRevLett.88.174102)
+[1] : C. Bandt, & B. Pompe, [Phys. Rev. Lett. **88** (17), pp 174102 (2002)](http://doi.org/10.1103/PhysRevLett.88.174102)
 """
 function permentropy(
         time_series::AbstractArray{T, 1}, order::UInt8,

@@ -120,7 +120,7 @@ hartley(args...) = genentropy(0, args...)
 
 Compute the permutation entropy (Bandt & Pompe, 2002) of given `order`
 from the `x` timeseries.  Optionally, `interval` can be specified to
-use `time_series[t0:interval:t1]` when calculating permutation of the
+use `x[t0:interval:t1]` when calculating permutation of the
 sliding windows between `t0` and `t1 = t0 + interval * (order - 1)`.
 
 ## References

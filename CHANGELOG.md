@@ -1,9 +1,10 @@
 # v0.5.0
 ## Breaking
-* Updated everything to be on par with the changes of DynamicalSystemsBase
+* Updated everything to be on par with the changes of DynamicalSystemsBase v0.5
 
 ## Non-breaking
 * Minor bug fixes resulting from misstypos.
+* New method for permutation entropy: `permentropy` !
 
 # v0.4.3
 * Added Broomhead King function

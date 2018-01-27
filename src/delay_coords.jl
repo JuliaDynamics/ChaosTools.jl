@@ -338,8 +338,8 @@ function trajectory_matrix(x::AbstractArray, d::Int)
 end
 
 """
-    broomhead_king(x::AbstractArray, d::Int) -> U, S, Vtr
-Return the Broomhead-King [1] coordinates of a timeseries `x`
+    broomhead_king(x::AbstractVector, d::Int) -> U, S, Vtr
+Return the Broomhead-King coordinates of a timeseries `x`
 by performing `svd` on the so-called trajectory matrix with dimension `d`.
 
 ## Description

@@ -1,6 +1,6 @@
 using Combinatorics: permutations
 
-export non0hist, genentropy, renyi, shannon, hartley, permutation_entropy
+export non0hist, genentropy, renyi, shannon, hartley, permentropy
 
 """
 ```julia
@@ -116,7 +116,7 @@ shannon(args...) = genentropy(1, args...)
 hartley(args...) = genentropy(0, args...)
 
 """
-    permutation_entropy(x::AbstractVector, order [, interval=1]; base=e)
+    permentropy(x::AbstractVector, order [, interval=1]; base=e)
 
 Compute the permutation entropy (Bandt & Pompe, 2002) of given `order`
 from the `x` timeseries.  Optionally, `interval` can be specified to
@@ -127,7 +127,7 @@ sliding windows between `t0` and `t1 = t0 + interval * (order - 1)`.
 
 [1] : Bandt, C., & Pompe, B., Phys. Rev. Lett. **88** (17), pp 174102 (2002)
 """
-function permutation_entropy(
+function permentropy(
         time_series::AbstractArray{T, 1}, order::UInt8,
         interval::Integer = 1;
         base=Base.e) where {T}
@@ -154,7 +154,7 @@ function permutation_entropy(
     return - sum(p .* log.(base, p))
 end
 
-function permutation_entropy(time_series, order::Integer, args...; kwargs...)
+function permentropy(time_series, order::Integer, args...; kwargs...)
     order = try
         UInt8(order)
     catch err
@@ -165,5 +165,5 @@ function permutation_entropy(time_series, order::Integer, args...; kwargs...)
             rethrow()
         end
     end
-    return permutation_entropy(time_series, order, args...; kwargs...)
+    return permentropy(time_series, order, args...; kwargs...)
 end

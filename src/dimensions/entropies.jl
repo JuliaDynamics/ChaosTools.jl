@@ -1,4 +1,6 @@
-export non0hist, genentropy, renyi, shannon, hartley
+using Combinatorics: permutations
+
+export non0hist, genentropy, renyi, shannon, hartley, permutation_entropy
 
 """
 ```julia
@@ -112,3 +114,58 @@ shannon(args...) = genentropy(1, args...)
 
 "hartley(args...) = genentropy(0, args...)"
 hartley(args...) = genentropy(0, args...)
+
+"""
+    permutation_entropy(time_series, order [, interval=1]; base=e)
+
+Compute the permutation entropy (Bandt & Pompe, 2002) of given `order`
+from the `time_series`.  Optionally, `interval` can be specified to
+use `time_series[t0:interval:t1]` when calculating permutation of the
+sliding windows between `t0` and `t1 = t0 + interval * (order - 1)`.
+
+## References
+
+[1] : Bandt, C., & Pompe, B. (2002). *Permutation entropy: a natural
+complexity measure for time series.* Physical Review Letters, 88(17),
+174102. <http://doi.org/10.1103/PhysRevLett.88.174102>
+"""
+function permutation_entropy(
+        time_series::AbstractArray{T, 1}, order::UInt8,
+        interval::Integer = 1;
+        base=Base.e) where {T}
+
+    # To use `searchsortedfirst`, we need each permutation to be
+    # "comparable" (ordered) type.  Let's use NTuple here:
+    PermType = NTuple{Int(order), UInt8}
+
+    perms = map(PermType, permutations(1:order))
+    count = zeros(UInt64, length(perms))
+
+    for t in 1:length(time_series) - interval * order + 1
+        sample = @view time_series[t:interval:t + interval * (order - 1)]
+        i = searchsortedfirst(perms, PermType(sortperm(sample)))
+        count[i] += 1
+    end
+
+    # To compute `p log(p)` correctly for `p = 0`, we first discard
+    # cases with zero occurrence.  They don't contribute to the final
+    # sum hence to the entropy:
+    nonzero = [c for c in count if c != 0]
+
+    p = nonzero ./ sum(nonzero)
+    return - sum(p .* log.(base, p))
+end
+
+function permutation_entropy(time_series, order::Integer, args...; kwargs...)
+    order = try
+        UInt8(order)
+    catch err
+        if isa(err, InexactError)
+            error("order = $order is too large.",
+                  " order smaller than $(Int(typemax(UInt8))) can be used.")
+        else
+            rethrow()
+        end
+    end
+    return permutation_entropy(time_series, order, args...; kwargs...)
+end

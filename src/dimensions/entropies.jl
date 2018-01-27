@@ -125,7 +125,7 @@ sliding windows between `t0` and `t1 = t0 + interval * (order - 1)`.
 
 ## References
 
-[1] : Bandt, C., & Pompe, B., Phys. Rev. Lett. **88** (17), pp 174102 (2002)
+[1] : Bandt, C., & Pompe, B., [Phys. Rev. Lett. **88** (17), pp 174102 (2002)](http://doi.org/10.1103/PhysRevLett.88.174102)
 """
 function permentropy(
         time_series::AbstractArray{T, 1}, order::UInt8,

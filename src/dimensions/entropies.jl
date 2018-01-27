@@ -49,17 +49,17 @@ non0hist(ε::Real, matrix) = non0hist(ε, convert(Dataset, matrix))
 
 """
 ```julia
-genentropy(α, ε, dataset::AbstractDataset)
+genentropy(α, ε, dataset::AbstractDataset; base = e)
 ```
 Compute the `α` order generalized (Rényi) entropy [1] of a dataset,
 by first partitioning it into boxes of length `ε` using [`non0hist`](@ref).
 ```julia
-genentropy(α, p::AbstractArray)
+genentropy(α, p::AbstractArray; base = e)
 ```
 Compute the entropy of an array `p` directly, assuming that `p` is
 sum-normalized.
 
-*log base-e is used in both cases, i.e. units of "nat".*
+Optionally use `base` for the logarithms.
 
 ## Description
 The Rényi entropy
@@ -85,25 +85,25 @@ Statistics and Probability*, pp 547 (1960)
 
 [2] : C. E. Shannon, Bell Systems Technical Journal **27**, pp 379 (1948)
 """
-function genentropy(α::Real, ε::Real, data::AbstractDataset)
+function genentropy(α::Real, ε::Real, data::AbstractDataset; base=Base.e)
     ε < 0 && throw(ArgumentError("Box-size for entropy calculation must be ≥ 0."))
     p = non0hist(ε, data)
-    return genentropy(α, p)
+    return genentropy(α, p; base = base)
 end
-genentropy(α::Real, ε::Real, matrix) =
-genentropy(α, ε, convert(Dataset, matrix))
+genentropy(α::Real, ε::Real, matrix; base = e) =
+genentropy(α, ε, convert(Dataset, matrix); base = base)
 
-function genentropy{T<:Real}(α::Real, p::AbstractArray{T})
+function genentropy{T<:Real}(α::Real, p::AbstractArray{T}; base = e)
   α < 0 && throw(ArgumentError("Order of Rényi entropy must be ≥ 0."))
 
   if α ≈ 0
-    return log(length(p)) #Hartley entropy, max-entropy
+    return log(base, length(p)) #Hartley entropy, max-entropy
   elseif α ≈ 1
-    return -sum( x*log(x) for x in p ) #Shannon entropy, information to locate with ε
+    return -sum( x*log(base, x) for x in p ) #Shannon entropy, information to locate with ε
   elseif isinf(α)
-    return -log(maximum(p)) #Min entropy
+    return -log(base, maximum(p)) #Min entropy
   else
-    return (1/(1-α))*log( sum(x^α for x in p) ) #genentropy entropy
+    return (1/(1-α))*log(base, sum(x^α for x in p) ) #Renyi α entropy
   end
 end
 # Aliases:
@@ -116,12 +116,16 @@ shannon(args...) = genentropy(1, args...)
 hartley(args...) = genentropy(0, args...)
 
 """
-    permentropy(x::AbstractVector, order [, interval=1]; base=e)
+    permentropy(x::AbstractVector, order [, interval=1]; base = e)
 
 Compute the permutation entropy (Bandt & Pompe, 2002) of given `order`
-from the `x` timeseries.  Optionally, `interval` can be specified to
+from the `x` timeseries.  
+
+Optionally, `interval` can be specified to
 use `x[t0:interval:t1]` when calculating permutation of the
 sliding windows between `t0` and `t1 = t0 + interval * (order - 1)`.
+
+Optionally use `base` for the logarithms.
 
 ## References
 

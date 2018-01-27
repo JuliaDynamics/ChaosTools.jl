@@ -229,12 +229,8 @@ end
 
 function lyapunovs(ds::DiscreteDS1D, N::Real = 10000; Ttr::Int = 0)
 
-    x = state(ds)
-
     #transient system evolution
-    for i in 1:Ttr
-        x = ds.eom(x)
-    end
+    x = Ttr > 0 ? evolve(ds, Ttr) : state(ds)
 
     # The case for 1D systems is trivial: you add log(abs(der(x))) at each step
     λ = log(abs(ds.deriv(x, ds.p)))

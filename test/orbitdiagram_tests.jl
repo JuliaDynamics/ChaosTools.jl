@@ -7,7 +7,7 @@ using Base.Test, StaticArrays, OrdinaryDiffEq
   @testset "DiscreteDS1D" begin
     ds = Systems.logistic()
     i = 1
-    parameter = :r
+    parameter = 1
     pvalues = 2:0.01:4
     ics = [rand() for m in 1:10]
     n = 50
@@ -21,7 +21,7 @@ using Base.Test, StaticArrays, OrdinaryDiffEq
   @testset "DiscreteDS" begin
     ds = Systems.standardmap()
     i = 2
-    parameter = :k
+    parameter = 1
     pvalues = 0:0.005:2
     ics = [0.001rand(2) for m in 1:10]
     n = 50
@@ -33,7 +33,7 @@ using Base.Test, StaticArrays, OrdinaryDiffEq
   @testset "BigDiscreteDS" begin
     ds = Systems.coupledstandardmaps(3)
     i = 2
-    parameter = :ks
+    parameter = 1
     pvalues = [a.* ones(3) for a in 0:0.005:0.5]
     ics = [0.001rand(6) for m in 1:10]
     n = 50
@@ -70,7 +70,7 @@ end
     ds = Systems.shinriki([-2, 0, 0.2])
 
     pvalues = linspace(19,22,11)
-    parameter = :R1
+    parameter = 1
     i = 1
     j = 2
     tf = 200.0

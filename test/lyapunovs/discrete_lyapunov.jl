@@ -36,7 +36,7 @@ end
 
 @testset "Logistic Map" begin
   lg1 = Systems.logistic(0.1, r=4)
-  lg2 = DiscreteDS1D(lg1.state, lg1.eom)
+  lg2 = DiscreteDS1D(lg1.state, lg1.eom; parameters = lg1.p)
   lg3 = Systems.logistic(big(0.1), r=4)
   @test typeof(lg3.state) == BigFloat
   λ1 = lyapunov(lg1, 10000000; Ttr = 100)
@@ -58,7 +58,7 @@ end
 
   @testset "lyapunovs ForwardDiff" begin
     ds = Systems.henon()
-    ds = DiscreteDS(state(ds), ds.eom)
+    ds = DiscreteDS(state(ds), ds.eom; parameters = ds.p)
     λ1 = lyapunovs(ds, 1e6)
     @test 0.418 < λ1[1] < 0.422
     @test -1.63 < λ1[2] < -1.61
@@ -66,7 +66,7 @@ end
 
   @testset "lyapunov" begin
     ds1 = Systems.henon()
-    ds2 = DiscreteDS(ds1.state, ds1.eom)
+    ds2 = DiscreteDS(ds1.state, ds1.eom; parameters = ds1.p)
     λ1 = lyapunov(ds1, 1000000)
     λ2 = lyapunov(ds2, 1000000)
     @test 0.418 < λ1[1] < 0.422

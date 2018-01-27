@@ -1,4 +1,4 @@
-using OrdinaryDiffEq
+using OrdinaryDiffEq, DiffEqBase
 export poincaresos, orbitdiagram, produce_orbitdiagram
 
 """
@@ -114,7 +114,7 @@ function poincaresos(ds::ContinuousDynamicalSystem, j::Int, tfinal = 100.0;
 
     extra_kw = Dict(:save_start=>false, :save_end=>false)
 
-    psos_prob = ODEProblem(ds, tfinal, u0, pcb)
+    psos_prob = ODEProblem(ds; t= tfinal, state = u0, callback = pcb)
 
     solu, tvec = get_sol(psos_prob, diff_eq_kwargs, extra_kw)
     length(solu) == 0 && error(PSOS_ERROR)
@@ -127,7 +127,7 @@ function psos_callback(j, direction = +1, offset::Real = 0,
 
     # Prepare callback:
     s = sign(direction)
-    cond = (t,u,integrator) -> s*(u - offset)
+    cond = (u, t, integrator) -> s*(u - offset)
     affect! = (integrator) -> nothing
 
     cb = DiffEqBase.ContinuousCallback(cond, affect!, nothing; callback_kwargs...,
@@ -135,20 +135,34 @@ function psos_callback(j, direction = +1, offset::Real = 0,
 end
 
 
-
+# function psos2(ds::ContinuousDynamicalSystem, j::Int, tfinal = 100.0;
+#     direction = +1, offset::Real = 0,
+#     diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
+#     callback_kwargs = Dict{Symbol, Any}(:abstol=>1e-9),
+#     Ttr::Real = 0.0)
+#
+#     if Ttr > 0
+#         u0 = evolve(ds, Ttr, diff_eq_kwargs = diff_eq_kwargs)
+#     else
+#         u0 = state(ds)
+#     end
+#
+#     psos_prob = ODEProblem(ds; t= tfinal, state = u0)
+#
+#     solver, newkw = DynamicalSystemsBase.extract_solver(diff_eq_kwargs)
+#     integ = DiffEqBase.init(psos_prob, solver; newkw...)
+#
+#
+# end
 
 
 """
     produce_orbitdiagram(ds::ContinuousDynamicalSystem, j, i,
-                         parameter::Symbol, pvalues; kwargs...)
+                         p_index, pvalues; kwargs...)
 Produce an orbit diagram (also called bifurcation diagram)
 for the `i`-th variable of the given continuous
 system by computing Poincaré surfaces of section
 of the `j`-th variable of the system for the given parameter values.
-
-This funtion assumes that you have created the `ContinuousDS` using functors; see the
-[official documentation](https://juliadynamics.github.io/DynamicalSystems.jl/latest/)
-for more.
 
 ## Keyword Arguments
 * `direction`, `offset`, `diff_eq_kwargs`, `callback_kwargs`, `Ttr` : Passed into
@@ -159,18 +173,17 @@ for more.
   will be produced.
 
 ## Description
-`parameter` is a symbol that indicates which
-parameter of `ds.prob.f` should be updated.
-`pvalues` is a collection with all the parameter values that the orbit diagram
-will be computed for.
-
 For each parameter, a PSOS reduces the system from a flow to a map. This then allows
 the formal computation of an "orbit diagram" for one of the `i ≠ j` variables
 of the system, just like it is done in [`orbitdiagram`](@ref).
 
+The parameter change is done as `ds.prob.p[p_index] = ...` taking values from `pvalues`
+and thus you must use a parameter container that supports this
+(either `Array`, `LMArray` or other).
+
 The returned `output` is a vector of vectors. `output[k]` are the
-"orbit diagram" points of the
-`i`-th variable of the system, at parameter value `pvalues[k]`.
+"orbit diagram" points of the `i`-th variable of the system,
+at parameter value `pvalues[k]`.
 
 ## Performance Notes
 The total amount of PSOS produced will be `length(ics)*length(pvalues)`.
@@ -181,31 +194,31 @@ function produce_orbitdiagram(
     ds::ContinuousDynamicalSystem,
     j::Int,
     i::Int,
-    parameter::Symbol,
+    p_index,
     pvalues;
     tfinal::Real = 100.0,
     ics = [state(ds)],
     direction = +1,
     offset::Real = 0,
-    diff_eq_kwargs = Dict(),
+    diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
     callback_kwargs = Dict{Symbol, Any}(:abstol=>1e-6),
     printparams::Bool = false,
     Ttr::Real = 0.0)
 
-    p0 = getfield(ds.prob.f, parameter)
+    p0 = ds.prob.p[p_index]
     T = eltype(ds)
     output = Vector{Vector{T}}(length(pvalues))
     extra_kw = Dict(:save_start=>false, :save_end=>false)
 
     # Prepare callback problem
     pcb = psos_callback(j, direction, offset, callback_kwargs)
-    psos_prob = ODEProblem(ds, tfinal, deepcopy(ds.prob.u0), pcb)
+    psos_prob = ODEProblem(ds; t= tfinal, state = state(ds), callback = pcb)
 
     for (n, p) in enumerate(pvalues)
         # This sets the parameter on both the ds problem
-        # as well as the psosprob:
-        setfield!(ds.prob.f, parameter, p)
-        printparams && println(parameter, " = $p")
+        # as well as the psos_prob:
+        psos_prob.p[p_index] = p
+        printparams && println("parameter = $p")
 
         for (m, st) in enumerate(ics)
 
@@ -227,6 +240,6 @@ function produce_orbitdiagram(
         end
     end
     # Reset the field parameter of the system:
-    setfield!(ds.prob.f, parameter, p0)
+    ds.prob.p[p_index] = p0
     return output
 end

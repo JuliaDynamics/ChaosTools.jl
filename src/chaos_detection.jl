@@ -126,17 +126,11 @@ end
 #####################################################################################
 #                                 Discrete GALI                                     #
 #####################################################################################
-function gali(ds::DiscreteDS{D, S, F, JJ}, k::Int, tmax,
-    Ws = qr(rand(D, D))[1][:, 1:k];
+@inbounds function gali(ds::DiscreteDS{D, S, F, JJ}, k::Int,
+    tmax, Ws = qr(rand(dimension(ds), dimension(ds)))[1][:, 1:k];
     threshold = 1e-12) where {D,S,F,JJ}
 
     ws = DynamicalSystemsBase.to_vectorSvector(Ws)
-    return gali(ds, k, tmax, ws; threshold = threshold)
-end
-
-@inbounds function gali(ds::DiscreteDS{D, S, F, JJ}, k::Int,
-    tmax, ws::Vector{SVector{D,S}};
-    threshold = 1e-12) where {D,S,F,JJ}
 
     f = (x) -> ds.eom(x, ds.p)
     J = (x) -> ds.jacob(x, ds.p)
@@ -169,15 +163,11 @@ end
 
 
 
-function gali(ds::BigDiscreteDS, k::Int, tmax,
-    Ws = qr(rand(dimension(ds), dimension(ds)))[1][:, 1:k]; threshold = 1e-12)
+@inbounds function gali(ds::BigDiscreteDS, k::Int,
+    tmax, Ws = qr(rand(dimension(ds), dimension(ds)))[1][:, 1:k];
+    threshold = 1e-12)
 
     ws = DynamicalSystemsBase.to_matrix(Ws)
-    return gali(ds, k, tmax, ws; threshold = threshold)
-end
-
-@inbounds function gali(ds::BigDiscreteDS, k::Int,
-    tmax, ws::Matrix; threshold = 1e-12)
 
     f! = (dx, x) -> ds.eom!(dx, x, ds.p)
     jacob! = (J, x) -> ds.jacob!(J, x, ds.p)

@@ -1,3 +1,7 @@
+# v0.5.1
+## Non-breaking
+* Bugfix: gali was invasive in the diff_eq_kwargs
+
 # v0.5.0
 ## Breaking
 * Updated everything to be on par with the changes of DynamicalSystemsBase v0.5

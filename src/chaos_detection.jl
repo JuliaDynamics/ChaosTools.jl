@@ -77,10 +77,6 @@ function gali(ds::ContinuousDynamicalSystem, k::Int, tmax::Real,
     wss = qr(rand((dimension(ds)), dimension(ds)))[1][:, 1:k];
     threshold = 1e-12, dt = 1.0, diff_eq_kwargs = Dict())
 
-    if haskey(diff_eq_kwargs, :saveat)
-        pop!(diff_eq_kwargs, :saveat)
-    end
-
     ws = DynamicalSystemsBase.to_matrix(wss)
     W = cat(2, ds.prob.u0, ws)
 

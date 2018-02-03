@@ -13,3 +13,7 @@ include("lyapunovs.jl")
             # retune=false,
             # promptsave=true,
             # promptoverwrite=true)
+
+
+# This is for copy/paste:
+# b = benchmarkpkg("ChaosTools", retune = true, promptsave = false); showall(b)

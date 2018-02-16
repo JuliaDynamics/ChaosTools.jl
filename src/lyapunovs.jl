@@ -110,7 +110,7 @@ while constantly rescaling the test one.
 * `diff_eq_kwargs = Dict(:abstol=>d0, :reltol=>d0)` : (only for continuous)
   Keyword arguments passed into the solvers of the
   `DifferentialEquations` package (see [`trajectory`](@ref) for more info).
-* `dt = 0.1` : (only for continuous) Time of evolution between each check of
+* `dt = 1.0` : (only for continuous) Time of evolution between each check of
   distance exceeding the `threshold`.
 
 * `inittest = (st1, d0) -> st1 .+ d0/sqrt(D)` :
@@ -262,7 +262,7 @@ function lyapunovs(ds::ContinuousDynamicalSystem, N::Real=1000;
     # Create integrator for dynamics and tangent space:
     S = [st eye(eltype(ds), D)]
     integ = variational_integrator(
-    ds, D, tstops[end], S; diff_eq_kwargs = diff_eq_kwargs)
+    ds, S, tstops[end]; diff_eq_kwargs = diff_eq_kwargs)
 
     # Main algorithm
     for τ in tstops
@@ -345,3 +345,65 @@ function lyapunov(ds::ContinuousDynamicalSystem,
     ds.prob.u0 .= initu0
     return λ/finalτ
 end
+
+#=
+function lyapunov_distance(S, D)
+    x = zero(eltype(S))
+    for i in 1:D
+        @inbounds x += (S[i] - S[i+D])^2
+    end
+    sqrt(x)
+end
+
+function lyapunov2(ds::ContinuousDynamicalSystem,
+                  T::Real;
+                  Ttr = 0.0,
+                  d0=1e-9,
+                  threshold=1e-5,
+                  dt = 1.0,
+                  diff_eq_kwargs = Dict(:abstol=>d0, :reltol=>d0),
+                  inittest = inittest_default(dimension(ds)),
+                  )
+
+    DynamicalSystemsBase.check_tolerances(d0, diff_eq_kwargs)
+    S = eltype(ds); D = dimension(ds)
+
+    threshold <= d0 && throw(ArgumentError("Threshold must be bigger than d0!"))
+
+    # Transient evolution:
+    u0 = Ttr != 0 ? evolve(ds, Ttr; diff_eq_kwargs = diff_eq_kwargs) : state(ds)
+
+    # Initialize:
+    S = cat(2, u0, inittest(u0, d0))
+    pinteg = parallel_integrator(ds, S, T; diff_eq_kwargs = diff_eq_kwargs)
+
+    λ::eltype(pinteg.u) = 0.0
+    i = 0;
+    tvector = dt:dt:T
+    finalτ = dt
+
+    # start evolution and rescaling:
+    for τ in tvector
+        # evolve until rescaling:
+        # Integrate
+        while pinteg.t < τ
+            step!(pinteg)
+        end
+        dist = lyapunov_distance(pinteg.u, D)
+        # Rescale:
+        if dist ≥ threshold
+            # add computed scale to accumulator (scale = local lyaponov exponent):
+            a = dist/d0
+            λ += log(a)
+            finalτ = pinteg.t
+            # Rescale and reset everything
+            # Must rescale towards difference direction:
+            @. @inbounds pinteg.u[:, 2] =
+            @views pinteg.u[:, 1] + (pinteg.u[:, 2] - pinteg.u[:, 1])/a
+            u_modified!(pinteg, true)
+            dist = d0
+        end
+    end
+    return λ/finalτ
+end
+=#

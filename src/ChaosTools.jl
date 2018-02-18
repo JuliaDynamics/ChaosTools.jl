@@ -8,11 +8,14 @@ module ChaosTools
 using Reexport
 @reexport using DynamicalSystemsBase
 
+using DynamicalSystemsBase: DS, DDS
+using DynamicalSystemsBase: CDS, DEFAULT_DIFFEQ_KWARGS, DEFAULT_SOLVER
+
 # Lyapunovs:
 include("lyapunovs.jl")
 
 # Phase space related:
-include("orbitdiagram.jl")
+# include("orbitdiagram.jl")
 
 # Entropies and Dimension Estimation:
 include("dimensions/entropies.jl")
@@ -22,10 +25,10 @@ include("dimensions/dims.jl")
 include("delay_coords.jl")
 
 # Periodicity:
-include("periodic.jl")
+# include("periodic.jl")
 
 # Chaos Detection:
-include("chaos_detection.jl")
+# include("chaos_detection.jl")
 
 # Visualization routines:
 using Requires

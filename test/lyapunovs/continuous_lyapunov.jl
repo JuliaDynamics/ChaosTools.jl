@@ -6,29 +6,29 @@ println("\nTesting continuous system lyapunov exponents...")
 
 @testset "Lorenz system" begin
   ds = Systems.lorenz()
-  ds2 = ContinuousDS(ds.prob)
+  ds2 = ContinuousDynamicalSystem(ds.prob.f, state(ds), ds.prob.p)
   @testset "lyapunovs" begin
-    λ = lyapunovs(ds, 1e5)
-    @test 0.9 < λ[1] < 1.0
+    λ = lyapunovs(ds, 1e3)
+    @test 0.85 < λ[1] < 0.95
     @test -0.1 < λ[2] < 0.1
     @test -15 < λ[3] < -14
 
-    λ = lyapunovs(ds, 1e5; dt = 0.1, Ttr = 10.0,
-    diff_eq_kwargs = Dict(:abstol=>1e-9, :solver => DP5()))
-    @test 0.9 < λ[1] < 1.0
+    λ = lyapunovs(ds, 1e4; dt = 0.1, Ttr = 10.0,
+    diff_eq_kwargs = Dict(:abstol=>1e-9, :solver => Tsit5()))
+    @test 0.85 < λ[1] < 0.95
     @test -0.1 < λ[2] < 0.1
     @test -14.7 < λ[3] < -14.1
   end
 
   @testset "lyapunovs FD" begin
       λ = lyapunovs(ds2, 1e5)
-      @test 0.9 < λ[1] < 1.0
+      @test 0.85 < λ[1] < 0.95
       @test -0.1 < λ[2] < 0.1
       @test -15 < λ[3] < -14
 
       λ = lyapunovs(ds2, 1e5; dt = 0.1, Ttr = 10.0,
       diff_eq_kwargs = Dict(:abstol=>1e-9, :solver => DP5()))
-      @test 0.9 < λ[1] < 1.0
+      @test 0.85 < λ[1] < 0.95
       @test -0.1 < λ[2] < 0.1
       @test -14.7 < λ[3] < -14.1
     end

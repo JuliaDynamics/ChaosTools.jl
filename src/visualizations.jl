@@ -64,3 +64,15 @@ function plot_linear_regions(x, y; dxi = 1, tol = 0.2, kwargs...)
     PyPlot.plot(x, y; ms= 5, marker="o", color = "black", kwargs..., lw=0)
     _plot_lrs(x, y, linear_regions(x, y;  dxi = dxi, tol = tol)...)
 end
+
+function plot_dataset(data::Dataset, tvec)
+    for (i, col) in enumerate(columns(dataset))
+        PyPlot.plot(tvec, col, label = "variable $i")
+    end
+end
+
+function plot_trajectory(ds::DS, T)
+    data = trajectory(ds, T)
+    tvec = inittime(ds):0.01:(T+inittime(ds))
+    plot_dataset(data, tvec)
+end

@@ -48,10 +48,10 @@ end
 
 @testset "Broomhead-King" begin
     ds = Systems.gissinger()
-    data = trajectory(ds, 1000.0)
+    data = trajectory(ds, 1000.0, dt = 0.05)
     x = data[1:end-1, 1] # "exactly" 20000 points
     distrib = Normal(0, 0.1)
-    s = x .+ rand(distrib, 20000)
+    s = x .+ rand(distrib, length(x))
 
     Ux, Σx = broomhead_king(x, 40)
     Us, Σs = broomhead_king(s, 40)

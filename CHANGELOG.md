@@ -1,3 +1,12 @@
+# v0.6
+This version updates all internals to be on par with `DynamicalSystemsBase` 0.6
+
+*All* internal implementations of methods that use a `DynamicalSystem` have been
+reworked almost from the ground up.
+
+This lead to (only minor) changes to some of the high level interfaces. Please see
+the documentation strings of each function before using it.
+
 # v0.5.1
 ## Non-breaking
 * Bugfix: gali was invasive in the diff_eq_kwargs

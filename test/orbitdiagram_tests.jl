@@ -31,11 +31,11 @@ using Base.Test, StaticArrays, OrdinaryDiffEq
   end
 
   @testset "Discrete IIP" begin
-    ds = Systems.coupledstandardmaps(3)
+    ds = Systems.henon_iip()
     i = 2
     parameter = 1
-    pvalues = [a.* ones(3) for a in 0:0.005:0.5]
-    ics = [0.001rand(6) for m in 1:10]
+    pvalues = [1.4, 1.5]
+    ics = [rand(2), rand(2)]
     n = 50
     Ttr = 5000
     output = orbitdiagram(ds, i, parameter, pvalues; n = n, Ttr = Ttr)

@@ -9,7 +9,8 @@ using Reexport
 @reexport using DynamicalSystemsBase
 
 using DynamicalSystemsBase: DS, DDS
-using DynamicalSystemsBase: CDS, DEFAULT_DIFFEQ_KWARGS, DEFAULT_SOLVER
+using DynamicalSystemsBase: CDS, DEFAULT_DIFFEQ_KWARGS
+using DynamicalSystemsBase: MDI
 
 # Lyapunovs:
 include("lyapunovs.jl")
@@ -28,7 +29,7 @@ include("delay_coords.jl")
 # include("periodic.jl")
 
 # Chaos Detection:
-# include("chaos_detection.jl")
+include("chaos_detection.jl")
 
 # Visualization routines:
 using Requires

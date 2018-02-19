@@ -8,11 +8,11 @@ export lyapunovs, lyapunov
 #                               Lyapunov Spectum                                    #
 #####################################################################################
 """
-    lyapunovs(ds::DynamicalSystem, N, k::Int | Q0; kwargs...) -> λs, t
+    lyapunovs(ds::DynamicalSystem, N, k::Int | Q0; kwargs...) -> λs
 
 Calculate the spectrum of Lyapunov exponents [1] of `ds` by applying
 a QR-decomposition on the parallelepiped matrix `N` times. Return the
-spectrum convergence timeseries and the time vector.
+spectrum sorted from maximum to minimum.
 
 The third argument `k` is optional, and dictates how many lyapunov exponents
 to calculate (defaults to `dimension(ds)`).
@@ -39,7 +39,8 @@ of the parallepiped. The growth rates are
 then averaged over `N` successive steps, yielding the lyapunov exponent spectrum.
 
 ## Performance Notes
-This function uses a `tangent_integrator`. For loops over initial conditions and/or
+This function uses a [`tangent_integrator`](@ref).
+For loops over initial conditions and/or
 parameter values one should use the lower level methods that accept
 an integrator, and `reinit!` it to new initial conditions.
 
@@ -220,8 +221,6 @@ function lyapunov(ds::DS, T;
     "d0 must be between thresholds!"))
     D = dimension(ds)
     if typeof(ds) <: DDS
-        # Time assertions
-        @assert typeof(Ttr) == Int
         pinteg = parallel_integrator(ds, [deepcopy(state(ds)), inittest(state(ds), d0)])
     else
         pinteg = parallel_integrator(ds, [deepcopy(state(ds)), inittest(state(ds), d0)];

@@ -16,7 +16,7 @@ using DynamicalSystemsBase: MDI
 include("lyapunovs.jl")
 
 # Phase space related:
-# include("orbitdiagram.jl")
+include("orbitdiagram.jl")
 
 # Entropies and Dimension Estimation:
 include("dimensions/entropies.jl")

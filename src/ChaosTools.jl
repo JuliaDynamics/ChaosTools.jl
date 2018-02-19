@@ -12,6 +12,8 @@ using DynamicalSystemsBase: DS, DDS
 using DynamicalSystemsBase: CDS, DEFAULT_DIFFEQ_KWARGS
 using DynamicalSystemsBase: MDI
 
+export reinit!
+
 # Lyapunovs:
 include("lyapunovs.jl")
 

@@ -16,8 +16,9 @@ spectrum sorted from maximum to minimum.
 
 The third argument `k` is optional, and dictates how many lyapunov exponents
 to calculate (defaults to `dimension(ds)`).
-Instead of passing an integer `k` you can also pass
-a pre-initialized matrix `Q0` whose columns are initial deviation vectors.
+Instead of passing an integer `k` you can pass
+a pre-initialized matrix `Q0` whose columns are initial deviation vectors (then
+`k = size(Q0)[2]`).
 
 ## Keyword Arguments
 * `Ttr = 0` : Extra "transient" time to evolve the system before application of the

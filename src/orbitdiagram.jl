@@ -5,8 +5,9 @@ export poincaresos, orbitdiagram, produce_orbitdiagram
     orbitdiagram(ds::DiscreteDynamicalSystem, i, p_index, pvalues; kwargs...)
 Compute the orbit diagram (also called bifurcation diagram) of the given system
 for the `i`-th variable for parameter values `pvalues`. The `p_index` specifies
-which parameter of the equations of motion is to be changed, through
-`ds.p[p_index]`.
+which parameter of the equations of motion is to be changed.
+
+Returns a vector of vectors, where each entry are the points are each parameter value.
 
 ## Keyword Arguments
 * `ics = [state(ds)]` : container of initial conditions that
@@ -19,42 +20,41 @@ which parameter of the equations of motion is to be changed, through
 The method works by computing orbits at each parameter value in `pvalues` for each
 initial condition in `ics`.
 
-The parameter change is done as `ds.p[p_index] = ...` and thus you must use
-a parameter container that supports this (either `Array`, `LMArray` or other).
+The parameter change is done as `p[p_index] = ...` and thus you must use
+a parameter container that supports this (either `Array`, `LMArray`, dictionary
+or other).
 
 The returned `output` is a vector of vectors. `output[j]` are the orbit points of the
 `i`-th variable of the system, at parameter value `pvalues[j]`.
 
 See also [`poincaresos`](@ref) and [`produce_orbitdiagram`](@ref).
 """
-function orbitdiagram(ds::DiscreteDynamicalSystem, i::Int, p_index, pvalues;
-    n::Int = 100, Ttr::Int = 1000, ics = [state(ds)])
+function orbitdiagram(ds::DDS{IIP, S, D}, i::Int, p_index, pvalues;
+    n::Int = 100, Ttr::Int = 1000, ics = [state(ds)]) where {IIP, S, D}
 
-    if typeof(ds) <: DiscreteDS1D
+    if D == 1
         i != 1 &&
         error("You have a 1D system and yet you gave `i=$i`. What's up with that!?")
     end
 
-    u0 = deepcopy(state(ds))
-    T = eltype(state(ds))
-    output = Vector{Vector{T}}(length(pvalues))
+    output = [zeros(eltype(S), n*length(ics)) for i in 1:length(pvalues)]
+
+    integ = integrator(ds)
 
     for (j, p) in enumerate(pvalues)
 
-        ds.p[p_index] = p
+        integ.p[p_index] = p
 
         for (m, st) in enumerate(ics)
-            st = evolve(ds, Ttr, st)
-            set_state!(ds, st)
+            reinit!(integ, st)
+            step!(integ, Ttr)
 
-            if m == 1
-                output[j] = trajectory(ds, n)[:, i]
-            else
-                append!(output[j], trajectory(ds, n)[:, i])
+            for k in 1:n
+                step!(integ)
+                output[j][(m-1)*n + k] = integ.u[i]
             end
         end
     end
-    set_state!(ds, u0)
     return output
 end
 
@@ -67,16 +67,12 @@ const PSOS_ERROR =
 
 
 """
-    poincaresos(ds::ContinuousDS, j, tfinal = 100.0; kwargs...)
+    poincaresos(ds::ContinuousDynamicalSystem, j, tfinal = 100.0; kwargs...)
 Calculate the Poincaré surface of section (also called Poincaré map) [1, 2]
 of the given system on the plane of the `j`-th variable of the system.
 The system is evolved for total time of `tfinal`.
 
 Returns a [`Dataset`](@ref) of the points that are on the surface of section.
-
-This function assumes that you have created the `ContinuousDS` using functors; see the
-[official documentation](https://juliadynamics.github.io/DynamicalSystems.jl/latest/)
-for more.
 
 ## Keyword Arguments
 * `direction = 1` and `offset = 0.0` : The surface of section is defined as the
@@ -84,10 +80,11 @@ for more.
   have direction `sign(direction)` are considered to belong to the surface of section.
 * `Ttr = 0.0` : Transient time to evolve the system before starting
   to compute the PSOS.
-* `diff_eq_kwargs = Dict()` : See [`trajectory`](@ref).
-* `callback_kwargs = Dict(:abstol=>1e-9)` : Keyword arguments passed into
-  the `ContinuousCallback` type of `DifferentialEquations`. The option
-  `callback_kwargs[:idxs] = j` is enforced.
+* `diff_eq_kwargs` : See [`trajectory`](@ref).
+* `callback_kwargs = Dict(:abstol=>1e-6)` : Keyword arguments passed into
+  the `ContinuousCallback` type of `DifferentialEquations`, used to find
+  the section. The option `callback_kwargs[:idxs] = j` is enforced. Decreasing
+  the `abstol` makes the section more accurate.
 
 ## References
 [1] : H. Poincaré, *Les Methods Nouvelles de la Mécanique Celeste*,
@@ -98,32 +95,36 @@ Paris: Gauthier-Villars (1892)
 
 See also [`orbitdiagram`](@ref), [`produce_orbitdiagram`](@ref).
 """
-function poincaresos(ds::ContinuousDynamicalSystem, j::Int, tfinal = 100.0;
+function poincaresos(ds::CDS, j::Int, tfinal = 100.0;
     direction = +1, offset::Real = 0,
     diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
-    callback_kwargs = Dict{Symbol, Any}(:abstol=>1e-9),
+    callback_kwargs = Dict(:abstol=>1e-6),
     Ttr::Real = 0.0)
 
     pcb = psos_callback(j, direction, offset, callback_kwargs)
 
     if Ttr > 0
-        u0 = evolve(ds, Ttr, diff_eq_kwargs = diff_eq_kwargs)
+        integ = integrator(ds)
+        step!(integ, Ttr, true) # step exactly Ttr
+        u0 = integ.u
+        t0 = integ.t
     else
         u0 = state(ds)
+        t0 = inittime(ds)
     end
 
-    extra_kw = Dict(:save_start=>false, :save_end=>false)
+    psos_prob = ODEProblem(ds.prob.f, u0, (t0, t0+tfinal), ds.prob.p, callback = pcb)
 
-    psos_prob = ODEProblem(ds; t= tfinal, state = u0, callback = pcb)
+    solver, newkw = DynamicalSystemsBase.extract_solver(diff_eq_kwargs)
+    sol = solve(psos_prob, solver; newkw..., save_start = false, save_end = false,
+    save_everystep = false)
+    length(sol.u) == 0 && error(PSOS_ERROR)
 
-    solu, tvec = get_sol(psos_prob, diff_eq_kwargs, extra_kw)
-    length(solu) == 0 && error(PSOS_ERROR)
-
-    return Dataset(solu)
+    return Dataset(sol.u)
 end
 
-function psos_callback(j, direction = +1, offset::Real = 0,
-    callback_kwargs = Dict{Symbol, Any}(:abstol=>1e-9))
+function psos_callback(j, direction, offset,
+    callback_kwargs)
 
     # Prepare callback:
     s = sign(direction)
@@ -134,26 +135,6 @@ function psos_callback(j, direction = +1, offset::Real = 0,
     save_positions = (true,false), idxs = j)
 end
 
-
-# function psos2(ds::ContinuousDynamicalSystem, j::Int, tfinal = 100.0;
-#     direction = +1, offset::Real = 0,
-#     diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
-#     callback_kwargs = Dict{Symbol, Any}(:abstol=>1e-9),
-#     Ttr::Real = 0.0)
-#
-#     if Ttr > 0
-#         u0 = evolve(ds, Ttr, diff_eq_kwargs = diff_eq_kwargs)
-#     else
-#         u0 = state(ds)
-#     end
-#
-#     psos_prob = ODEProblem(ds; t= tfinal, state = u0)
-#
-#     solver, newkw = DynamicalSystemsBase.extract_solver(diff_eq_kwargs)
-#     integ = DiffEqBase.init(psos_prob, solver; newkw...)
-#
-#
-# end
 
 
 """
@@ -177,9 +158,9 @@ For each parameter, a PSOS reduces the system from a flow to a map. This then al
 the formal computation of an "orbit diagram" for one of the `i ≠ j` variables
 of the system, just like it is done in [`orbitdiagram`](@ref).
 
-The parameter change is done as `ds.prob.p[p_index] = ...` taking values from `pvalues`
+The parameter change is done as `p[p_index] = value` taking values from `pvalues`
 and thus you must use a parameter container that supports this
-(either `Array`, `LMArray` or other).
+(either `Array`, `LMArray`, dictionary or other).
 
 The returned `output` is a vector of vectors. `output[k]` are the
 "orbit diagram" points of the `i`-th variable of the system,
@@ -191,7 +172,7 @@ The total amount of PSOS produced will be `length(ics)*length(pvalues)`.
 See also [`poincaresos`](@ref), [`orbitdiagram`](@ref).
 """
 function produce_orbitdiagram(
-    ds::ContinuousDynamicalSystem,
+    ds::CDS,
     j::Int,
     i::Int,
     p_index,
@@ -201,32 +182,45 @@ function produce_orbitdiagram(
     direction = +1,
     offset::Real = 0,
     diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
-    callback_kwargs = Dict{Symbol, Any}(:abstol=>1e-6),
+    callback_kwargs = Dict(:abstol=>1e-6),
     printparams::Bool = false,
     Ttr::Real = 0.0)
 
     p0 = ds.prob.p[p_index]
-    T = eltype(ds)
-    output = Vector{Vector{T}}(length(pvalues))
-    extra_kw = Dict(:save_start=>false, :save_end=>false)
+    output = Vector{Vector{eltype(state(ds))}}(length(pvalues))
+    solver, newkw = DynamicalSystemsBase.extract_solver(diff_eq_kwargs)
 
     # Prepare callback problem
     pcb = psos_callback(j, direction, offset, callback_kwargs)
-    psos_prob = ODEProblem(ds; t= tfinal, state = state(ds), callback = pcb)
+    psos_prob = ODEProblem(
+        ds.prob.f, state(ds), (inittime(ds), inittime(ds)+tfinal),
+        ds.prob.p, callback = pcb)
+
+    psosinteg = init(psos_prob, solver; newkw..., save_start = false,
+    save_end = false, save_everystep=false)
+
+    integ = integrator(ds; diff_eq_kwargs = diff_eq_kwargs)
 
     for (n, p) in enumerate(pvalues)
-        # This sets the parameter on both the ds problem
-        # as well as the psos_prob:
-        psos_prob.p[p_index] = p
+        psosinteg.p[p_index] = p
+        integ.p[p_index] = p
         printparams && println("parameter = $p")
 
         for (m, st) in enumerate(ics)
 
-            Ttr > 0 && (st = evolve(ds, Ttr, st; diff_eq_kwargs = diff_eq_kwargs))
+            if Ttr > 0
+                reinit!(integ, st)
+                step!(integ, Ttr)
+                st0 = integ.u
+            else
+                st0 = st
+            end
 
-            psos_prob.u0 .= st
+            reinit!(psosinteg, st0)
 
-            solu, tvec = get_sol(psos_prob, diff_eq_kwargs, extra_kw)
+            solve!(psosinteg)
+
+            solu = psosinteg.sol.u
             length(solu) == 0 && error(PSOS_ERROR)
 
             out = [a[i] for a in solu]
@@ -239,7 +233,7 @@ function produce_orbitdiagram(
 
         end
     end
-    # Reset the field parameter of the system:
+    # Reset the parameter of the system:
     ds.prob.p[p_index] = p0
     return output
 end

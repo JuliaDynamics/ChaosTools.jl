@@ -3,8 +3,7 @@ using ChaosTools
 ti = time()
 
 # lyapunov Exponents:
-include(joinpath("lyapunovs", "discrete_lyapunov.jl"))
-include(joinpath("lyapunovs", "continuous_lyapunov.jl"))
+include("lyapunov_exponents.jl")
 # Entropies (and attractor dimensions)
 include("entropy_dimension.jl")
 include("permentropy.jl")

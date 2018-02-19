@@ -35,8 +35,7 @@ println("\nTesting chaos detection algorithms...")
             @test t[end] < 1000
         end
         @testset "regular" begin
-            ds.state = [π, rand()]
-            g, t = ChaosTools.gali(ds, k, 1000)
+            g, t = ChaosTools.gali(ds, k, 1000; u0 =  [π, rand()])
             @test t[end] == 1000
             @test g[end] > 1/1000^2
         end
@@ -55,10 +54,8 @@ println("\nTesting chaos detection algorithms...")
             @test g[end] > 1e-12
         end
 
-        ds = Systems.coupledstandardmaps(M, chaotic; ks=ks, Γ = Γ)
-
         @testset "chaotic k=$k" for k in [2,3,4, 5, 6]
-            g, t = gali(ds, k, 1000; threshold=1e-12)
+            g, t = gali(ds, k, 1000; threshold=1e-12, u0 = chaotic)
             @test t[end] < 1000
             @test g[end] ≤ 1e-12
         end
@@ -76,21 +73,18 @@ end
         ds = Systems.henonhelies()
         diffeq = Dict(:abstol=>1e-9, :reltol=>1e-9, :solver => Tsit5())
         @testset "regular" begin
-            ds.prob.u0 .= sp
             for k in [2,3,4]
-                g, t = gali(ds, k, tt; diff_eq_kwargs = diffeq)
+                g, t = gali(ds, k, tt; diff_eq_kwargs = diffeq, u0 = sp)
                 @test t[end] ≥ tt
             end
-            ds.prob.u0 .= qp
             for k in [2,3,4]
-                g, t = gali(ds, k, tt; diff_eq_kwargs = diffeq)
+                g, t = gali(ds, k, tt; diff_eq_kwargs = diffeq, u0 = qp)
                 @test t[end] ≥ tt
             end
         end
         @testset "chaotic" begin
-            ds.prob.u0 .= ch
             for k in [2,3,4]
-                g, t = gali(ds, k, tt; diff_eq_kwargs = diffeq)
+                g, t = gali(ds, k, tt; diff_eq_kwargs = diffeq, u0 = ch)
                 @test t[end] < tt
                 @test g[end] ≤ 1e-12
             end

@@ -42,6 +42,7 @@ orbits from e.g. least unstable to most unstable, see [3] for details.
 """
 function lambdamatrix(λ::Real, inds::AbstractVector{<:Integer},
     sings::AbstractVector{<:Real})
+    # this function seems to be super inefficient
 
     D = length(inds)
     D != length(sings) && throw(ArgumentError("inds and sings must have equal size."))
@@ -78,12 +79,10 @@ end
 
 
 """
-    periodicorbits(ds::DiscreteDS, o, ics [, λs, indss, singss] ; kwargs...) -> FP
-Find stable and unstable fixed points `FP` of order `o` for the map `ds`
-using the algorithm
-due to Schmelcher & Diakonos [1].
-`ics` is a collection of initial conditions
-(container of `SVector`s) to be evolved.
+    periodicorbits(ds::DiscreteDynamicalSystem, o, ics [, λs, indss, singss]; kwargs...) -> FP
+Find fixed points `FP` of order `o` for the map `ds`
+using the algorithm due to Schmelcher & Diakonos [1].
+`ics` is a collection of initial conditions (container of vectors) to be evolved.
 
 ## Optional Arguments
 The optional arguments `λs, indss, singss` *must be containers* of appropriate
@@ -108,18 +107,15 @@ a random permutation will be chosen for them, with `λ=0.001`.
    to get the full precision of the algorithm.
 
 ## Description
-The algorithm used can detect stable/unstable periodic orbits
-by turning stable/unstable fixed points of the original
-map `ds` to dissipatively stable ones, through the transformation
+The algorithm used can detect periodic orbits
+by turning fixed points of the original
+map `ds` to stable ones, through the transformation
 ```math
 \\mathbf{x}_{n+1} = \\mathbf{x}_n +
 \\mathbf{\\Lambda}_k\\left(f^{(o)}(\\mathbf{x}_n) - \\mathbf{x}_n\\right)
 ```
-with ``f`` = `ds.eom`. The index ``k`` counts the various
+with ``f`` = `eom`. The index ``k`` counts the various
 possible ``\\mathbf{\\Lambda}_k``.
-
-Note that algorithm is intented for *unstable* orbits, and thus there are cases
-where it may not work for stable orbits.
 
 ## Performance Notes
 *All* initial conditions are
@@ -130,55 +126,63 @@ long computation times.
 
 [1] : P. Schmelcher & F. K. Diakonos, Phys. Rev. Lett. **78**, pp 4733 (1997)
 """
-function periodicorbits(ds::DiscreteDS{D, T, F, J},
-                        o::Integer,
-                        ics::AbstractArray{SVector{D,T}},
+function periodicorbits(ds::DDS{false, S},
+                        o::Int,
+                        ics,
                         λs,
                         indss,
                         singss;
                         maxiters::Int = 100000,
                         disttol::Real = 1e-10,
                         inftol::Real = 10.0,
-                        roundtol::Int = 4) where {D, T, F, J}
+                        roundtol::Int = 4) where {S}
 
-    f = (x) -> ds.eom(x, ds.p)
-    FP = SVector{D, T}[]
+    FP = S[]
+    integ = integrator(ds)
     for λ in λs
         for inds in indss
             for sings in singss
                 Λ = lambdamatrix(λ, inds, sings)
-                _periodicorbits!(FP, f, o, ics, Λ, maxiters, disttol, inftol, roundtol)
+                _periodicorbits!(FP, integ, o, ics, Λ, maxiters, disttol, inftol, roundtol)
             end
         end
     end
-    return FP
+    return Dataset(FP)
 end
-
-function periodicorbits(ds::DiscreteDS{D, T, F, J},
-                        o::Integer,
-                        ics::AbstractArray{SVector{D,T}};
+function periodicorbits(ds::DDS{false, S},
+                        o::Int,
+                        ics;
                         maxiters::Int = 100000,
                         disttol::Real = 1e-10,
                         inftol::Real = 10.0,
-                        roundtol::Int = 4) where {D, T, F, J}
+                        roundtol::Int = 4) where {S}
 
-    f = (x) -> ds.eom(x, ds.p)
-    FP = SVector{D, T}[]
+    integ = integrator(ds)
+    FP = S[]
     Λ = lambdamatrix(0.001, dimension(ds))
-    _periodicorbits!(FP, f, o, ics, Λ, maxiters, disttol, inftol, roundtol)
-    return FP
+    _periodicorbits!(FP, integ, o, ics, Λ, maxiters, disttol, inftol, roundtol)
+    return Dataset(FP)
 end
+periodicorbits(::DDS{true}, args...; kwargs...) = error(
+"Currently `periodicorbits` is implemented only for out-of-place maps. Sorry!")
 
 function _periodicorbits!(
-    FP, f, o, ics, Λ, maxiter, disttol, inftol, roundtol)
+    FP, integ, o, ics, Λ, maxiter, disttol, inftol, roundtol)
 
-    Sk = (state) -> state + Λ*(iterate(state, f, o) - state)
+
+    Sk = (state) -> begin
+        integ.u = state
+        step!(integ, o)
+        state + Λ*(integ.u - state)
+    end
 
     for st in ics
+        reinit!(integ, st)
         for i in 1:maxiter
             prevst = st
             st = Sk(prevst)
             norm(st) > inftol && break
+
             if norm(prevst - st) < disttol
                 unist = round.(st, roundtol)
                 unist ∉ FP && push!(FP, unist)
@@ -186,11 +190,4 @@ function _periodicorbits!(
             end
         end
     end
-end
-
-function iterate(state, f, i::Integer=1)
-    for j in 1:i
-        state = f(state)
-    end
-    return state
 end

@@ -4,22 +4,18 @@ using OrdinaryDiffEq
 #                               Continuous GALI                                     #
 #####################################################################################
 """
-    gali(ds::DynamicalSystem, k::Int, tmax [, ws]; kwargs...) -> GALI_k, t
+    gali(ds::DynamicalSystem, tmax, k::Int; kwargs...) -> GALI_k, t
 Compute ``\\text{GALI}_k`` [1] for a given `k` up to time `tmax`.
-Return
-``\\text{GALI}_k(t)`` and time vector ``t``.
-
-`ws` is an optional argument
-containing the deviation vectors ``w_i`` for ``i \\in [1,k]``, expected either
-as a matrix with each column a deviation vector, or as a vector of vectors.
-If not given,
-random orthonormal vectors are chosen.
+Return ``\\text{GALI}_k(t)`` and time vector ``t``.
 
 ## Keyword Arguments
-* `threshold` : If `GALI_k` falls below the `threshold` iteration is terminated.
-  Default value is `1e-12`.
-* `dt=1.0` : Time step between variational vector normalizations for continuous systems.
+* `threshold = 1e-12` : If `GALI_k` falls below the `threshold` iteration is terminated.
+* `dt = 1` : Time-step between variational vector normalizations. Must be integer
+  for discrete systems.
 * `diff_eq_kwargs` : See [`trajectory`](@ref).
+* `u0` : Initial state for the system. Defaults to `state(ds)`.
+* `w0` : Initial orthonormal vectors (in matrix form).
+  Defaults to `orthonormal(dimension(ds), k)`, i.e. `k` random orthonormal vectors.
 
 ## Description
 The Generalized Alignment Index,
@@ -51,19 +47,18 @@ Traditionally, if ``\\text{GALI}_k(t)`` does not become less than
 the `threshold` until `tmax`
 the given orbit is said to be chaotic, otherwise it is regular.
 
-The entirety of our implementation is not based on the original paper, but rather in
+Our implementation is not based on the original paper, but rather in
 the method described in [2], which uses the product of the singular values of ``A``,
 a matrix that has as *columns* the deviation vectors.
 
 ## Performance Notes
-If you want to do repeated evaluations of `gali` for many initial conditions and for
-continuous systems, you can take advantage of the function:
+This function uses a [`tangent_integrator`](@ref). For loops over initial conditions and/or
+parameter values one should use the lower level methods that accept
+an integrator, and `reinit!` it to new initial conditions.
 
-    gali(integrator, k, W, tmax, dt, threshold)
-
-in conjuction with `reinit!(integrator, W)` for various `W=cat(2, state, ws)`.
-See the source code on how to
-set-up the `integrator` and `W` for the first time.
+See the "advanced documentation" for info on the integrator object
+and use `@which ...` to go to the source code for the low-level
+call signature.
 
 ## References
 
@@ -73,56 +68,129 @@ set-up the `integrator` and `W` for the first time.
 (section 5.3.1 and ref. [85] therein), Lecture Notes in Physics **915**,
 Springer (2016)
 """
-function gali(ds::ContinuousDynamicalSystem, k::Int, tmax::Real,
-    wss = qr(rand((dimension(ds)), dimension(ds)))[1][:, 1:k];
-    threshold = 1e-12, dt = 1.0, diff_eq_kwargs = Dict())
+function gali(ds::DS{IIP, S, D}, k::Int, tmax::Real;
+    w0 = orthonormal(dimension(ds), k),
+    threshold = 1e-12, dt = 1, diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
+    u0 = state(ds)) where {IIP, S, D}
 
-    ws = DynamicalSystemsBase.to_matrix(wss)
-    W = cat(2, ds.prob.u0, ws)
+    # Create tangent integrator:
+    if typeof(ds) <: DDS
+        tinteg = tangent_integrator(ds, w0; u0 = u0)
+    else
+        tinteg = tangent_integrator(ds, w0; diff_eq_kwargs = diff_eq_kwargs, u0 = u0)
+    end
+    k = size(w0)[2]
+    @assert k > 1
 
-    integrator = variational_integrator(ds, k, oftype(dt, tmax), W;
-    diff_eq_kwargs = diff_eq_kwargs)
-
-    return gali(integrator, k, W, tmax, dt, threshold)
+    return _gali(tinteg, tmax, dt, threshold)
 end
 
+function _gali(tinteg, tmax, dt, threshold)
 
+    rett = [tinteg.t]
+    gali_k = [one(eltype(tinteg.u))]
+    k = size(tinteg.u)[2] - 1
+    ws_index = SVector{k, Int}(2:(k+1)...)
+    t0 = tinteg.t
 
-@inbounds function gali(integrator, k, W, tmax, dt, threshold)
-
-    # warn("GALI has *not* been tested with periodic orbits of continuous systems!")
-    rett = 0:dt:tmax
-    gali_k = ones(eltype(W), length(rett))
-
-    ti=1
-
-    for ti in 2:length(rett)
-        τ = rett[ti]
-        # Evolve:
-        while integrator.t < τ
-            step!(integrator)
-        end
-        # Interpolate:
-        integrator(W, τ)
-        # Normalize
-        for j in 1:k
-            normalize!(view(W, :, j+1))
-        end
+    while tinteg.t < tmax + t0
+        step!(tinteg, dt)
+        # Normalize deviation vectors
+        normalize_deviations!(tinteg, ws_index)
         # Calculate singular values:
-        zs = svdfact(view(W, :, 2:k+1))[:S]
-        gali_k[ti] = prod(zs)
-        if gali_k[ti] < threshold
+        zs = singular_values(tinteg.u, ws_index)
+        push!(gali_k, prod(zs))
+        push!(rett, tinteg.t)
+
+        if gali_k[end] < threshold
             break
         end
-        for j in 1:k
-            normalize!(view(integrator.u, :, j+1))
-        end
-        u_modified!(integrator, true)
     end
-
-    return gali_k[1:ti], rett[1:ti]
+    return gali_k, rett
 end
 
+#####################################################################################
+#                 Helpers (normalize and singular values)                           #
+#####################################################################################
+# Super convienient dispatch that allows a single function
+using DynamicalSystemsBase: MDI
+# Contributed by @saschatimme
+function normalize_impl(::Type{SMatrix{D, K, T, DK}}) where {D, K, T, DK}
+    exprs = []
+    for j = 2:K
+        c_j = Symbol("c", j)
+        push!(exprs, :($c_j = normalize(A[:, $j])))
+    end
+
+    ops = Expr[]
+    for j=2:K, i=1:D
+        c_j = Symbol("c", j)
+        push!(ops, :($c_j[$i]))
+    end
+
+    Expr(:block,
+        exprs...,
+        Expr(:call, SMatrix{D, K-1, T, D*(K-1)}, ops...)
+        )
+end
+@generated function normalize_devs(A::SMatrix)
+    normalize_impl(A)
+end
+# ws_index is just the SVector(2:(k+1)...) which is also of type SVector{k}
+# OOP Versions:
+function normalize_deviations!(tinteg::ODEIntegrator{Alg, S}, ws_index) where{Alg, S<:SMatrix}
+    tinteg.u = hcat(tinteg.u[:, 1], normalize_devs(tinteg.u))
+    u_modified!(tinteg, true)
+    return
+end
+function normalize_deviations!(tinteg::MDI{false}, ws_index)
+    tinteg.u = hcat(tinteg.u[:, 1], normalize_devs(tinteg.u))
+    u_modified!(tinteg, true)
+    return
+end
+# IIP Versions:
+function normalize_deviations!(tinteg::ODEIntegrator{Alg, S}, ws_index) where{Alg, S<:Matrix}
+    for i in ws_index
+        normalize!(view(tinteg.u, :, i))
+    end
+    u_modified!(tinteg, true)
+    return
+end
+function normalize_deviations!(tinteg::MDI{true}, ws_index)
+    for i in ws_index
+        normalize!(view(tinteg.u, :, i))
+    end
+    u_modified!(tinteg, true)
+    return
+end
+
+# SVD methods:
+singular_values(u::Matrix, ws_index::SVector{k, Int}) where {k} =
+svdfact(view(u, :, 2:(k+1)))[:S]
+singular_values(u::SMatrix, ws_index::SVector{k, Int}) where {k} =
+svdfact(u[:, ws_index]).S
+
+# function test(
+#     integ::Union{A, B}) where
+#     {A<:ODEIntegrator{Alg, S} where {Alg, S<:SMatrix}, B<:MDI{false}}
+#   1
+# end
+#
+# function test(
+#     integ::Union{A, B}) where
+#     {A<:ODEIntegrator{Alg, S} where {Alg, S<:Matrix}, B<:MDI{true}}
+#   1
+# end
+
+# Version 1
+# test(integ::ODEIntegrator{Alg, S}) where{Alg, S<:SMatrix} = 1
+# test(integ::MDI{false}) = 1
+#
+# # Version 2
+# test(integ::ODEIntegrator{Alg, S}, ws_index) where{Alg, S<:Matrix} = 2
+# test(integ::MDI{true}) = 2
+
+#=
 #####################################################################################
 #                                 Discrete GALI                                     #
 #####################################################################################
@@ -205,3 +273,4 @@ end
 
     return gali_k[1:ti], rett[1:ti]
 end
+=#

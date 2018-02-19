@@ -78,11 +78,11 @@ function lyapunovs(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
 
     # Choose algorithm
     if IIP
-        if k == D && D < 20
-            return _lyapunovs_iip(tode, N, dt, Ttr, k, DynamicalSystemsBase.qr_sq)
-        else
+        # if k == D && D < 20
+        #     return _lyapunovs_iip(tode, N, dt, Ttr, k, DynamicalSystemsBase.qr_sq)
+        # else
             return _lyapunovs_iip(tode, N, dt, Ttr, k, Base.qr)
-        end
+        # end
     else
         return _lyapunovs_oop(tode, N, dt, Ttr, Val{k}())
     end

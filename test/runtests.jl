@@ -6,7 +6,6 @@ ti = time()
 include("lyapunov_exponents.jl")
 # Entropies (and attractor dimensions)
 include("entropy_dimension.jl")
-include("permentropy.jl")
 # Nonlinear Timeseries Analysis:
 include("nlts_tests.jl")
 # Periodicity:

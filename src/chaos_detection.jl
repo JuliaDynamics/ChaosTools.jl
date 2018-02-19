@@ -4,14 +4,9 @@ using OrdinaryDiffEq
 #                               Continuous GALI                                     #
 #####################################################################################
 """
-    gali(ds::DynamicalSystem, tmax, k::Int [, w0]; kwargs...) -> GALI_k, t
+    gali(ds::DynamicalSystem, tmax, k::Int; kwargs...) -> GALI_k, t
 Compute ``\\text{GALI}_k`` [1] for a given `k` up to time `tmax`.
 Return ``\\text{GALI}_k(t)`` and time vector ``t``.
-
-`w0` is an optional argument
-containing the deviation vectors ``w_i`` for ``i \\in [1,k]``, expected as a matrix
-with columns the deviation vectors. If not given,
-random orthonormal vectors are chosen.
 
 ## Keyword Arguments
 * `threshold = 1e-12` : If `GALI_k` falls below the `threshold` iteration is terminated.
@@ -19,6 +14,8 @@ random orthonormal vectors are chosen.
   for discrete systems.
 * `diff_eq_kwargs` : See [`trajectory`](@ref).
 * `u0` : Initial state for the system. Defaults to `state(ds)`.
+* `w0` : Initial orthonormal vectors (in matrix form).
+  Defaults to `orthonormal(dimension(ds), k)`, i.e. `k` random orthonormal vectors.
 
 ## Description
 The Generalized Alignment Index,
@@ -71,8 +68,8 @@ call signature.
 (section 5.3.1 and ref. [85] therein), Lecture Notes in Physics **915**,
 Springer (2016)
 """
-function gali(ds::DS{IIP, S, D}, k::Int, tmax::Real,
-    w0 = orthonormal(dimension(ds), k);
+function gali(ds::DS{IIP, S, D}, k::Int, tmax::Real;
+    w0 = orthonormal(dimension(ds), k),
     threshold = 1e-12, dt = 1, diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
     u0 = state(ds)) where {IIP, S, D}
 

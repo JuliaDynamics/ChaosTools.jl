@@ -338,8 +338,8 @@ function trajectory_matrix(x::AbstractArray, d::Int)
 end
 
 """
-    broomhead_king(x::AbstractVector, d::Int) -> U, S, Vtr
-Return the Broomhead-King coordinates of a timeseries `x`
+    broomhead_king(s::AbstractVector, d::Int) -> U, S, Vtr
+Return the Broomhead-King coordinates of a timeseries `s`
 by performing `svd` on the so-called trajectory matrix with dimension `d`.
 
 ## Description
@@ -347,7 +347,7 @@ Broomhead and King coordinates is a method proposed in [1] that applies the
 Karhunen–Loève theorem to delay coordinates embedding with smallest possible delay.
 
 The function performs singular value decomposition
-on the `d`-dimensional trajectory matrix ``X`` of ``x``,
+on the `d`-dimensional trajectory matrix ``X`` of ``s``,
 ```math
 X = \\frac{1}{\\sqrt{N}}\\left(
 \\begin{array}{cccc}
@@ -358,6 +358,7 @@ x_{N-d+1} & x_{N-d+2} &\\ldots & x_N
 \\end{array}
 \\right) = U\\cdot S \\cdot V^{tr}.
 ```
+where ``x := s - \\bar{s}``. 
 The columns of ``U`` can then be used as a new coordinate system, and by
 considering the values of the singular values ``S`` you can decide how many
 columns of ``U`` are "important". See the documentation page for example application.

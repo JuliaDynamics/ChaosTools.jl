@@ -87,7 +87,7 @@ KDTree(D::AbstractDataset) = KDTree(D.data, Euclidean())
 
 """
 ```julia
-numericallyapunov(R::Reconstruction, ks;  refstates, distance, method)
+numericallyapunov(R::Reconstruction, ks;  refstates, w, distance, method)
 ```
 Return `E = [E(k) for k ∈ ks]`, where `E(k)` is the average logarithmic distance for
 nearby states that are evolved in time for `k` steps (`k` must be integer).
@@ -98,6 +98,8 @@ nearby states that are evolved in time for `k` steps (`k` must be integer).
   that notes which
   states of the reconstruction should be used as "reference states", which means
   that the algorithm is applied for all state indices contained in `refstates`.
+* `w::Int = τ` : The Theiler window, which determines whether points are separated
+  enough in time to be considered separate trajectories.
 * `method::AbstractNeighborhood = FixedMassNeighborhood(1)` : The method to
   be used when evaluating
   the neighborhood of each reference state. See
@@ -141,7 +143,7 @@ the distances used are defined in the package
 [Distances.jl](https://github.com/JuliaStats/Distances.jl), but are re-exported here
 for ease-of-use.
 
-This function assumes that the Theiler window (see [1]) is the same as the delay time,
+This function uses the delay time as the default Theiler window (see [1]),
 ``w  = \\tau``.
 
 ## References
@@ -151,16 +153,18 @@ This function assumes that the Theiler window (see [1]) is the same as the delay
 
 [2] : Kantz, H., Phys. Lett. A **185**, pp 77–87 (1994)
 """
-function numericallyapunov(R::Reconstruction, ks;
+function numericallyapunov(R::Reconstruction{D, T, τ}, ks;
                            refstates = 1:(length(R) - ks[end]),
+                           w = τ,
                            distance = Cityblock(),
-                           method = FixedMassNeighborhood(1))
-    Ek = numericallyapunov(R, ks, refstates, distance, method)
+                           method = FixedMassNeighborhood(1)) where {D, T, τ}
+    Ek = numericallyapunov(R, ks, refstates, w, distance, method)
 end
 
 function numericallyapunov(R::Reconstruction{D, T, τ},
                            ks::AbstractVector{Int},
                            ℜ::AbstractVector{Int},
+                           w::Int,
                            distance::Metric,
                            method::AbstractNeighborhood) where {D, T, τ}
 
@@ -198,8 +202,8 @@ function numericallyapunov(R::Reconstruction{D, T, τ},
             # If `m` is nearer to the end of the timeseries than k allows
             # is it completely skipped (and length(⋓) reduced).
             # If m is closer to n than the Theiler window allows, also skip.
-            # It is assumed that w = τ (the Theiler window is the delay time)
-            if m > timethres || abs(m - n) <= τ
+            # The Theiler window defaults to τ
+            if m > timethres || abs(m - n) <= w
                 skippedm += 1
                 continue
             end

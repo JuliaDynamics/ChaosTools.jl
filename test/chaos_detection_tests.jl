@@ -70,7 +70,7 @@ end
         qp = [0, .483000, .278980390, 0] #quasiperiodic orbit: 2D torus
         ch = [0, -0.25, 0.42081, 0] # chaotic orbit
         tt = 1000
-        ds = Systems.henonhelies()
+        ds = Systems.henonheiles()
         diffeq = Dict(:abstol=>1e-9, :reltol=>1e-9, :solver => Tsit5())
         @testset "regular" begin
             for k in [2,3,4]

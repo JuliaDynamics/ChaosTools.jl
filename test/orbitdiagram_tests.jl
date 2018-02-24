@@ -45,7 +45,7 @@ end
 
 @testset "Poincare SOS" begin
   @testset "Henon Helies" begin
-    ds = Systems.henonhelies([0, .483000, .278980390, 0] )
+    ds = Systems.henonheiles([0, .483000, .278980390, 0] )
     psos = poincaresos(ds, 2, 1000.0, callback_kwargs = Dict(:abstol=>1e-12))
     xcross = psos[:, 2]
     @test length(xcross) > 1

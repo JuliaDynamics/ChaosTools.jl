@@ -99,7 +99,8 @@ nearby states that are evolved in time for `k` steps (`k` must be integer).
   states of the reconstruction should be used as "reference states", which means
   that the algorithm is applied for all state indices contained in `refstates`.
 * `w::Int = τ` : The Theiler window, which determines whether points are separated
-  enough in time to be considered separate trajectories.
+  enough in time to be considered separate trajectories (see [1]). Defaults to the 
+  delay time.
 * `method::AbstractNeighborhood = FixedMassNeighborhood(1)` : The method to
   be used when evaluating
   the neighborhood of each reference state. See
@@ -142,9 +143,6 @@ of the reconstruction `R`(distance ``d_F`` in ref. [1]). Notice that
 the distances used are defined in the package
 [Distances.jl](https://github.com/JuliaStats/Distances.jl), but are re-exported here
 for ease-of-use.
-
-This function uses the delay time as the default Theiler window (see [1]),
-``w  = \\tau``.
 
 ## References
 

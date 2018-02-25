@@ -3,6 +3,8 @@ if current_module() != ChaosTools
 end
 using Base.Test, StaticArrays, OrdinaryDiffEq
 
+println("\nTesting orbit diagrams...")
+
 @testset "Orbit Diagram" begin
   @testset "Discrete 1D" begin
     ds = Systems.logistic()

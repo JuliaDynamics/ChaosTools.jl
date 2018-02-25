@@ -18,6 +18,7 @@ PARAMS = [p, ph]
 MLE = [[0.75, 0.95], [0.41, 0.43]]
 SLE = [[-0.1, 0.1], [-1.63, -1.61]]
 
+@testset "Lyapunovs" begin
 for i in 1:8
     @testset "combination $i" begin
         sysindx = i < 5 ? 1 : 2
@@ -61,4 +62,5 @@ for i in 1:8
             @test MLE[sysindx][1] < λ2[1] < MLE[sysindx][2]
         end
     end
+end
 end

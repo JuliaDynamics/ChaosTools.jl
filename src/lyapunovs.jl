@@ -152,7 +152,7 @@ end
 inittest_default(D) = (state1, d0) -> state1 + d0/sqrt(D)
 
 """
-    lyapunov(ds::DynamicalSystem, Τ; kwargs...)
+    lyapunov(ds::DynamicalSystem, Τ; kwargs...) -> λ
 
 Calculate the maximum Lyapunov exponent `λ` using a method due to Benettin [1],
 which simply
@@ -173,21 +173,21 @@ while constantly rescaling the test one.
   `DifferentialEquations` package (see [`trajectory`](@ref) for more info).
 * `dt = 1` : Time of evolution between each check of
   distance exceeding the thresholds.
-* `inittest = (st1, d0) -> st1 .+ d0/sqrt(D)` :
-  A function that given `(st1, d0)`
+* `inittest = (u1, d0) -> u1 .+ d0/sqrt(D)` :
+  A function that given `(u1, d0)`
   initializes the test state with distance
-  `d0` from the given state `st1` (`D` is the dimension
+  `d0` from the given state `u1` (`D` is the dimension
   of the system). This function can be used when you want to avoid
   the test state appearing in a region of the phase-space where it would have
   e.g. different energy or escape to infinity.
 
 ## Description
 Two neighboring trajectories with initial distance `d0` are evolved in time.
-At time ``d(t_i)`` their distance either exceeds the `upper_threshold`,
+At time ``t_i`` their distance ``d(t_i)`` either exceeds the `upper_threshold`,
 or is lower than `lower_threshold`, which initializes
 a rescaling of the test trajectory back to having distance `d0` from
 the given one, while the rescaling keeps the difference vector along the maximal
-expansion/contraction direction.
+expansion/contraction direction: `` u_2 \\to u_1+(u_2−u_1)/(d(t_i)/d_0)``.
 
 The maximum
 Lyapunov exponent is the average of the time-local Lyapunov exponents

@@ -1,7 +1,7 @@
 ![DynamicalSystems.jl logo: The Double Pendulum](https://i.imgur.com/nFQFdB0.gif)
 
 Repository containing tools for the exploration of chaos and nonlinear dynamics. It
-is part of the ecosystem of [DynamicalSystems.jl](https://juliadynamics.github.io/DynamicalSystems.jl/latest/).
+is part of the library [DynamicalSystems.jl](https://juliadynamics.github.io/DynamicalSystems.jl/latest/).
 
 | **Documentation**   |  **Travis**     | **AppVeyor** | Gitter |
 |:--------:|:-------------------:|:-----:|:-----:|

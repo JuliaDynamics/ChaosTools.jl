@@ -1,5 +1,5 @@
 julia 0.6
-DynamicalSystemsBase 0.7 0.8
+DynamicalSystemsBase 0.7.3 0.8
 OrdinaryDiffEq 3.2.0
 DiffEqBase 3.5
 DiffEqCallbacks 1.0.0

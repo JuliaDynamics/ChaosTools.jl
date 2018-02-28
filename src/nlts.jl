@@ -1,85 +1,13 @@
-using NearestNeighbors, Requires, StaticArrays
+using NearestNeighbors, StaticArrays
+using DynamicalSystemsBase
 using StatsBase: autocor
 using Distances: Metric, Cityblock, Euclidean
-import NearestNeighbors: KDTree
 using LsqFit: curve_fit
 
-export Cityblock, Euclidean, AbstractNeighborhood
-export FixedMassNeighborhood, FixedSizeNeighborhood, numericallyapunov
-export neighborhood, KDTree
 export estimate_delay
 export broomhead_king
-#####################################################################################
-#                              Neighborhoods n stuff                                #
-#####################################################################################
-"""
-    AbstractNeighborhood
-Supertype of methods for deciding the neighborhood of points for a given point.
-
-Concrete subtypes:
-* `FixedMassNeighborhood(K::Int)`  : The neighborhood of a point consists of the `K`
-  nearest neighbors of the point.
-* `FixedSizeNeighborhood(ε::Real)` : The neighborhood of a point consists of all
-  neighbors that have distance < `ε` from the point.
-
-Notice that these distances are always computed using the `Euclidean()` distance
-in `D`-dimensional space.
-
-See also [`neighborhood`](@ref) or [`numericallyapunov`](@ref).
-"""
-abstract type AbstractNeighborhood end
-struct FixedMassNeighborhood <: AbstractNeighborhood
-    K::Int
-end
-FixedMassNeighborhood() = FixedMassNeighborhood(1)
-struct FixedSizeNeighborhood <: AbstractNeighborhood
-    ε::Float64
-end
-FixedSizeNeighborhood() = FixedSizeNeighborhood(0.001)
-
-"""
-    neighborhood(n, point, tree::KDTree, method::AbstractNeighborhood)
-Return a vector of indices which are the neighborhood of `point`, whose index
-in the original data is `n`.
-
-If the original data is `data <: AbstractDataset`, then
-use `tree = KDTree(data)` to obtain the `tree` instance (which also
-contains a copy of the data).
-Both `point` and `n` must be provided because the
-`tree` has indices in different sorting.
-
-The `method` can be a subtype of [`AbstractNeighborhood`](@ref).
-
-`neighborhood` works for *any* subtype of `AbstractDataset`, for example
-```julia
-R = some_dataset
-tree = KDTree(R)
-neigh = neighborhood(n, R[n], tree, method)
-```
-
-## References
-
-`neighborhood` simply interfaces the functions
-`knn` and `inrange` from
-[NearestNeighbors.jl](https://github.com/KristofferC/NearestNeighbors.jl) by using
-the last argument, `method`.
-"""
-function neighborhood(
-    n, point, tree::KDTree, method::FixedMassNeighborhood)
-    idxs, = knn(tree, point, method.K, false, i -> i==n)
-    return idxs
-end
-function neighborhood(
-    n, point, tree::KDTree, method::FixedSizeNeighborhood)
-    idxs = inrange(tree, point, method.ε)
-    deleteat!(idxs, findin(idxs, n)) # unfortunately this has to be done...
-    return idxs
-end
-neighborhood(n, point, tree::KDTree) =
-neighborhood(n, point, tree, FixedMassNeighborhood(1))
-
-KDTree(D::AbstractDataset) = KDTree(D.data, Euclidean())
-
+export numericallyapunov
+export Cityblock, Euclidean
 #####################################################################################
 #                    Numerical Lyapunov (from Reconstruction)                       #
 #####################################################################################
@@ -94,16 +22,15 @@ nearby states that are evolved in time for `k` steps (`k` must be integer).
 
 ## Keyword Arguments
 
-* `refstates::AbstractVector{Int} = 1:(length(R) - ks[end])` : Vector of indices
+* `refstates = 1:(length(R) - ks[end])` : Vector of indices
   that notes which
   states of the reconstruction should be used as "reference states", which means
   that the algorithm is applied for all state indices contained in `refstates`.
 * `w::Int = τ` : The Theiler window, which determines whether points are separated
-  enough in time to be considered separate trajectories (see [1]). Defaults to the 
+  enough in time to be considered separate trajectories (see [1]). Defaults to the
   delay time.
 * `method::AbstractNeighborhood = FixedMassNeighborhood(1)` : The method to
-  be used when evaluating
-  the neighborhood of each reference state. See
+  be used when evaluating the neighborhood of each reference state. See
   [`AbstractNeighborhood`](@ref) or [`neighborhood`](@ref) for more info.
 * `distance::Metric = Cityblock()` : The distance function used in the
   logarithmic distance of nearby states. The allowed distances are `Cityblock()`
@@ -139,10 +66,7 @@ If the `Metric` is `Euclidean()` then use the Euclidean distance of the
 full `D`-dimensional points (distance ``d_E`` in ref. [1]).
 If however the `Metric` is `Cityblock()`, calculate
 the absolute distance of *only the first elements* of the `m+k` and `n+k` points
-of the reconstruction `R`(distance ``d_F`` in ref. [1]). Notice that
-the distances used are defined in the package
-[Distances.jl](https://github.com/JuliaStats/Distances.jl), but are re-exported here
-for ease-of-use.
+of the reconstruction `R`(distance ``d_F`` in ref. [1]).
 
 ## References
 
@@ -360,7 +284,7 @@ x_{N-d+1} & x_{N-d+2} &\\ldots & x_N
 \\end{array}
 \\right) = U\\cdot S \\cdot V^{tr}.
 ```
-where ``x := s - \\bar{s}``. 
+where ``x := s - \\bar{s}``.
 The columns of ``U`` can then be used as a new coordinate system, and by
 considering the values of the singular values ``S`` you can decide how many
 columns of ``U`` are "important". See the documentation page for example application.

@@ -4,6 +4,7 @@
 ## Non-Breaking
 * Theiler window is now configurable in `numericallyapunov`.
 * Updated source and documentation for new `Reconstruction`.
+* Type-stability tests and improvements.
 
 # v0.6
 This version updates all internals to be on par with `DynamicalSystemsBase` 0.6

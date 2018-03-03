@@ -64,6 +64,7 @@ lyapunovs(ds, N, orthonormal(dimension(ds), k); kwargs...)
 function lyapunovs(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
     diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS, dt::Real = 1) where {IIP, S, D}
 
+    T = stateeltype(ds)
     # Create tangent integrator:
     if typeof(ds) <: DDS
         # Time assertions
@@ -77,19 +78,21 @@ function lyapunovs(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
     @assert k > 1
 
     # Choose algorithm
-    if IIP
+    λ::Vector{T} = if IIP
         # if k == D && D < 20
-        #     return _lyapunovs_iip(tode, N, dt, Ttr, k, DynamicalSystemsBase.qr_sq)
+        #     _lyapunovs_iip(tode, N, dt, Ttr, k, DynamicalSystemsBase.qr_sq)
         # else
-            return _lyapunovs_iip(tode, N, dt, Ttr, k, Base.qr)
+            _lyapunovs_iip(tode, N, dt, Ttr, k, Base.qr)::Vector{T}
         # end
     else
-        return _lyapunovs_oop(tode, N, dt, Ttr, Val{k}())
+        _lyapunovs_oop(tode, N, dt, Ttr, Val{k}())
     end
+    return λ
 end
 
 function _lyapunovs_iip(integ, N, dt::Real, Ttr::Real, k::Int, qrf::Function)
 
+    T = stateeltype(integ)
     t0 = integ.t
     if Ttr > 0
         while integ.t < t0 + Ttr
@@ -100,7 +103,7 @@ function _lyapunovs_iip(integ, N, dt::Real, Ttr::Real, k::Int, qrf::Function)
         end
     end
 
-    λ = zeros(k)
+    λ::Vector{T} = zeros(T, k)
     t0 = integ.t
 
     for i in 2:N
@@ -118,6 +121,7 @@ end
 
 function _lyapunovs_oop(integ, N, dt::Real, Ttr::Real, ::Val{k}) where {k}
 
+    T = stateeltype(integ)
     t0 = integ.t
     ws_idx = SVector{k, Int}(collect(2:k+1))
     D = size(state(integ))[1]
@@ -130,7 +134,7 @@ function _lyapunovs_oop(integ, N, dt::Real, Ttr::Real, ::Val{k}) where {k}
         u_modified!(integ, true)
     end
 
-    λ = zeros(k)
+    λ::Vector{T} = zeros(T, k)
     t0 = integ.t
 
     for i in 2:N
@@ -218,6 +222,7 @@ function lyapunov(ds::DS, T;
                   dt = 1
                   )
 
+    ST = stateeltype(ds)
     lower_threshold ≤ d0 ≤ upper_threshold || throw(ArgumentError(
     "d0 must be between thresholds!"))
     D = dimension(ds)
@@ -227,8 +232,8 @@ function lyapunov(ds::DS, T;
         pinteg = parallel_integrator(ds, [deepcopy(state(ds)), inittest(state(ds), d0)];
         diff_eq_kwargs = diff_eq_kwargs)
     end
-
-    return _lyapunov(pinteg, T, Ttr, dt, d0, upper_threshold, lower_threshold)
+    λ::ST = _lyapunov(pinteg, T, Ttr, dt, d0, upper_threshold, lower_threshold)
+    return λ
 end
 
 function _lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
@@ -242,6 +247,7 @@ function _lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
 
     t0 = pinteg.t
     d = λdist(pinteg)
+    d == 0 && error("Initial distance between states is zero!!!")
     rescale!(pinteg, d/d0); u_modified!(pinteg, true)
     λ = zero(d)
     while pinteg.t < t0 + T

@@ -1,13 +1,11 @@
 using NearestNeighbors, StaticArrays
-using DynamicalSystemsBase
-using StatsBase: autocor
+using DynamicalSystemsBase: AbstractReconstruction
 using Distances: Metric, Cityblock, Euclidean
-using LsqFit: curve_fit
 
-export estimate_delay
 export broomhead_king
 export numericallyapunov
 export Cityblock, Euclidean
+
 #####################################################################################
 #                    Numerical Lyapunov (from Reconstruction)                       #
 #####################################################################################
@@ -26,9 +24,9 @@ nearby states that are evolved in time for `k` steps (`k` must be integer).
   that notes which
   states of the reconstruction should be used as "reference states", which means
   that the algorithm is applied for all state indices contained in `refstates`.
-* `w::Int = τ` : The Theiler window, which determines whether points are separated
-  enough in time to be considered separate trajectories (see [1]). Defaults to the
-  delay time.
+* `w::Int = round(Int, mean(R.delay))` : The Theiler window, which determines
+  whether points are separated enough in time to be considered separate trajectories
+  (see [1]). Defaults to the mean delay time.
 * `method::AbstractNeighborhood = FixedMassNeighborhood(1)` : The method to
   be used when evaluating the neighborhood of each reference state. See
   [`AbstractNeighborhood`](@ref) or [`neighborhood`](@ref) for more info.
@@ -75,15 +73,15 @@ of the reconstruction `R`(distance ``d_F`` in ref. [1]).
 
 [2] : Kantz, H., Phys. Lett. A **185**, pp 77–87 (1994)
 """
-function numericallyapunov(R::Reconstruction{D, T, τ}, ks;
+function numericallyapunov(R::AbstractReconstruction{D, T, τ}, ks;
                            refstates = 1:(length(R) - ks[end]),
-                           w = τ,
+                           w = round(Int, mean(R.delay)),
                            distance = Cityblock(),
                            method = FixedMassNeighborhood(1)) where {D, T, τ}
     Ek = numericallyapunov(R, ks, refstates, w, distance, method)
 end
 
-function numericallyapunov(R::Reconstruction{D, T, τ},
+function numericallyapunov(R::AbstractReconstruction{D, T, τ},
                            ks::AbstractVector{Int},
                            ℜ::AbstractVector{Int},
                            w::Int,
@@ -161,90 +159,6 @@ end
     R::Reconstruction{D, T, τ}, m, n, k) where {D, T, τ}
     return norm(R[m+k] - R[n+k])
 end
-
-#####################################################################################
-#                      Estimate Reconstruction Parameters                           #
-#####################################################################################
-"""
-    localextrema(y) -> max_ind, min_ind
-Find the local extrema of given array `y`, by scanning point-by-point. Return the
-indices of the maxima (`max_ind`) and the indices of the minima (`min_ind`).
-"""
-function localextrema end
-@inbounds function localextrema(y)
-    l = length(y)
-    i = 1
-    maxargs = Int[]
-    minargs = Int[]
-    if y[1] > y[2]
-        push!(maxargs, 1)
-    elseif y[1] < y[2]
-        push!(minargs, 1)
-    end
-
-    for i in 2:l-1
-        left = i-1
-        right = i+1
-        if  y[left] < y[i] > y[right]
-            push!(maxargs, i)
-        elseif y[left] > y[i] < y[right]
-            push!(minargs, i)
-        end
-    end
-
-    if y[l] > y[l-1]
-        push!(maxargs, l)
-    elseif y[l] < y[l-1]
-        push!(minargs, l)
-    end
-    return maxargs, minargs
-end
-
-
-function exponential_decay_extrema(c::AbstractVector)
-    ac = abs.(c)
-    ma, mi = localextrema(ac)
-    # ma start from 1 but correlation is expected to start from x=0
-    ydat = ac[ma]; xdat = ma .- 1
-    # Do curve fit from LsqFit
-    model(x, p) = @. exp(-x/p[1])
-    decay = curve_fit(model, xdat, ydat, [1.0]).param[1]
-    return decay
-end
-
-function exponential_decay(c::AbstractVector)
-    # Do curve fit from LsqFit
-    model(x, p) = @. exp(-x/p[1])
-    decay = curve_fit(model, 0:length(c)-1, abs.(c), [1.0]).param[1]
-    return decay
-end
-
-"""
-    estimate_delay(s) -> τ
-Estimate an optimal delay to be used in [`Reconstruction`](@ref),
-by performing an exponential fit to
-the `abs.(c)` with `c` the auto-correlation function of `s`.
-Return the exponential decay time `τ` rounded to an integer.
-"""
-function estimate_delay(x::AbstractVector)
-    c = autocor(x, 0:length(x)÷10)
-    i = 1
-    # Find 0 crossing:
-    while c[i] > 0
-        i+= 1
-        i == length(c) && break
-    end
-    # Find exponential fit:
-    τ = exponential_decay(c)
-    # Is there a method to deduce which one of the 2 is the better approach?
-    return round(Int, τ)
-end
-
-# function estimate_dimension(s::AbstractVector)
-  # Estimate number of “false nearest neighbors” due to
-  # projection into a too low dimension reconstruction space
-# end
-
 
 
 

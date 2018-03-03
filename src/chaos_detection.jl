@@ -4,7 +4,7 @@ using OrdinaryDiffEq
 #                               Continuous GALI                                     #
 #####################################################################################
 """
-    gali(ds::DynamicalSystem, tmax, k::Int; kwargs...) -> GALI_k, t
+    gali(ds::DynamicalSystem, k::Int, tmax; kwargs...) -> GALI_k, t
 Compute ``\\text{GALI}_k`` [1] for a given `k` up to time `tmax`.
 Return ``\\text{GALI}_k(t)`` and time vector ``t``.
 
@@ -73,6 +73,8 @@ function gali(ds::DS{IIP, S, D}, k::Int, tmax::Real;
     threshold = 1e-12, dt = 1, diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
     u0 = state(ds)) where {IIP, S, D}
 
+    size(w0) != (dimension(ds), k) && throw(ArgumentError(
+    "w0 do not have correct size! Expected $((dimension(ds), k))"))
     # Create tangent integrator:
     if typeof(ds) <: DDS
         tinteg = tangent_integrator(ds, w0; u0 = u0)
@@ -82,7 +84,10 @@ function gali(ds::DS{IIP, S, D}, k::Int, tmax::Real;
     k = size(w0)[2]
     @assert k > 1
 
-    return _gali(tinteg, tmax, dt, threshold)
+    ST = stateeltype(ds)
+    TT = timetype(ds)
+    gal::Vector{ST}, tvec::Vector{TT} = _gali(tinteg, tmax, dt, threshold)
+    return gal, tvec
 end
 
 function _gali(tinteg, tmax, dt, threshold)

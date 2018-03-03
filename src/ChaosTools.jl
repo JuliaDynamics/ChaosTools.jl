@@ -11,6 +11,7 @@ using Reexport
 using DynamicalSystemsBase: DS, DDS
 using DynamicalSystemsBase: CDS, DEFAULT_DIFFEQ_KWARGS
 using DynamicalSystemsBase: MDI
+using DynamicalSystemsBase: stateeltype, timetype
 
 export reinit!
 

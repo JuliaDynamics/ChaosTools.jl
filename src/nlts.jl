@@ -13,7 +13,7 @@ export Cityblock, Euclidean
 
 """
 ```julia
-numericallyapunov(R::Reconstruction, ks;  refstates, w, distance, method)
+numericallyapunov(R::AbstractDataset, ks;  refstates, w, distance, method)
 ```
 Return `E = [E(k) for k ∈ ks]`, where `E(k)` is the average logarithmic distance for
 nearby states that are evolved in time for `k` steps (`k` must be integer).
@@ -26,7 +26,9 @@ nearby states that are evolved in time for `k` steps (`k` must be integer).
   that the algorithm is applied for all state indices contained in `refstates`.
 * `w::Int = round(Int, mean(R.delay))` : The Theiler window, which determines
   whether points are separated enough in time to be considered separate trajectories
-  (see [1]). Defaults to the mean delay time.
+  (see [1]). Defaults to the mean delay time. If you give a `Dataset` instead
+  of a `Reconstruction` in the place of `R`, you *must* provide the Theiler window
+  (you can give `w=typemax(Int)` if it does not apply to your case).
 * `method::AbstractNeighborhood = FixedMassNeighborhood(1)` : The method to
   be used when evaluating the neighborhood of each reference state. See
   [`AbstractNeighborhood`](@ref) or [`neighborhood`](@ref) for more info.
@@ -36,7 +38,7 @@ nearby states that are evolved in time for `k` steps (`k` must be integer).
 
 
 ## Description
-If the reconstruction
+If the dataset/reconstruction
 exhibits exponential divergence of nearby states, then it should clearly hold
 ```math
 E(k) \\approx \\lambda\\Delta t k + E(0)

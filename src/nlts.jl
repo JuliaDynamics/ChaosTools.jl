@@ -155,8 +155,7 @@ end
     abs(R[m+k][1] - R[n+k][1])
 end
 
-@inline @inbounds function delay_distance(di::Euclidean,
-    R::Reconstruction{D, T, τ}, m, n, k) where {D, T, τ}
+@inline @inbounds function delay_distance(di::Euclidean, R, m, n, k)
     return norm(R[m+k] - R[n+k])
 end
 

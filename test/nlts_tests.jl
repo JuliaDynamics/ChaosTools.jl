@@ -43,21 +43,21 @@ println("\nTesting nonlinear timeseries analysis...")
                 end
             end
         end
-        @testset "Multidim Multitime R" begin
-            ds = Systems.towel()
-            data = trajectory(ds, 10000)
-
-            taus = [0 0; 2 3; 4 6; 6 8]
-            data2 = data[:, 1:2]
-            R = Reconstruction(data2, 4, taus)
-
-            ks = 1:20
-            E = numericallyapunov(R, ks,
-            refstates = 1:1000, distance=Cityblock(), method=FixedMassNeighborhood(1))
-            λ = linear_region(ks, E)[2]
-            test_value(λ, 0.3, 0.5)
-        end
     end
+end
+@testset "Multidim Multitime R" begin
+    ds = Systems.towel()
+    data = trajectory(ds, 10000)
+
+    taus = [0 0; 2 3; 4 6; 6 8]
+    data2 = data[:, 1:2]
+    R = Reconstruction(data2, 4, taus)
+
+    ks = 1:20
+    E = numericallyapunov(R, ks,
+    refstates = 1:1000, distance=Cityblock(), method=FixedMassNeighborhood(1))
+    λ = linear_region(ks, E)[2]
+    test_value(λ, 0.3, 0.5)
 end
 
 @testset "Broomhead-King" begin

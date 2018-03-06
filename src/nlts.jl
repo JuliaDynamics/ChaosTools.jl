@@ -13,7 +13,7 @@ export Cityblock, Euclidean
 
 """
 ```julia
-numericallyapunov(R::Reconstruction, ks;  refstates, w, distance, method)
+numericallyapunov(R::AbstractDataset, ks;  refstates, w, distance, method)
 ```
 Return `E = [E(k) for k ∈ ks]`, where `E(k)` is the average logarithmic distance for
 nearby states that are evolved in time for `k` steps (`k` must be integer).
@@ -26,7 +26,9 @@ nearby states that are evolved in time for `k` steps (`k` must be integer).
   that the algorithm is applied for all state indices contained in `refstates`.
 * `w::Int = round(Int, mean(R.delay))` : The Theiler window, which determines
   whether points are separated enough in time to be considered separate trajectories
-  (see [1]). Defaults to the mean delay time.
+  (see [1]). Defaults to the mean delay time. If you give a `Dataset` instead
+  of a `Reconstruction` in the place of `R`, you *must* provide the Theiler window
+  (you can give `w=typemax(Int)` if it does not apply to your case).
 * `method::AbstractNeighborhood = FixedMassNeighborhood(1)` : The method to
   be used when evaluating the neighborhood of each reference state. See
   [`AbstractNeighborhood`](@ref) or [`neighborhood`](@ref) for more info.
@@ -36,7 +38,7 @@ nearby states that are evolved in time for `k` steps (`k` must be integer).
 
 
 ## Description
-If the reconstruction
+If the dataset/reconstruction
 exhibits exponential divergence of nearby states, then it should clearly hold
 ```math
 E(k) \\approx \\lambda\\Delta t k + E(0)
@@ -73,20 +75,20 @@ of the reconstruction `R`(distance ``d_F`` in ref. [1]).
 
 [2] : Kantz, H., Phys. Lett. A **185**, pp 77–87 (1994)
 """
-function numericallyapunov(R::AbstractReconstruction{D, T, τ}, ks;
+function numericallyapunov(R::AbstractDataset{D, T}, ks;
                            refstates = 1:(length(R) - ks[end]),
                            w = round(Int, mean(R.delay)),
                            distance = Cityblock(),
-                           method = FixedMassNeighborhood(1)) where {D, T, τ}
+                           method = FixedMassNeighborhood(1)) where {D, T}
     Ek = numericallyapunov(R, ks, refstates, w, distance, method)
 end
 
-function numericallyapunov(R::AbstractReconstruction{D, T, τ},
+function numericallyapunov(R::AbstractDataset{D, T},
                            ks::AbstractVector{Int},
                            ℜ::AbstractVector{Int},
                            w::Int,
                            distance::Metric,
-                           method::AbstractNeighborhood) where {D, T, τ}
+                           method::AbstractNeighborhood) where {D, T}
 
     # ℜ = \Re<tab> = set of indices that have the points that one finds neighbors.
     # n belongs in ℜ and R[n] is the "reference state".
@@ -155,8 +157,7 @@ end
     abs(R[m+k][1] - R[n+k][1])
 end
 
-@inline @inbounds function delay_distance(di::Euclidean,
-    R::Reconstruction{D, T, τ}, m, n, k) where {D, T, τ}
+@inline @inbounds function delay_distance(di::Euclidean, R, m, n, k)
     return norm(R[m+k] - R[n+k])
 end
 

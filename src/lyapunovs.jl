@@ -176,7 +176,8 @@ while constantly rescaling the test one.
   Keyword arguments passed into the solvers of the
   `DifferentialEquations` package (see [`trajectory`](@ref) for more info).
 * `dt = 1` : Time of evolution between each check of
-  distance exceeding the thresholds.
+  distance exceeding the thresholds. For continuous
+  systems this is approximate.
 * `inittest = (u1, d0) -> u1 .+ d0/sqrt(D)` :
   A function that given `(u1, d0)`
   initializes the test state with distance

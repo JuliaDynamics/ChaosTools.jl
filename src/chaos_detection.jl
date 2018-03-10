@@ -10,8 +10,8 @@ Return ``\\text{GALI}_k(t)`` and time vector ``t``.
 
 ## Keyword Arguments
 * `threshold = 1e-12` : If `GALI_k` falls below the `threshold` iteration is terminated.
-* `dt = 1` : Time-step between variational vector normalizations. Must be integer
-  for discrete systems.
+* `dt = 1` : Time-step between variational vector normalizations. For continuous
+  systems this is approximate.
 * `diff_eq_kwargs` : See [`trajectory`](@ref).
 * `u0` : Initial state for the system. Defaults to `state(ds)`.
 * `w0` : Initial orthonormal vectors (in matrix form).

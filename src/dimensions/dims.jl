@@ -1,5 +1,5 @@
 using LsqFit: curve_fit
-export linear_region, linear_regions, estimate_boxsizes
+export linear_region, linear_regions, estimate_boxsizes, saturation_point
 export boxcounting_dim, capacity_dim, generalized_dim,
 information_dim, correlation_dim, estimate_boxsizes,
 kaplanyorke_dim
@@ -122,6 +122,21 @@ function slope(xfit, yfit)
     # Find fit of tangent:
     curve_fit(model, xfit, yfit, p0).param[1]
 end
+
+"""
+    saturation_point(x, y; threshold = 0.01, dxi::Int = 1, tol = 0.2)
+Decompose the curve `y(x)` into linear regions using `linear_regions(x, y; dxi, tol)`
+and then attempt to find a saturation point where the the first slope
+of the linear regions become `< threshold`.
+
+Return the `x` value of the saturation point.
+"""
+function saturation_point(Ds, E1s; threshold = 0.01, kwargs...)
+    lrs, slops = ChaosTools.linear_regions(Ds, E1s; kwargs...)
+    i = findfirst(x -> x < threshold, slops)
+    return i == 0 ? Ds[end] : Ds[lrs[i]]
+end
+
 
 #######################################################################################
 # Dimensions

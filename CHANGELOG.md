@@ -1,3 +1,14 @@
+# v0.8
+* Methods for estimating Reconstruction parameters moved here.
+* Added Cao's method for estimating dimension.
+* Added methods to find delay time:
+  * First minimum
+  * First zero
+  * Exp. decay
+  * Mutual information (NOT exported, needs to be tested and documented)
+* Generalized `numericallyapunov` to allow choosing Theiler window
+  (and adopted it to new `neighborhood` function)
+  
 # v0.7
 ## Breaking
 * The code for estimating reconstruction parameters was moved to `DynamicalSystemsBase`.

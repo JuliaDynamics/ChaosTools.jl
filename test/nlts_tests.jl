@@ -1,6 +1,4 @@
-if current_module() != ChaosTools
-  using ChaosTools
-end
+using ChaosTools
 using Base.Test
 using Distances: Cityblock, Euclidean
 using Distributions: Normal
@@ -37,7 +35,7 @@ println("\nTesting nonlinear timeseries analysis...")
                 for D in [2, 4]
                     R = Reconstruction(x, D, 1)
                     E = numericallyapunov(R, ks,
-                    refstates = 1:1000, distance=di, method=meth)
+                    refstates = 1:1000, distance=di, ntype=meth)
                     λ = linear_region(ks, E)[2]
                     test_value(λ, 0.3, 0.5)
                 end
@@ -55,7 +53,7 @@ end
 
     ks = 1:20
     E = numericallyapunov(R, ks,
-    refstates = 1:1000, distance=Cityblock(), method=FixedMassNeighborhood(1))
+    refstates = 1:1000, distance=Cityblock(), ntype=FixedMassNeighborhood(1))
     λ = linear_region(ks, E)[2]
     test_value(λ, 0.3, 0.5)
 end

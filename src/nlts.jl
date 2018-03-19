@@ -12,9 +12,7 @@ export Cityblock, Euclidean
 # Everything in this section is based on Ulrich Parlitz [1]
 
 """
-```julia
-numericallyapunov(R::AbstractDataset, ks;  refstates, w, distance, method)
-```
+    numericallyapunov(R::AbstractDataset, ks;  refstates, w, distance, ntype)
 Return `E = [E(k) for k ∈ ks]`, where `E(k)` is the average logarithmic distance for
 nearby states that are evolved in time for `k` steps (`k` must be integer).
 
@@ -29,7 +27,7 @@ nearby states that are evolved in time for `k` steps (`k` must be integer).
   (see [1]). Defaults to the mean delay time. If you give a `Dataset` instead
   of a `Reconstruction` in the place of `R`, you *must* provide the Theiler window
   (you can give `w=typemax(Int)` if it does not apply to your case).
-* `method::AbstractNeighborhood = FixedMassNeighborhood(1)` : The method to
+* `ntype::AbstractNeighborhood = FixedMassNeighborhood(1)` : The method to
   be used when evaluating the neighborhood of each reference state. See
   [`AbstractNeighborhood`](@ref) or [`neighborhood`](@ref) for more info.
 * `distance::Metric = Cityblock()` : The distance function used in the
@@ -79,8 +77,8 @@ function numericallyapunov(R::AbstractDataset{D, T}, ks;
                            refstates = 1:(length(R) - ks[end]),
                            w = round(Int, mean(R.delay)),
                            distance = Cityblock(),
-                           method = FixedMassNeighborhood(1)) where {D, T}
-    Ek = numericallyapunov(R, ks, refstates, w, distance, method)
+                           ntype = FixedMassNeighborhood(1)) where {D, T}
+    Ek = numericallyapunov(R, ks, refstates, w, distance, ntype)
 end
 
 function numericallyapunov(R::AbstractDataset{D, T},
@@ -88,7 +86,7 @@ function numericallyapunov(R::AbstractDataset{D, T},
                            ℜ::AbstractVector{Int},
                            w::Int,
                            distance::Metric,
-                           method::AbstractNeighborhood) where {D, T}
+                           ntype::AbstractNeighborhood) where {D, T}
 
     # ℜ = \Re<tab> = set of indices that have the points that one finds neighbors.
     # n belongs in ℜ and R[n] is the "reference state".
@@ -97,7 +95,7 @@ function numericallyapunov(R::AbstractDataset{D, T},
     # ℜ = 1:(length(R) - ks[end])
 
     # ⩅(n) = \Cup<tab> = neighborhood of reference state n
-    # which is evaluated for each n and for the given neighborhood method
+    # which is evaluated for each n and for the given neighborhood ntype
 
     # Initialize:
     timethres = length(R) - ks[end]
@@ -119,7 +117,7 @@ function numericallyapunov(R::AbstractDataset{D, T},
         # Since ⋓[n] doesn't depend on `k` one can then interchange the loops:
         # Instead of k being the outermost loop, it becomes the innermost loop!
         point = data[n]
-        ⋓ = neighborhood(n, point, tree, method)
+        ⋓ = neighborhood(point, tree, ntype, n, w)
         for m in ⋓
             # If `m` is nearer to the end of the timeseries than k allows
             # is it completely skipped (and length(⋓) reduced).
@@ -184,7 +182,7 @@ Return the Broomhead-King coordinates of a timeseries `s`
 by performing `svd` on the so-called trajectory matrix with dimension `d`.
 
 ## Description
-Broomhead and King coordinates is a method proposed in [1] that applies the
+Broomhead and King coordinates is a ntype proposed in [1] that applies the
 Karhunen–Loève theorem to delay coordinates embedding with smallest possible delay.
 
 The function performs singular value decomposition

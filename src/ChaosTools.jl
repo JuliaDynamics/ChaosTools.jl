@@ -27,6 +27,7 @@ include("dimensions/dims.jl")
 
 # Nonlinear Timeseries Analysis:
 include("nlts.jl")
+include("estimate_reconstruction.jl")
 
 # Periodicity:
 include("periodic.jl")

@@ -89,6 +89,7 @@ function linear_regions(x::AbstractVector, y::AbstractVector;
 
     # Start loop over all partitions of `x` into `dxi` intervals:
     for k in 1:maxit-1
+        # tang = linreg(view(x, k*dxi:(k+1)*dxi), view(y, k*dxi:(k+1)*dxi))[2]
         tang = slope(view(x, k*dxi:(k+1)*dxi), view(y, k*dxi:(k+1)*dxi))
         if isapprox(tang, prevtang, rtol=tol)
             # Tanget is similar with initial previous one (based on tolerance)

@@ -7,7 +7,8 @@
   * Exp. decay
   * Mutual information (NOT exported, needs to be tested and documented)
 * Generalized `numericallyapunov` to allow choosing Theiler window
-  (and adopted it to new `neighborhood` function)
+  (and adopted it to new `neighborhood` function).
+* Keyword `method` in `numericallyapunov` changed to
   
 # v0.7
 ## Breaking

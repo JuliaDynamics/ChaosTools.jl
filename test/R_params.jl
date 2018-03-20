@@ -7,7 +7,7 @@ test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 @testset "Estimate Delay" begin
 
     ds = Systems.henon()
-    data = trajectory(ds,100)
+    data = trajectory(ds,100;dt=1)
     x = data[:,1]
     @test estimate_delay(x,"first_zero") <= 2
     @test estimate_delay(x,"first_min")  <= 2

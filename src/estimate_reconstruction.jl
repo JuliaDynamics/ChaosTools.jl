@@ -214,7 +214,6 @@ values of `E1` for each `D ∈ Ds`, according to Cao's Method [1].
 
 Return the vector of all computed `E1`s. To estimate a dimension from this,
 find the dimension for which the value `E1` saturates, at some value around 1.
-You can also use the function `saturation_point` with arguments `(Ds, E1s)`.
 
 *Note: This method does not work for datasets with perfectly periodic signals.*
 

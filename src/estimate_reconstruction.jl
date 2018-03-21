@@ -204,25 +204,23 @@ end
 
 
 """
-    estimate_dimension(s::AbstractVector, τ:Int, Ds) -> E1s
+    estimate_dimension(s::AbstractVector, τ:Int, Ds = 1:6) -> E1s
 
 Estimate an optimal embedding dimension to be used in [`Reconstruction`](@ref).
 
 ## Description
-Take a scalar timeseries `s`, the embedding delay `τ` and a the dimensions `Ds` to check,
-and compute the paramter `E1` for each dimension according to Cao's Method [1].
+Given the scalar timeseries `s` and the embedding delay `τ` compute the
+values of `E1` for each `D ∈ Ds`, according to Cao's Method [1].
 
-Return a vector of all computed `E1`s. To estimate a dimension from this,
-find the dimension for which the value `E1` saturates to 1 (see
-`saturation_point` from `ChaosTools`).
+Return the vector of all computed `E1`s. To estimate a dimension from this,
+find the dimension for which the value `E1` saturates, at some value around 1.
+You can also use the function `saturation_point` with arguments `(Ds, E1s)`.
 
 *Note: This method does not work for datasets with perfectly periodic signals.*
 
-
 ## References
 
-[1] : Liangyue Cao, *Practical method for determining the minimum embedding dimension
-of a scalar time series*, Physica D, pp. 43-50 (1997)
+[1] : Liangyue Cao, [Physica D, pp. 43-50 (1997)](https://doi.org/10.1016/S0167-2789(97)00118-8)
 """
 function estimate_dimension(s::AbstractVector{T}, τ::Int, Ds = 1:6) where {T}
     E1s = zeros(T, length(Ds))

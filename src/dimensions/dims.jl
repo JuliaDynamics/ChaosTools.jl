@@ -1,4 +1,3 @@
-using LsqFit: curve_fit
 export linear_region, linear_regions, estimate_boxsizes, saturation_point
 export boxcounting_dim, capacity_dim, generalized_dim,
 information_dim, correlation_dim, estimate_boxsizes,
@@ -6,24 +5,12 @@ kaplanyorke_dim
 #######################################################################################
 # Functions and methods to deduce linear scaling regions
 #######################################################################################
-"""
-    isevenly(a::AbstractVector)
-Check if `a` is evenly spaced.
-"""
-function isevenly(a::AbstractVector)
-    test = a[2] - a[1]
-    for i in 2:length(a)-1
-        if !(a[i+1] - a[i] ≈ test)
-            return false
-        end
-    end
-    true
-end
+slope(x, y) = linreg(x, y)[2]
 
 """
     linear_region(x, y; dxi::Int = 1, tol = 0.2) -> ([ind1, ind2], slope)
 Call [`linear_regions`](@ref), identify the largest linear region
-and approximate the slope of the entire region using least squares fit.
+and approximate the slope of the entire region using `linreg`.
 Return the indices where
 the region starts and stops (`x[ind1:ind2]`) as well as the approximated slope.
 """
@@ -32,14 +19,10 @@ function linear_region(x::AbstractVector, y::AbstractVector;
 
     # Find biggest linear region:
     reg_ind = max_linear_region(linear_regions(x,y; dxi=dxi, tol=tol)...)
-    # Prepare least squares fit:
+    # least squares fit:
     xfit = view(x, reg_ind[1]:reg_ind[2])
     yfit = view(y, reg_ind[1]:reg_ind[2])
-    p0 = [1.0, 1.0]
-    model(x, p) = p[1].*x .+ p[2]
-    # Find fit of tangent:
-    fit = curve_fit(model, xfit, yfit, p0)
-    approx_tang = fit.param[1]
+    approx_tang = slope(xfit, yfit)
     return reg_ind, approx_tang
 end
 
@@ -112,17 +95,6 @@ function linear_regions(x::AbstractVector, y::AbstractVector;
     return lrs, tangents
 end
 
-"""
-    slope(xdata, ydata)
-Perform linear fit to `y(x)` using the module `LsqFit` and return the calculated
-slope.
-"""
-function slope(xfit, yfit)
-    p0 = [(yfit[end] - yfit[1])/(xfit[end] - xfit[1]), yfit[1]]
-    model(x, p) = p[1].*x .+ p[2]
-    # Find fit of tangent:
-    curve_fit(model, xfit, yfit, p0).param[1]
-end
 
 """
     saturation_point(x, y; threshold = 0.01, dxi::Int = 1, tol = 0.2)

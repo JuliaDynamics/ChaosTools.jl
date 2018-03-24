@@ -32,12 +32,13 @@ a pre-initialized matrix `Q0` whose columns are initial deviation vectors (then
   `DifferentialEquations` package (see [`trajectory`](@ref) for more info).
 
 ## Description
-The method we employ is "H2" of [2], originally stated in [3]. The vectors
-defining a `D`-dimensional parallepiped are evolved using the tangent dynamics
-of the system.
+The method we employ is "H2" of [2], originally stated in [3]. The deviation vectors
+defining a `D`-dimensional parallepiped in tangent space
+are evolved using the tangent dynamics of the system.
 A QR-decomposition at each step yields the local growth rate for each dimension
 of the parallepiped. The growth rates are
-then averaged over `N` successive steps, yielding the lyapunov exponent spectrum.
+then averaged over `N` successive steps, yielding the lyapunov exponent spectrum
+(at each step the parallepiped is re-normalized).
 
 ## Performance Notes
 This function uses a [`tangent_integrator`](@ref).

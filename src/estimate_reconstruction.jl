@@ -219,7 +219,7 @@ find the dimension for which the value `E1` saturates, at some value around 1.
 
 ## References
 
-[1] : Liangyue Cao, [Physica D, pp. 43-50 (1997)](https://doi.org/10.1016/S0167-2789(97)00118-8)
+[1] : Liangyue Cao, [Physica D, pp. 43-50 (1997)](https://www.sciencedirect.com/science/article/pii/S0167278997001188?via%3Dihub)
 """
 function estimate_dimension(s::AbstractVector{T}, τ::Int, Ds = 1:6) where {T}
     E1s = zeros(T, length(Ds))

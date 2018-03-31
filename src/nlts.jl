@@ -13,8 +13,9 @@ export Cityblock, Euclidean
 
 """
     numericallyapunov(R::AbstractDataset, ks;  refstates, w, distance, ntype)
-Return `E = [E(k) for k ∈ ks]`, where `E(k)` is the average logarithmic distance for
-nearby states that are evolved in time for `k` steps (`k` must be integer).
+Return `E = [E(k) for k ∈ ks]`, where `E(k)` is the average logarithmic distance
+between states of a [`neighborhood`](@ref)
+that are evolved in time for `k` steps (`k` must be integer).
 
 ## Keyword Arguments
 
@@ -182,7 +183,7 @@ Return the Broomhead-King coordinates of a timeseries `s`
 by performing `svd` on the so-called trajectory matrix with dimension `d`.
 
 ## Description
-Broomhead and King coordinates is a ntype proposed in [1] that applies the
+Broomhead and King coordinates is an approach proposed in [1] that applies the
 Karhunen–Loève theorem to delay coordinates embedding with smallest possible delay.
 
 The function performs singular value decomposition

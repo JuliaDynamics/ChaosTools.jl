@@ -64,7 +64,7 @@ Optionally use `base` for the logarithms.
 ## Description
 Let ``p`` be an array of probabilities (summing to 1). Then the Rényi entropy is
 ```math
-R_\\alpha(p) = \\frac{1}{1-\\alpha}\\sum_i p[i]^\\alpha
+R_\\alpha(p) = \\frac{1}{1-\\alpha} \\log \\left(\\sum_i p[i]^\\alpha\\right)
 ```
 and generalizes other known entropies,
 like e.g. the information entropy

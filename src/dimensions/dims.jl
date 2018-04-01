@@ -181,7 +181,6 @@ The following aliases are provided:
 
   * α = 0 : `boxcounting_dim`, `capacity_dim`
   * α = 1 : `information_dim`
-  * α = 2 : `correlation_dim`
 """
 function generalized_dim(α, data::AbstractDataset, sizes = estimate_boxsizes(data))
     dd = genentropy.(α, sizes, data)
@@ -191,9 +190,6 @@ generalized_dim(α, matrix::AbstractMatrix, args...) =
 generalized_dim(α, convert(AbstractDataset, matrix), args...)
 
 # Aliases
-"correlation_dim(args...) = generalized_dim(2, args...)"
-correlation_dim(args...) = generalized_dim(2, args...)
-
 "capacity_dim(args...) = generalized_dim(0, args...)"
 capacity_dim(args...) = generalized_dim(0, args...)
 boxcounting_dim = capacity_dim

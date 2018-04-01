@@ -1,6 +1,6 @@
-# v0.8.1
+# v0.8.2
 * Docstring typos fixed
-* Removed aliases from `genentropy` but not from `generalized_dim`
+* Removed aliases from `genentropy` .
 
 # v0.8
 * Methods for estimating Reconstruction parameters moved here.

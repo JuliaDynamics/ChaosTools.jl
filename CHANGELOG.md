@@ -1,3 +1,7 @@
+# v0.8.1
+* Docstring typos fixed
+* Removed aliases from `genentropy` but not from `generalized_dim`
+
 # v0.8
 * Methods for estimating Reconstruction parameters moved here.
 * Added Cao's method for estimating dimension.
@@ -9,7 +13,7 @@
 * Generalized `numericallyapunov` to allow choosing Theiler window
   (and adopted it to new `neighborhood` function).
 * Keyword `method` in `numericallyapunov` changed to
-  
+
 # v0.7
 ## Breaking
 * The code for estimating reconstruction parameters was moved to `DynamicalSystemsBase`.

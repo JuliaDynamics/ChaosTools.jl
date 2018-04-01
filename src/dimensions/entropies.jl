@@ -1,6 +1,6 @@
 using Combinatorics: permutations
 
-export non0hist, genentropy, renyi, shannon, hartley, permentropy
+export non0hist, genentropy, permentropy
 
 """
 ```julia
@@ -62,21 +62,15 @@ sum-normalized.
 Optionally use `base` for the logarithms.
 
 ## Description
-The Rényi entropy
+Let ``p`` be an array of probabilities (summing to 1). Then the Rényi entropy is
 ```math
 R_\\alpha(p) = \\frac{1}{1-\\alpha}\\sum_i p[i]^\\alpha
 ```
-generalizes other known entropies,
+and generalizes other known entropies,
 like e.g. the information entropy
 (``\\alpha = 1``, see [2]), the maximum entropy (``\\alpha=0``,
 also known as Hartley entropy), or the correlation entropy
 (``\\alpha = 2``, also known as collision entropy).
-
-The following aliases are provided:
-
-* `renyi = genentropy`
-* `shannon(args...) = genentropy(1, args...)`
-* `hartley(args...) = genentropy(0, args...)`
 
 ## References
 
@@ -106,14 +100,8 @@ function genentropy{T<:Real}(α::Real, p::AbstractArray{T}; base = e)
     return (1/(1-α))*log(base, sum(x^α for x in p) ) #Renyi α entropy
   end
 end
-# Aliases:
-renyi = genentropy
 
-"shannon(args...) = genentropy(1, args...)"
-shannon(args...) = genentropy(1, args...)
 
-"hartley(args...) = genentropy(0, args...)"
-hartley(args...) = genentropy(0, args...)
 
 """
     permentropy(x::AbstractVector, order [, interval=1]; base = e)

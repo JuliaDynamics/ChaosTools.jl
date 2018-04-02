@@ -1,6 +1,9 @@
 using OrdinaryDiffEq, DiffEqBase
 export poincaresos, orbitdiagram, produce_orbitdiagram
 
+#####################################################################################
+#                                 Orbit Diagram                                     #
+#####################################################################################
 """
     orbitdiagram(ds::DiscreteDynamicalSystem, i, p_index, pvalues; kwargs...)
 Compute the orbit diagram (also called bifurcation diagram) of the given system
@@ -58,25 +61,62 @@ function orbitdiagram(ds::DDS{IIP, S, D}, i::Int, p_index, pvalues;
     return output
 end
 
-
+#####################################################################################
+#                               Poincare Section                                    #
+#####################################################################################
 const PSOS_ERROR =
-"The Poincaré surface of section did not have any points!"*
-" Check: If the variable chosen crosses the `offset`,"*
-" if the parameters used make it happen"*
-" and be sure you have integrated for enough time."
+"the Poincaré surface of section did not have any points!"
+
+function _check_plane(plane, D)
+    P = typeof(plane)
+    L = length(plane)
+    if P <: AbstractVector
+        if L != D + 1
+            throw(ArgumentError(
+            "The plane for the `poincaresos` must be either a 2-Tuple or a vector of "*
+            "length D+1 with D the dimension of the system."
+            ))
+        end
+    elseif P <: Tuple
+        if !(P <: Tuple{Int, Number})
+            throw(ArgumentError(
+            "If the plane for the `poincaresos` is a 2-Tuple then "*
+            "it must be subtype of `Tuple{Int, Number}`."
+            ))
+        end
+    else
+        throw(ArgumentError(
+        "Unrecognized type for the `plane` argument."
+        ))
+    end
+end
+
 
 
 """
-    poincaresos(ds::ContinuousDynamicalSystem, j, tfinal = 100.0; kwargs...)
+    poincaresos(ds::ContinuousDynamicalSystem, plane, tfinal = 1000.0; kwargs...)
 Calculate the Poincaré surface of section (also called Poincaré map) [1, 2]
-of the given system on the plane of the `j`-th variable of the system.
+of the given system with the given `plane`.
 The system is evolved for total time of `tfinal`.
+
+If the state of the system is ``\\mathbf{u} = (u_1, \\ldots, u_D)`` then the equation for
+the hyperplane is
+```math
+a_1u_1 + \\dots + a_Du_D = \\mathbf{a}\\cdot\\mathbf{u}=b
+```
+where ``\\mathbf{a}, b`` are the parameters that define the hyperplane.
+
+In code, `plane` can be either:
+
+* A `Tuple{Int, <: Number}`, like `(j, r)` : the hyperplane is defined
+  as when the `j` variable of the system crosses the value `r`.
+* An `AbstractVector` of length `D+1`. The first `D` elements of the
+  vector correspond to ``\\mathbf{a}`` while the last element is ``b``.
 
 Returns a [`Dataset`](@ref) of the points that are on the surface of section.
 
 ## Keyword Arguments
-* `direction = 1` and `offset = 0.0` : The surface of section is defined as the
-  (hyper-) plane where `state[j] = offset`. Only crossings of the plane that
+* `direction = 1` : Only crossings of the plane that
   have direction `sign(direction)` are considered to belong to the surface of section.
 * `Ttr = 0.0` : Transient time to evolve the system before starting
   to compute the PSOS.
@@ -85,6 +125,7 @@ Returns a [`Dataset`](@ref) of the points that are on the surface of section.
   the `ContinuousCallback` type of `DifferentialEquations`, used to find
   the section. The option `callback_kwargs[:idxs] = j` is enforced. Decreasing
   the `abstol` makes the section more accurate.
+* `warning = true` : Throw a warning if the Poincaré section was empty.
 
 ## References
 [1] : H. Poincaré, *Les Methods Nouvelles de la Mécanique Celeste*,
@@ -93,15 +134,18 @@ Paris: Gauthier-Villars (1892)
 [2] : M. Tabor, *Chaos and Integrability in Nonlinear Dynamics: An Introduction*,
 §4.1, in pp. 118-126, New York: Wiley (1989)
 
+[3] : This function is simply manipulating [`ContinuousCallback`](http://docs.juliadiffeq.org/latest/features/callback_functions.html) from
+DifferentialEquations.jl.
+
 See also [`orbitdiagram`](@ref), [`produce_orbitdiagram`](@ref).
 """
-function poincaresos(ds::CDS, j::Int, tfinal = 100.0;
-    direction = +1, offset::Real = 0,
-    diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
-    callback_kwargs = Dict(:abstol=>1e-6),
-    Ttr::Real = 0.0)
+function poincaresos(ds::CDS, plane, tfinal = 1000.0;
+    direction = +1, diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
+    callback_kwargs = Dict(:abstol=>1e-6), Ttr::Real = 0.0, warning = true)
 
-    pcb = psos_callback(j, direction, offset, callback_kwargs)
+    _check_plane(plane, dimension(ds))
+
+    pcb = psos_callback(plane, direction, callback_kwargs)
 
     if Ttr > 0
         integ = integrator(ds)
@@ -116,16 +160,17 @@ function poincaresos(ds::CDS, j::Int, tfinal = 100.0;
     psos_prob = ODEProblem(ds.prob.f, u0, (t0, t0+tfinal), ds.prob.p, callback = pcb)
 
     solver, newkw = DynamicalSystemsBase.extract_solver(diff_eq_kwargs)
+
     sol = solve(psos_prob, solver; newkw..., save_start = false, save_end = false,
     save_everystep = false)
-    length(sol.u) == 0 && error(PSOS_ERROR)
+
+    warning && length(sol.u) == 0 && warn(PSOS_ERROR)
 
     return Dataset(sol.u)
 end
 
-function psos_callback(j, direction, offset,
-    callback_kwargs)
-
+function psos_callback(plane::Tuple{Int, <:Number}, direction, callback_kwargs)
+    j, offset = plane
     # Prepare callback:
     s = sign(direction)
     cond = (u, t, integrator) -> s*(u - offset)
@@ -135,27 +180,42 @@ function psos_callback(j, direction, offset,
     save_positions = (true,false), idxs = j)
 end
 
+function psos_callback(plane::AbstractVector, direction, callback_kwargs)
+    b = plane[end]
+    a = plane[1:end-1]
+    # Prepare callback:
+    s = sign(direction)
+    cond = (u, t, integrator) -> s*(dot(u, a) - b)
+    affect! = (integrator) -> nothing
+
+    cb = DiffEqBase.ContinuousCallback(cond, affect!, nothing; callback_kwargs...,
+    save_positions = (true,false))
+end
 
 
+#####################################################################################
+#                            Produce Orbit Diagram                                  #
+#####################################################################################
 """
-    produce_orbitdiagram(ds::ContinuousDynamicalSystem, j, i,
+    produce_orbitdiagram(ds::ContinuousDynamicalSystem, plane, i::Int,
                          p_index, pvalues; kwargs...)
 Produce an orbit diagram (also called bifurcation diagram)
 for the `i`-th variable of the given continuous
-system by computing Poincaré surfaces of section
-of the `j`-th variable of the system for the given parameter values.
+system by computing Poincaré surfaces of section using `plane`
+for the given parameter values (see [`poincaresos`](@ref)).
 
 ## Keyword Arguments
-* `direction`, `offset`, `diff_eq_kwargs`, `callback_kwargs`, `Ttr` : Passed into
+* `direction`, `diff_eq_kwargs`, `callback_kwargs`, `Ttr` : Passed into
   [`poincaresos`](@ref).
 * `printparams::Bool = false` : Whether to print the parameter used during computation
   in order to keep track of running time.
 * `ics = [state(ds)]` : Collection of initial conditions. For every `state ∈ ics` a PSOS
   will be produced.
+* `warning = true` : Throw a warning if any Poincaré section was empty.
 
 ## Description
 For each parameter, a PSOS reduces the system from a flow to a map. This then allows
-the formal computation of an "orbit diagram" for one of the `i ≠ j` variables
+the formal computation of an "orbit diagram" for the `i` variable
 of the system, just like it is done in [`orbitdiagram`](@ref).
 
 The parameter change is done as `p[p_index] = value` taking values from `pvalues`
@@ -173,17 +233,17 @@ See also [`poincaresos`](@ref), [`orbitdiagram`](@ref).
 """
 function produce_orbitdiagram(
     ds::CDS,
-    j::Int,
+    plane,
     i::Int,
     p_index,
     pvalues;
     tfinal::Real = 100.0,
     ics = [state(ds)],
     direction = +1,
-    offset::Real = 0,
     diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
     callback_kwargs = Dict(:abstol=>1e-6),
     printparams::Bool = false,
+    warning = true,
     Ttr::Real = 0.0)
 
     p0 = ds.prob.p[p_index]
@@ -191,11 +251,12 @@ function produce_orbitdiagram(
     solver, newkw = DynamicalSystemsBase.extract_solver(diff_eq_kwargs)
 
     # Prepare callback problem
-    pcb = psos_callback(j, direction, offset, callback_kwargs)
+    pcb = psos_callback(plane, direction, callback_kwargs)
     psos_prob = ODEProblem(
         ds.prob.f, state(ds), (inittime(ds), inittime(ds)+tfinal),
         ds.prob.p, callback = pcb)
 
+    # TODO: Save only the index requested
     psosinteg = init(psos_prob, solver; newkw..., save_start = false,
     save_end = false, save_everystep=false)
 
@@ -221,7 +282,8 @@ function produce_orbitdiagram(
             solve!(psosinteg)
 
             solu = psosinteg.sol.u
-            length(solu) == 0 && error(PSOS_ERROR)
+            warning && length(solu) == 0 && warn(
+            "For parameter $p and initial condition index $m $PSOS_ERROR")
 
             out = [a[i] for a in solu]
 

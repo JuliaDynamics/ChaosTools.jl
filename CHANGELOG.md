@@ -1,3 +1,7 @@
+# v0.9
+* Upgraded `poincaresos` to work for any arbitrary hyperplane. The call signature had
+  to change to make it work.
+
 # v0.8.2
 * Docstring typos fixed
 * Removed aliases from `genentropy` .

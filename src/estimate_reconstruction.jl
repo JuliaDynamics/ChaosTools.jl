@@ -23,6 +23,8 @@ the second algorithm outlined by Kraskov [1^].
 - `k::Integer=1`: The number of nearest-neighbors to find
 
 [^1] : A. Kraskov *et al.*, [Phys. Rev. E **69**, pp 066138 (2004)](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.69.066138)
+
+See also [`estimate_delay`](@ref).
 """
 function mutinfo(k, Xm::Vararg{<:AbstractVector,M}) where M
     @assert M > 1
@@ -158,13 +160,12 @@ The `method` can be one of the following:
 * `first_zero` : find first delay at which the auto-correlation function becomes 0.
 * `first_min` : return delay of first minimum of the auto-correlation function.
 * `exp_decay` : perform an exponential fit to the `abs.(c)` with `c` the auto-correlation function of `s`.
-* `mutual_inf` : return the first minimum of the mutual information function
-
-# Keyword arguments:
-* `maxtau::Integer=100` : stops the delay calculations after the given `maxtau`. This may
-not be appropriate for all data (ie the optimal delay may be higher than the default `maxtau`)
-* `k::Integer=1` : the number of nearest-neighbors to include. As with `maxtau` the default
-value of 1 may not be appropriate for all data
+* `mutual_inf` : return the first minimum of the mutual information function (see [`mutinfo`](@ref). 
+  this option also has the following keyword arguments:
+    * `maxtau::Integer=100` : stops the delay calculations after the given `maxtau`. This may
+      not be appropriate for all data (ie the optimal delay may be higher than the default `maxtau`)
+    * `k::Integer=1` : the number of nearest-neighbors to include. As with `maxtau` the default
+      value of 1 may not be appropriate for all data
 """
 function estimate_delay(x::AbstractVector, method::String; maxtau=100, k=1)
     method ∈ ["first_zero", "first_min", "exp_decay", "mutual_inf"] ||

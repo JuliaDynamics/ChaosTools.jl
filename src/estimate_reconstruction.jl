@@ -11,16 +11,15 @@ export mutinfo, mutinfo_delaycurve
 #                                Mutual Information                                 #
 #####################################################################################
 """
-    mutinfo(X1, X2[, ..., Xm]; k=1)
+    mutinfo(k, X1, X2[, ..., Xm]) -> I
 
-Calculate the mutual information of the given vectors. Uses the second algorithm outlined by
-Kraskov et al. [^1].
+Calculate the mutual information `I` of the given vectors, using
+the second algorithm outlined by Kraskov [1^].
 
 # Keyword Arguments:
 - `k::Integer=1`: The number of nearest-neighbors to find
 
-[^1] A. Kraskov, H. Stögbauer, and P. Grassberger, “Estimating mutual information,”
-Phys. Rev. E, vol. 69, no. 6, p. 066138, Jun. 2004. doi:10.1103/PhysRevE.69.066138
+[^1] : A. Kraskov *et al.*, [Phys. Rev. E **69**, pp 066138 (2004)](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.69.066138)
 """
 function mutinfo(k, Xm::Vararg{<:AbstractVector,M}) where M
     @assert M > 1
@@ -74,7 +73,7 @@ end
 """
     mutinfo_delaycurve(x; maxtau=100, k=1)
 
-Return the mutual information between `x` and itself for delays of `1:maxtau`.
+Return the [`mutinfo`](@ref) between `x` and itself for delays of `1:maxtau`.
 """
 function mutinfo_delaycurve(X::AbstractVector; maxtau=100, k=1)
     I = zeros(maxtau)

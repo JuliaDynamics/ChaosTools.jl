@@ -13,12 +13,13 @@ export mutinfo, mutinfo_delaycurve
 """
     mutinfo(k, X1, X2[, ..., Xm]) -> I
 
-Calculate the mutual information `I` of the given vectors, using
+Calculate the mutual information `I` of the given vectors
+`X1, ....`, using `k` nearest-neighbors.
+
+The method follows
 the second algorithm outlined by Kraskov [1^].
 
-# Keyword Arguments:
-- `k::Integer=1`: The number of nearest-neighbors to find
-
+## References
 [^1] : A. Kraskov *et al.*, [Phys. Rev. E **69**, pp 066138 (2004)](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.69.066138)
 
 See also [`estimate_delay`](@ref).

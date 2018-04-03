@@ -1,6 +1,4 @@
-if current_module() != ChaosTools
-  using ChaosTools
-end
+using ChaosTools
 using Base.Test
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax

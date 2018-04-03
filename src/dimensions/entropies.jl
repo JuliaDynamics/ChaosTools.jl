@@ -37,20 +37,15 @@ function non0hist(ε::Real, data::AbstractDataset{D, T}) where {D, T<:Real}
         ind::SVector{D, Int} = floor.(Int, (point - mini)/ε)
 
         # Add 1 to the bin that contains the datapoint:
-        haskey(d, ind) || (d[ind] = 0) #check if you need to create key (= bin)
-        d[ind] += 1
+        d[ind] = get(d, ind, 0) + 1
     end
     return collect(values(d))./L
 end
 
-non0hist(ε::Real, matrix) = non0hist(ε, convert(Dataset, matrix))
-
 
 
 """
-```julia
-genentropy(α, ε, dataset::AbstractDataset; base = e)
-```
+    genentropy(α, ε, dataset::AbstractDataset; base = e)
 Compute the `α` order generalized (Rényi) entropy [1] of a dataset,
 by first partitioning it into boxes of length `ε` using [`non0hist`](@ref).
 ```julia

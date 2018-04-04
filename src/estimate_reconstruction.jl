@@ -17,7 +17,7 @@ export estimate_dimension, stochastic_indicator
     mutinfo(k, X1, X2[, ..., Xm]) -> I
 
 Calculate the mutual information `I` of the given vectors
-`X1, ....`, using `k` nearest-neighbors.
+`X1, X2, ...`, using `k` nearest-neighbors.
 
 The method follows
 the second algorithm outlined by Kraskov [1^].
@@ -153,20 +153,22 @@ end
 """
     estimate_delay(s, method::String) -> τ
 
-Estimate an optimal delay to be used in [`Reconstruction`](@ref). Returns the exponential
-decay time `τ` rounded to an integer.
+Estimate an optimal delay to be used in [`Reconstruction`](@ref).
+Return the exponential decay time `τ` rounded to an integer.
 
 The `method` can be one of the following:
 
 * `first_zero` : find first delay at which the auto-correlation function becomes 0.
 * `first_min` : return delay of first minimum of the auto-correlation function.
-* `exp_decay` : perform an exponential fit to the `abs.(c)` with `c` the auto-correlation function of `s`.
-* `mutual_inf` : return the first minimum of the mutual information function (see [`mutinfo`](@ref). 
-  this option also has the following keyword arguments:
-    * `maxtau::Integer=100` : stops the delay calculations after the given `maxtau`. This may
-      not be appropriate for all data (ie the optimal delay may be higher than the default `maxtau`)
-    * `k::Integer=1` : the number of nearest-neighbors to include. As with `maxtau` the default
-      value of 1 may not be appropriate for all data
+* `exp_decay` : perform an exponential fit to the `abs.(c)` with `c` the
+  auto-correlation function of `s`.
+* `mutual_inf` : return the first minimum of the mutual information function
+  (see [`mutinfo`](@ref)). This option also has the following keyword arguments:
+    * `maxtau::Integer=100` : stops the delay calculations after the given `maxtau`.
+      This may not be appropriate for all data (ie the optimal delay may be higher
+      than the default `maxtau`).
+    * `k::Integer=1` : the number of nearest-neighbors to include.
+      As with `maxtau` the default value of 1 may not be appropriate for all data
 """
 function estimate_delay(x::AbstractVector, method::String; maxtau=100, k=1)
     method ∈ ["first_zero", "first_min", "exp_decay", "mutual_inf"] ||
@@ -197,7 +199,7 @@ function estimate_delay(x::AbstractVector, method::String; maxtau=100, k=1)
         τ = exponential_decay(c)
         return round(Int,τ)
     elseif method=="mutual_inf"
-        m = mutinfo(k, x,x)
+        m = mutinfo(k, x, x)
         L = length(x)
         for i=1:maxtau
             n = mutinfo(k, view(x, 1:L-i), view(x, 1+i:L))

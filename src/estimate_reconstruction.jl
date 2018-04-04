@@ -19,11 +19,10 @@ export estimate_dimension, stochastic_indicator
 Calculate the mutual information `I` of the given vectors
 `X1, X2, ...`, using `k` nearest-neighbors.
 
-The method follows
-the second algorithm outlined by Kraskov [1^].
+The method follows the second algorithm ``I^{(2)}`` outlined by Kraskov in [1].
 
 ## References
-[^1] : A. Kraskov *et al.*, [Phys. Rev. E **69**, pp 066138 (2004)](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.69.066138)
+[1] : A. Kraskov *et al.*, [Phys. Rev. E **69**, pp 066138 (2004)](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.69.066138)
 
 See also [`estimate_delay`](@ref).
 """

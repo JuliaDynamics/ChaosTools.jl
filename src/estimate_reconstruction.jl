@@ -5,7 +5,7 @@ using LsqFit: curve_fit
 using StatsBase: autocor
 
 export estimate_delay
-export estimate_dimension
+export estimate_dimension, stochastic_indicator
 # export mutual_info
 
 #####################################################################################
@@ -206,11 +206,12 @@ end
 """
     estimate_dimension(s::AbstractVector, τ:Int, Ds = 1:6) -> E1s
 
-Estimate an optimal embedding dimension to be used in [`Reconstruction`](@ref).
+Compute a quantity that can estimate an optimal embedding
+dimension to be used in [`Reconstruction`](@ref).
 
 ## Description
 Given the scalar timeseries `s` and the embedding delay `τ` compute the
-values of `E1` for each `D ∈ Ds`, according to Cao's Method [1].
+values of `E1` for each `D ∈ Ds`, according to Cao's Method (eq. 3 of [1]).
 
 Return the vector of all computed `E1`s. To estimate a dimension from this,
 find the dimension for which the value `E1` saturates, at some value around 1.
@@ -234,27 +235,50 @@ function estimate_dimension(s::AbstractVector{T}, τ::Int, Ds = 1:6) where {T}
 end
 # then use function `saturation_point(Ds, E1s)` from ChaosTools
 
-function stochastic_indicator(s::AbstractVector{T},D,τ) where T # E2, equation (5)
+
+
+"""
+    stochastic_indicator(s::AbstractVector, τ:Int, Ds = 1:6) -> E2s
+
+Compute an estimator for apparent randomness in a reconstruction of dimensions `Ds`.
+
+## Description
+Given the scalar timeseries `s` and the embedding delay `τ` compute the
+values of `E2` for each `D ∈ Ds`, according to Cao's Method (eq. 5 of [1]).
+
+Use this function to confirm that the
+input signal is not random and validate the results of [`estimate_dimension`](@ref).
+In the case of random signals, it should be `E2 ≈ 1 ∀ D`.
+
+## References
+
+[1] : Liangyue Cao, [Physica D, pp. 43-50 (1997)](https://www.sciencedirect.com/science/article/pii/S0167278997001188?via%3Dihub)
+"""
+function stochastic_indicator(s::AbstractVector{T},τ, Ds=1:6) where T # E2, equation (5)
     #This function tries to tell the difference between deterministic
     #and stochastic signals
     #Calculate E* for Dimension D+1
-    R1 = Reconstruction(s,D+1,τ)
-    tree1 = KDTree(R1[1:end-1-τ])
-    method = FixedMassNeighborhood(2)
+    E2s = Float64[]
+    for D ∈ Ds
+        R1 = Reconstruction(s,D+1,τ)
+        tree1 = KDTree(R1[1:end-1-τ])
+        method = FixedMassNeighborhood(2)
 
-    Es1 = 0.
-    nind = (x = neighborhood(R1[1:end-τ], tree1, method); [ind[1] for ind in x])
-    for  (i,j) ∈ enumerate(nind)
-        Es1 += abs(R1[i+τ][end] - R1[j+τ][end]) / length(R1)
-    end
+        Es1 = 0.
+        nind = (x = neighborhood(R1[1:end-τ], tree1, method); [ind[1] for ind in x])
+        for  (i,j) ∈ enumerate(nind)
+            Es1 += abs(R1[i+τ][end] - R1[j+τ][end]) / length(R1)
+        end
 
-    #Calculate E* for Dimension D
-    R2 = Reconstruction(s,D,τ)
-    tree2 = KDTree(R2[1:end-1-τ])
-    Es2 = 0.
-    nind = (x = neighborhood(R2[1:end-τ], tree2, method); [ind[1] for ind in x])
-    for  (i,j) ∈ enumerate(nind)
-        Es2 += abs(R2[i+τ][end] - R2[j+τ][end]) / length(R2)
+        #Calculate E* for Dimension D
+        R2 = Reconstruction(s,D,τ)
+        tree2 = KDTree(R2[1:end-1-τ])
+        Es2 = 0.
+        nind = (x = neighborhood(R2[1:end-τ], tree2, method); [ind[1] for ind in x])
+        for  (i,j) ∈ enumerate(nind)
+            Es2 += abs(R2[i+τ][end] - R2[j+τ][end]) / length(R2)
+        end
+        push!(E2s, Es1/Es2)
     end
-    return Es1/Es2
+    return E2s
 end

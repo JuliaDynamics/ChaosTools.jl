@@ -251,7 +251,7 @@ input signal is not random and validate the results of [`estimate_dimension`](@r
 
 [1] : Liangyue Cao, [Physica D, pp. 43-50 (1997)](https://www.sciencedirect.com/science/article/pii/S0167278997001188?via%3Dihub)
 """
-function stochastic_indicator(s::AbstractVector{T},τ, Ds) where T # E2, equation (5)
+function stochastic_indicator(s::AbstractVector{T},τ, Ds=1:6) where T # E2, equation (5)
     #This function tries to tell the difference between deterministic
     #and stochastic signals
     #Calculate E* for Dimension D+1

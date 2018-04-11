@@ -206,11 +206,12 @@ end
 """
     estimate_dimension(s::AbstractVector, τ:Int, Ds = 1:6) -> E1s
 
-Estimate an optimal embedding dimension to be used in [`Reconstruction`](@ref).
+Compute a quantity that can estimate an optimal embedding
+dimension to be used in [`Reconstruction`](@ref).
 
 ## Description
 Given the scalar timeseries `s` and the embedding delay `τ` compute the
-values of `E1` for each `D ∈ Ds`, according to Cao's Method [1].
+values of `E1` for each `D ∈ Ds`, according to Cao's Method (eq. 3 of [1]).
 
 Return the vector of all computed `E1`s. To estimate a dimension from this,
 find the dimension for which the value `E1` saturates, at some value around 1.
@@ -234,18 +235,20 @@ function estimate_dimension(s::AbstractVector{T}, τ::Int, Ds = 1:6) where {T}
 end
 # then use function `saturation_point(Ds, E1s)` from ChaosTools
 
+
+
 """
     stochastic_indicator(s::AbstractVector, τ:Int, Ds = 1:6) -> E2s
 
-Estimate the apparent randomness in a reconstruction of dimensions Ds.
+Compute an estimator for apparent randomness in a reconstruction of dimensions `Ds`.
 
 ## Description
 Given the scalar timeseries `s` and the embedding delay `τ` compute the
-values of `E2` for each `D ∈ Ds`, according to Cao's Method [1].
+values of `E2` for each `D ∈ Ds`, according to Cao's Method (eq. 5 of [1]).
 
-Return the vector of all computed `E2`s. Use this function to confirm that the
+Use this function to confirm that the
 input signal is not random and validate the results of [`estimate_dimension`](@ref).
-`E2 ≈ 1` for all `D` in case of random signals.
+In the case of random signals, it should be `E2 ≈ 1 ∀ D`.
 
 ## References
 

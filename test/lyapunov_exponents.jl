@@ -64,3 +64,9 @@ for i in 1:8
     end
 end
 end
+
+@testset "1D Lyapunovs" begin
+    ds = Systems.logistic(;r = 4.0)
+    λ = lyapunov(ds, 10000; Ttr = 100)
+    @test 0.692 < λ < 0.694
+end

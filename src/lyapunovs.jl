@@ -151,6 +151,33 @@ function _lyapunovs_oop(integ, N, dt::Real, Ttr::Real, ::Val{k}) where {k}
     return λ
 end
 
+
+lyapunovs(ds::DynamicalSystem{IIP, T, 1}, a...; kw...) where {IIP, T} = error(
+"For 1D systems, only discrete & out-of-place method is implemented.")
+
+function lyapunovs(ds::DDS{false, T, 1}, N; Ttr = 0) where {T}
+
+    x = state(ds); f = ds.prob.f
+    p = ds.prob.p; t0 = ds.prob.t0
+    t = 0
+    if Ttr > 0
+        for i in t0:(Ttr+t0)
+            x = f(x, p, i)
+        end
+    end
+
+    λ = zero(T)
+
+    for i in (t0+Ttr):(t0+Ttr+N)
+        x = f(x, p, i)
+        λ += log(abs(ds.jacobian(x, p, i)))
+    end
+
+    return λ/N
+end
+
+lyapunov(ds::DDS{false, T, 1}, N; Ttr = 0) where {T} = lyapunovs(ds, N; Ttr = Ttr)
+
 #####################################################################################
 #                           Maximum Lyapunov Exponent                               #
 #####################################################################################

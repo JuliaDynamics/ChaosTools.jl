@@ -106,7 +106,6 @@ function _lyapunovs(integ, N, dt::Real, Ttr::Real)
             λ[i] += log(abs(R[i,i]))
         end
         set_deviations!(integ, Q)
-        u_modified!(integ, true)
     end
     λ ./= (integ.t - t0)
     return λ
@@ -249,7 +248,7 @@ function _lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
         # local lyapunov exponent is simply the relative distance of the trajectories
         a = d/d0
         λ += log(a)
-        rescale!(pinteg, a); u_modified!(pinteg, true)
+        rescale!(pinteg, a)
     end
     # Do final rescale, in case no other happened
     d = λdist(pinteg)
@@ -289,10 +288,13 @@ function rescale!(integ::ODEIntegrator{Alg, M}, a) where {Alg, M<:Matrix}
     for i in 1:size(integ.u)[1]
         integ.u[i, 2] = integ.u[i,1] + (integ.u[i,2] - integ.u[i,1])/a
     end
+    u_modified!(integ, true)
 end
 function rescale!(integ::ODEIntegrator{Alg, Vector{S}}, a) where {Alg, S<:Vector}
     @. integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
+    u_modified!(integ, true)
 end
 function rescale!(integ::ODEIntegrator{Alg, Vector{S}}, a) where {Alg, S<:SVector}
     integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
+    u_modified!(integ, true)
 end

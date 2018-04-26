@@ -13,7 +13,7 @@ which parameter of the equations of motion is to be changed.
 Returns a vector of vectors, where each entry are the points are each parameter value.
 
 ## Keyword Arguments
-* `ics = [state(ds)]` : container of initial conditions that
+* `ics = [get_state(ds)]` : container of initial conditions that
   are used at each parameter value to evolve orbits.
 * `Ttr::Int = 1000` : Transient steps;
   each orbit is evolved for `Ttr` first before saving output.
@@ -33,7 +33,7 @@ The returned `output` is a vector of vectors. `output[j]` are the orbit points o
 See also [`poincaresos`](@ref) and [`produce_orbitdiagram`](@ref).
 """
 function orbitdiagram(ds::DDS{IIP, S, D}, i::Int, p_index, pvalues;
-    n::Int = 100, Ttr::Int = 1000, ics = [state(ds)]) where {IIP, S, D}
+    n::Int = 100, Ttr::Int = 1000, ics = [get_state(ds)]) where {IIP, S, D}
 
     if D == 1
         i != 1 &&
@@ -153,7 +153,7 @@ function poincaresos(ds::CDS, plane, tfinal = 1000.0;
         u0 = integ.u
         t0 = integ.t
     else
-        u0 = state(ds)
+        u0 = get_state(ds)
         t0 = inittime(ds)
     end
 
@@ -209,7 +209,7 @@ for the given parameter values (see [`poincaresos`](@ref)).
   [`poincaresos`](@ref).
 * `printparams::Bool = false` : Whether to print the parameter used during computation
   in order to keep track of running time.
-* `ics = [state(ds)]` : Collection of initial conditions. For every `state ∈ ics` a PSOS
+* `ics = [get_state(ds)]` : Collection of initial conditions. For every `state ∈ ics` a PSOS
   will be produced.
 * `warning = true` : Throw a warning if any Poincaré section was empty.
 
@@ -238,7 +238,7 @@ function produce_orbitdiagram(
     p_index,
     pvalues;
     tfinal::Real = 100.0,
-    ics = [state(ds)],
+    ics = [get_state(ds)],
     direction = +1,
     diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
     callback_kwargs = Dict(:abstol=>1e-6),
@@ -247,13 +247,13 @@ function produce_orbitdiagram(
     Ttr::Real = 0.0)
 
     p0 = ds.prob.p[p_index]
-    output = Vector{Vector{eltype(state(ds))}}(length(pvalues))
+    output = Vector{Vector{eltype(get_state(ds))}}(length(pvalues))
     solver, newkw = DynamicalSystemsBase.extract_solver(diff_eq_kwargs)
 
     # Prepare callback problem
     pcb = psos_callback(plane, direction, callback_kwargs)
     psos_prob = ODEProblem(
-        ds.prob.f, state(ds), (inittime(ds), inittime(ds)+tfinal),
+        ds.prob.f, get_state(ds), (inittime(ds), inittime(ds)+tfinal),
         ds.prob.p, callback = pcb)
 
     # TODO: Save only the index requested

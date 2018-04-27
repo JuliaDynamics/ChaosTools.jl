@@ -13,7 +13,7 @@ Return ``\\text{GALI}_k(t)`` and time vector ``t``.
 * `dt = 1` : Time-step between variational vector normalizations. For continuous
   systems this is approximate.
 * `diff_eq_kwargs` : See [`trajectory`](@ref).
-* `u0` : Initial state for the system. Defaults to `state(ds)`.
+* `u0` : Initial state for the system. Defaults to `get_state(ds)`.
 * `w0` : Initial orthonormal vectors (in matrix form).
   Defaults to `orthonormal(dimension(ds), k)`, i.e. `k` random orthonormal vectors.
 
@@ -22,9 +22,9 @@ The Generalized Alignment Index,
 ``\\text{GALI}_k``, is an efficient (and very fast) indicator of chaotic or regular
 behavior type in ``D``-dimensional Hamiltonian systems
 (``D`` is number of variables). The *asymptotic* behavior of
-``\\text{GALI}_k(t)`` depends critically of
+``\\text{GALI}_k(t)`` depends critically on
 the type of orbit resulting
-from the initial condition `state(ds)`. If it is a chaotic orbit, then
+from the initial condition. If it is a chaotic orbit, then
 ```math
 \\text{GALI}_k(t) \\sim
 \\exp\\left[\\sum_{j=1}^k (\\lambda_1 - \\lambda_j)t \\right]
@@ -71,7 +71,7 @@ Springer (2016)
 function gali(ds::DS{IIP, S, D}, k::Int, tmax::Real;
     w0 = orthonormal(dimension(ds), k),
     threshold = 1e-12, dt = 1, diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
-    u0 = state(ds)) where {IIP, S, D}
+    u0 = get_state(ds)) where {IIP, S, D}
 
     size(w0) != (dimension(ds), k) && throw(ArgumentError(
     "w0 do not have correct size! Expected $((dimension(ds), k))"))
@@ -94,16 +94,14 @@ function _gali(tinteg, tmax, dt, threshold)
 
     rett = [tinteg.t]
     gali_k = [one(eltype(tinteg.u))]
-    k = size(tinteg.u)[2] - 1
-    ws_index = SVector{k, Int}(2:(k+1)...)
     t0 = tinteg.t
 
     while tinteg.t < tmax + t0
         step!(tinteg, dt)
         # Normalize deviation vectors
-        normalize_deviations!(tinteg, ws_index)
+        normalize_deviations!(tinteg)
         # Calculate singular values:
-        zs = singular_values(tinteg.u, ws_index)
+        zs = svdfact(get_deviations(tinteg)).S
         push!(gali_k, prod(zs))
         push!(rett, tinteg.t)
 
@@ -115,62 +113,65 @@ function _gali(tinteg, tmax, dt, threshold)
 end
 
 #####################################################################################
-#                 Helpers (normalize and singular values)                           #
+#                            Normalize Deviation Vectors                            #
 #####################################################################################
-# Super convienient dispatch that allows a single function
-using DynamicalSystemsBase: MDI
-# Contributed by @saschatimme
+# Metaprogramming ontributed by @saschatimme
 function normalize_impl(::Type{SMatrix{D, K, T, DK}}) where {D, K, T, DK}
     exprs = []
-    for j = 2:K
+    for j = 1:K
         c_j = Symbol("c", j)
         push!(exprs, :($c_j = normalize(A[:, $j])))
     end
 
     ops = Expr[]
-    for j=2:K, i=1:D
+    for j=1:K, i=1:D
         c_j = Symbol("c", j)
         push!(ops, :($c_j[$i]))
     end
 
     Expr(:block,
         exprs...,
-        Expr(:call, SMatrix{D, K-1, T, D*(K-1)}, ops...)
+        Expr(:call, SMatrix{D, K, T, D*K}, ops...)
         )
 end
 @generated function normalize_devs(A::SMatrix)
     normalize_impl(A)
 end
-# ws_index is just the SVector(2:(k+1)...) which is also of type SVector{k}
-# OOP Versions:
-function normalize_deviations!(tinteg::ODEIntegrator{Alg, S}, ws_index) where{Alg, S<:SMatrix}
-    tinteg.u = hcat(tinteg.u[:, 1], normalize_devs(tinteg.u))
-    u_modified!(tinteg, true)
+
+# I AM SURE THE FOLLOWING CAN BE SHORTENED USING UNIONS!!!
+
+# OOP version (either cont or disc)
+function normalize_deviations!(
+    tinteg::ODEIntegrator{Alg, S}) where {Alg, S<:SMatrix}
+    norms = normalize_devs(get_deviations(tinteg))
+    set_deviations!(tinteg, norms)
     return
 end
-function normalize_deviations!(tinteg::MDI{false}, ws_index)
-    tinteg.u = hcat(tinteg.u[:, 1], normalize_devs(tinteg.u))
-    u_modified!(tinteg, true)
-    return
-end
-# IIP Versions:
-function normalize_deviations!(tinteg::ODEIntegrator{Alg, S}, ws_index) where{Alg, S<:Matrix}
-    for i in ws_index
-        normalize!(view(tinteg.u, :, i))
-    end
-    u_modified!(tinteg, true)
-    return
-end
-function normalize_deviations!(tinteg::MDI{true}, ws_index)
-    for i in ws_index
-        normalize!(view(tinteg.u, :, i))
-    end
-    u_modified!(tinteg, true)
+function normalize_deviations!(
+    tinteg::TDI{false})
+    norms = normalize_devs(get_deviations(tinteg))
+    set_deviations!(tinteg, norms)
     return
 end
 
-# SVD methods:
-singular_values(u::Matrix, ws_index::SVector{k, Int}) where {k} =
-svdfact(view(u, :, 2:(k+1)))[:S]
-singular_values(u::SMatrix, ws_index::SVector{k, Int}) where {k} =
-svdfact(u[:, ws_index]).S
+# IIP
+function normalize_inplace!(A)
+    for i in 1:size(A)[2]
+        normalize!(view(A, :, i))
+    end
+end
+function normalize_deviations!(tinteg::Union{
+        ODEIntegrator{Alg, S},
+        MDI{Alg, S}}) where {Alg, S<:Matrix}
+    A = get_deviations(tinteg)
+    normalize_inplace!(A)
+    # no reason to call set_deviations, because
+    # get_deviations always returns views for IIP
+    u_modified!(tinteg, true)
+    return
+end
+function normalize_deviations!(tinteg::TDI{true})
+    A = get_deviations(tinteg)
+    normalize_inplace!(A)
+    return
+end

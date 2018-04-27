@@ -70,94 +70,53 @@ function lyapunovs(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
     if typeof(ds) <: DDS
         # Time assertions
         @assert typeof(Ttr) == Int
-        tode = tangent_integrator(ds, Q0; t0 = inittime(ds)+Ttr)
+        integ = tangent_integrator(ds, Q0; t0 = inittime(ds)+Ttr)
     else
-        tode = tangent_integrator(ds, Q0; diff_eq_kwargs = diff_eq_kwargs,
+        integ = tangent_integrator(ds, Q0; diff_eq_kwargs = diff_eq_kwargs,
         t0 = inittime(ds)+Ttr)
     end
     k = size(Q0)[2]
     @assert k > 1
 
     # Choose algorithm
-    λ::Vector{T} = if IIP
-        # if k == D && D < 20
-        #     _lyapunovs_iip(tode, N, dt, Ttr, k, DynamicalSystemsBase.qr_sq)
-        # else
-            _lyapunovs_iip(tode, N, dt, Ttr, k, Base.qr)::Vector{T}
-        # end
-    else
-        _lyapunovs_oop(tode, N, dt, Ttr, Val{k}())
-    end
+    λ::Vector{T} = _lyapunovs(integ, N, dt, Ttr)
     return λ
 end
 
-function _lyapunovs_iip(integ, N, dt::Real, Ttr::Real, k::Int, qrf::Function)
+function _lyapunovs(integ, N, dt::Real, Ttr::Real)
 
     T = stateeltype(integ)
     t0 = integ.t
     if Ttr > 0
         while integ.t < t0 + Ttr
             step!(integ, dt)
-            Q, R = qrf(view(integ.u, :, 2:k+1))
-            view(integ.u, :, 2:k+1) .= Q
+            Q, R = qr(get_deviations(integ))
+            set_deviations!(integ, Q)
             u_modified!(integ, true)
         end
     end
-
+    k = size(get_deviations(integ))[2]
     λ::Vector{T} = zeros(T, k)
     t0 = integ.t
 
     for i in 2:N
         step!(integ, dt)
-        Q, R = qrf(view(integ.u, :, 2:k+1))
+        Q, R = qr(get_deviations(integ))
         for i in 1:k
             λ[i] += log(abs(R[i,i]))
         end
-        view(integ.u, :, 2:k+1) .= Q
-        u_modified!(integ, true)
+        set_deviations!(integ, Q)
     end
     λ ./= (integ.t - t0)
     return λ
 end
-
-function _lyapunovs_oop(integ, N, dt::Real, Ttr::Real, ::Val{k}) where {k}
-
-    T = stateeltype(integ)
-    t0 = integ.t
-    ws_idx = SVector{k, Int}(collect(2:k+1))
-    D = size(state(integ))[1]
-    O = D*k; T = eltype(state(integ))
-
-    if Ttr > 0
-        step!(integ, dt)
-        Q, R = qr(integ.u[:, ws_idx])
-        integ.u = hcat(integ.u[:,1], Q)
-        u_modified!(integ, true)
-    end
-
-    λ::Vector{T} = zeros(T, k)
-    t0 = integ.t
-
-    for i in 2:N
-        step!(integ, dt)
-        Q, R = qr(integ.u[:, ws_idx])
-        for i in 1:k
-            λ[i] += log(abs(R[i,i]))
-        end
-        integ.u = hcat(integ.u[:,1], Q)
-        u_modified!(integ, true)
-    end
-    λ ./= (integ.t - t0)
-    return λ
-end
-
 
 lyapunovs(ds::DynamicalSystem{IIP, T, 1}, a...; kw...) where {IIP, T} = error(
 "For 1D systems, only discrete & out-of-place method is implemented.")
 
 function lyapunovs(ds::DDS{false, T, 1}, N; Ttr = 0) where {T}
 
-    x = state(ds); f = ds.prob.f
+    x = get_state(ds); f = ds.prob.f
     p = ds.prob.p; t0 = ds.prob.t0
     t = 0
     if Ttr > 0
@@ -165,14 +124,11 @@ function lyapunovs(ds::DDS{false, T, 1}, N; Ttr = 0) where {T}
             x = f(x, p, i)
         end
     end
-
     λ = zero(T)
-
     for i in (t0+Ttr):(t0+Ttr+N)
         x = f(x, p, i)
         λ += log(abs(ds.jacobian(x, p, i)))
     end
-
     return λ/N
 end
 
@@ -256,10 +212,12 @@ function lyapunov(ds::DS, T;
     "d0 must be between thresholds!"))
     D = dimension(ds)
     if typeof(ds) <: DDS
-        pinteg = parallel_integrator(ds, [deepcopy(state(ds)), inittest(state(ds), d0)])
+        pinteg = parallel_integrator(ds,
+            [deepcopy(get_state(ds)), inittest(get_state(ds), d0)])
     else
-        pinteg = parallel_integrator(ds, [deepcopy(state(ds)), inittest(state(ds), d0)];
-        diff_eq_kwargs = diff_eq_kwargs)
+        pinteg = parallel_integrator(ds,
+            [deepcopy(get_state(ds)), inittest(get_state(ds), d0)];
+            diff_eq_kwargs = diff_eq_kwargs)
     end
     λ::ST = _lyapunov(pinteg, T, Ttr, dt, d0, upper_threshold, lower_threshold)
     return λ
@@ -290,7 +248,7 @@ function _lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
         # local lyapunov exponent is simply the relative distance of the trajectories
         a = d/d0
         λ += log(a)
-        rescale!(pinteg, a); u_modified!(pinteg, true)
+        rescale!(pinteg, a)
     end
     # Do final rescale, in case no other happened
     d = λdist(pinteg)
@@ -330,10 +288,13 @@ function rescale!(integ::ODEIntegrator{Alg, M}, a) where {Alg, M<:Matrix}
     for i in 1:size(integ.u)[1]
         integ.u[i, 2] = integ.u[i,1] + (integ.u[i,2] - integ.u[i,1])/a
     end
+    u_modified!(integ, true)
 end
 function rescale!(integ::ODEIntegrator{Alg, Vector{S}}, a) where {Alg, S<:Vector}
     @. integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
+    u_modified!(integ, true)
 end
 function rescale!(integ::ODEIntegrator{Alg, Vector{S}}, a) where {Alg, S<:SVector}
     integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
+    u_modified!(integ, true)
 end

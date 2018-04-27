@@ -5,7 +5,7 @@ println("\nTesting type stability...")
 @testset "Type stability" begin
 for ds ∈ [Systems.towel(), Systems.lorenz()]
 
-    pinteg = parallel_integrator(ds, [state(ds), state(ds)+1e-9])
+    pinteg = parallel_integrator(ds, [get_state(ds), get_state(ds)+1e-9])
     @test_nowarn @inferred ChaosTools._lyapunov(pinteg, 1000, 100, 1, 1e-9, 1e-6, 1e-12)
     @test_nowarn @inferred lyapunov(ds, 1000)
 

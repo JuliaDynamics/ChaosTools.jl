@@ -8,7 +8,7 @@ export lyapunovs, lyapunov
 #                               Lyapunov Spectum                                    #
 #####################################################################################
 """
-    lyapunovs(ds::DynamicalSystem, N, k::Int | Q0; kwargs...) -> λs
+    lyapunovs(ds::DynamicalSystem, N [, k::Int | Q0]; kwargs...) -> λs
 
 Calculate the spectrum of Lyapunov exponents [1] of `ds` by applying
 a QR-decomposition on the parallelepiped matrix `N` times. Return the

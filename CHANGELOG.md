@@ -1,3 +1,11 @@
+# 0.11
+* Changed `gali` call signature to be the same as `lyapunovs`.
+* Bugfixed 1D lyapunov computation
+* Bugfixed `set_deviations!` for continuous systems
+* Updated for `DynamicalSystemsBase` 0.10 (using `get_state` etc.)
+* Significantly reduced code repetition in the source.
+
+
 # v0.9
 * Upgraded `poincaresos` to work for any arbitrary hyperplane. The call signature had
   to change to make it work.

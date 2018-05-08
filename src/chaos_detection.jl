@@ -4,18 +4,21 @@ using OrdinaryDiffEq
 #                               Continuous GALI                                     #
 #####################################################################################
 """
-    gali(ds::DynamicalSystem, k::Int, tmax; kwargs...) -> GALI_k, t
+    gali(ds::DynamicalSystem, tmax, k::Int | Q0; kwargs...) -> GALI_k, t
 Compute ``\\text{GALI}_k`` [1] for a given `k` up to time `tmax`.
 Return ``\\text{GALI}_k(t)`` and time vector ``t``.
 
+The third argument, which sets the order of `gali`, can be an integer `k`, or
+a matrix with its columns being the deviation vectors (then
+`k = size(Q0)[2]`). In the first case random orthonormal vectors are chosen.
+
 ## Keyword Arguments
-* `threshold = 1e-12` : If `GALI_k` falls below the `threshold` iteration is terminated.
-* `dt = 1` : Time-step between variational vector normalizations. For continuous
+* `threshold = 1e-12` : If `GALI_k` falls below the `threshold`
+  iteration is terminated.
+* `dt = 1` : Time-step between deviation vector normalizations. For continuous
   systems this is approximate.
 * `diff_eq_kwargs` : See [`trajectory`](@ref).
 * `u0` : Initial state for the system. Defaults to `get_state(ds)`.
-* `w0` : Initial orthonormal vectors (in matrix form).
-  Defaults to `orthonormal(dimension(ds), k)`, i.e. `k` random orthonormal vectors.
 
 ## Description
 The Generalized Alignment Index,
@@ -29,7 +32,8 @@ from the initial condition. If it is a chaotic orbit, then
 \\text{GALI}_k(t) \\sim
 \\exp\\left[\\sum_{j=1}^k (\\lambda_1 - \\lambda_j)t \\right]
 ```
-with ``\\lambda_1`` being the maximum [`lyapunov`](@ref) exponent.
+with ``\\lambda_j`` being the `j`-th Lyapunov exponent
+(see [`lyapunov`](@ref), [`lyapunovs`](@ref)).
 If on the other hand the orbit is regular, corresponding
 to movement in ``d``-dimensional torus with `` 1 \\le d \\le D/2``
 then it holds
@@ -52,9 +56,9 @@ the method described in [2], which uses the product of the singular values of ``
 a matrix that has as *columns* the deviation vectors.
 
 ## Performance Notes
-This function uses a [`tangent_integrator`](@ref). For loops over initial conditions and/or
-parameter values one should use the lower level methods that accept
-an integrator, and `reinit!` it to new initial conditions.
+This function uses a [`tangent_integrator`](@ref). For loops over initial
+conditions and/or parameter values one should use the lower level methods
+that accept an integrator, and `reinit!` it to new initial conditions.
 
 See the "advanced documentation" for info on the integrator object
 and use `@which ...` to go to the source code for the low-level
@@ -68,21 +72,25 @@ call signature.
 (section 5.3.1 and ref. [85] therein), Lecture Notes in Physics **915**,
 Springer (2016)
 """
-function gali(ds::DS{IIP, S, D}, k::Int, tmax::Real;
-    w0 = orthonormal(dimension(ds), k),
+gali(ds::DS, tmax::Real, k::Int; kwargs...) =
+    gali(ds, tmax, orthonormal(dimension(ds), k); kwargs...)
+
+function gali(ds::DS{IIP, S, D}, tmax::Real, Q0::AbstractMatrix;
     threshold = 1e-12, dt = 1, diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
     u0 = get_state(ds)) where {IIP, S, D}
 
-    size(w0) != (dimension(ds), k) && throw(ArgumentError(
-    "w0 do not have correct size! Expected $((dimension(ds), k))"))
+    size(Q0)[1] != D && throw(ArgumentError(
+    "Deviation vectors must have first dimension equal to the dimension of the "*
+    "system, $D."))
+    2 ≤ size(Q0)[2] ≤ D || throw(ArgumentError(
+    "The order of GALI_k must be 2 ≤ k ≤ $D."))
+
     # Create tangent integrator:
     if typeof(ds) <: DDS
-        tinteg = tangent_integrator(ds, w0; u0 = u0)
+        tinteg = tangent_integrator(ds, Q0; u0 = u0)
     else
-        tinteg = tangent_integrator(ds, w0; diff_eq_kwargs = diff_eq_kwargs, u0 = u0)
+        tinteg = tangent_integrator(ds, Q0; diff_eq_kwargs = diff_eq_kwargs, u0 = u0)
     end
-    k = size(w0)[2]
-    @assert k > 1
 
     ST = stateeltype(ds)
     TT = timetype(ds)

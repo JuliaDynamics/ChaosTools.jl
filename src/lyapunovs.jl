@@ -243,7 +243,7 @@ function _lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
         while lt ≤ d ≤ ut
             step!(pinteg, dt)
             d = λdist(pinteg)
-            pinteg.t ≥ Ttr + T && break
+            pinteg.t ≥ t0 + T && break
         end
         # local lyapunov exponent is simply the relative distance of the trajectories
         a = d/d0

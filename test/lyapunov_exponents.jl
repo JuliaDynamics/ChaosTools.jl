@@ -70,3 +70,32 @@ end
     λ = lyapunov(ds, 10000; Ttr = 100)
     @test 0.692 < λ < 0.694
 end
+
+@testset "Negative λ, continuous" begin
+    f(u, p, t) = -0.9u
+    g(du, u, p, t) = (du .= -0.9u)
+
+    ds = ContinuousDynamicalSystem(f, rand(SVector{3}), nothing)
+    λ1 = lyapunov(ds, 1000)
+    @test λ1 < 0
+    ds = ContinuousDynamicalSystem(g, rand(3), nothing)
+    λ2 = lyapunov(ds, 1000)
+    @test λ2 < 0
+
+    @testset "Lorenz stable" begin
+        ds = Systems.lorenz(ρ = 20.0)
+        @test lyapunov(ds, 2000, Ttr = 100) < 0
+    end
+end
+
+@testset "Negative λ, discrete" begin
+    f(u, p, t) = 0.9u
+    g(du, u, p, t) = (du .= 0.9u)
+
+    ds = DiscreteDynamicalSystem(f, rand(SVector{3}), nothing)
+    λ1 = lyapunov(ds, 100000)
+    @test isapprox(λ1, log(0.9); rtol = 1e-4)
+    ds = DiscreteDynamicalSystem(g, rand(3), nothing)
+    λ2 = lyapunov(ds, 100000)
+    @test isapprox(λ1, log(0.9); rtol = 1e-4)
+end

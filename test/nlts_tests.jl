@@ -55,7 +55,7 @@ end
     E = numericallyapunov(R, ks,
     refstates = 1:1000, distance=Cityblock(), ntype=FixedMassNeighborhood(1))
     λ = linear_region(ks, E)[2]
-    test_value(λ, 0.3, 0.5)
+    test_value(λ, 0.3, 0.6)
 end
 
 @testset "Broomhead-King" begin

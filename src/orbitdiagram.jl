@@ -99,8 +99,8 @@ Calculate the Poincaré surface of section (also called Poincaré map) [1, 2]
 of the given system with the given `plane`.
 The system is evolved for total time of `tfinal`.
 
-If the state of the system is ``\\mathbf{u} = (u_1, \\ldots, u_D)`` then the equation for
-the hyperplane is
+If the state of the system is ``\\mathbf{u} = (u_1, \\ldots, u_D)`` then the
+equation for the hyperplane is
 ```math
 a_1u_1 + \\dots + a_Du_D = \\mathbf{a}\\cdot\\mathbf{u}=b
 ```
@@ -117,7 +117,9 @@ Returns a [`Dataset`](@ref) of the points that are on the surface of section.
 
 ## Keyword Arguments
 * `direction = 1` : Only crossings of the plane that
-  have direction `sign(direction)` are considered to belong to the surface of section.
+  have direction `sign(direction)` are considered to belong to
+  the surface of section.
+* `u0 = get_state(ds)` : Initial state of the system.
 * `Ttr = 0.0` : Transient time to evolve the system before starting
   to compute the PSOS.
 * `diff_eq_kwargs` : See [`trajectory`](@ref).
@@ -141,19 +143,19 @@ See also [`orbitdiagram`](@ref), [`produce_orbitdiagram`](@ref).
 """
 function poincaresos(ds::CDS, plane, tfinal = 1000.0;
     direction = +1, diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
-    callback_kwargs = Dict(:abstol=>1e-6), Ttr::Real = 0.0, warning = true)
+    callback_kwargs = Dict(:abstol=>1e-6), Ttr::Real = 0.0, warning = true,
+    u0 = get_state(ds))
 
     _check_plane(plane, dimension(ds))
 
     pcb = psos_callback(plane, direction, callback_kwargs)
 
     if Ttr > 0
-        integ = integrator(ds)
+        integ = integrator(ds, u0)
         step!(integ, Ttr, true) # step exactly Ttr
         u0 = integ.u
         t0 = integ.t
     else
-        u0 = get_state(ds)
         t0 = inittime(ds)
     end
 
@@ -209,8 +211,8 @@ for the given parameter values (see [`poincaresos`](@ref)).
   [`poincaresos`](@ref).
 * `printparams::Bool = false` : Whether to print the parameter used during computation
   in order to keep track of running time.
-* `ics = [get_state(ds)]` : Collection of initial conditions. For every `state ∈ ics` a PSOS
-  will be produced.
+* `ics = [get_state(ds)]` : Collection of initial conditions.
+  For every `state ∈ ics` a PSOS will be produced.
 * `warning = true` : Throw a warning if any Poincaré section was empty.
 
 ## Description

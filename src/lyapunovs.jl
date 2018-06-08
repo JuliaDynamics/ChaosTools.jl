@@ -68,17 +68,14 @@ function lyapunovs(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
     T = stateeltype(ds)
     # Create tangent integrator:
     if typeof(ds) <: DDS
-        # Time assertions
         @assert typeof(Ttr) == Int
-        integ = tangent_integrator(ds, Q0; t0 = inittime(ds)+Ttr)
+        integ = tangent_integrator(ds, Q0)
     else
-        integ = tangent_integrator(ds, Q0; diff_eq_kwargs = diff_eq_kwargs,
-        t0 = inittime(ds)+Ttr)
+        integ = tangent_integrator(ds, Q0; diff_eq_kwargs = diff_eq_kwargs)
     end
     k = size(Q0)[2]
     @assert k > 1
 
-    # Choose algorithm
     λ::Vector{T} = _lyapunovs(integ, N, dt, Ttr)
     return λ
 end

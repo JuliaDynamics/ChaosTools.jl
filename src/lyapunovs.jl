@@ -89,7 +89,6 @@ function _lyapunovs(integ, N, dt::Real, Ttr::Real)
             step!(integ, dt)
             Q, R = qr(get_deviations(integ))
             set_deviations!(integ, Q)
-            u_modified!(integ, true)
         end
     end
     k = size(get_deviations(integ))[2]

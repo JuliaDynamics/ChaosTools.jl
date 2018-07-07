@@ -1,5 +1,7 @@
-using StaticArrays, OrdinaryDiffEq
-using OrdinaryDiffEq: ODEIntegrator
+using LinearAlgebra: qr
+using StaticArrays: qr
+# using OrdinaryDiffEq
+# using OrdinaryDiffEq: ODEIntegrator
 using DynamicalSystemsBase: MinimalDiscreteIntegrator
 
 export lyapunovs, lyapunov

@@ -9,7 +9,8 @@ using Reexport
 @reexport using DynamicalSystemsBase
 
 using DynamicalSystemsBase: DS, DDS
-using DynamicalSystemsBase: CDS, DEFAULT_DIFFEQ_KWARGS
+# using DynamicalSystemsBase: CDS, DEFAULT_DIFFEQ_KWARGS
+DEFAULT_DIFFEQ_KWARGS = ()
 using DynamicalSystemsBase: MDI, TDI
 using DynamicalSystemsBase: stateeltype, timetype
 

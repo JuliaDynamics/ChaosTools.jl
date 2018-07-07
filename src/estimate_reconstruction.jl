@@ -14,9 +14,9 @@ export estimate_dimension, stochastic_indicator
 #                                Mutual Information                                 #
 #####################################################################################
 """
-    mutinfo(k, X1, X2[, ..., Xm]) -> I
+    mutinfo(k, X1, X2[, ..., Xm]) -> MI
 
-Calculate the mutual information `I` of the given vectors
+Calculate the mutual information `MI` of the given vectors
 `X1, X2, ...`, using `k` nearest-neighbors.
 
 The method follows the second algorithm ``I^{(2)}`` outlined by Kraskov in [1].
@@ -24,7 +24,10 @@ The method follows the second algorithm ``I^{(2)}`` outlined by Kraskov in [1].
 ## References
 [1] : A. Kraskov *et al.*, [Phys. Rev. E **69**, pp 066138 (2004)](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.69.066138)
 
-See also [`estimate_delay`](@ref).
+## Performance Notes
+This functin gets very slow for large `k`.
+
+See also [`estimate_delay`](@ref) and [`mutinfo_delaycurve`](@ref).
 """
 function mutinfo(k, Xm::Vararg{<:AbstractVector,M}) where M
     @assert M > 1
@@ -157,20 +160,22 @@ Return the exponential decay time `τ` rounded to an integer.
 
 The `method` can be one of the following:
 
-* `first_zero` : find first delay at which the auto-correlation function becomes 0.
-* `first_min` : return delay of first minimum of the auto-correlation function.
-* `exp_decay` : perform an exponential fit to the `abs.(c)` with `c` the
-  auto-correlation function of `s`.
-* `mutual_inf` : return the first minimum of the mutual information function
-  (see [`mutinfo`](@ref)). This option also has the following keyword arguments:
+* `"first_zero"` : find first delay at which the auto-correlation function becomes 0.
+* `"first_min"` : return delay of first minimum of the auto-correlation function.
+* `"exp_decay"` : perform an exponential fit to the `abs.(c)` with `c` the
+  auto-correlation function of `s`. Return the exponential decay time rounded
+  to an integer.
+* `"mutual_inf"` : return the first minimum of the mutual information function
+  (see [`mutinfo_delaycurve`](@ref)).
+  This option also has the following keyword arguments:
     * `maxtau::Integer=100` : stops the delay calculations after the given `maxtau`.
-      This may not be appropriate for all data (ie the optimal delay may be higher
-      than the default `maxtau`).
     * `k::Integer=1` : the number of nearest-neighbors to include.
-      As with `maxtau` the default value of 1 may not be appropriate for all data
+
+*WARNING* - `"mutual_inf"` fails spectacularly with data from maps. In addition
+it is much slower than the other alternatives.
 """
 function estimate_delay(x::AbstractVector, method::String; maxtau=100, k=1)
-    method ∈ ["first_zero", "first_min", "exp_decay", "mutual_inf"] ||
+    method ∈ ("first_zero", "first_min", "exp_decay", "mutual_inf") ||
         throw(ArgumentError("Unknown method"))
 
     if method=="first_zero"
@@ -193,7 +198,7 @@ function estimate_delay(x::AbstractVector, method::String; maxtau=100, k=1)
         end
         return i
     elseif method=="exp_decay"
-        c = autocor(x, 0:length(x)÷10, demean=true)
+        c = autocor(x, demean=true)
         # Find exponential fit:
         τ = exponential_decay(c)
         return round(Int,τ)

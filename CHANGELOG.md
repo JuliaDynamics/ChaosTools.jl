@@ -1,3 +1,7 @@
+# WIP
+* Added method to compute mutual information, from  A. Kraskov *et al.*, [Phys. Rev. E **69**, pp 066138 (2004)]
+* Added method in finding delay time that uses mutual information. At the moment this method is vastly inferior to all others...
+
 # 0.11
 * Changed `gali` call signature to be the same as `lyapunovs`.
 * Bugfixed 1D lyapunov computation

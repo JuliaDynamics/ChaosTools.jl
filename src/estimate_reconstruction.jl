@@ -5,40 +5,57 @@ using LsqFit: curve_fit
 using StatsBase: autocor
 
 export estimate_delay
+export estimate_dimension
+export mutinfo, mutinfo_delaycurve
 export estimate_dimension, stochastic_indicator
 # export mutual_info
 
 #####################################################################################
 #                                Mutual Information                                 #
 #####################################################################################
-function mutual_info(Xm::Vararg{<:AbstractVector,M}; k=1) where M
+"""
+    mutinfo(k, X1, X2[, ..., Xm]) -> MI
+
+Calculate the mutual information `MI` of the given vectors
+`X1, X2, ...`, using `k` nearest-neighbors.
+
+The method follows the second algorithm ``I^{(2)}`` outlined by Kraskov in [1].
+
+## References
+[1] : A. Kraskov *et al.*, [Phys. Rev. E **69**, pp 066138 (2004)](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.69.066138)
+
+## Performance Notes
+This functin gets very slow for large `k`.
+
+See also [`estimate_delay`](@ref) and [`mutinfo_delaycurve`](@ref).
+"""
+function mutinfo(k, Xm::Vararg{<:AbstractVector,M}) where M
     @assert M > 1
     @assert (size.(Xm,1) .== size(Xm[1],1)) |> prod
+    k += 1
     N = size(Xm[1],1)
+    invN = 1/N
 
     d = Dataset(Xm...)
-    tree = KDTree(d.data, Chebyshev()) # replacing this with Euclidean() gives a
-                                       # speed-up of x4
+    tree = KDTree(d.data, Chebyshev())
 
     n_x_m = zeros(M)
 
     Xm_sp = zeros(Int, N, M)
     Xm_revsp = zeros(Int, N, M)
-    for m in 1:M #this loop takes 5% of time
+    for m in 1:M
         Xm_sp[:,m] .= sortperm(Xm[m]; alg=QuickSort)
-        Xm_revsp[:,m] .= sortperm(sortperm(Xm[m]; alg=QuickSort); alg=QuickSort)
+        Xm_revsp[:,m] .= sortperm(Xm_sp[:,m]; alg=QuickSort)
     end
 
     I = digamma(k) - (M-1)/k + (M-1)*digamma(N)
 
+    nns = (x = knn(tree, d.data, k)[1]; [ind[1] for ind in x])
+
     I_itr = zeros(M)
     # Makes more sense computationally to loop over N rather than M
     for i in 1:N
-        point = d[i]
-        idxs, dists = knn(tree, point, k+1)  # this line takes 80% of time
-
-        ϵi = idxs[indmax(dists)]
-        ϵ = abs.(d[ϵi] - point)  # surprisingly, this takes a significant amount of time
+        ϵ = abs.(d[nns[i]] - d[i])./2
 
         for m in 1:M # this loop takes 8% of time
             hb = lb = Xm_revsp[i,m]
@@ -54,11 +71,26 @@ function mutual_info(Xm::Vararg{<:AbstractVector,M}; k=1) where M
         I_itr .+= digamma.(n_x_m)
     end
 
-    I_itr ./= N
+    I_itr .*= invN
 
     I -= sum(I_itr)
 
     return max(0, I)
+end
+
+"""
+    mutinfo_delaycurve(x; maxtau=100, k=1)
+
+Return the [`mutinfo`](@ref) between `x` and itself for delays of `1:maxtau`.
+"""
+function mutinfo_delaycurve(X::AbstractVector; maxtau=100, k=1)
+    I = zeros(maxtau)
+
+    @views for τ in 1:maxtau
+        I[τ] = mutinfo(k, X[1:end-τ],X[τ+1:end])
+    end
+
+    return I
 end
 
 
@@ -124,16 +156,26 @@ end
     estimate_delay(s, method::String) -> τ
 
 Estimate an optimal delay to be used in [`Reconstruction`](@ref).
+Return the exponential decay time `τ` rounded to an integer.
 
 The `method` can be one of the following:
 
-* `first_zero` : find first delay at which the auto-correlation function becomes 0.
-* `first_min` : return delay of first minimum of the auto-correlation function.
-* `exp_decay` : perform an exponential fit to the `abs.(c)` with `c` the auto-correlation function of `s`.
-  Return the exponential decay time `τ` rounded to an integer.
+* `"first_zero"` : find first delay at which the auto-correlation function becomes 0.
+* `"first_min"` : return delay of first minimum of the auto-correlation function.
+* `"exp_decay"` : perform an exponential fit to the `abs.(c)` with `c` the
+  auto-correlation function of `s`. Return the exponential decay time rounded
+  to an integer.
+* `"mutual_inf"` : return the first minimum of the mutual information function
+  (see [`mutinfo_delaycurve`](@ref)).
+  This option also has the following keyword arguments:
+    * `maxtau::Integer=100` : stops the delay calculations after the given `maxtau`.
+    * `k::Integer=1` : the number of nearest-neighbors to include.
+
+*WARNING* - `"mutual_inf"` fails spectacularly with data from maps. In addition
+it is much slower than the other alternatives.
 """
 function estimate_delay(x::AbstractVector, method::String; maxtau=100, k=1)
-    method ∈ ["first_zero", "first_min", "exp_decay", "mutual_inf"] ||
+    method ∈ ("first_zero", "first_min", "exp_decay", "mutual_inf") ||
         throw(ArgumentError("Unknown method"))
 
     if method=="first_zero"
@@ -156,16 +198,15 @@ function estimate_delay(x::AbstractVector, method::String; maxtau=100, k=1)
         end
         return i
     elseif method=="exp_decay"
-        c = autocor(x, 0:length(x)÷10, demean=true)
+        c = autocor(x, demean=true)
         # Find exponential fit:
         τ = exponential_decay(c)
         return round(Int,τ)
     elseif method=="mutual_inf"
-        error("Mutual information method is not currently tested!")
-        m = mutual_info(x,x; k=k)
+        m = mutinfo(k, x, x)
         L = length(x)
         for i=1:maxtau
-            n = mutual_info(view(x, 1:L-i), view(x, 1+i:L); k = k)
+            n = mutinfo(k, view(x, 1:L-i), view(x, 1+i:L))
             n > m && return i
             m = n
         end

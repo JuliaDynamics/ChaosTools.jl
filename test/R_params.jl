@@ -40,7 +40,7 @@ test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
     x = data[:,1]
     @test 1.3 <= estimate_delay(x,"first_zero")*dt <= 1.7
     @test 2.6 <= estimate_delay(x,"first_min")*dt  <= 3.4
-    @test 1.3 <= estimate_delay(x,"mutual_inf")*dt <= 1.7
+    @test 1.3 <= estimate_delay(x,"mutual_inf")*dt <= 1.8
     @test 1.3 <= estimate_delay(x,"mutual_inf"; maxtau=150, k = 2)*dt <= 1.7
 
     ds = Systems.lorenz()

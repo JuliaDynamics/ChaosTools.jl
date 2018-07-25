@@ -311,25 +311,25 @@ function produce_orbitdiagram(
     return output
 end
 
-ds = Systems.shinriki([-2, 0, 0.2])
-
-pvalues = linspace(19,22,21)
-i = 1
-tfinal = 1000.0
-p_index = 1
-plane = (2, 2.0)# psos at variable 2 with offset = 0
-Ttr = 500.0
-
-
-output = produce_orbitdiagram(ds, plane, i, p_index, pvalues; tfinal = tfinal,
-Ttr = 200.0, direction = -1, printparams = true)
-
-figure()
-for (j, p) in enumerate(pvalues)
-    plot(p .* ones(output[j]), output[j], lw = 0,
-    marker = "o", ms = 0.5, color = "black")
-end
-xlabel("\$R_1\$"); ylabel("\$V_1\$")
-
-
-diffeq = (a = 3,)
+# ds = Systems.shinriki([-2, 0, 0.2])
+#
+# pvalues = linspace(19,22,21)
+# i = 1
+# tfinal = 1000.0
+# p_index = 1
+# plane = (2, 2.0)# psos at variable 2 with offset = 0
+# Ttr = 500.0
+#
+#
+# output = produce_orbitdiagram(ds, plane, i, p_index, pvalues; tfinal = tfinal,
+# Ttr = 200.0, direction = -1, printparams = true)
+#
+# figure()
+# for (j, p) in enumerate(pvalues)
+#     plot(p .* ones(output[j]), output[j], lw = 0,
+#     marker = "o", ms = 0.5, color = "black")
+# end
+# xlabel("\$R_1\$"); ylabel("\$V_1\$")
+#
+#
+# diffeq = (a = 3,)

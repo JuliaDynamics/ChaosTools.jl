@@ -1,4 +1,4 @@
-using NearestNeighbors, StaticArrays, LinearAlgrebra
+using NearestNeighbors, StaticArrays, LinearAlgebra
 using Distances: Metric, Cityblock, Euclidean
 
 export broomhead_king

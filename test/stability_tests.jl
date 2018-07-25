@@ -1,5 +1,5 @@
 using ChaosTools
-using Base.Test
+using Test
 
 println("\nTesting type stability...")
 @testset "Type stability" begin

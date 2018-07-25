@@ -1,5 +1,5 @@
 using ChaosTools
-using Base.Test
+using Test
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 

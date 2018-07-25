@@ -82,7 +82,7 @@ end
 genentropy(α::Real, ε::Real, matrix; base = e) =
 genentropy(α, ε, convert(Dataset, matrix); base = base)
 
-function genentropy{T<:Real}(α::Real, p::AbstractArray{T}; base = e)
+function genentropy(α::Real, p::AbstractArray{T}; base = e) where {T<:Real}
   α < 0 && throw(ArgumentError("Order of Rényi entropy must be ≥ 0."))
 
   if α ≈ 0

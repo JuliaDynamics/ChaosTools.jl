@@ -1,7 +1,6 @@
-using LinearAlgebra: qr
-using StaticArrays: qr
-# using OrdinaryDiffEq
-# using OrdinaryDiffEq: ODEIntegrator
+using LinearAlgebra
+using OrdinaryDiffEq
+using OrdinaryDiffEq: ODEIntegrator
 using DynamicalSystemsBase: MinimalDiscreteIntegrator
 
 export lyapunovs, lyapunov
@@ -29,9 +28,8 @@ a pre-initialized matrix `Q0` whose columns are initial deviation vectors (then
 * `dt` : Time of individual evolutions
   between successive orthonormalization steps. Defaults to `1`. For continuous
   systems this is approximate.
-* `diff_eq_kwargs = Dict()` : (only for continuous)
-  Keyword arguments passed into the solvers of the
-  `DifferentialEquations` package (see [`trajectory`](@ref) for more info).
+* `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
+  See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
 ## Description
 The method we employ is "H2" of [2], originally stated in [3]. The deviation vectors
@@ -45,12 +43,13 @@ then averaged over `N` successive steps, yielding the lyapunov exponent spectrum
 ## Performance Notes
 This function uses a [`tangent_integrator`](@ref).
 For loops over initial conditions and/or
-parameter values one should use the lower level methods that accept
+parameter values one should use the low level method that accepts
 an integrator, and `reinit!` it to new initial conditions.
-
-See the "advanced documentation" for info on the integrator object
-and use `@which ...` to go to the source code for the low-level
-call signature.
+See the "advanced documentation" for info on the integrator object.
+The low level method is
+```
+ChaosTools._lyapunovs(tinteg, N, dt::Real, Ttr::Real)
+```
 
 ## References
 
@@ -65,7 +64,7 @@ lyapunovs(ds::DS, N, k::Int = dimension(ds); kwargs...) =
 lyapunovs(ds, N, orthonormal(dimension(ds), k); kwargs...)
 
 function lyapunovs(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
-    diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS, dt::Real = 1) where {IIP, S, D}
+    dt::Real = 1, diffeq...) where {IIP, S, D}
 
     T = stateeltype(ds)
     # Create tangent integrator:
@@ -73,10 +72,8 @@ function lyapunovs(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
         @assert typeof(Ttr) == Int
         integ = tangent_integrator(ds, Q0)
     else
-        integ = tangent_integrator(ds, Q0; diff_eq_kwargs = diff_eq_kwargs)
+        integ = tangent_integrator(ds, Q0; diffeq...)
     end
-    k = size(Q0)[2]
-    @assert k > 1
 
     λ::Vector{T} = _lyapunovs(integ, N, dt, Ttr)
     return λ
@@ -89,8 +86,8 @@ function _lyapunovs(integ, N, dt::Real, Ttr::Real)
     if Ttr > 0
         while integ.t < t0 + Ttr
             step!(integ, dt)
-            Q, R = qr(get_deviations(integ))
-            set_deviations!(integ, Q)
+            QR = LinearAlgebra.qr(get_deviations(integ))
+            set_deviations!(integ, Matrix(QR.Q))
         end
     end
     k = size(get_deviations(integ))[2]
@@ -99,11 +96,11 @@ function _lyapunovs(integ, N, dt::Real, Ttr::Real)
 
     for i in 2:N
         step!(integ, dt)
-        Q, R = qr(get_deviations(integ))
+        QR = LinearAlgebra.qr(get_deviations(integ))
         for i in 1:k
-            λ[i] += log(abs(R[i,i]))
+            λ[i] += log(abs(QR.R[i,i]))
         end
-        set_deviations!(integ, Q)
+        set_deviations!(integ, Matrix(QR.Q))
     end
     λ ./= (integ.t - t0)
     return λ
@@ -154,9 +151,6 @@ while constantly rescaling the test one.
 * `upper_threshold = 1e-6` : Upper distance threshold for rescaling.
 * `lower_threshold = 1e-12` : Lower distance threshold for rescaling (in order to
    be able to detect negative exponents).
-* `diff_eq_kwargs = Dict(:abstol=>d0, :reltol=>d0)` : (only for continuous)
-  Keyword arguments passed into the solvers of the
-  `DifferentialEquations` package (see [`trajectory`](@ref) for more info).
 * `dt = 1` : Time of evolution between each check of
   distance exceeding the thresholds. For continuous
   systems this is approximate.
@@ -167,6 +161,9 @@ while constantly rescaling the test one.
   of the system). This function can be used when you want to avoid
   the test state appearing in a region of the phase-space where it would have
   e.g. different energy or escape to infinity.
+* `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
+  See [`trajectory`](@ref) for examples. Only valid for continuous systems.
+
 
 ## Description
 Two neighboring trajectories with initial distance `d0` are evolved in time.
@@ -184,13 +181,15 @@ Lyapunov exponent is the average of the time-local Lyapunov exponents
 ```
 
 ## Performance Notes
-This function uses a `parallel_integrator`. For loops over initial conditions and/or
-parameter values one should use the lower level methods that accept
+This function uses a [`parallel_integrator`](@ref).
+For loops over initial conditions and/or
+parameter values one should use the low level method that accepts
 an integrator, and `reinit!` it to new initial conditions.
-
-See the "advanced documentation" for info on the integrator object
-and use `@which ...` to go to the source code for the low-level
-call signature.
+See the "advanced documentation" for info on the integrator object.
+The low level method is
+```
+ChaosTools._lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
+```
 
 ## References
 [1] : G. Benettin *et al.*, Phys. Rev. A **14**, pp 2338 (1976)
@@ -201,8 +200,8 @@ function lyapunov(ds::DS, T;
                   upper_threshold = 1e-6,
                   lower_threshold = 1e-12,
                   inittest = inittest_default(dimension(ds)),
-                  diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
-                  dt = 1
+                  dt = 1,
+                  diffeq...
                   )
 
     ST = stateeltype(ds)
@@ -215,7 +214,7 @@ function lyapunov(ds::DS, T;
     else
         pinteg = parallel_integrator(ds,
             [deepcopy(get_state(ds)), inittest(get_state(ds), d0)];
-            diff_eq_kwargs = diff_eq_kwargs)
+            diffeq...)
     end
     λ::ST = _lyapunov(pinteg, T, Ttr, dt, d0, upper_threshold, lower_threshold)
     return λ
@@ -227,13 +226,13 @@ function _lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
     while pinteg.t < t0 + Ttr
         step!(pinteg, dt)
         d = λdist(pinteg)
-        lt ≤ d ≤ ut || ( rescale!(pinteg, d/d0); u_modified!(pinteg, true) )
+        lt ≤ d ≤ ut || rescale!(pinteg, d/d0)
     end
 
     t0 = pinteg.t
     d = λdist(pinteg)
     d == 0 && error("Initial distance between states is zero!!!")
-    rescale!(pinteg, d/d0); u_modified!(pinteg, true)
+    rescale!(pinteg, d/d0)
     λ = zero(d)
     while pinteg.t < t0 + T
         d = λdist(pinteg)
@@ -266,7 +265,12 @@ function λdist(integ::ODEIntegrator{Alg, M}) where {Alg, M<:Matrix}
 end
 # No-annotation case is with Vectors
 function λdist(integ)
-    return norm(integ.u[1] .- integ.u[2])
+    @inbounds s = zero(eltype(integ.u[1]))
+    @inbounds for k in 1:length(integ.u[1])
+        x = (integ.u[1][k] - integ.u[2][k])
+        s += x*x
+    end
+    return sqrt(s)
 end
 function λdist(integ::MinimalDiscreteIntegrator{true, Vector{S}}) where {S<:SVector}
     return norm(integ.u[1] - integ.u[2])
@@ -278,9 +282,11 @@ end
 # Rescales:
 function rescale!(integ::MinimalDiscreteIntegrator{true, Vector{S}}, a) where {S<:SVector}
     integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
+    u_modified!(integ, true)
 end
 function rescale!(integ::MinimalDiscreteIntegrator{true, Vector{S}}, a) where {S<:Vector}
     @. integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
+    u_modified!(integ, true)
 end
 function rescale!(integ::ODEIntegrator{Alg, M}, a) where {Alg, M<:Matrix}
     for i in 1:size(integ.u)[1]

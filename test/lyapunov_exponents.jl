@@ -1,5 +1,5 @@
 using ChaosTools
-using Base.Test, StaticArrays
+using Test, StaticArrays
 using DynamicalSystemsBase: CDS, DDS
 using DynamicalSystemsBase.Systems: hoop, hoop_jac, hiip, hiip_jac
 using DynamicalSystemsBase.Systems: loop, loop_jac, liip, liip_jac

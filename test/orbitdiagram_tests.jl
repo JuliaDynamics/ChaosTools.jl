@@ -1,7 +1,5 @@
-if current_module() != ChaosTools
-  using ChaosTools
-end
-using Base.Test, StaticArrays, OrdinaryDiffEq
+using ChaosTools
+using Test, StaticArrays, OrdinaryDiffEq
 
 println("\nTesting orbit diagrams...")
 

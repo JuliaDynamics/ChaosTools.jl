@@ -1,7 +1,5 @@
-if current_module() != ChaosTools
-  using ChaosTools
-end
-using Base.Test, StaticArrays
+using ChaosTools
+using Test, StaticArrays
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 # Known fixed point locations from publication:

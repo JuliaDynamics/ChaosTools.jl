@@ -1,5 +1,5 @@
 using ChaosTools
-using Base.Test
+using Test
 using Distances: Cityblock, Euclidean
 using Distributions: Normal
 

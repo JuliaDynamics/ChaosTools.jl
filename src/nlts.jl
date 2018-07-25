@@ -1,5 +1,4 @@
 using NearestNeighbors, StaticArrays
-using DynamicalSystemsBase: AbstractReconstruction
 using Distances: Metric, Cityblock, Euclidean
 
 export broomhead_king

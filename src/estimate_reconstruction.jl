@@ -8,7 +8,6 @@ export estimate_delay
 export estimate_dimension
 export mutinfo, mutinfo_delaycurve
 export estimate_dimension, stochastic_indicator
-# export mutual_info
 
 #####################################################################################
 #                                Mutual Information                                 #
@@ -155,7 +154,7 @@ end
 """
     estimate_delay(s, method::String) -> τ
 
-Estimate an optimal delay to be used in [`Reconstruction`](@ref).
+Estimate an optimal delay to be used in [`reconstruct`](@ref).
 Return the exponential decay time `τ` rounded to an integer.
 
 The `method` can be one of the following:
@@ -220,30 +219,6 @@ end
 #####################################################################################
 #                                Estimate Dimension                                 #
 #####################################################################################
-function _average_a(s::AbstractVector{T},D,τ) where T
-    #Sum over all a(i,d) of the Ddim Reconstructed space, equation (2)
-    R1 = Reconstruction(s,D+1,τ)
-    R2 = Reconstruction(s[1:end-τ],D,τ)
-    tree2 = KDTree(R2)
-    nind = (x = knn(tree2, R2.data, 2)[1]; [ind[1] for ind in x])
-    e=0.
-    for (i,j) in enumerate(nind)
-        δ = norm(R2[i]-R2[j], Inf)
-        #If R2[i] and R2[j] are still identical, choose the next nearest neighbor
-        if δ == 0.
-            j = knn(tree2, R2[i], 3, true)[1][end]
-            δ = norm(R2[i]-R2[j], Inf)
-        end
-        e += norm(R1[i]-R1[j], Inf) / δ
-    end
-    return e / length(R1)
-end
-
-function dimension_indicator(s,D,τ) #this is E1, equation (3) of Cao
-    return _average_a(s,D+1,τ)/_average_a(s,D,τ)
-end
-
-
 """
     estimate_dimension(s::AbstractVector, τ:Int, Ds = 1:6) -> E1s
 
@@ -276,6 +251,28 @@ function estimate_dimension(s::AbstractVector{T}, τ::Int, Ds = 1:6) where {T}
 end
 # then use function `saturation_point(Ds, E1s)` from ChaosTools
 
+function _average_a(s::AbstractVector{T},D,τ) where T
+    #Sum over all a(i,d) of the Ddim Reconstructed space, equation (2)
+    R1 = Reconstruction(s,D+1,τ)
+    R2 = Reconstruction(s[1:end-τ],D,τ)
+    tree2 = KDTree(R2)
+    nind = (x = knn(tree2, R2.data, 2)[1]; [ind[1] for ind in x])
+    e=0.
+    for (i,j) in enumerate(nind)
+        δ = norm(R2[i]-R2[j], Inf)
+        #If R2[i] and R2[j] are still identical, choose the next nearest neighbor
+        if δ == 0.
+            j = knn(tree2, R2[i], 3, true)[1][end]
+            δ = norm(R2[i]-R2[j], Inf)
+        end
+        e += norm(R1[i]-R1[j], Inf) / δ
+    end
+    return e / length(R1)
+end
+
+function dimension_indicator(s,D,τ) #this is E1, equation (3) of Cao
+    return _average_a(s,D+1,τ)/_average_a(s,D,τ)
+end
 
 
 """

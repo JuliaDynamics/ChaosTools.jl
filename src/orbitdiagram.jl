@@ -1,5 +1,6 @@
 using OrdinaryDiffEq, DiffEqBase
 using DynamicalSystemsBase: DEFAULT_DIFFEQ_KWARGS, _get_solver
+using Roots
 export poincaresos, orbitdiagram, produce_orbitdiagram
 
 #####################################################################################
@@ -74,15 +75,15 @@ of the given system with the given `plane`.
 The system is evolved for total time of `tfinal`.
 
 If the state of the system is ``\\mathbf{u} = (u_1, \\ldots, u_D)`` then the
-equation for the hyperplane is
+equation for the planecrossing is
 ```math
 a_1u_1 + \\dots + a_Du_D = \\mathbf{a}\\cdot\\mathbf{u}=b
 ```
-where ``\\mathbf{a}, b`` are the parameters that define the hyperplane.
+where ``\\mathbf{a}, b`` are the parameters that define the planecrossing.
 
 In code, `plane` can be either:
 
-* A `Tuple{Int, <: Number}`, like `(j, r)` : the hyperplane is defined
+* A `Tuple{Int, <: Number}`, like `(j, r)` : the planecrossing is defined
   as when the `j` variable of the system crosses the value `r`.
 * An `AbstractVector` of length `D+1`. The first `D` elements of the
   vector correspond to ``\\mathbf{a}`` while the last element is ``b``.
@@ -194,6 +195,70 @@ end
 
 const PSOS_ERROR =
 "the Poincaré surface of section did not have any points!"
+
+function poincaresos2(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
+    direction = +1, Ttr::Real = 0.0, warning = true,
+    u0 = get_state(ds), diffeq...) where {IIP, S, D}
+
+    integ = integrator(ds, u0; diffeq...)
+
+    planecrossing = PlaneCrossing{D}(plane, direction > 0 )
+
+    psos = _poincaresos(integ, planecrossing, tfinal, Ttr, warning)
+    warning && length(psos) == 0 && warn(PSOS_ERROR)
+    return psos
+end
+
+struct PlaneCrossing{D, P}
+    plane::P
+    dir::Bool
+end
+PlaneCrossing{D}(p::P, b) where {P} = PlaneCrossing{D, P}(p, b)
+function (hp::PlaneCrossing{D, P})(u::AbstractVector) where {D, P<:Tuple}
+    @inbounds x = u[hp.plane[1]] - hp.plane[2]
+    hp.dir ? x : -x
+end
+function (hp::PlaneCrossing{D, P})(u::AbstractVector) where {D, P<:AbstractVector}
+    x = zero(eltype(u))
+    @inbounds for i in 1:D
+        x += u[i]*hp.plane[i]
+    end
+    @inbounds x -= hp.plane[D+1]
+    hp.dir ? x : -x
+end
+
+function _poincaresos(
+    integ, planecrossing::PlaneCrossing{D}, tfinal, Ttr, atol = 1e-6, xrtol = 1e-6, 
+    ) where {D}
+
+    Ttr != 0 && step!(integ, Ttr)
+
+    psos = Dataset{D, eltype(integ.u)}()
+
+    f = (t) -> planecrossing(integ(t))
+    side = planecrossing(integ.u)
+
+    while integ.t < tfinal + Ttr
+        while planecrossing(integ.u) < 0
+            integ.t > tfinal + Ttr && break
+            step!(integ)
+        end
+        while planecrossing(integ.u) > 0
+            integ.t > tfinal + Ttr && break
+            step!(integ)
+        end
+        # I am now guaranteed to have `t` in negative and `tprev` in positive
+        tcross = find_zero(f, (integ.tprev, integ.t), ZERO_FINDER,
+                           xatol = 0, rtol = 0, xrtol = xrtol, atol = atol)
+
+        ucross = integ(tcross)
+        push!(psos.data, SVector{D}(ucross))
+
+    end
+    return psos
+end
+
+const ZERO_FINDER = FalsePosition()
 
 #####################################################################################
 #                            Produce Orbit Diagram                                  #

@@ -54,7 +54,7 @@ function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
     direction = +1, Ttr::Real = 0.0, warning = true,
     diffeq...) where {IIP, S, D}
 
-    _check_plane(plane, dimension(ds))
+    _check_plane(plane, D)
     integ = integrator(ds; diffeq...)
     planecrossing = PlaneCrossing{D}(plane, direction > 0 )
     f = (t) -> planecrossing(integ(t))
@@ -194,69 +194,31 @@ function produce_orbitdiagram(
     tfinal::Real = 100.0,
     ics = [get_state(ds)],
     direction = +1,
-    callback_kwargs = (abstol=1e-6,),
-    printparams = false,
+    printparams = true,
     warning = true,
     Ttr = 0.0,
     diffeq...) where {IIP, S, D}
 
-    _check_plane(plane, dimension(ds))
+    _check_plane(plane, D)
     integ = integrator(ds; diffeq...)
     planecrossing = PlaneCrossing{D}(plane, direction > 0 )
     f = (t) -> planecrossing(integ(t))
     p0 = ds.p[p_index]
 
-    output = Vector{Vector{eltype(get_state(ds))}}(undef, length(pvalues))
-
-    # Prepare callback problem
-    pcb = psos_callback(plane, direction, callback_kwargs)
-    psos_prob = ODEProblem(
-        ds.f, get_state(ds), (ds.t0 + Ttr, ds.t0 + Ttr + tfinal),
-        ds.p, callback = pcb)
-
-    solver = _get_solver(diffeq)
-    psosinteg = init(psos_prob, solver; DEFAULT_DIFFEQ_KWARGS..., save_start = false,
-    save_end = false, save_everystep=false, diffeq..., save_idxs = [i])
-
-    integ = integrator(ds; Tfinal = Ttr, diffeq...)
+    output = [Vector{eltype(S)}() for j in 1:length(pvalues)]
 
     for (n, p) in enumerate(pvalues)
-        psosinteg.p[p_index] = p
         integ.p[p_index] = p
         printparams && println("parameter = $p")
 
         for (m, st) in enumerate(ics)
 
-            if Ttr > 0
-                reinit!(integ, st)
-                step!(integ, Ttr, true)
-                st0 = integ.u
-            else
-                st0 = st
-            end
+            reinit!(integ, st)
+            _poincare_cross!(output[n], integ,
+                             f, planecrossing, tfinal, Ttr, i)
 
-            reinit!(psosinteg, st0)
-
-            solve!(psosinteg)
-
-            solu = psosinteg.sol.u
-            warning && length(solu) == 0 && warn(
+            warning && length(output[n]) == 0 && warn(
             "For parameter $p and initial condition index $m $PSOS_ERROR")
-
-            if length(solu) != 0
-                out = [a[1] for a in solu]
-            else
-                out = eltype(get_state(ds))[]
-            end
-
-            if m == 1
-                output[n] = out
-            else
-                append!(output[n], out)
-            end
-
-
-
         end
     end
     # Reset the parameter of the system:

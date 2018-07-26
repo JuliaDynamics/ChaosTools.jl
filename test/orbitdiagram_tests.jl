@@ -46,12 +46,11 @@ end
 @testset "Poincare SOS" begin
     @testset "Henon Helies" begin
         ds = Systems.henonheiles([0, .483000, .278980390, 0] )
-        psos = poincaresos(ds, (2, 0.0), 1000.0,
-                          callback_kwargs = Dict(:abstol=>1e-12))
+        psos = poincaresos(ds, (2, 0.0), 1000.0)
         xcross = psos[:, 2]
         @test length(xcross) > 1
         for x in xcross
-            @test abs(x) < 1e-12
+            @test abs(x) < 1e-3
         end
 
         # @inline Vhh(q1, q2) = 1//2 * (q1^2 + q2^2 + 2q1^2 * q2 - 2//3 * q2^3)
@@ -67,8 +66,8 @@ end
     @testset "Gissinger crazy plane" begin
         gis = Systems.gissinger([2.32865, 2.02514, 1.98312])
         # Define appropriate hyperplane for gissinger system
-        const ν = 0.1
-        const Γ = 0.9 # default parameters of the system
+        ν = 0.1
+        Γ = 0.9 # default parameters of the system
 
         # I want hyperperplane defined by these two points:
         Np(μ) = SVector{3}(sqrt(ν + Γ*sqrt(ν/μ)), -sqrt(μ + Γ*sqrt(μ/ν)), -sqrt(μ*ν))
@@ -79,7 +78,7 @@ end
 
         μ = 0.12
         set_parameter!(gis, 1, μ)
-        psos = poincaresos(gis, gis_plane(μ), 10000.0, Ttr = 200.0)
+        psos = poincaresos(gis, gis_plane(μ), 10000.0, Ttr = 200.0, direction = -1)
         @test length(psos) > 1
         @test generalized_dim(2, psos) < 1
     end

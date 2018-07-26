@@ -1,7 +1,6 @@
 export linear_region, linear_regions, estimate_boxsizes
 export boxcounting_dim, capacity_dim, generalized_dim,
-information_dim, correlation_dim, estimate_boxsizes,
-kaplanyorke_dim
+information_dim, estimate_boxsizes, kaplanyorke_dim
 #######################################################################################
 # Functions and methods to deduce linear scaling regions
 #######################################################################################

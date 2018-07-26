@@ -6,9 +6,8 @@ NearestNeighbors 0.4
 DiffEqBase 4.10
 OrdinaryDiffEq 4.5
 ForwardDiff 0.8
+Roots 0.6
+Combinatorics 0.6.0
+Reexport 0.1.0
+
 LsqFit 0.3.0
-StatsBase 0.8.2
-Combinatorics
-Reexport
-SpecialFunctions
-DiffEqCallbacks 2.1.0

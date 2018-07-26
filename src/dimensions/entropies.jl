@@ -74,13 +74,13 @@ Statistics and Probability*, pp 547 (1960)
 
 [2] : C. E. Shannon, Bell Systems Technical Journal **27**, pp 379 (1948)
 """
-function genentropy(α::Real, ε::Real, data::AbstractDataset; base=Base.e)
+function genentropy(α::Real, ε::Real, data::AbstractDataset; base=Base.MathConstants.e)
     ε < 0 && throw(ArgumentError("Box-size for entropy calculation must be ≥ 0."))
     p = non0hist(ε, data)
     return genentropy(α, p; base = base)
 end
-genentropy(α::Real, ε::Real, matrix; base = e) =
-genentropy(α, ε, convert(Dataset, matrix); base = base)
+genentropy(α::Real, ε::Real, matrix; base = Base.MathConstants.e) =
+genentropy(α, ε, Dataset(matrix); base = base)
 
 function genentropy(α::Real, p::AbstractArray{T}; base = e) where {T<:Real}
   α < 0 && throw(ArgumentError("Order of Rényi entropy must be ≥ 0."))
@@ -117,7 +117,7 @@ Optionally use `base` for the logarithms.
 function permentropy(
         time_series::AbstractArray{T, 1}, order::UInt8,
         interval::Integer = 1;
-        base=Base.e) where {T}
+        base=Base.MathConstants.e) where {T}
 
     # To use `searchsortedfirst`, we need each permutation to be
     # "comparable" (ordered) type.  Let's use NTuple here:

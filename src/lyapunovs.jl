@@ -111,8 +111,8 @@ lyapunovs(ds::DynamicalSystem{IIP, T, 1}, a...; kw...) where {IIP, T} = error(
 
 function lyapunovs(ds::DDS{false, T, 1}, N; Ttr = 0) where {T}
 
-    x = get_state(ds); f = ds.prob.f
-    p = ds.prob.p; t0 = ds.prob.t0
+    x = get_state(ds); f = ds.f
+    p = ds.p; t0 = ds.t0
     t = 0
     if Ttr > 0
         for i in t0:(Ttr+t0)
@@ -132,7 +132,7 @@ lyapunov(ds::DDS{false, T, 1}, N; Ttr = 0) where {T} = lyapunovs(ds, N; Ttr = Tt
 #####################################################################################
 #                           Maximum Lyapunov Exponent                               #
 #####################################################################################
-inittest_default(D) = (state1, d0) -> state1 + d0/sqrt(D)
+inittest_default(D) = (state1, d0) -> state1 .+ d0/sqrt(D)
 
 """
     lyapunov(ds::DynamicalSystem, Τ; kwargs...) -> λ

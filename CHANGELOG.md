@@ -1,4 +1,9 @@
 # WIP
+## BREAKING
+* Dropped support for all julia < 0.7
+
+## New Features
+* Brand new algorith that computes poincare sections. Now uses interpolation of DiffEq and root finding of Roots.jl. This gives _at least an order of magnitude speedup_ in `produce_orbitdiagram` and makes the source code massively more clear!!!
 * Added method to compute mutual information, from  A. Kraskov *et al.*, [Phys. Rev. E **69**, pp 066138 (2004)]
 * Added method in finding delay time that uses mutual information. At the moment this method is vastly inferior to all others both in speed and in actual results.
 

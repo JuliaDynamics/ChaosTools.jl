@@ -9,5 +9,7 @@ ForwardDiff 0.8
 Roots 0.6
 Combinatorics 0.6.0
 Reexport 0.1.0
+SpecialFunctions 0.6.0
+StatsBase 0.24.0
 
 LsqFit 0.3.0

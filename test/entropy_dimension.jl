@@ -1,5 +1,6 @@
 using ChaosTools
 using Test
+using StatsBase
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
@@ -8,11 +9,11 @@ println("\nTesting generalized entropy (genentropy) & linear scaling...")
   @testset "Henon Map" begin
     ds = Systems.henon()
     ts = trajectory(ds, 200000)
-    mat = convert(Matrix, ts)
+    mat = Matrix(ts)
     # Test call with dataset
     genentropy(1, 0.001, ts)
-    es = logspace(-0, -3, 7)
-    dd = zeros(es)
+    es = 10 .^ range(-0, stop = -3, length = 7)
+    dd = zero(es)
     for q in [0,2,1, 2.56]
       for (i, ee) in enumerate(es)
         dd[i] = genentropy(q, ee, mat)
@@ -25,7 +26,7 @@ println("\nTesting generalized entropy (genentropy) & linear scaling...")
     ds = Systems.lorenz()
     ts = trajectory(ds, 5000)
     es = logspace(1, -3, 11)
-    dd = zeros(es)
+    dd = zero(es)
     for q in [0,1,2]
       for (i, ee) in enumerate(es)
         dd[i] = genentropy(q, ee, ts)

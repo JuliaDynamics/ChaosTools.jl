@@ -1,10 +1,12 @@
+using StatsBase
+
 export linear_region, linear_regions, estimate_boxsizes
 export boxcounting_dim, capacity_dim, generalized_dim,
 information_dim, estimate_boxsizes, kaplanyorke_dim
 #######################################################################################
 # Functions and methods to deduce linear scaling regions
 #######################################################################################
-slope(x, y) = linreg(x, y)[2]
+slope(x, y) = StatsBase.linreg(x, y)[2]
 
 """
     linear_region(x, y; dxi::Int = 1, tol = 0.2) -> ([ind1, ind2], slope)
@@ -100,7 +102,7 @@ end
 #######################################################################################
 """
     estimate_boxsizes(dataset::AbstractDataset; k::Int = 12, z = -1, w = 1)
-Return a `k`-element `logspace` from `lower + w` to `upper + z`,
+Return `k` exponentially spaced values from 10^`lower + w` to 10^`upper + z`.
 
 `lower` is the magnitude of the
 minimum pair-wise distance between datapoints while `upper` is the magnitude
@@ -129,7 +131,7 @@ function estimate_boxsizes(data::AbstractDataset{D, T};
         "Adjust keywords or provide a bigger dataset.")
     end
 
-    logspace(lower+w, upper+z, k)
+    return 10 .^ range(lower+w, stop = upper+z, length = k)
 end
 
 estimate_boxsizes(ts::AbstractMatrix; kwargs...) =

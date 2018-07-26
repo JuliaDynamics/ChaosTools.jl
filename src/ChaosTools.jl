@@ -18,7 +18,8 @@ import OrdinaryDiffEq: ODEIntegrator
 include("lyapunovs.jl")
 
 # Phase space related:
-include("orbitdiagram.jl")
+include("orbitdiagrams/discrete_diagram.jl")
+include("orbitdiagrams/poincare.jl")
 
 # Entropies and Dimension Estimation:
 include("dimensions/entropies.jl")

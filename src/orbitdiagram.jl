@@ -1,6 +1,6 @@
 using OrdinaryDiffEq, DiffEqBase
 using DynamicalSystemsBase: DEFAULT_DIFFEQ_KWARGS, _get_solver
-using Roots
+using Roots: find_zero, Bisection, FalsePosition
 export poincaresos, orbitdiagram, produce_orbitdiagram
 
 #####################################################################################
@@ -198,13 +198,13 @@ const PSOS_ERROR =
 
 function poincaresos2(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
     direction = +1, Ttr::Real = 0.0, warning = true,
-    u0 = get_state(ds), diffeq...) where {IIP, S, D}
+    diffeq...) where {IIP, S, D}
 
-    integ = integrator(ds, u0; diffeq...)
+    integ = integrator(ds; diffeq...)
 
     planecrossing = PlaneCrossing{D}(plane, direction > 0 )
 
-    psos = _poincaresos(integ, planecrossing, tfinal, Ttr, warning)
+    psos = _poincaresos(integ, planecrossing, tfinal, Ttr)
     warning && length(psos) == 0 && warn(PSOS_ERROR)
     return psos
 end
@@ -213,7 +213,7 @@ struct PlaneCrossing{D, P}
     plane::P
     dir::Bool
 end
-PlaneCrossing{D}(p::P, b) where {P} = PlaneCrossing{D, P}(p, b)
+PlaneCrossing{D}(p::P, b) where {P, D} = PlaneCrossing{D, P}(p, b)
 function (hp::PlaneCrossing{D, P})(u::AbstractVector) where {D, P<:Tuple}
     @inbounds x = u[hp.plane[1]] - hp.plane[2]
     hp.dir ? x : -x
@@ -228,7 +228,7 @@ function (hp::PlaneCrossing{D, P})(u::AbstractVector) where {D, P<:AbstractVecto
 end
 
 function _poincaresos(
-    integ, planecrossing::PlaneCrossing{D}, tfinal, Ttr, atol = 1e-6, xrtol = 1e-6, 
+    integ, planecrossing::PlaneCrossing{D}, tfinal, Ttr, atol = 1e-3, xrtol = 1e-3,
     ) where {D}
 
     Ttr != 0 && step!(integ, Ttr)
@@ -239,17 +239,21 @@ function _poincaresos(
     side = planecrossing(integ.u)
 
     while integ.t < tfinal + Ttr
-        while planecrossing(integ.u) < 0
+        while side < 0
             integ.t > tfinal + Ttr && break
             step!(integ)
+            side = planecrossing(integ.u)
         end
-        while planecrossing(integ.u) > 0
+        while side > 0
             integ.t > tfinal + Ttr && break
             step!(integ)
+            side = planecrossing(integ.u)
         end
+        integ.t > tfinal + Ttr && break
+
         # I am now guaranteed to have `t` in negative and `tprev` in positive
-        tcross = find_zero(f, (integ.tprev, integ.t), ZERO_FINDER,
-                           xatol = 0, rtol = 0, xrtol = xrtol, atol = atol)
+        tcross = find_zero(f, (integ.tprev, integ.t), Bisection(),
+                           xrtol = xrtol, atol = atol)
 
         ucross = integ(tcross)
         push!(psos.data, SVector{D}(ucross))
@@ -257,8 +261,8 @@ function _poincaresos(
     end
     return psos
 end
+export poincaresos2
 
-const ZERO_FINDER = FalsePosition()
 
 #####################################################################################
 #                            Produce Orbit Diagram                                  #

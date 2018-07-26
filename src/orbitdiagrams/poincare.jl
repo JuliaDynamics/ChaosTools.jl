@@ -157,15 +157,11 @@ system by computing Poincaré surfaces of section using `plane`
 for the given parameter values (see [`poincaresos`](@ref)).
 
 ## Keyword Arguments
-* `direction`, `diff_eq_kwargs`, `callback_kwargs`, `Ttr` : Passed into
-  [`poincaresos`](@ref).
 * `printparams::Bool = false` : Whether to print the parameter used during computation
   in order to keep track of running time.
 * `ics = [get_state(ds)]` : Collection of initial conditions.
   For every `state ∈ ics` a PSOS will be produced.
-* `warning = true` : Throw a warning if any Poincaré section was empty.
-* `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
-  See [`trajectory`](@ref) for examples.
+* `direction, warning, Ttr, diffeq...` : Propagated into [`poincaresos`](@ref).
 
 ## Description
 For each parameter, a PSOS reduces the system from a flow to a map. This then allows

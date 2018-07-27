@@ -6,14 +6,14 @@ using Distributions: Normal
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
 println("\nTesting nonlinear timeseries analysis...")
-@testset "Henon Reconstruction" begin
+@testset "Henon reconstruct" begin
     ds = Systems.henon()
     data = trajectory(ds, 100000)
     x = data[:, 1] # some "recorded" timeseries
     @testset "Sizes" begin
         for τ in [1, 2, 7]
             for D in [2, 3, 6]
-                R = Reconstruction(x, D, τ)
+                R = reconstruct(x, D-1, τ)
                 @test length(size(R)) == 2
                 @test length(R) == length(x) - (D-1)*τ
                 @test length(R[1]) == D
@@ -22,7 +22,7 @@ println("\nTesting nonlinear timeseries analysis...")
     end
     @testset "Dimension" begin
         τ = 1; D = 2
-        R = Reconstruction(x, D, τ)
+        R = reconstruct(x, D-1, τ)
         D2 = information_dim(R)
         test_value(D2, 1.1, 1.3)
     end
@@ -33,7 +33,7 @@ println("\nTesting nonlinear timeseries analysis...")
             FixedSizeNeighborhood(0.01)]
             @testset "distance = $di" for di in [Euclidean(), Cityblock()]
                 for D in [2, 4]
-                    R = Reconstruction(x, D, 1)
+                    R = reconstruct(x, D-1, 1)
                     E = numericallyapunov(R, ks,
                     refstates = 1:1000, distance=di, ntype=meth)
                     λ = linear_region(ks, E)[2]
@@ -49,7 +49,7 @@ end
 
     taus = [0 0; 2 3; 4 6; 6 8]
     data2 = data[:, 1:2]
-    R = Reconstruction(data2, 4, taus)
+    R = reconstruct(data2, 3, taus)
 
     ks = 1:20
     E = numericallyapunov(R, ks,
@@ -67,13 +67,14 @@ end
 
     Ux, Σx = broomhead_king(x, 40)
     Us, Σs = broomhead_king(s, 40)
-    R = Reconstruction(x, 2, 30)
-    newcoords = Dataset(Us[:, 1], Us[:, 2])
-    newcoordsclean = Dataset(Ux[:, 1], Ux[:, 2])
+    R = reconstruct(x, 1, 30)
 
     for j in 10:40
         @test Σx[j] < Σs[j]
     end
+
+    newcoords = Dataset(Us[:, 1], Us[:, 2])
+    newcoordsclean = Dataset(Ux[:, 1], Ux[:, 2])
 
     Dnew = information_dim(newcoords)
     DR = information_dim(R)

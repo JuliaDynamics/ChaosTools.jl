@@ -6,7 +6,7 @@ export numericallyapunov
 export Cityblock, Euclidean
 
 #####################################################################################
-#                    Numerical Lyapunov (from Reconstruction)                       #
+#                    Numerical Lyapunov (from reconstruction)                       #
 #####################################################################################
 # Everything in this section is based on Ulrich Parlitz [1]
 

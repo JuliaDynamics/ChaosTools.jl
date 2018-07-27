@@ -1,11 +1,30 @@
-using StatsBase
-
 export linear_region, linear_regions, estimate_boxsizes
 export boxcounting_dim, capacity_dim, generalized_dim,
 information_dim, estimate_boxsizes, kaplanyorke_dim
-#######################################################################################
+#####################################################################################
 # Functions and methods to deduce linear scaling regions
-#######################################################################################
+#####################################################################################
+using StatsBase: covm, varm
+# The following function comes from a version in StatsBase that is now deleted
+function linreg(x::AbstractVector, y::AbstractVector)
+    # Least squares given
+    # Y = a + b*X
+    # where
+    # b = cov(X, Y)/var(X)
+    # a = mean(Y) - b*mean(X)
+    if size(x) != size(y)
+        throw(DimensionMismatch("x has size $(size(x)) and y has size $(size(y)), " *
+            "but these must be the same size"))
+    end
+    mx = mean(x)
+    my = mean(y)
+    # don't need to worry about the scaling (n vs n - 1)
+    # since they cancel in the ratio
+    b = covm(x, mx, y, my)/varm(x, mx)
+    a = my - b*mx
+    return (a, b)
+end
+
 slope(x, y) = StatsBase.linreg(x, y)[2]
 
 """

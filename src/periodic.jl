@@ -169,7 +169,6 @@ periodicorbits(::DDS{true}, args...; kwargs...) = error(
 function _periodicorbits!(
     FP, integ, o, ics, Λ, maxiter, disttol, inftol, roundtol)
 
-
     Sk = (state) -> begin
         integ.u = state
         step!(integ, o)
@@ -184,7 +183,7 @@ function _periodicorbits!(
             norm(st) > inftol && break
 
             if norm(prevst - st) < disttol
-                unist = round.(st, roundtol)
+                unist = round.(st, digits = roundtol)
                 unist ∉ FP && push!(FP, unist)
                 break
             end

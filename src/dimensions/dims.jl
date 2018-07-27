@@ -5,7 +5,11 @@ information_dim, estimate_boxsizes, kaplanyorke_dim
 # Functions and methods to deduce linear scaling regions
 #####################################################################################
 using StatsBase: covm, varm
+using Statistics
 # The following function comes from a version in StatsBase that is now deleted
+# StatsBase is copirighted under the MIT License with
+# Copyright (c) 2012-2016: Dahua Lin, Simon Byrne, Andreas Noack, Douglas Bates,
+# John Myles White, Simon Kornblith, and other contributors.
 function linreg(x::AbstractVector, y::AbstractVector)
     # Least squares given
     # Y = a + b*X
@@ -16,8 +20,8 @@ function linreg(x::AbstractVector, y::AbstractVector)
         throw(DimensionMismatch("x has size $(size(x)) and y has size $(size(y)), " *
             "but these must be the same size"))
     end
-    mx = mean(x)
-    my = mean(y)
+    mx = Statistics.mean(x)
+    my = Statistics.mean(y)
     # don't need to worry about the scaling (n vs n - 1)
     # since they cancel in the ratio
     b = covm(x, mx, y, my)/varm(x, mx)
@@ -25,7 +29,7 @@ function linreg(x::AbstractVector, y::AbstractVector)
     return (a, b)
 end
 
-slope(x, y) = StatsBase.linreg(x, y)[2]
+slope(x, y) = linreg(x, y)[2]
 
 """
     linear_region(x, y; dxi::Int = 1, tol = 0.2) -> ([ind1, ind2], slope)

@@ -25,7 +25,7 @@ println("\nTesting generalized entropy (genentropy) & linear scaling...")
   @testset "Lorenz System" begin
     ds = Systems.lorenz()
     ts = trajectory(ds, 5000)
-    es = logspace(1, -3, 11)
+    es = 10 .^ range(1, stop = -3, length = 11)
     dd = zero(es)
     for q in [0,1,2]
       for (i, ee) in enumerate(es)
@@ -73,11 +73,6 @@ println("\nTesting permutation entropy...")
     end
     @testset "User Interface" begin
         order = Int(typemax(UInt8)) + 1
-        try
-            permentropy([], order)
-        catch err
-            @test isa(err, ErrorException)
-            @test contains(err.msg, "order = $order is too large")
-        end
+        @test_throws ArgumentError permentropy([], order)
     end
 end

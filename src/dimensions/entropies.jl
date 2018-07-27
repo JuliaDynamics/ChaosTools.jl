@@ -74,8 +74,9 @@ Statistics and Probability*, pp 547 (1960)
 
 [2] : C. E. Shannon, Bell Systems Technical Journal **27**, pp 379 (1948)
 """
-function genentropy(α::Real, ε::Real, data::AbstractDataset; base=Base.MathConstants.e)
-    ε < 0 && throw(ArgumentError("Box-size for entropy calculation must be ≥ 0."))
+function genentropy(α::Real, ε::Real, data::AbstractDataset;
+    base=Base.MathConstants.e)
+    ε ≤ 0 && throw(ArgumentError("Box-size for entropy calculation must be > 0."))
     p = non0hist(ε, data)
     return genentropy(α, p; base = base)
 end
@@ -88,7 +89,7 @@ function genentropy(α::Real, p::AbstractArray{T}; base = e) where {T<:Real}
   if α ≈ 0
     return log(base, length(p)) #Hartley entropy, max-entropy
   elseif α ≈ 1
-    return -sum( x*log(base, x) for x in p ) #Shannon entropy, information to locate with ε
+    return -sum( x*log(base, x) for x in p ) #Shannon entropy
   elseif isinf(α)
     return -log(base, maximum(p)) #Min entropy
   else
@@ -115,10 +116,13 @@ Optionally use `base` for the logarithms.
 [1] : C. Bandt, & B. Pompe, [Phys. Rev. Lett. **88** (17), pp 174102 (2002)](http://doi.org/10.1103/PhysRevLett.88.174102)
 """
 function permentropy(
-        time_series::AbstractArray{T, 1}, order::UInt8,
+        time_series::AbstractArray{T, 1}, orderi::Integer,
         interval::Integer = 1;
         base=Base.MathConstants.e) where {T}
 
+    orderi > 255 && throw(ArgumentError("order = $orderi is too large, "*
+              "must be smaller than $(Int(typemax(UInt8))) can be used."))
+    order = UInt8(orderi)
     # To use `searchsortedfirst`, we need each permutation to be
     # "comparable" (ordered) type.  Let's use NTuple here:
     PermType = NTuple{Int(order), UInt8}
@@ -138,19 +142,5 @@ function permentropy(
     nonzero = [c for c in count if c != 0]
 
     p = nonzero ./ sum(nonzero)
-    return - sum(p .* log.(base, p))
-end
-
-function permentropy(time_series, order::Integer, args...; kwargs...)
-    order = try
-        UInt8(order)
-    catch err
-        if isa(err, InexactError)
-            error("order = $order is too large.",
-                  " order smaller than $(Int(typemax(UInt8))) can be used.")
-        else
-            rethrow()
-        end
-    end
-    return permentropy(time_series, order, args...; kwargs...)
+    return -sum(p .* log.(base, p))
 end

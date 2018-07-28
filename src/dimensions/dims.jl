@@ -4,8 +4,7 @@ information_dim, estimate_boxsizes, kaplanyorke_dim
 #####################################################################################
 # Functions and methods to deduce linear scaling regions
 #####################################################################################
-using StatsBase: covm, varm
-using Statistics
+using Statistics: covm, varm
 # The following function comes from a version in StatsBase that is now deleted
 # StatsBase is copirighted under the MIT License with
 # Copyright (c) 2012-2016: Dahua Lin, Simon Byrne, Andreas Noack, Douglas Bates,

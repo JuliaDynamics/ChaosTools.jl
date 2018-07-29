@@ -117,8 +117,10 @@ function _poincare_cross!(data, integ,
     end
     return data
 end
+# I want to rework this so that produce orbit diagram can be used for different
+# energies / parameters...?
 
-_fill_crossing_data(data::Vector{<:SVector}, ucross, j) = push!(data, ucross)
+_fill_crossing_data(data::Vector{<:AbstractVector}, ucross, j) = push!(data, ucross)
 _fill_crossing_data(data::Vector{<:Number}, ucross, j) = push!(data, ucross[j])
 
 function _check_plane(plane, D)

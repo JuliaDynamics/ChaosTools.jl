@@ -22,6 +22,7 @@ a pre-initialized matrix `Q0` whose columns are initial deviation vectors (then
 `k = size(Q0)[2]`).
 
 ## Keyword Arguments
+* `u0 = get_state(ds)` : State to start from.
 * `Ttr = 0` : Extra "transient" time to evolve the system before application of the
   algorithm. Should be `Int` for discrete systems. Both the system and the
   deviation vectors are evolved for this time.
@@ -64,15 +65,15 @@ lyapunovs(ds::DS, N, k::Int = dimension(ds); kwargs...) =
 lyapunovs(ds, N, orthonormal(dimension(ds), k); kwargs...)
 
 function lyapunovs(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
-    dt::Real = 1, diffeq...) where {IIP, S, D}
+    dt::Real = 1, u0 = get_state(ds), diffeq...) where {IIP, S, D}
 
     T = stateeltype(ds)
     # Create tangent integrator:
     if typeof(ds) <: DDS
         @assert typeof(Ttr) == Int
-        integ = tangent_integrator(ds, Q0)
+        integ = tangent_integrator(ds, Q0; u0 = u0)
     else
-        integ = tangent_integrator(ds, Q0; diffeq...)
+        integ = tangent_integrator(ds, Q0; u0 = u0, diffeq...)
     end
 
     λ::Vector{T} = _lyapunovs(integ, N, dt, Ttr)

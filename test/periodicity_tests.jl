@@ -2,6 +2,7 @@ using ChaosTools
 using Test, StaticArrays
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
+let
 # Known fixed point locations from publication:
 o2x = [0.0
 0.0
@@ -67,4 +68,5 @@ println("\nTesting finding stable & unstable fixed points...")
             @test round(fp[2], digits = 4) ∈ oy[o]
         end
     end
+end
 end

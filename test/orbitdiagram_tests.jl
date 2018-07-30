@@ -88,7 +88,7 @@ end
   @testset "Shinriki" begin
     ds = Systems.shinriki([-2, 0, 0.2])
 
-    pvalues = linspace(19,22,11)
+    pvalues = range(19,stop=22,length=11)
     parameter = 1
     i = 1
     j = 2
@@ -96,15 +96,15 @@ end
 
     de = Dict(:abstol=>1e-9, :reltol => 1e-9)
     output = produce_orbitdiagram(ds, (j, 0.0), i, parameter, pvalues; tfinal = tf,
-    Ttr = 100.0, diff_eq_kwargs = de, direction = -1)
+    Ttr = 100.0, printparams = false, de...)
     @test length(output) == length(pvalues)
 
-    v = round.(output[1], 4)
+    v = round.(output[1], digits = 4)
     s = collect(Set(v))
     @test length(s) == 1
     @test s[1] == -0.856
 
-    v = round.(output[4], 4)
+    v = round.(output[4], digits = 4)
     s = Set(v)
     @test length(s) == 2
     @test s == Set([-0.376, -1.2887])
@@ -112,9 +112,10 @@ end
   end
 end
 
-@testset "Stroboscopic" begin
-  ds = Systems.duffing(β = -1, ω = 1, f = 0.3)
-  a = trajectory(ds, 100000.0, dt = 2π)
-  D = information_dim(a)
-  @test 1.25 < D < 1.5
-end
+# # This test offers nothing to the Suite (does pass though)
+# @testset "Stroboscopic" begin
+#   ds = Systems.duffing(β = -1, ω = 1, f = 0.3)
+#   a = trajectory(ds, 100000.0, dt = 2π)
+#   D = information_dim(a)
+#   @test 1.25 < D < 1.5
+# end

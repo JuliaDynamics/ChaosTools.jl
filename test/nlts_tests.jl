@@ -1,7 +1,6 @@
 using ChaosTools
 using Test
 using Distances: Cityblock, Euclidean
-using Distributions: Normal
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
@@ -10,24 +9,15 @@ println("\nTesting nonlinear timeseries analysis...")
     ds = Systems.henon()
     data = trajectory(ds, 100000)
     x = data[:, 1] # some "recorded" timeseries
-    @testset "Sizes" begin
-        for τ in [1, 2, 7]
-            for D in [2, 3, 6]
-                R = reconstruct(x, D-1, τ)
-                @test length(size(R)) == 2
-                @test length(R) == length(x) - (D-1)*τ
-                @test length(R[1]) == D
-            end
-        end
-    end
+
     @testset "Dimension" begin
         τ = 1; D = 2
         R = reconstruct(x, D-1, τ)
         D2 = information_dim(R)
         test_value(D2, 1.1, 1.3)
     end
-    ks = 1:20
     @testset "Numerical Lyapunov" begin
+        ks = 1:20
         @testset "meth = $meth" for meth in
             [FixedMassNeighborhood(1), FixedMassNeighborhood(4),
             FixedSizeNeighborhood(0.01)]
@@ -47,7 +37,7 @@ end
     ds = Systems.towel()
     data = trajectory(ds, 10000)
 
-    taus = [0 0; 2 3; 4 6; 6 8]
+    taus = [2 3; 4 6; 6 8]
     data2 = data[:, 1:2]
     R = reconstruct(data2, 3, taus)
 
@@ -62,8 +52,7 @@ end
     ds = Systems.gissinger()
     data = trajectory(ds, 1000.0, dt = 0.05)
     x = data[1:end-1, 1] # "exactly" 20000 points
-    distrib = Normal(0, 0.1)
-    s = x .+ rand(distrib, length(x))
+    s = x .+ 0.1rand(length(x))
 
     Ux, Σx = broomhead_king(x, 40)
     Us, Σs = broomhead_king(s, 40)

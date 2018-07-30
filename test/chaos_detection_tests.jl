@@ -1,5 +1,5 @@
 using ChaosTools
-using Test
+using Test, LsqFit
 using LsqFit: curve_fit
 using OrdinaryDiffEq: Tsit5
 

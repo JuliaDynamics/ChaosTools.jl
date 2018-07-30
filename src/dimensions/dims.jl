@@ -4,6 +4,7 @@ information_dim, estimate_boxsizes, kaplanyorke_dim
 #####################################################################################
 # Functions and methods to deduce linear scaling regions
 #####################################################################################
+using Statistics
 using Statistics: covm, varm
 # The following function comes from a version in StatsBase that is now deleted
 # StatsBase is copirighted under the MIT License with
@@ -191,7 +192,7 @@ The following aliases are provided:
   * α = 1 : `information_dim`
 """
 function generalized_dim(α, data::AbstractDataset, sizes = estimate_boxsizes(data))
-    dd = genentropy.(α, sizes, data)
+    dd = genentropy.(α, sizes, Ref(data))
     return linear_region(-log.(sizes), dd)[2]
 end
 generalized_dim(α, matrix::AbstractMatrix, args...) =

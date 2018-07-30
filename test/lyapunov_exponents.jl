@@ -6,7 +6,7 @@ using DynamicalSystemsBase.Systems: loop, loop_jac, liip, liip_jac
 using OrdinaryDiffEq
 
 println("\nTesting lyapunov exponents...")
-
+let
 u0 = [0, 10.0, 0]
 p = [10, 28, 8/3]
 u0h = ones(2)
@@ -98,4 +98,5 @@ end
     ds = DiscreteDynamicalSystem(g, rand(3), nothing)
     λ2 = lyapunov(ds, 100000)
     @test isapprox(λ1, log(0.9); rtol = 1e-4)
+end
 end

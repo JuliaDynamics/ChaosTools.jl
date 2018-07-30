@@ -159,7 +159,7 @@ system by computing Poincaré surfaces of section using `plane`
 for the given parameter values (see [`poincaresos`](@ref)).
 
 ## Keyword Arguments
-* `printparams::Bool = false` : Whether to print the parameter used during computation
+* `printparams::Bool = true` : Whether to print the parameter used during computation
   in order to keep track of running time.
 * `ics = [get_state(ds)]` : Collection of initial conditions.
   For every `state ∈ ics` a PSOS will be produced.

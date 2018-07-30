@@ -79,7 +79,8 @@ end
 
 
 """
-    periodicorbits(ds::DiscreteDynamicalSystem, o, ics [, λs, indss, singss]; kwargs...) -> FP
+    periodicorbits(ds::DiscreteDynamicalSystem,
+                   o, ics [, λs, indss, singss]; kwargs...) -> FP
 Find fixed points `FP` of order `o` for the map `ds`
 using the algorithm due to Schmelcher & Diakonos [1].
 `ics` is a collection of initial conditions (container of vectors) to be evolved.
@@ -87,9 +88,8 @@ using the algorithm due to Schmelcher & Diakonos [1].
 ## Optional Arguments
 The optional arguments `λs, indss, singss` *must be containers* of appropriate
 values, besides `λs` which can also be a number. The elements of those containers
-are passed to: `lambdamatrix(λ, inds, sings)`, which creates the appropriate
-``\\mathbf{\\Lambda}_k`` matrix (see [`lambdamatrix`](@ref)
-for more). If these arguments are not given,
+are passed to: [`lambdamatrix(λ, inds, sings)`](@ref), which creates the appropriate
+``\\mathbf{\\Lambda}_k`` matrix. If these arguments are not given,
 a random permutation will be chosen for them, with `λ=0.001`.
 
 ## Keyword Arguments
@@ -169,25 +169,25 @@ periodicorbits(::DDS{true}, args...; kwargs...) = error(
 function _periodicorbits!(
     FP, integ, o, ics, Λ, maxiter, disttol, inftol, roundtol)
 
-
-    Sk = (state) -> begin
-        integ.u = state
-        step!(integ, o)
-        state + Λ*(integ.u - state)
-    end
-
     for st in ics
         reinit!(integ, st)
+        prevst = st
         for i in 1:maxiter
-            prevst = st
-            st = Sk(prevst)
+            prevst, st = Sk(integ, prevst, o, Λ)
             norm(st) > inftol && break
 
             if norm(prevst - st) < disttol
-                unist = round.(st, roundtol)
+                unist = round.(st, digits = roundtol)
                 unist ∉ FP && push!(FP, unist)
                 break
             end
+            prevst = st
         end
     end
+end
+
+function Sk(integ::MDI{false}, prevst, o, Λ)
+    integ.u = prevst
+    step!(integ, o)
+    return prevst, prevst + Λ*(integ.u - prevst)
 end

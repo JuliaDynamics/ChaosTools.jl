@@ -1,10 +1,34 @@
 export linear_region, linear_regions, estimate_boxsizes
 export boxcounting_dim, capacity_dim, generalized_dim,
-information_dim, correlation_dim, estimate_boxsizes,
-kaplanyorke_dim
-#######################################################################################
+information_dim, estimate_boxsizes, kaplanyorke_dim
+#####################################################################################
 # Functions and methods to deduce linear scaling regions
-#######################################################################################
+#####################################################################################
+using Statistics
+using Statistics: covm, varm
+# The following function comes from a version in StatsBase that is now deleted
+# StatsBase is copirighted under the MIT License with
+# Copyright (c) 2012-2016: Dahua Lin, Simon Byrne, Andreas Noack, Douglas Bates,
+# John Myles White, Simon Kornblith, and other contributors.
+function linreg(x::AbstractVector, y::AbstractVector)
+    # Least squares given
+    # Y = a + b*X
+    # where
+    # b = cov(X, Y)/var(X)
+    # a = mean(Y) - b*mean(X)
+    if size(x) != size(y)
+        throw(DimensionMismatch("x has size $(size(x)) and y has size $(size(y)), " *
+            "but these must be the same size"))
+    end
+    mx = Statistics.mean(x)
+    my = Statistics.mean(y)
+    # don't need to worry about the scaling (n vs n - 1)
+    # since they cancel in the ratio
+    b = covm(x, mx, y, my)/varm(x, mx)
+    a = my - b*mx
+    return (a, b)
+end
+
 slope(x, y) = linreg(x, y)[2]
 
 """
@@ -101,7 +125,7 @@ end
 #######################################################################################
 """
     estimate_boxsizes(dataset::AbstractDataset; k::Int = 12, z = -1, w = 1)
-Return a `k`-element `logspace` from `lower + w` to `upper + z`,
+Return `k` exponentially spaced values from 10^`lower + w` to 10^`upper + z`.
 
 `lower` is the magnitude of the
 minimum pair-wise distance between datapoints while `upper` is the magnitude
@@ -130,7 +154,7 @@ function estimate_boxsizes(data::AbstractDataset{D, T};
         "Adjust keywords or provide a bigger dataset.")
     end
 
-    logspace(lower+w, upper+z, k)
+    return 10 .^ range(lower+w, stop = upper+z, length = k)
 end
 
 estimate_boxsizes(ts::AbstractMatrix; kwargs...) =
@@ -168,7 +192,7 @@ The following aliases are provided:
   * α = 1 : `information_dim`
 """
 function generalized_dim(α, data::AbstractDataset, sizes = estimate_boxsizes(data))
-    dd = genentropy.(α, sizes, data)
+    dd = genentropy.(α, sizes, Ref(data))
     return linear_region(-log.(sizes), dd)[2]
 end
 generalized_dim(α, matrix::AbstractMatrix, args...) =

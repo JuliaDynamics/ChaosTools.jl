@@ -1,9 +1,8 @@
-if current_module() != ChaosTools
-  using ChaosTools
-end
-using Base.Test, StaticArrays
+using ChaosTools
+using Test, StaticArrays
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
+let
 # Known fixed point locations from publication:
 o2x = [0.0
 0.0
@@ -53,7 +52,7 @@ println("\nTesting finding stable & unstable fixed points...")
 @testset "Standard Map" begin
 
     ds = Systems.standardmap()
-    xs = linspace(0, 2π, 11); ys = copy(xs)
+    xs = range(0, stop = 2π, length = 11); ys = copy(xs)
     ics = [SVector{2}(x,y) for x in xs for y in ys]
 
     # All permutations of [±1, ±1]:
@@ -65,8 +64,9 @@ println("\nTesting finding stable & unstable fixed points...")
     @testset "order = $o" for o in [2, 3]
         FP = periodicorbits(ds, o, ics, λs, indss, singss; roundtol = 4)
         for fp in FP
-            @test round(fp[1], 4) ∈ ox[o]
-            @test round(fp[2], 4) ∈ oy[o]
+            @test round(fp[1], digits = 4) ∈ ox[o]
+            @test round(fp[2], digits = 4) ∈ oy[o]
         end
     end
+end
 end

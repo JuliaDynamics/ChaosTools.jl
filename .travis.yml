@@ -1,15 +1,14 @@
-## Documentation: http://docs.travis-ci.com/user/languages/julia/
 language: julia
 os:
   - linux
 #  - osx
+# branches:
+#   except:
+#     - 0.7
 julia:
-  - 0.6
+  # - 0.7
+  - nightly
 notifications:
   email:
     on_success: never
     on_failure: always
-script:
-  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia -e 'Pkg.clone(pwd())'
-  - julia -e 'Pkg.test("ChaosTools")'

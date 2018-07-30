@@ -1,5 +1,5 @@
 export gali
-using OrdinaryDiffEq
+using OrdinaryDiffEq, LinearAlgebra
 #####################################################################################
 #                               Continuous GALI                                     #
 #####################################################################################
@@ -17,8 +17,9 @@ a matrix with its columns being the deviation vectors (then
   iteration is terminated.
 * `dt = 1` : Time-step between deviation vector normalizations. For continuous
   systems this is approximate.
-* `diff_eq_kwargs` : See [`trajectory`](@ref).
 * `u0` : Initial state for the system. Defaults to `get_state(ds)`.
+* `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
+  See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
 ## Description
 The Generalized Alignment Index,
@@ -56,13 +57,15 @@ the method described in [2], which uses the product of the singular values of ``
 a matrix that has as *columns* the deviation vectors.
 
 ## Performance Notes
-This function uses a [`tangent_integrator`](@ref). For loops over initial
-conditions and/or parameter values one should use the lower level methods
-that accept an integrator, and `reinit!` it to new initial conditions.
-
-See the "advanced documentation" for info on the integrator object
-and use `@which ...` to go to the source code for the low-level
-call signature.
+This function uses a [`tangent_integrator`](@ref).
+For loops over initial conditions and/or
+parameter values one should use the low level method that accepts
+an integrator, and `reinit!` it to new initial conditions.
+See the "advanced documentation" for info on the integrator object.
+The low level method is
+```
+ChaosTools._gali(tinteg, tmax, dt, threshold)
+```
 
 ## References
 
@@ -76,8 +79,8 @@ gali(ds::DS, tmax::Real, k::Int; kwargs...) =
     gali(ds, tmax, orthonormal(dimension(ds), k); kwargs...)
 
 function gali(ds::DS{IIP, S, D}, tmax::Real, Q0::AbstractMatrix;
-    threshold = 1e-12, dt = 1, diff_eq_kwargs = DEFAULT_DIFFEQ_KWARGS,
-    u0 = get_state(ds)) where {IIP, S, D}
+    threshold = 1e-12, dt = 1, u0 = get_state(ds),
+    diffeq...) where {IIP, S, D}
 
     size(Q0)[1] != D && throw(ArgumentError(
     "Deviation vectors must have first dimension equal to the dimension of the "*
@@ -89,11 +92,11 @@ function gali(ds::DS{IIP, S, D}, tmax::Real, Q0::AbstractMatrix;
     if typeof(ds) <: DDS
         tinteg = tangent_integrator(ds, Q0; u0 = u0)
     else
-        tinteg = tangent_integrator(ds, Q0; diff_eq_kwargs = diff_eq_kwargs, u0 = u0)
+        tinteg = tangent_integrator(ds, Q0; u0 = u0, diffeq...)
     end
 
     ST = stateeltype(ds)
-    TT = timetype(ds)
+    TT = typeof(ds.t0)
     gal::Vector{ST}, tvec::Vector{TT} = _gali(tinteg, tmax, dt, threshold)
     return gal, tvec
 end
@@ -109,7 +112,7 @@ function _gali(tinteg, tmax, dt, threshold)
         # Normalize deviation vectors
         normalize_deviations!(tinteg)
         # Calculate singular values:
-        zs = svdfact(get_deviations(tinteg)).S
+        zs = LinearAlgebra.svd(get_deviations(tinteg)).S
         push!(gali_k, prod(zs))
         push!(rett, tinteg.t)
 
@@ -165,7 +168,7 @@ end
 # IIP
 function normalize_inplace!(A)
     for i in 1:size(A)[2]
-        normalize!(view(A, :, i))
+        LinearAlgebra.normalize!(view(A, :, i))
     end
 end
 function normalize_deviations!(tinteg::Union{

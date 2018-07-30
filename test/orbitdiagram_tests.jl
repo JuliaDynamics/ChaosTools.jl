@@ -1,7 +1,5 @@
-if current_module() != ChaosTools
-  using ChaosTools
-end
-using Base.Test, StaticArrays, OrdinaryDiffEq
+using ChaosTools
+using Test, StaticArrays, OrdinaryDiffEq
 
 println("\nTesting orbit diagrams...")
 
@@ -48,12 +46,11 @@ end
 @testset "Poincare SOS" begin
     @testset "Henon Helies" begin
         ds = Systems.henonheiles([0, .483000, .278980390, 0] )
-        psos = poincaresos(ds, (2, 0.0), 1000.0,
-                          callback_kwargs = Dict(:abstol=>1e-12))
+        psos = poincaresos(ds, (2, 0.0), 1000.0)
         xcross = psos[:, 2]
         @test length(xcross) > 1
         for x in xcross
-            @test abs(x) < 1e-12
+            @test abs(x) < 1e-3
         end
 
         # @inline Vhh(q1, q2) = 1//2 * (q1^2 + q2^2 + 2q1^2 * q2 - 2//3 * q2^3)
@@ -69,8 +66,8 @@ end
     @testset "Gissinger crazy plane" begin
         gis = Systems.gissinger([2.32865, 2.02514, 1.98312])
         # Define appropriate hyperplane for gissinger system
-        const ν = 0.1
-        const Γ = 0.9 # default parameters of the system
+        ν = 0.1
+        Γ = 0.9 # default parameters of the system
 
         # I want hyperperplane defined by these two points:
         Np(μ) = SVector{3}(sqrt(ν + Γ*sqrt(ν/μ)), -sqrt(μ + Γ*sqrt(μ/ν)), -sqrt(μ*ν))
@@ -81,7 +78,7 @@ end
 
         μ = 0.12
         set_parameter!(gis, 1, μ)
-        psos = poincaresos(gis, gis_plane(μ), 10000.0, Ttr = 200.0)
+        psos = poincaresos(gis, gis_plane(μ), 10000.0, Ttr = 200.0, direction = -1)
         @test length(psos) > 1
         @test generalized_dim(2, psos) < 1
     end
@@ -91,7 +88,7 @@ end
   @testset "Shinriki" begin
     ds = Systems.shinriki([-2, 0, 0.2])
 
-    pvalues = linspace(19,22,11)
+    pvalues = range(19,stop=22,length=11)
     parameter = 1
     i = 1
     j = 2
@@ -99,15 +96,15 @@ end
 
     de = Dict(:abstol=>1e-9, :reltol => 1e-9)
     output = produce_orbitdiagram(ds, (j, 0.0), i, parameter, pvalues; tfinal = tf,
-    Ttr = 100.0, diff_eq_kwargs = de, direction = -1)
+    Ttr = 100.0, printparams = false, de...)
     @test length(output) == length(pvalues)
 
-    v = round.(output[1], 4)
+    v = round.(output[1], digits = 4)
     s = collect(Set(v))
     @test length(s) == 1
     @test s[1] == -0.856
 
-    v = round.(output[4], 4)
+    v = round.(output[4], digits = 4)
     s = Set(v)
     @test length(s) == 2
     @test s == Set([-0.376, -1.2887])
@@ -115,9 +112,10 @@ end
   end
 end
 
-@testset "Stroboscopic" begin
-  ds = Systems.duffing(β = -1, ω = 1, f = 0.3)
-  a = trajectory(ds, 100000.0, dt = 2π)
-  D = information_dim(a)
-  @test 1.25 < D < 1.5
-end
+# # This test offers nothing to the Suite (does pass though)
+# @testset "Stroboscopic" begin
+#   ds = Systems.duffing(β = -1, ω = 1, f = 0.3)
+#   a = trajectory(ds, 100000.0, dt = 2π)
+#   D = information_dim(a)
+#   @test 1.25 < D < 1.5
+# end

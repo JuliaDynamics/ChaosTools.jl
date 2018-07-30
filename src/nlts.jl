@@ -1,5 +1,4 @@
-using NearestNeighbors, StaticArrays
-using DynamicalSystemsBase: AbstractReconstruction
+using NearestNeighbors, StaticArrays, LinearAlgebra
 using Distances: Metric, Cityblock, Euclidean
 
 export broomhead_king
@@ -7,12 +6,12 @@ export numericallyapunov
 export Cityblock, Euclidean
 
 #####################################################################################
-#                    Numerical Lyapunov (from Reconstruction)                       #
+#                    Numerical Lyapunov (from reconstruction)                       #
 #####################################################################################
 # Everything in this section is based on Ulrich Parlitz [1]
 
 """
-    numericallyapunov(R::AbstractDataset, ks;  refstates, w, distance, ntype)
+    numericallyapunov(R::Dataset, ks;  refstates, w, distance, ntype)
 Return `E = [E(k) for k ∈ ks]`, where `E(k)` is the average logarithmic distance
 between states of a [`neighborhood`](@ref)
 that are evolved in time for `k` steps (`k` must be integer).
@@ -23,11 +22,9 @@ that are evolved in time for `k` steps (`k` must be integer).
   that notes which
   states of the reconstruction should be used as "reference states", which means
   that the algorithm is applied for all state indices contained in `refstates`.
-* `w::Int = round(Int, mean(R.delay))` : The Theiler window, which determines
+* `w::Int = 1` : The Theiler window, which determines
   whether points are separated enough in time to be considered separate trajectories
-  (see [1]). Defaults to the mean delay time. If you give a `Dataset` instead
-  of a `Reconstruction` in the place of `R`, you *must* provide the Theiler window
-  (you can give `w=typemax(Int)` if it does not apply to your case).
+  (see [1] and [`neighborhood`](@ref)).
 * `ntype::AbstractNeighborhood = FixedMassNeighborhood(1)` : The method to
   be used when evaluating the neighborhood of each reference state. See
   [`AbstractNeighborhood`](@ref) or [`neighborhood`](@ref) for more info.
@@ -65,7 +62,7 @@ If the `Metric` is `Euclidean()` then use the Euclidean distance of the
 full `D`-dimensional points (distance ``d_E`` in ref. [1]).
 If however the `Metric` is `Cityblock()`, calculate
 the absolute distance of *only the first elements* of the `m+k` and `n+k` points
-of the reconstruction `R`(distance ``d_F`` in ref. [1]).
+of the reconstruction `R` (distance ``d_F`` in ref. [1]).
 
 ## References
 
@@ -76,7 +73,7 @@ of the reconstruction `R`(distance ``d_F`` in ref. [1]).
 """
 function numericallyapunov(R::AbstractDataset{D, T}, ks;
                            refstates = 1:(length(R) - ks[end]),
-                           w = round(Int, mean(R.delay)),
+                           w = 1,
                            distance = Cityblock(),
                            ntype = FixedMassNeighborhood(1)) where {D, T}
     Ek = numericallyapunov(R, ks, refstates, w, distance, ntype)
@@ -152,12 +149,12 @@ function numericallyapunov(R::AbstractDataset{D, T},
     E ./= length(ℜ) - skippedn
 end
 
-@inline @inbounds function delay_distance(di::Cityblock, R, m, n, k)
-    abs(R[m+k][1] - R[n+k][1])
+@inline function delay_distance(di::Cityblock, R, m, n, k)
+    @inbounds abs(R[m+k][1] - R[n+k][1])
 end
 
-@inline @inbounds function delay_distance(di::Euclidean, R, m, n, k)
-    return norm(R[m+k] - R[n+k])
+@inline function delay_distance(di::Euclidean, R, m, n, k)
+    @inbounds norm(R[m+k] - R[n+k])
 end
 
 
@@ -165,18 +162,6 @@ end
 #####################################################################################
 #                                  Broomhead-King                                   #
 #####################################################################################
-function trajectory_matrix(x::AbstractArray, d::Int)
-    xdash = mean(x)
-    N = length(x); sqN = √N
-    X = zeros(N-d+1, d)
-    for j in 1:d
-        for i in 0:(N-d)
-            @inbounds X[i+1, j] = (x[j+i] - xdash)/sqN
-        end
-    end
-    return X
-end
-
 """
     broomhead_king(s::AbstractVector, d::Int) -> U, S, Vtr
 Return the Broomhead-King coordinates of a timeseries `s`
@@ -208,6 +193,18 @@ columns of ``U`` are "important". See the documentation page for example applica
 """
 function broomhead_king(x::AbstractArray, d::Int)
     X = trajectory_matrix(x, d)
-    F = svdfact(X)
-    return F[:U], F[:S], F[:Vt]
+    F = LinearAlgebra.svd(X)
+    return F.U, F.S, F.Vt
+end
+
+function trajectory_matrix(x::AbstractArray, d::Int)
+    xdash = mean(x)
+    N = length(x); sqN = √N
+    X = zeros(N-d+1, d)
+    for j in 1:d
+        for i in 0:(N-d)
+            @inbounds X[i+1, j] = (x[j+i] - xdash)/sqN
+        end
+    end
+    return X
 end

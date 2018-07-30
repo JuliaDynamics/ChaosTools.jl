@@ -8,18 +8,18 @@ module ChaosTools
 using Reexport
 @reexport using DynamicalSystemsBase
 
-using DynamicalSystemsBase: DS, DDS
-using DynamicalSystemsBase: CDS, DEFAULT_DIFFEQ_KWARGS
+using DynamicalSystemsBase: DS, DDS, CDS
 using DynamicalSystemsBase: MDI, TDI
-using DynamicalSystemsBase: stateeltype, timetype
-
-export reinit!
+using DynamicalSystemsBase: stateeltype
+using OrdinaryDiffEq
+import OrdinaryDiffEq: ODEIntegrator
 
 # Lyapunovs:
 include("lyapunovs.jl")
 
 # Phase space related:
-include("orbitdiagram.jl")
+include("orbitdiagrams/discrete_diagram.jl")
+include("orbitdiagrams/poincare.jl")
 
 # Entropies and Dimension Estimation:
 include("dimensions/entropies.jl")
@@ -36,7 +36,7 @@ include("periodic.jl")
 include("chaos_detection.jl")
 
 # Visualization routines:
-using Requires
-@require PyPlot include("visualizations.jl")
+# using Requires
+# @require PyPlot include("visualizations.jl")
 
 end # module

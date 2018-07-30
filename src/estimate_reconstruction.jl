@@ -8,7 +8,6 @@ export estimate_delay
 export estimate_dimension
 export mutinfo, mutinfo_delaycurve
 export estimate_dimension, stochastic_indicator
-# export mutual_info
 
 #####################################################################################
 #                                Mutual Information                                 #
@@ -155,7 +154,7 @@ end
 """
     estimate_delay(s, method::String) -> τ
 
-Estimate an optimal delay to be used in [`Reconstruction`](@ref).
+Estimate an optimal delay to be used in [`reconstruct`](@ref).
 Return the exponential decay time `τ` rounded to an integer.
 
 The `method` can be one of the following:
@@ -220,10 +219,44 @@ end
 #####################################################################################
 #                                Estimate Dimension                                 #
 #####################################################################################
+"""
+    estimate_dimension(s::AbstractVector, τ:Int, Ds = 1:5) -> E₁s
+
+Compute a quantity that can estimate an optimal amount of
+temporal neighbors `D` to be used in [`reconstruct`](@ref).
+
+## Description
+Given the scalar timeseries `s` and the embedding delay `τ` compute the
+values of `E₁` for each `D ∈ Ds`, according to Cao's Method (eq. 3 of [1]).
+Please be aware that in **DynamicalSystems.jl** `D` stands for the amount of temporal
+neighbors, *not* the dimension as in [1]. The dimension is `D+1`.
+
+Return the vector of all computed `E₁`s. To estimate a good value for `D` from this,
+find `D` for which the value `E₁` saturates at some value around 1.
+
+*Note: This method does not work for datasets with perfectly periodic signals.*
+
+## References
+
+[1] : Liangyue Cao, [Physica D, pp. 43-50 (1997)](https://www.sciencedirect.com/science/article/pii/S0167278997001188?via%3Dihub)
+"""
+function estimate_dimension(s::AbstractVector{T}, τ::Int, Ds = 1:5) where {T}
+    E1s = zeros(T, length(Ds))
+    aafter = zero(T)
+    aprev = _average_a(s, Ds[1], τ)
+    for (i, D) ∈ enumerate(Ds)
+        aafter = _average_a(s, D+1, τ)
+        E1s[i] = aafter/aprev
+        aprev = aafter
+    end
+    return E1s
+end
+# then use function `saturation_point(Ds, E1s)` from ChaosTools
+
 function _average_a(s::AbstractVector{T},D,τ) where T
     #Sum over all a(i,d) of the Ddim Reconstructed space, equation (2)
-    R1 = Reconstruction(s,D+1,τ)
-    R2 = Reconstruction(s[1:end-τ],D,τ)
+    R1 = reconstruct(s,D+1,τ)
+    R2 = reconstruct(s[1:end-τ],D,τ)
     tree2 = KDTree(R2)
     nind = (x = knn(tree2, R2.data, 2)[1]; [ind[1] for ind in x])
     e=0.
@@ -245,63 +278,30 @@ end
 
 
 """
-    estimate_dimension(s::AbstractVector, τ:Int, Ds = 1:6) -> E1s
+    stochastic_indicator(s::AbstractVector, τ:Int, Ds = 1:4) -> E₂s
 
-Compute a quantity that can estimate an optimal embedding
-dimension to be used in [`Reconstruction`](@ref).
-
-## Description
-Given the scalar timeseries `s` and the embedding delay `τ` compute the
-values of `E1` for each `D ∈ Ds`, according to Cao's Method (eq. 3 of [1]).
-
-Return the vector of all computed `E1`s. To estimate a dimension from this,
-find the dimension for which the value `E1` saturates, at some value around 1.
-
-*Note: This method does not work for datasets with perfectly periodic signals.*
-
-## References
-
-[1] : Liangyue Cao, [Physica D, pp. 43-50 (1997)](https://www.sciencedirect.com/science/article/pii/S0167278997001188?via%3Dihub)
-"""
-function estimate_dimension(s::AbstractVector{T}, τ::Int, Ds = 1:6) where {T}
-    E1s = zeros(T, length(Ds))
-    aafter = zero(T)
-    aprev = _average_a(s, Ds[1], τ)
-    for (i, D) ∈ enumerate(Ds)
-        aafter = _average_a(s, D+1, τ)
-        E1s[i] = aafter/aprev
-        aprev = aafter
-    end
-    return E1s
-end
-# then use function `saturation_point(Ds, E1s)` from ChaosTools
-
-
-
-"""
-    stochastic_indicator(s::AbstractVector, τ:Int, Ds = 1:6) -> E2s
-
-Compute an estimator for apparent randomness in a reconstruction of dimensions `Ds`.
+Compute an estimator for apparent randomness in a reconstruction `Ds` temporal
+neighbors.
 
 ## Description
 Given the scalar timeseries `s` and the embedding delay `τ` compute the
-values of `E2` for each `D ∈ Ds`, according to Cao's Method (eq. 5 of [1]).
+values of `E₂` for each `D ∈ Ds`, according to Cao's Method (eq. 5 of [1]).
 
 Use this function to confirm that the
 input signal is not random and validate the results of [`estimate_dimension`](@ref).
-In the case of random signals, it should be `E2 ≈ 1 ∀ D`.
+In the case of random signals, it should be `E₂ ≈ 1 ∀ D`.
 
 ## References
 
 [1] : Liangyue Cao, [Physica D, pp. 43-50 (1997)](https://www.sciencedirect.com/science/article/pii/S0167278997001188?via%3Dihub)
 """
-function stochastic_indicator(s::AbstractVector{T},τ, Ds=1:6) where T # E2, equation (5)
+function stochastic_indicator(s::AbstractVector{T},τ, Ds=1:4) where T # E2, equation (5)
     #This function tries to tell the difference between deterministic
     #and stochastic signals
     #Calculate E* for Dimension D+1
     E2s = Float64[]
     for D ∈ Ds
-        R1 = Reconstruction(s,D+1,τ)
+        R1 = reconstruct(s,D+1,τ)
         tree1 = KDTree(R1[1:end-1-τ])
         method = FixedMassNeighborhood(2)
 
@@ -312,7 +312,7 @@ function stochastic_indicator(s::AbstractVector{T},τ, Ds=1:6) where T # E2, equ
         end
 
         #Calculate E* for Dimension D
-        R2 = Reconstruction(s,D,τ)
+        R2 = reconstruct(s,D,τ)
         tree2 = KDTree(R2[1:end-1-τ])
         Es2 = 0.
         nind = (x = neighborhood(R2[1:end-τ], tree2, method); [ind[1] for ind in x])

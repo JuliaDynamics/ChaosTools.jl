@@ -52,7 +52,7 @@ end
     ds = Systems.gissinger()
     data = trajectory(ds, 1000.0, dt = 0.05)
     x = data[1:end-1, 1] # "exactly" 20000 points
-    s = x .+ 0.1rand(length(x))
+    s = x .+ 0.01rand(length(x))
 
     Ux, Σx = broomhead_king(x, 40)
     Us, Σs = broomhead_king(s, 40)
@@ -68,6 +68,6 @@ end
     Dnew = information_dim(newcoords)
     DR = information_dim(R)
     DC = information_dim(newcoordsclean)
-    @test abs(Dnew - 0.1 - DR) < 0.15 # subtract 0.1 for "added dimensionality"
+    @test abs(Dnew - 0.1 - DR) < 0.2 # subtract 0.1 for "added dimensionality"
     @test abs(DC - DR) < 0.2
 end

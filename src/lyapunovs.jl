@@ -1,4 +1,4 @@
-using LinearAlgebra
+using LinearAlgebra, StaticArrays
 using OrdinaryDiffEq
 using OrdinaryDiffEq: ODEIntegrator
 using DynamicalSystemsBase: MinimalDiscreteIntegrator
@@ -80,15 +80,15 @@ function lyapunovs(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
     return λ
 end
 
-function _lyapunovs(integ, N, dt::Real, Ttr::Real)
+function _lyapunovs(integ, N, dt::Real, Ttr::Real = 0.0)
 
     T = stateeltype(integ)
     t0 = integ.t
     if Ttr > 0
         while integ.t < t0 + Ttr
             step!(integ, dt)
-            QR = LinearAlgebra.qr(get_deviations(integ))
-            set_deviations!(integ, Matrix(QR.Q))
+            qrdec = LinearAlgebra.qr(get_deviations(integ))
+            set_deviations!(integ, _get_Q(qrdec))
         end
     end
     k = size(get_deviations(integ))[2]
@@ -97,15 +97,18 @@ function _lyapunovs(integ, N, dt::Real, Ttr::Real)
 
     for i in 2:N
         step!(integ, dt)
-        QR = LinearAlgebra.qr(get_deviations(integ))
+        qrdec = LinearAlgebra.qr(get_deviations(integ))
         for i in 1:k
-            λ[i] += log(abs(QR.R[i,i]))
+            @inbounds λ[i] += log(abs(qrdec.R[i,i]))
         end
-        set_deviations!(integ, Matrix(QR.Q))
+        set_deviations!(integ, _get_Q(qrdec))
     end
     λ ./= (integ.t - t0)
     return λ
 end
+
+_get_Q(qrdec::StaticArrays.QR) = qrdec.Q
+_get_Q(qrdec::LinearAlgebra.QRCompactWY) = Matrix(qrdec.Q)
 
 lyapunovs(ds::DynamicalSystem{IIP, T, 1}, a...; kw...) where {IIP, T} = error(
 "For 1D systems, only discrete & out-of-place method is implemented.")

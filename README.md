@@ -9,8 +9,3 @@ is part of the library [DynamicalSystems.jl](https://juliadynamics.github.io/Dyn
 
 The features of ChaosTools.jl are updated and expanded frequently and therefore we
 refer our users to the official documentation: https://juliadynamics.github.io/DynamicalSystems.jl/latest/chaos/overview/
-
-
-The git history of this repository before version v0.1.0 is contained in the git history of
-[DynamicalSystems.jl](https://github.com/JuliaDynamics/DynamicalSystems.jl) before
-its version v1.0.0.

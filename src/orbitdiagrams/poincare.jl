@@ -195,7 +195,7 @@ See also [`poincaresos`](@ref), [`orbitdiagram`](@ref).
 function produce_orbitdiagram(
     ds::CDS{IIP, S, D},
     plane,
-    idxs::Int,
+    idxs,
     p_index,
     pvalues;
     tfinal::Real = 100.0,
@@ -223,7 +223,7 @@ function produce_orbitdiagram(
         printparams && println("parameter = $p")
 
         if typeof(u0) <: Vector{<:AbstractVector}
-            st = u0[j]
+            st = u0[n]
         else
             st = u0
         end

@@ -1,11 +1,11 @@
-# WIP
+# 0.12
 ## BREAKING
 * Dropped support for all julia < 0.7
 * Method for estimating reconstruction dimension now estimate temporal neighbor number to account for `reconstruct`.
 * Reworked a bit how `orbitdiagram`s and co. behave. Now if given multiple states it is assumed that each state is for a different parameter.
 
 ## New Features
-* Brand new algorith that computes poincare sections. Now uses interpolation of DiffEq and root finding of Roots.jl. This gives _at least an order of magnitude speedup_ in `produce_orbitdiagram` and makes the source code massively more clear!!!
+* Brand new algorithm that computes poincare sections. Now uses interpolation of DiffEq and root finding of Roots.jl. This gives _at least an order of magnitude speedup_ in `produce_orbitdiagram` and makes the source code massively more clear!!!
 * It is now possible to choose which variables to save in both discrete and continuous orbit diagrams.
 * Added method to compute mutual information, from  A. Kraskov *et al.*, [Phys. Rev. E **69**, pp 066138 (2004)]
 * Added method in finding delay time that uses mutual information. At the moment this method is vastly inferior to all others both in speed and in actual results.

@@ -32,6 +32,8 @@ Returns a [`Dataset`](@ref) of the points that are on the surface of section.
 * `direction = 1` : Only crossings with `sign(direction)` are considered to belong to
   the surface of section. Positive direction means going from less than ``b``
   to greater than ``b``.
+* `idxs = 1:dimension(ds)` : Optionally you can choose which variables to save.
+  Defaults to the entire state.
 * `Ttr = 0.0` : Transient time to evolve the system before starting
   to compute the PSOS.
 * `warning = true` : Throw a warning if the Poincaré section was empty.
@@ -51,7 +53,7 @@ DifferentialEquations.jl.
 See also [`orbitdiagram`](@ref), [`produce_orbitdiagram`](@ref).
 """
 function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
-    direction = +1, Ttr::Real = 0.0, warning = true,
+    direction = +1, Ttr::Real = 0.0, warning = true, idxs = 1:D,
     diffeq...) where {IIP, S, D}
 
     _check_plane(plane, D)
@@ -59,11 +61,23 @@ function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
     planecrossing = PlaneCrossing{D}(plane, direction > 0 )
     f = (t) -> planecrossing(integ(t))
 
-    psos = Dataset{D, eltype(S)}()
-    _poincare_cross!(psos.data, integ,
-                     f, planecrossing, tfinal, Ttr)
-    warning && length(psos) == 0 && warn(PSOS_ERROR)
-    return psos
+    i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
+
+    data = _initialize_output(get_state(ds), i)
+
+    _poincare_cross!(data, integ,
+                     f, planecrossing, tfinal, Ttr, i)
+    warning && length(data) == 0 && warn(PSOS_ERROR)
+
+    return Dataset(data)
+end
+
+function _initialize_output(u::S, i::Int) where {S}
+    output = eltype(S)[]
+end
+function _initialize_output(u::S, i::SVector) where {S}
+    s = u[i]
+    output = typeof(s)[]
 end
 
 const PSOS_ERROR =
@@ -88,7 +102,7 @@ function (hp::PlaneCrossing{D, P})(u::AbstractVector) where {D, P<:AbstractVecto
 end
 
 function _poincare_cross!(data, integ,
-                          f, planecrossing, tfinal, Ttr, j = 1)
+                          f, planecrossing, tfinal, Ttr, j)
 
     Ttr != 0 && step!(integ, Ttr)
 
@@ -113,15 +127,11 @@ function _poincare_cross!(data, integ,
 
         ucross = integ(tcross)
 
-        _fill_crossing_data(data, ucross, j)
+        push!(data, ucross[j])
     end
     return data
 end
-# I want to rework this so that produce orbit diagram can be used for different
-# energies / parameters...?
 
-_fill_crossing_data(data::Vector{<:AbstractVector}, ucross, j) = push!(data, ucross)
-_fill_crossing_data(data::Vector{<:Number}, ucross, j) = push!(data, ucross[j])
 
 function _check_plane(plane, D)
     P = typeof(plane)
@@ -154,16 +164,22 @@ end
     produce_orbitdiagram(ds::ContinuousDynamicalSystem, plane, i::Int,
                          p_index, pvalues; kwargs...)
 Produce an orbit diagram (also called bifurcation diagram)
-for the `i`-th variable of the given continuous
+for the `i` variable(s) of the given continuous
 system by computing Poincaré surfaces of section using `plane`
 for the given parameter values (see [`poincaresos`](@ref)).
 
+`i` can be `Int` or `AbstractVector{Int}`.
+If `i` is `Int`, returns a vector of vectors. Else
+it returns vectors of vectors of vectors.
+Each entry are the points at each parameter value.
+
 ## Keyword Arguments
-* `printparams::Bool = true` : Whether to print the parameter used during computation
+* `printparams::Bool = false` : Whether to print the parameter used during computation
   in order to keep track of running time.
-* `ics = [get_state(ds)]` : Collection of initial conditions.
-  For every `state ∈ ics` a PSOS will be produced.
 * `direction, warning, Ttr, diffeq...` : Propagated into [`poincaresos`](@ref).
+* `u0 = get_state(ds)` : Initial condition. Besides a vector you can also give
+  a vector of vectors such that `length(u0) == length(pvalues)`. Then each parameter
+  has a different initial condition.
 
 ## Description
 For each parameter, a PSOS reduces the system from a flow to a map. This then allows
@@ -174,50 +190,51 @@ The parameter change is done as `p[p_index] = value` taking values from `pvalues
 and thus you must use a parameter container that supports this
 (either `Array`, `LMArray`, dictionary or other).
 
-The returned `output` is a vector of vectors. `output[k]` are the
-"orbit diagram" points of the `i`-th variable of the system,
-at parameter value `pvalues[k]`.
-
-## Performance Notes
-The total amount of PSOS produced will be `length(ics)*length(pvalues)`.
-
 See also [`poincaresos`](@ref), [`orbitdiagram`](@ref).
 """
 function produce_orbitdiagram(
     ds::CDS{IIP, S, D},
     plane,
-    i::Int,
+    idxs::Int,
     p_index,
     pvalues;
     tfinal::Real = 100.0,
-    ics = [get_state(ds)],
     direction = +1,
-    printparams = true,
+    printparams = false,
     warning = true,
     Ttr = 0.0,
+    u0 = get_state(ds),
     diffeq...) where {IIP, S, D}
 
+    i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
+
     _check_plane(plane, D)
+    typeof(u0) <: Vector{<:AbstractVector} && @assert length(u0)==length(p)
+
     integ = integrator(ds; diffeq...)
     planecrossing = PlaneCrossing{D}(plane, direction > 0 )
     f = (t) -> planecrossing(integ(t))
     p0 = ds.p[p_index]
 
-    output = [Vector{eltype(S)}() for j in 1:length(pvalues)]
+    output = [_initialize_output(ds.u0, i) for k in 1:length(pvalues)]
 
     for (n, p) in enumerate(pvalues)
         integ.p[p_index] = p
         printparams && println("parameter = $p")
 
-        for (m, st) in enumerate(ics)
-
-            reinit!(integ, st)
-            _poincare_cross!(output[n], integ,
-                             f, planecrossing, tfinal, Ttr, i)
-
-            warning && length(output[n]) == 0 && warn(
-            "For parameter $p and initial condition index $m $PSOS_ERROR")
+        if typeof(u0) <: Vector{<:AbstractVector}
+            st = u0[j]
+        else
+            st = u0
         end
+
+        reinit!(integ, st)
+        _poincare_cross!(output[n], integ,
+                         f, planecrossing, tfinal, Ttr, i)
+
+        warning && length(output[n]) == 0 && warn(
+        "For parameter $p $PSOS_ERROR")
+
     end
     # Reset the parameter of the system:
     ds.p[p_index] = p0

@@ -6,7 +6,7 @@ Compute the orbit diagram (also called bifurcation diagram) of the given system,
 saving the `i` variable(s) for parameter values `pvalues`. The `p_index` specifies
 which parameter of the equations of motion is to be changed.
 
-`i` can be `Int` or `Vector{Int}`.
+`i` can be `Int` or `AbstractVector{Int}`.
 If `i` is `Int`, returns a vector of vectors. Else
 it returns vectors of vectors of vectors.
 Each entry are the points at each parameter value.
@@ -18,7 +18,7 @@ Each entry are the points at each parameter value.
 * `dt = 1` : Stepping time. Changing this will give you the orbit diagram of
   the `dt` order map.
 * `u0 = get_state(ds)` : Initial condition. Besides a vector you can also give
-  a vector of vectors such as `length(u0) == length(pvalues)`. Then each parameter
+  a vector of vectors such that `length(u0) == length(pvalues)`. Then each parameter
   has a different initial condition.
 
 See also [`poincaresos`](@ref) and [`produce_orbitdiagram`](@ref).
@@ -34,7 +34,7 @@ function orbitdiagram(ds::DDS{IIP, S, D}, idxs, p_index, pvalues;
 
     typeof(u0) <: Vector{<:AbstractVector} && @assert length(u0)==length(p)
 
-    i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
+    i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
 
     output = _initialize_output(ds.u0, i, n, length(pvalues))
     integ = integrator(ds)

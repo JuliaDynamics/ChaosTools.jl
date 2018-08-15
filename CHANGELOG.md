@@ -1,3 +1,7 @@
+# 0.13
+* Renamed all low-level methods that were exposed as part of the API to not start with an underscore anymore.
+* Updated everything (REQUIRES etc) to julia 1.0.
+
 # 0.12
 ## BREAKING
 * Dropped support for all julia < 0.7

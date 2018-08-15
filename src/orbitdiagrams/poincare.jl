@@ -1,7 +1,9 @@
 using OrdinaryDiffEq, DiffEqBase
 using DynamicalSystemsBase: DEFAULT_DIFFEQ_KWARGS, _get_solver
-using Roots: find_zero, Bisection, FalsePosition
+using Roots: find_zero, A42, AlefeldPotraShi, Brent
 export poincaresos, produce_orbitdiagram
+
+const ROOTS_ALG = A42()
 
 #####################################################################################
 #                               Poincare Section                                    #
@@ -122,8 +124,8 @@ function _poincare_cross!(data, integ,
         integ.t > tfinal + Ttr && break
 
         # I am now guaranteed to have `t` in negative and `tprev` in positive
-        tcross = find_zero(f, (integ.tprev, integ.t), FalsePosition(),
-                           xrtol = 1e-3, atol = 1e-3)
+        tcross = find_zero(f, (integ.tprev, integ.t), ROOTS_ALG,
+                           xrtol = 1e-6, atol = 1e-6)
 
         ucross = integ(tcross)
 

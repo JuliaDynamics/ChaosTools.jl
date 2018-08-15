@@ -67,7 +67,7 @@ function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
 
     data = _initialize_output(get_state(ds), i)
 
-    _poincare_cross!(data, integ,
+    poincare_cross!(data, integ,
                      f, planecrossing, tfinal, Ttr, i)
     warning && length(data) == 0 && warn(PSOS_ERROR)
 
@@ -103,7 +103,7 @@ function (hp::PlaneCrossing{D, P})(u::AbstractVector) where {D, P<:AbstractVecto
     hp.dir ? x : -x
 end
 
-function _poincare_cross!(data, integ,
+function poincare_cross!(data, integ,
                           f, planecrossing, tfinal, Ttr, j)
 
     Ttr != 0 && step!(integ, Ttr)
@@ -231,7 +231,7 @@ function produce_orbitdiagram(
         end
 
         reinit!(integ, st)
-        _poincare_cross!(output[n], integ,
+        poincare_cross!(output[n], integ,
                          f, planecrossing, tfinal, Ttr, i)
 
         warning && length(output[n]) == 0 && warn(

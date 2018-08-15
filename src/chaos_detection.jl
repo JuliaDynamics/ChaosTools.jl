@@ -64,7 +64,7 @@ an integrator, and `reinit!` it to new initial conditions.
 See the "advanced documentation" for info on the integrator object.
 The low level method is
 ```
-ChaosTools._gali(tinteg, tmax, dt, threshold)
+ChaosTools.gali(tinteg, tmax, dt, threshold)
 ```
 
 ## References
@@ -97,11 +97,11 @@ function gali(ds::DS{IIP, S, D}, tmax::Real, Q0::AbstractMatrix;
 
     ST = stateeltype(ds)
     TT = typeof(ds.t0)
-    gal::Vector{ST}, tvec::Vector{TT} = _gali(tinteg, tmax, dt, threshold)
+    gal::Vector{ST}, tvec::Vector{TT} = gali(tinteg, tmax, dt, threshold)
     return gal, tvec
 end
 
-function _gali(tinteg, tmax, dt, threshold)
+function gali(tinteg, tmax, dt, threshold)
 
     rett = [tinteg.t]
     gali_k = [one(eltype(tinteg.u))]

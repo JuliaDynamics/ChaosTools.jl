@@ -49,7 +49,7 @@ an integrator, and `reinit!` it to new initial conditions.
 See the "advanced documentation" for info on the integrator object.
 The low level method is
 ```
-ChaosTools._lyapunovs(tinteg, N, dt::Real, Ttr::Real)
+lyapunovs(tinteg, N, dt::Real, Ttr::Real)
 ```
 
 ## References
@@ -76,11 +76,11 @@ function lyapunovs(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
         integ = tangent_integrator(ds, Q0; u0 = u0, diffeq...)
     end
 
-    λ::Vector{T} = _lyapunovs(integ, N, dt, Ttr)
+    λ::Vector{T} = lyapunovs(integ, N, dt, Ttr)
     return λ
 end
 
-function _lyapunovs(integ, N, dt::Real, Ttr::Real = 0.0)
+function lyapunovs(integ, N, dt::Real, Ttr::Real = 0.0)
 
     T = stateeltype(integ)
     t0 = integ.t
@@ -192,7 +192,7 @@ an integrator, and `reinit!` it to new initial conditions.
 See the "advanced documentation" for info on the integrator object.
 The low level method is
 ```
-ChaosTools._lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
+lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
 ```
 
 ## References
@@ -220,11 +220,11 @@ function lyapunov(ds::DS, T;
             [deepcopy(get_state(ds)), inittest(get_state(ds), d0)];
             diffeq...)
     end
-    λ::ST = _lyapunov(pinteg, T, Ttr, dt, d0, upper_threshold, lower_threshold)
+    λ::ST = lyapunov(pinteg, T, Ttr, dt, d0, upper_threshold, lower_threshold)
     return λ
 end
 
-function _lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
+function lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
     # transient
     t0 = pinteg.t
     while pinteg.t < t0 + Ttr

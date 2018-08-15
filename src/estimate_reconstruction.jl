@@ -280,7 +280,7 @@ end
 """
     stochastic_indicator(s::AbstractVector, τ:Int, Ds = 1:4) -> E₂s
 
-Compute an estimator for apparent randomness in a reconstruction `Ds` temporal
+Compute an estimator for apparent randomness in a reconstruction with `Ds` temporal
 neighbors.
 
 ## Description

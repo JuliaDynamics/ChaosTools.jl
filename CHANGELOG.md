@@ -1,6 +1,7 @@
 # 0.13
 * Renamed all low-level methods that were exposed as part of the API to not start with an underscore anymore.
 * Updated everything (REQUIRES etc) to julia 1.0.
+* Added convergence return function for lyapunov exponents.
 
 # 0.12
 ## BREAKING

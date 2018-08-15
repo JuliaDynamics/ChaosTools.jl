@@ -99,4 +99,14 @@ end
     λ2 = lyapunov(ds, 100000)
     @test isapprox(λ1, log(0.9); rtol = 1e-4)
 end
+
+@testset "Lyapunov convergence" begin
+
+ds = Systems.towel()
+tinteg = tangent_integrator(ds)
+ls, t = ChaosTools.lyapunovs_convergence(tinteg, 20000, 1, 0)
+l1 = [x[1] for x in ls]
+@test 0.434 < l1[end] < 0.436
+end
+
 end

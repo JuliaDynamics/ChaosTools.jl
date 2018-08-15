@@ -52,6 +52,13 @@ The low level method is
 lyapunovs(tinteg, N, dt::Real, Ttr::Real)
 ```
 
+If you want to obtain the convergence timeseries of the Lyapunov spectrum,
+use the method
+```
+ChaosTools.lyapunovs_convergence(tinteg, N, dt, Ttr)
+```
+(not exported).
+
 ## References
 
 [1] : A. M. Lyapunov, *The General Problem of the Stability of Motion*,
@@ -98,8 +105,8 @@ function lyapunovs(integ, N, dt::Real, Ttr::Real = 0.0)
     for i in 2:N
         step!(integ, dt)
         qrdec = LinearAlgebra.qr(get_deviations(integ))
-        for i in 1:k
-            @inbounds λ[i] += log(abs(qrdec.R[i,i]))
+        for j in 1:k
+            @inbounds λ[j] += log(abs(qrdec.R[j,j]))
         end
         set_deviations!(integ, _get_Q(qrdec))
     end

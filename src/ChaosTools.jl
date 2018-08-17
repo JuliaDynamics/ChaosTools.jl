@@ -36,8 +36,4 @@ include("chaos_detection.jl")
 # Ugly methods that shouldn't exist:
 include("ugliness.jl")
 
-# Visualization routines:
-# using Requires
-# @require PyPlot include("visualizations.jl")
-
 end # module

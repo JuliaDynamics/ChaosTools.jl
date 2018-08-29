@@ -82,6 +82,27 @@ end
         @test length(psos) > 1
         @test generalized_dim(2, psos) < 1
     end
+    @testset "beginning on the plane" begin
+
+        @inbounds @inline function ż(z, p, t)
+            A, B, D = p
+            p₀, p₂ = z[1:2]
+            q₀, q₂ = z[3:4]
+
+            return SVector{4}(
+                -A * q₀ - 3 * B / √2 * (q₂^2 - q₀^2) - D * q₀ * (q₀^2 + q₂^2),
+                -q₂ * (A + 3 * √2 * B * q₀ + D * (q₀^2 + q₂^2)),
+                A * p₀,
+                A * p₂
+            )
+        end
+        z0 = SVector{4}(2.3499921651423565, -9.801351029039825, 0.0, -2.7230316965872268)
+
+        ds = ContinuousDynamicalSystem(ż, z0, (A=1, B=0.55, D=0.4))
+        psos = poincaresos(ds, (3, 0), 10., direction=1, idxs=[2,4])
+        @test length(psos) > 0
+        @test size(psos)[2] == 2
+    end
 end
 
 @testset "Produce OD" begin

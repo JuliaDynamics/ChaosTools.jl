@@ -15,11 +15,11 @@ of the given system with the given `plane`.
 The system is evolved for total time of `tfinal`.
 
 If the state of the system is ``\\mathbf{u} = (u_1, \\ldots, u_D)`` then the
-equation for the planecrossing is
+equation intersecting the hyperplane is
 ```math
 a_1u_1 + \\dots + a_Du_D = \\mathbf{a}\\cdot\\mathbf{u}=b
 ```
-where ``\\mathbf{a}, b`` are the parameters that define the planecrossing.
+where ``\\mathbf{a}, b`` are the parameters that define the hyperplane.
 
 In code, `plane` can be either:
 
@@ -39,8 +39,10 @@ Returns a [`Dataset`](@ref) of the points that are on the surface of section.
 * `Ttr = 0.0` : Transient time to evolve the system before starting
   to compute the PSOS.
 * `warning = true` : Throw a warning if the Poincaré section was empty.
-* `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
-  See [`trajectory`](@ref) for examples.
+* `rootkw = (xrtol = 1e-6, atol = 1e-6)` : A `NamedTuple` of keyword arguments
+  passed to `find_zero` from [Roots.jl](https://github.com/JuliaMath/Roots.jl).
+* `diffeq...` : All other extra keyword arguments are propagated into `init`
+  of DifferentialEquations.jl. See [`trajectory`](@ref) for examples.
 
 ## References
 [1] : H. Poincaré, *Les Methods Nouvelles de la Mécanique Celeste*,
@@ -49,14 +51,11 @@ Paris: Gauthier-Villars (1892)
 [2] : M. Tabor, *Chaos and Integrability in Nonlinear Dynamics: An Introduction*,
 §4.1, in pp. 118-126, New York: Wiley (1989)
 
-[3] : This function is simply manipulating [`ContinuousCallback`](http://docs.juliadiffeq.org/latest/features/callback_functions.html) from
-DifferentialEquations.jl.
-
 See also [`orbitdiagram`](@ref), [`produce_orbitdiagram`](@ref).
 """
 function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
     direction = +1, Ttr::Real = 0.0, warning = true, idxs = 1:D,
-    diffeq...) where {IIP, S, D}
+    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...) where {IIP, S, D}
 
     _check_plane(plane, D)
     integ = integrator(ds; diffeq...)
@@ -68,7 +67,7 @@ function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
     data = _initialize_output(get_state(ds), i)
 
     poincare_cross!(data, integ,
-                     f, planecrossing, tfinal, Ttr, i)
+                     f, planecrossing, tfinal, Ttr, i, rootkw)
     warning && length(data) == 0 && warn(PSOS_ERROR)
 
     return Dataset(data)
@@ -104,7 +103,7 @@ function (hp::PlaneCrossing{D, P})(u::AbstractVector) where {D, P<:AbstractVecto
 end
 
 function poincare_cross!(data, integ,
-                          f, planecrossing, tfinal, Ttr, j)
+                          f, planecrossing, tfinal, Ttr, j, rootkw)
 
     Ttr != 0 && step!(integ, Ttr)
 
@@ -116,7 +115,7 @@ function poincare_cross!(data, integ,
             step!(integ)
             side = planecrossing(integ.u)
         end
-        while side > 0
+        while side ≥ 0
             integ.t > tfinal + Ttr && break
             step!(integ)
             side = planecrossing(integ.u)
@@ -124,9 +123,7 @@ function poincare_cross!(data, integ,
         integ.t > tfinal + Ttr && break
 
         # I am now guaranteed to have `t` in negative and `tprev` in positive
-        tcross = find_zero(f, (integ.tprev, integ.t), ROOTS_ALG,
-                           xrtol = 1e-6, atol = 1e-6)
-
+        tcross = find_zero(f, (integ.tprev, integ.t), ROOTS_ALG; rootkw...)
         ucross = integ(tcross)
 
         push!(data, ucross[j])
@@ -176,9 +173,10 @@ it returns vectors of vectors of vectors.
 Each entry are the points at each parameter value.
 
 ## Keyword Arguments
-* `printparams::Bool = false` : Whether to print the parameter used during computation
-  in order to keep track of running time.
-* `direction, warning, Ttr, diffeq...` : Propagated into [`poincaresos`](@ref).
+* `printparams::Bool = false` : Whether to print the parameter used
+  during computation in order to keep track of running time.
+* `direction, warning, Ttr, rootkw, diffeq...` :
+  Propagated into [`poincaresos`](@ref).
 * `u0 = get_state(ds)` : Initial condition. Besides a vector you can also give
   a vector of vectors such that `length(u0) == length(pvalues)`. Then each parameter
   has a different initial condition.
@@ -206,6 +204,7 @@ function produce_orbitdiagram(
     warning = true,
     Ttr = 0.0,
     u0 = get_state(ds),
+    rootkw = (xrtol = 1e-6, atol = 1e-6),
     diffeq...) where {IIP, S, D}
 
     i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
@@ -232,7 +231,7 @@ function produce_orbitdiagram(
 
         reinit!(integ, st)
         poincare_cross!(output[n], integ,
-                         f, planecrossing, tfinal, Ttr, i)
+                         f, planecrossing, tfinal, Ttr, i, rootkw)
 
         warning && length(output[n]) == 0 && warn(
         "For parameter $p $PSOS_ERROR")

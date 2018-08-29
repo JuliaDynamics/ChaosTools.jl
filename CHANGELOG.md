@@ -1,3 +1,10 @@
+# 1.1
+* Fixed a bug in `poincaresos` when the initial condition was on the plane.
+* Allowed `poinracesos` and `produce_orbitdiagram` to also configure the keywords of the root finding.
+
+# 1.0 ≡ 0.13
+First major release.
+
 # 0.13
 * Renamed all low-level methods that were exposed as part of the API to not start with an underscore anymore.
 * Updated everything (REQUIRES etc) to julia 1.0.

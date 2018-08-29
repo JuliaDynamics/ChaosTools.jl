@@ -162,15 +162,14 @@ The `method` can be one of the following:
 * `"first_zero"` : find first delay at which the auto-correlation function becomes 0.
 * `"first_min"` : return delay of first minimum of the auto-correlation function.
 * `"exp_decay"` : perform an exponential fit to the `abs.(c)` with `c` the
-  auto-correlation function of `s`. Return the exponential decay time rounded
-  to an integer.
+  auto-correlation function of `s`.
 * `"mutual_inf"` : return the first minimum of the mutual information function
   (see [`mutinfo_delaycurve`](@ref)).
   This option also has the following keyword arguments:
     * `maxtau::Integer=100` : stops the delay calculations after the given `maxtau`.
     * `k::Integer=1` : the number of nearest-neighbors to include.
 
-*WARNING* - `"mutual_inf"` fails spectacularly with data from maps. In addition
+*WARNING* - `"mutual_inf"` has bad results with data from maps. In addition
 it is much slower than the other alternatives.
 """
 function estimate_delay(x::AbstractVector, method::String; maxtau=100, k=1)

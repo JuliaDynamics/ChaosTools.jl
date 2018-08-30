@@ -28,7 +28,7 @@ test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
     # @test 3 <= estimate_delay(x,"mutual_inf"; k=1) <= 10
     # @test 3 <= estimate_delay(x,"mutual_inf"; k=10) <= 10
 
-    ds = Systems.roessler()
+    ds = Systems.roessler(ones(3))
     dt = 0.01
     data = trajectory(ds,200,dt=dt)
     x = data[:,1]

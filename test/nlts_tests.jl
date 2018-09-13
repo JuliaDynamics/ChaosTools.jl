@@ -49,7 +49,10 @@ end
 end
 
 @testset "Broomhead-King" begin
-    ds = Systems.gissinger()
+    using Random
+    Random.seed!(1234);
+    ds = Systems.gissinger(ones(3)) # standard initial condition
+
     data = trajectory(ds, 1000.0, dt = 0.05)
     x = data[1:end-1, 1] # "exactly" 20000 points
     s = x .+ 0.01rand(length(x))

@@ -68,7 +68,7 @@ function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
 
     poincare_cross!(data, integ,
                      f, planecrossing, tfinal, Ttr, i, rootkw)
-    warning && length(data) == 0 && warn(PSOS_ERROR)
+    warning && length(data) == 0 && @warn PSOS_ERROR
 
     return Dataset(data)
 end
@@ -233,8 +233,7 @@ function produce_orbitdiagram(
         poincare_cross!(output[n], integ,
                          f, planecrossing, tfinal, Ttr, i, rootkw)
 
-        warning && length(output[n]) == 0 && warn(
-        "For parameter $p $PSOS_ERROR")
+        warning && length(output[n]) == 0 && @warn "For parameter $p $PSOS_ERROR"
 
     end
     # Reset the parameter of the system:

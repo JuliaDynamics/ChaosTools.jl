@@ -1,5 +1,6 @@
 using StaticArrays
 using Combinatorics: permutations, multiset_permutations
+using Random: randperm
 
 export lambdamatrix, lambdaperms, periodicorbits
 

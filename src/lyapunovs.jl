@@ -2,6 +2,7 @@ using LinearAlgebra, StaticArrays
 using OrdinaryDiffEq
 using OrdinaryDiffEq: ODEIntegrator
 using DynamicalSystemsBase: MinimalDiscreteIntegrator
+using Distributed
 
 export lyapunovs, lyapunov
 
@@ -263,6 +264,29 @@ function lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
     a = d/d0
     λ += log(a)
     return λ/(pinteg.t - t0)
+end
+
+# TODO: Add docs and tests
+
+function λmap(ds::CDS, T, u0;
+              Ttr = 0,
+              d0 = 1e-9,
+              upper_threshold = 1e-6,
+              lower_threshold = 1e-12,
+              inittest = inittest_default(dimension(ds)),
+              dt = 1,
+              diffeq...)
+
+    pinteg = parallel_integrator(ds,
+            [deepcopy(get_state(ds)), inittest(get_state(ds), d0)];
+            diffeq...)
+
+    λs = pmap(eachindex(u0)) do i
+            reinit!(pinteg, [u0[i], inittest(u0[i], d0)])
+            lyapunov(pinteg, T, Ttr, dt, d0, upper_threshold, lower_threshold)
+        end
+
+    return λs
 end
 
 ################ Helper functions that allow a single definition ######################

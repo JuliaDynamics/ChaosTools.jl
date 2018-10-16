@@ -38,6 +38,7 @@ Returns a [`Dataset`](@ref) of the points that are on the surface of section.
   Defaults to the entire state.
 * `Ttr = 0.0` : Transient time to evolve the system before starting
   to compute the PSOS.
+* `u0 = get_state(ds)` : Specify an initial state.
 * `warning = true` : Throw a warning if the Poincaré section was empty.
 * `rootkw = (xrtol = 1e-6, atol = 1e-6)` : A `NamedTuple` of keyword arguments
   passed to `find_zero` from [Roots.jl](https://github.com/JuliaMath/Roots.jl).
@@ -54,11 +55,11 @@ Paris: Gauthier-Villars (1892)
 See also [`orbitdiagram`](@ref), [`produce_orbitdiagram`](@ref).
 """
 function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
-    direction = +1, Ttr::Real = 0.0, warning = true, idxs = 1:D,
+    direction = +1, Ttr::Real = 0.0, warning = true, idxs = 1:D, u0 = get_state(ds),
     rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...) where {IIP, S, D}
 
     _check_plane(plane, D)
-    integ = integrator(ds; diffeq...)
+    integ = integrator(ds, u0; diffeq...)
     planecrossing = PlaneCrossing{D}(plane, direction > 0 )
     f = (t) -> planecrossing(integ(t))
 

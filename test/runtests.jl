@@ -12,7 +12,6 @@ include("periodicity_tests.jl")
 include("entropy_dimension.jl")
 # Nonlinear Timeseries Analysis:
 include("nlts_tests.jl")
-include("R_params.jl")
 
 ti = time() - ti
 println("\nTest took total time of:")

@@ -25,13 +25,13 @@ In code, `plane` can be either:
 
 * A `Tuple{Int, <: Number}`, like `(j, r)` : the planecrossing is defined
   as when the `j` variable of the system crosses the value `r`.
-* An `AbstractVector` of length `D+1`. The first `D` elements of the
+* A vector of length `D+1`. The first `D` elements of the
   vector correspond to ``\\mathbf{a}`` while the last element is ``b``.
 
 Returns a [`Dataset`](@ref) of the points that are on the surface of section.
 
 ## Keyword Arguments
-* `direction = 1` : Only crossings with `sign(direction)` are considered to belong to
+* `direction = -1` : Only crossings with `sign(direction)` are considered to belong to
   the surface of section. Positive direction means going from less than ``b``
   to greater than ``b``.
 * `idxs = 1:dimension(ds)` : Optionally you can choose which variables to save.
@@ -55,7 +55,7 @@ Paris: Gauthier-Villars (1892)
 See also [`orbitdiagram`](@ref), [`produce_orbitdiagram`](@ref).
 """
 function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
-    direction = +1, Ttr::Real = 0.0, warning = true, idxs = 1:D, u0 = get_state(ds),
+    direction = -1, Ttr::Real = 0.0, warning = true, idxs = 1:D, u0 = get_state(ds),
     rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...) where {IIP, S, D}
 
     _check_plane(plane, D)
@@ -68,7 +68,7 @@ function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
     data = _initialize_output(get_state(ds), i)
 
     poincare_cross!(data, integ,
-                     f, planecrossing, tfinal, Ttr, i, rootkw)
+                    f, planecrossing, tfinal, Ttr, i, rootkw)
     warning && length(data) == 0 && @warn PSOS_ERROR
 
     return Dataset(data)
@@ -108,7 +108,13 @@ function poincare_cross!(data, integ,
 
     Ttr != 0 && step!(integ, Ttr)
 
+    # Check if initial condition is already on the plane
     side = planecrossing(integ.u)
+    if side == 0
+        push!(data, integ.u[j])
+        step!(integ)
+        side = planecrossing(integ.u)
+    end
 
     while integ.t < tfinal + Ttr
         while side < 0

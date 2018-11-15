@@ -44,9 +44,9 @@ println("\nTesting orbit diagrams...")
 end
 
 @testset "Poincare SOS" begin
-    @testset "Henon Helies" begin
+    @testset "Henon Heiles" begin
         ds = Systems.henonheiles([0, .483000, .278980390, 0] )
-        psos = poincaresos(ds, (2, 0.0), 1000.0)
+        psos = poincaresos(ds, (2, 0.0), 1000.0, direction = +1)
         xcross = psos[:, 2]
         @test length(xcross) > 1
         for x in xcross
@@ -99,7 +99,7 @@ end
         z0 = SVector{4}(2.3499921651423565, -9.801351029039825, 0.0, -2.7230316965872268)
 
         ds = ContinuousDynamicalSystem(ż, z0, (A=1, B=0.55, D=0.4))
-        psos = poincaresos(ds, (3, 0), 10., direction=1, idxs=[2,4])
+        psos = poincaresos(ds, (3, 0), 10., direction=+1, idxs=[2,4])
         @test length(psos) > 0
         @test size(psos)[2] == 2
     end
@@ -117,7 +117,7 @@ end
 
     de = Dict(:abstol=>1e-9, :reltol => 1e-9)
     output = produce_orbitdiagram(ds, (j, 0.0), i, parameter, pvalues; tfinal = tf,
-    Ttr = 100.0, printparams = false, de...)
+    Ttr = 100.0, printparams = false, direction = +1, de...)
     @test length(output) == length(pvalues)
 
     v = round.(output[1], digits = 4)

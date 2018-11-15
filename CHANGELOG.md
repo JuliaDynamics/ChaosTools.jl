@@ -1,3 +1,10 @@
+# 1.3
+* Actually fix the issue with `poincaresos` and states starting on the plane
+* The default of `direction` had to change to `-1`. We realized that having `1` was wrong and unintuitive with how the PSOS data is returned and plotted and thus we consider this a bugfix.
+
+# 1.2
+* allow `u0` as keyword in `poincaresos`
+
 # 1.1
 * Fixed a bug in `poincaresos` when the initial condition was on the plane.
 * Allowed `poinracesos` and `produce_orbitdiagram` to also configure the keywords of the root finding.

@@ -58,9 +58,6 @@ function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
     direction = -1, Ttr::Real = 0.0, warning = true, idxs = 1:D, u0 = get_state(ds),
     rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...) where {IIP, S, D}
 
-    @warn "Default value of `direction` argument had to change to +1 from -1 because "*
-    "it did not correspond with the 'default' direction the returned dataset is facing."
-
     _check_plane(plane, D)
     integ = integrator(ds, u0; diffeq...)
     planecrossing = PlaneCrossing{D}(plane, direction > 0 )

@@ -26,20 +26,31 @@ function non0hist(ε::Real, data::AbstractDataset{D, T}) where {D, T<:Real}
     # Initialize:
     mini = minima(data)
     L = length(data)
-    # Perform "Histogram":
-    # `d` is a dictionary that contains all the histogram information
-    # the keys are the bin edges indices and the values are the amount of
-    # datapoints in each bin
-    d = Dict{SVector{D, Int}, Int}()
-    for point in data
-        # index of datapoint in the ranges space:
-        # It is necessary to convert floor to Int (representation issues)
-        ind::SVector{D, Int} = floor.(Int, (point - mini)/ε)
+    hist = Vector{Float64}()
 
-        # Add 1 to the bin that contains the datapoint:
-        d[ind] = get(d, ind, 0) + 1
+    # Reserve enough space for histogram:
+    sizehint!(hist, L)
+
+    # Map each datapoint to its bin edge and sort the resulting list:
+    bins = map(point -> floor.(Int, (point - mini)/ε), data)
+    sort!(bins)
+
+    # Fill the histogram by counting consecutive equal bins:
+    prev_bin = bins[1]
+    count = 1
+    @inbounds for i in 2:L
+        bin = bins[i]
+        if bin == prev_bin
+            count += 1
+        else
+            push!(hist, count/L)
+            prev_bin = bin
+            count = 1
+        end
     end
-    return collect(values(d))/L
+    push!(hist, count/L)
+
+    return collect(hist)
 end
 
 

@@ -50,7 +50,10 @@ function non0hist(ε::Real, data::AbstractDataset{D, T}) where {D, T<:Real}
     end
     push!(hist, count/L)
 
-    return collect(hist)
+    # Shrink histogram capacity to fit its size:
+    sizehint!(hist, length(hist))
+
+    return hist
 end
 
 

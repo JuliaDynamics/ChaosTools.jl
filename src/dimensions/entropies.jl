@@ -11,11 +11,9 @@ size `ε` and return the sum-normalized histogram in an unordered 1D form,
 discarding all zero elements.
 
 ## Performances Notes
-This method is effecient in both memory
-and speed, because it uses a dictionary to collect the information of bins with
-elements, while it completely disregards empty bins. This allows
-computation of entropies of high-dimensional datasets and
-with small box sizes `ε` without memory overflow.
+This method has a linearithmic time complexity and a linear space complexity
+in `length(data)`. This allows computation of entropies of high-dimensional
+datasets and with small box sizes `ε` without memory overflow.
 
 Use e.g. `fit(Histogram, ...)` from
 [`StatsBase`](http://juliastats.github.io/StatsBase.jl/stable/) if you

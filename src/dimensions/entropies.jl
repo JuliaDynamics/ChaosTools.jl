@@ -31,7 +31,7 @@ function non0hist(ε::Real, data::AbstractDataset{D, T}) where {D, T<:Real}
 
     # Map each datapoint to its bin edge and sort the resulting list:
     bins = map(point -> floor.(Int, (point - mini)/ε), data)
-    sort!(bins)
+    sort!(bins, alg=QuickSort)
 
     # Fill the histogram by counting consecutive equal bins:
     prev_bin = bins[1]

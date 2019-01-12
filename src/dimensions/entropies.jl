@@ -8,11 +8,12 @@ non0hist(ε, dataset::AbstractDataset)
 ```
 Partition a dataset into tabulated intervals (boxes) of
 size `ε` and return the sum-normalized histogram in an unordered 1D form,
-discarding all zero elements.
+discarding all zero elements and bin edge information.
 
 ## Performances Notes
-This method has a linearithmic time complexity and a linear space complexity
-in `length(data)`. This allows computation of entropies of high-dimensional
+This method has a linearithmic time complexity (`n log(n)` for `in `n=length(data)`)
+and a linear space complexity (`l` for `l = dimension(data)`).
+This allows computation of entropies of high-dimensional
 datasets and with small box sizes `ε` without memory overflow.
 
 Use e.g. `fit(Histogram, ...)` from

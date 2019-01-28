@@ -187,7 +187,7 @@ expansion/contraction direction: `` u_2 \\to u_1+(u_2−u_1)/(d(t_i)/d_0)``.
 The maximum
 Lyapunov exponent is the average of the time-local Lyapunov exponents
 ```math
-\\lambda = \\frac{1}{t_{n}}\\sum_{i=1}^{n}
+\\lambda = \\frac{1}{t_{n} - t_0}\\sum_{i=1}^{n}
 \\ln\\left( a_i \\right),\\quad a_i = \\frac{d(t_{i})}{d_0}.
 ```
 

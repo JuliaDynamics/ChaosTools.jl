@@ -1,3 +1,10 @@
+# 1.4
+* `estimate_boxsizes` now slightly expands borders if upper and lower do not have 2 orders of magnitude difference.
+
+# 1.3
+* increased performance of `non0hist`
+* Documentation improvements
+
 # 1.2.1
 * Actually fix the issue with `poincaresos` and states starting on the plane
 * The default of `direction` had to change to `-1`. We realized that having `1` was wrong and unintuitive with how the PSOS data is returned and plotted and thus we consider this a bugfix.

@@ -79,9 +79,9 @@ then these two regions belong to the same linear region.
 
 Return the indices of `x` that correspond to linear regions, `lrs`,
 and the approximated `tangents` at each region. `lrs` is a vector of `Int`.
-
-A function `plot_linear_regions` visualizes the result of using this `linear_regions`
-(requires `PyPlot`).
+Notice that `tangents` is _not_ accurate: it is not recomputed at every step,
+but only when its error exceeds the tolerance `tol`! Use [`linear_region`](@ref)
+to obtain a correct estimate for the slope of the largest linear region.
 """
 function linear_regions(x::AbstractVector, y::AbstractVector;
     dxi::Int = 1, tol::Real = 0.2)

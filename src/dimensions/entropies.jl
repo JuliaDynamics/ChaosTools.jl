@@ -11,7 +11,7 @@ size `ε` and return the sum-normalized histogram in an unordered 1D form,
 discarding all zero elements and bin edge information.
 
 ## Performances Notes
-This method has a linearithmic time complexity (`n log(n)` for `in `n = length(data)`)
+This method has a linearithmic time complexity (`n log(n)` for `n = length(data)`)
 and a linear space complexity (`l` for `l = dimension(data)`).
 This allows computation of entropies of high-dimensional
 datasets and with small box sizes `ε` without memory overflow.

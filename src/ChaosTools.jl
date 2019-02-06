@@ -9,8 +9,7 @@ using Reexport
 using DynamicalSystemsBase: DS, DDS, CDS
 using DynamicalSystemsBase: MDI, TDI
 using DynamicalSystemsBase: stateeltype
-using OrdinaryDiffEq
-import OrdinaryDiffEq: ODEIntegrator
+using DiffEqBase: AbstractODEIntegrator, u_modified!
 
 include("lyapunovs.jl")
 

@@ -1,5 +1,5 @@
 export gali
-using OrdinaryDiffEq, LinearAlgebra
+using LinearAlgebra
 #####################################################################################
 #                               Continuous GALI                                     #
 #####################################################################################
@@ -152,8 +152,12 @@ end
 # I AM SURE THE FOLLOWING CAN BE SHORTENED USING UNIONS!!!
 
 # OOP version (either cont or disc)
+"""
+    normalize_deviations!(tinteg)
+Normalize (in-place) the deviation vectors of the tangent integrator.
+"""
 function normalize_deviations!(
-    tinteg::ODEIntegrator{Alg, S}) where {Alg, S<:SMatrix}
+    tinteg::AbstractODEIntegrator{Alg, IIP, S}) where {Alg, IIP, S<:SMatrix}
     norms = normalize_devs(get_deviations(tinteg))
     set_deviations!(tinteg, norms)
     return
@@ -172,8 +176,8 @@ function normalize_inplace!(A)
     end
 end
 function normalize_deviations!(tinteg::Union{
-        ODEIntegrator{Alg, S},
-        MDI{Alg, S}}) where {Alg, S<:Matrix}
+        AbstractODEIntegrator{Alg, IIP, S},
+        MDI{Alg, S}}) where {Alg, IIP, S<:Matrix}
     A = get_deviations(tinteg)
     normalize_inplace!(A)
     # no reason to call set_deviations, because

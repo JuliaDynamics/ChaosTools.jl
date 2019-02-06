@@ -1,4 +1,3 @@
-using OrdinaryDiffEq, DiffEqBase
 using DynamicalSystemsBase: DEFAULT_DIFFEQ_KWARGS, _get_solver
 using Roots: find_zero, A42, AlefeldPotraShi, Brent
 export poincaresos, produce_orbitdiagram
@@ -104,7 +103,7 @@ function (hp::PlaneCrossing{D, P})(u::AbstractVector) where {D, P<:AbstractVecto
 end
 
 function poincare_cross!(data, integ,
-                          f, planecrossing, tfinal, Ttr, j, rootkw)
+                         f, planecrossing, tfinal, Ttr, j, rootkw)
 
     Ttr != 0 && step!(integ, Ttr)
 
@@ -238,7 +237,7 @@ function produce_orbitdiagram(
 
         reinit!(integ, st)
         poincare_cross!(output[n], integ,
-                         f, planecrossing, tfinal, Ttr, i, rootkw)
+                        f, planecrossing, tfinal, Ttr, i, rootkw)
 
         warning && length(output[n]) == 0 && @warn "For parameter $p $PSOS_ERROR"
 

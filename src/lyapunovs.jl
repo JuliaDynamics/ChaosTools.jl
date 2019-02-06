@@ -1,6 +1,4 @@
 using LinearAlgebra, StaticArrays
-using OrdinaryDiffEq
-using OrdinaryDiffEq: ODEIntegrator
 using DynamicalSystemsBase: MinimalDiscreteIntegrator
 
 export lyapunovs, lyapunov
@@ -26,9 +24,8 @@ a pre-initialized matrix `Q0` whose columns are initial deviation vectors (then
 * `Ttr = 0` : Extra "transient" time to evolve the system before application of the
   algorithm. Should be `Int` for discrete systems. Both the system and the
   deviation vectors are evolved for this time.
-* `dt` : Time of individual evolutions
-  between successive orthonormalization steps. Defaults to `1`. For continuous
-  systems this is approximate.
+* `dt = 1` : Time of individual evolutions
+  between successive orthonormalization steps. For continuous systems this is approximate.
 * `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
   See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
@@ -266,7 +263,7 @@ function lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
 end
 
 ################ Helper functions that allow a single definition ######################
-function λdist(integ::ODEIntegrator{Alg, M}) where {Alg, M<:Matrix}
+function λdist(integ::AbstractODEIntegrator{Alg, IIP, M}) where {Alg, IIP, M<:Matrix}
     d = 0.0
     for i in 1:size(integ.u)[1]
         d += (integ.u[i, 1] - integ.u[i, 2])^2
@@ -286,7 +283,7 @@ end
 function λdist(integ::MinimalDiscreteIntegrator{true, Vector{S}}) where {S<:SVector}
     return norm(integ.u[1] - integ.u[2])
 end
-function λdist(integ::ODEIntegrator{Alg, Vector{S}}) where {Alg, S<:SVector}
+function λdist(integ::AbstractODEIntegrator{Alg, IIP, Vector{S}}) where {Alg, IIP, S<:SVector}
     return norm(integ.u[1] - integ.u[2])
 end
 
@@ -299,17 +296,17 @@ function rescale!(integ::MinimalDiscreteIntegrator{true, Vector{S}}, a) where {S
     @. integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
     u_modified!(integ, true)
 end
-function rescale!(integ::ODEIntegrator{Alg, M}, a) where {Alg, M<:Matrix}
+function rescale!(integ::AbstractODEIntegrator{Alg, IIP, M}, a) where {Alg, IIP, M<:Matrix}
     for i in 1:size(integ.u)[1]
         integ.u[i, 2] = integ.u[i,1] + (integ.u[i,2] - integ.u[i,1])/a
     end
     u_modified!(integ, true)
 end
-function rescale!(integ::ODEIntegrator{Alg, Vector{S}}, a) where {Alg, S<:Vector}
+function rescale!(integ::AbstractODEIntegrator{Alg, IIP, Vector{S}}, a) where {Alg, IIP, S<:Vector}
     @. integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
     u_modified!(integ, true)
 end
-function rescale!(integ::ODEIntegrator{Alg, Vector{S}}, a) where {Alg, S<:SVector}
+function rescale!(integ::AbstractODEIntegrator{Alg, IIP, Vector{S}}, a) where {Alg, IIP, S<:SVector}
     integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
     u_modified!(integ, true)
 end

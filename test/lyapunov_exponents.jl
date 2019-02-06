@@ -39,7 +39,7 @@ for i in 1:8
         λ = lyapunovs(ds, 2000)
         if i < 5
             λ2 = lyapunovs(ds, 2000; dt = 2.0, Ttr = 10.0,
-            diff_eq_kwargs = Dict(:abstol=>1e-9, :solver => Tsit5()))
+            abstol = 1e-9, alg = Tsit5())
         else
             λ2 = lyapunovs(ds, 1000; dt = 5, Ttr = 20)
         end
@@ -52,14 +52,12 @@ for i in 1:8
         if isodd(i) # Jacobians dont matter for MLE
             T = i < 5 ? 10000 : 1000
             λ = lyapunov(ds, T)
-            if i < 5
-                λ2 = lyapunov(ds, T; dt = 2.0, Ttr = 10.0,
-                diff_eq_kwargs = Dict(:abstol=>1e-9, :solver => Tsit5()))
-            else
-                λ2 = lyapunovs(ds, T; dt = 5, Ttr = 20)
-            end
             @test MLE[sysindx][1] < λ < MLE[sysindx][2]
-            @test MLE[sysindx][1] < λ2[1] < MLE[sysindx][2]
+            if i < 5
+                λ2 = lyapunov(ds, 2000; dt = 1.0, Ttr = 10.0,
+                abstol = 1e-9, alg = Tsit5())
+                @test MLE[sysindx][1] < λ2 < MLE[sysindx][2]
+            end
         end
     end
 end
@@ -76,15 +74,15 @@ end
     g(du, u, p, t) = (du .= -0.9u)
 
     ds = ContinuousDynamicalSystem(f, rand(SVector{3}), nothing)
-    λ1 = lyapunov(ds, 1000)
+    λ1 = lyapunov(ds, 10000)
     @test λ1 < 0
     ds = ContinuousDynamicalSystem(g, rand(3), nothing)
-    λ2 = lyapunov(ds, 1000)
+    λ2 = lyapunov(ds, 10000)
     @test λ2 < 0
 
     @testset "Lorenz stable" begin
         ds = Systems.lorenz(ρ = 20.0)
-        @test lyapunov(ds, 2000, Ttr = 100) < 0
+        @test lyapunov(ds, 2000, Ttr = 100) ≈ 0 atol = 1e-4
     end
 end
 

@@ -1,5 +1,5 @@
 using ChaosTools
-using Test, StaticArrays, OrdinaryDiffEq
+using Test, StaticArrays, OrdinaryDiffEq, LinearAlgebra
 
 println("\nTesting poincare sections...")
 
@@ -34,11 +34,11 @@ println("\nTesting poincare sections...")
         Nm(μ) = SVector{3}(-sqrt(ν + Γ*sqrt(ν/μ)), sqrt(μ + Γ*sqrt(μ/ν)), -sqrt(μ*ν))
 
         # Create hyperplane using normal vector to vector connecting points:
-        gis_plane(μ) = (d = (Np(μ) - Nm(μ)); [d[2], -d[1], 0, 0])
+        gis_plane(μ) = [cross(Np(μ), Nm(μ))..., 0]
 
         μ = 0.12
         set_parameter!(gis, 1, μ)
-        psos = poincaresos(gis, gis_plane(μ), 10000.0, Ttr = 2000.0, direction = +1)
+        psos = poincaresos(gis, gis_plane(μ), 5000.0, Ttr = 200.0, direction = +1)
         @test length(psos) > 1
         @test generalized_dim(2, psos) < 1
     end

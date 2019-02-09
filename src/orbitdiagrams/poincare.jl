@@ -14,16 +14,16 @@ of the given system with the given `plane`.
 The system is evolved for total time of `tfinal`.
 
 If the state of the system is ``\\mathbf{u} = (u_1, \\ldots, u_D)`` then the
-equation intersecting the hyperplane is
+equation defining a hyperplane is
 ```math
 a_1u_1 + \\dots + a_Du_D = \\mathbf{a}\\cdot\\mathbf{u}=b
 ```
-where ``\\mathbf{a}, b`` are the parameters that define the hyperplane.
+where ``\\mathbf{a}, b`` are the parameters of the hyperplane.
 
 In code, `plane` can be either:
 
-* A `Tuple{Int, <: Number}`, like `(j, r)` : the planecrossing is defined
-  as when the `j` variable of the system crosses the value `r`.
+* A `Tuple{Int, <: Number}`, like `(j, r)` : the plane is defined
+  as when the `j` variable of the system equals the value `r`.
 * A vector of length `D+1`. The first `D` elements of the
   vector correspond to ``\\mathbf{a}`` while the last element is ``b``.
 

@@ -1,4 +1,4 @@
-export linear_region, linear_regions, estimate_boxsizes
+export linear_region, linear_regions, estimate_boxsizes, linreg
 export boxcounting_dim, capacity_dim, generalized_dim,
 information_dim, estimate_boxsizes, kaplanyorke_dim
 #####################################################################################

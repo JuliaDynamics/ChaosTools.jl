@@ -215,7 +215,7 @@ function produce_orbitdiagram(ds::CDS{IIP, S, D},
                               p_index,
                               pvalues;
                               tfinal::Real = 100.0,
-                              direction = +1,
+                              direction = -1,
                               printparams = false,
                               warning = true,
                               Ttr = 0.0,

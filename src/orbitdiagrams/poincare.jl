@@ -1,6 +1,6 @@
 using DynamicalSystemsBase: DEFAULT_DIFFEQ_KWARGS, _get_solver
 using Roots: find_zero, A42, AlefeldPotraShi, Brent
-export poincaresos, produce_orbitdiagram
+export poincaresos, produce_orbitdiagram, PlaneCrossing
 
 const ROOTS_ALG = A42()
 
@@ -44,6 +44,21 @@ Returns a [`Dataset`](@ref) of the points that are on the surface of section.
 * `diffeq...` : All other extra keyword arguments are propagated into `init`
   of DifferentialEquations.jl. See [`trajectory`](@ref) for examples.
 
+## Performance Notes
+This function uses a standard [`integrator`](@ref). For loops over initial conditions
+and/or parameters you should use the low lever method that accepts an integrator and
+`reinit!` to new initial conditions. See the "advanced documentation" for more.
+
+The low level call signature is:
+```julia
+poincaresos(integ, planecrossing, tfinal, Ttr, idxs, rootkw)
+```
+where
+```julia
+planecrossing = PlaneCrossing(plane, direction > 0)
+```
+and `idxs` must be `Int` or `SVector{Int}`.
+
 ## References
 [1] : H. Poincaré, *Les Methods Nouvelles de la Mécanique Celeste*,
 Paris: Gauthier-Villars (1892)
@@ -59,42 +74,37 @@ function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
 
     _check_plane(plane, D)
     integ = integrator(ds, u0; diffeq...)
-    planecrossing = PlaneCrossing{D}(plane, direction > 0 )
-    f = (t) -> planecrossing(integ(t))
 
     i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
+    planecrossing = PlaneCrossing(plane, direction > 0)
 
-    data = _initialize_output(get_state(ds), i)
-
-    poincare_cross!(data, integ,
-                    f, planecrossing, tfinal, Ttr, i, rootkw)
+    data = poincaresos(integ, planecrossing, tfinal, Ttr, i, rootkw)
     warning && length(data) == 0 && @warn PSOS_ERROR
 
     return Dataset(data)
 end
 
-function _initialize_output(u::S, i::Int) where {S}
-    output = eltype(S)[]
-end
-function _initialize_output(u::S, i::SVector) where {S}
-    s = u[i]
-    output = typeof(s)[]
+_initialize_output(u::S, i::Int) where {S} = eltype(S)[]
+_initialize_output(u::S, i::SVector{N, Int}) where {N, S} = typeof(u[i])[]
+function _initialize_output(u, i)
+    error("The variable index when producing the PSOS must be Int or SVector{Int}")
 end
 
 const PSOS_ERROR =
 "the Poincaré surface of section did not have any points!"
 
-struct PlaneCrossing{D, P}
+struct PlaneCrossing{P}
     plane::P
     dir::Bool
 end
-PlaneCrossing{D}(p::P, b) where {P, D} = PlaneCrossing{D, P}(p, b)
-function (hp::PlaneCrossing{D, P})(u::AbstractVector) where {D, P<:Tuple}
+PlaneCrossing(p::P, b) where {P} = PlaneCrossing{P}(p, b)
+function (hp::PlaneCrossing{P})(u::AbstractVector) where {P<:Tuple}
     @inbounds x = u[hp.plane[1]] - hp.plane[2]
     hp.dir ? x : -x
 end
-function (hp::PlaneCrossing{D, P})(u::AbstractVector) where {D, P<:AbstractVector}
+function (hp::PlaneCrossing{P})(u::AbstractVector) where {P<:AbstractVector}
     x = zero(eltype(u))
+    D = length(u)
     @inbounds for i in 1:D
         x += u[i]*hp.plane[i]
     end
@@ -102,9 +112,10 @@ function (hp::PlaneCrossing{D, P})(u::AbstractVector) where {D, P<:AbstractVecto
     hp.dir ? x : -x
 end
 
-function poincare_cross!(data, integ,
-                         f, planecrossing, tfinal, Ttr, j, rootkw)
+function poincaresos(integ, planecrossing, tfinal, Ttr, j, rootkw)
 
+    f = (t) -> planecrossing(integ(t))
+    data = _initialize_output(integ.u, j)
     Ttr != 0 && step!(integ, Ttr)
 
     # Check if initial condition is already on the plane
@@ -175,7 +186,7 @@ for the given parameter values (see [`poincaresos`](@ref)).
 
 `i` can be `Int` or `AbstractVector{Int}`.
 If `i` is `Int`, returns a vector of vectors. Else
-it returns vectors of vectors of vectors.
+it returns a vector of vectors of vectors.
 Each entry are the points at each parameter value.
 
 ## Keyword Arguments
@@ -198,20 +209,19 @@ and thus you must use a parameter container that supports this
 
 See also [`poincaresos`](@ref), [`orbitdiagram`](@ref).
 """
-function produce_orbitdiagram(
-    ds::CDS{IIP, S, D},
-    plane,
-    idxs,
-    p_index,
-    pvalues;
-    tfinal::Real = 100.0,
-    direction = +1,
-    printparams = false,
-    warning = true,
-    Ttr = 0.0,
-    u0 = get_state(ds),
-    rootkw = (xrtol = 1e-6, atol = 1e-6),
-    diffeq...) where {IIP, S, D}
+function produce_orbitdiagram(ds::CDS{IIP, S, D},
+                              plane,
+                              idxs,
+                              p_index,
+                              pvalues;
+                              tfinal::Real = 100.0,
+                              direction = +1,
+                              printparams = false,
+                              warning = true,
+                              Ttr = 0.0,
+                              u0 = get_state(ds),
+                              rootkw = (xrtol = 1e-6, atol = 1e-6),
+                              diffeq...) where {IIP, S, D}
 
     i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
 
@@ -219,11 +229,11 @@ function produce_orbitdiagram(
     typeof(u0) <: Vector{<:AbstractVector} && @assert length(u0)==length(p)
 
     integ = integrator(ds; diffeq...)
-    planecrossing = PlaneCrossing{D}(plane, direction > 0 )
-    f = (t) -> planecrossing(integ(t))
+    planecrossing = PlaneCrossing(plane, direction > 0)
+
     p0 = ds.p[p_index]
 
-    output = [_initialize_output(ds.u0, i) for k in 1:length(pvalues)]
+    output = Vector{typeof(ds.u0[i])}[]
 
     for (n, p) in enumerate(pvalues)
         integ.p[p_index] = p
@@ -236,10 +246,9 @@ function produce_orbitdiagram(
         end
 
         reinit!(integ, st)
-        poincare_cross!(output[n], integ,
-                        f, planecrossing, tfinal, Ttr, i, rootkw)
+        push!(output, poincaresos(integ, planecrossing, tfinal, Ttr, i, rootkw))
 
-        warning && length(output[n]) == 0 && @warn "For parameter $p $PSOS_ERROR"
+        warning && length(output[end]) == 0 && @warn "For parameter $p $PSOS_ERROR"
 
     end
     # Reset the parameter of the system:

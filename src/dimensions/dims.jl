@@ -7,9 +7,14 @@ information_dim, estimate_boxsizes, kaplanyorke_dim
 using Statistics
 using Statistics: covm, varm
 # The following function comes from a version in StatsBase that is now deleted
-# StatsBase is copirighted under the MIT License with
+# StatsBase is copyrighted under the MIT License with
 # Copyright (c) 2012-2016: Dahua Lin, Simon Byrne, Andreas Noack, Douglas Bates,
 # John Myles White, Simon Kornblith, and other contributors.
+"""
+    linreg(x, y) -> a, b
+Perform a linear regression to find the best coefficients so that the curve:
+`y = a + b*x` has the least squared error.
+"""
 function linreg(x::AbstractVector, y::AbstractVector)
     # Least squares given
     # Y = a + b*X
@@ -26,7 +31,7 @@ function linreg(x::AbstractVector, y::AbstractVector)
     # since they cancel in the ratio
     b = covm(x, mx, y, my)/varm(x, mx)
     a = my - b*mx
-    return (a, b)
+    return a, b
 end
 
 slope(x, y) = linreg(x, y)[2]

@@ -1,16 +1,16 @@
 ti = time()
 
-# lyapunov Exponents:
+# Continuous
 include("lyapunov_exponents.jl")
-# Chaos Detection:
 include("chaos_detection_tests.jl")
-# Orbit Diagrams:
+include("poincare_tests.jl")
+
+# Discrete
 include("orbitdiagram_tests.jl")
-# Periodicity:
 include("periodicity_tests.jl")
-# Entropies (and attractor dimensions)
+
+# Numeric
 include("entropy_dimension.jl")
-# Nonlinear Timeseries Analysis:
 include("nlts_tests.jl")
 
 ti = time() - ti

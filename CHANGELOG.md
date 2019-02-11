@@ -1,3 +1,9 @@
+# 1.5
+* Updated everything to new DiffEqBase 5.0 and the new default integrator (`SimpleATsit5`)
+* Simplified low-level call signature for `poincaresos`.
+* Small documentation improvements throughout.
+
+
 # 1.4
 * `estimate_boxsizes` now slightly expands borders if upper and lower do not have 2 orders of magnitude difference.
 

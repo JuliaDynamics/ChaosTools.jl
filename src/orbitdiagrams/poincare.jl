@@ -46,7 +46,7 @@ Returns a [`Dataset`](@ref) of the points that are on the surface of section.
 
 ## Performance Notes
 This function uses a standard [`integrator`](@ref). For loops over initial conditions
-and/or parameters you should use the low lever method that accepts an integrator and
+and/or parameters you should use the low level method that accepts an integrator and
 `reinit!` to new initial conditions. See the "advanced documentation" for more.
 
 The low level call signature is:

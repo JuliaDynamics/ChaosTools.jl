@@ -159,7 +159,7 @@ function estimate_boxsizes(data::AbstractDataset{D, T};
         w -= 0.5; z += 0.5
     end
 
-    return 10.0 .^ range(lower+w, upper+z, length = k)
+    return 10.0 .^ range(lower+w, stop = upper+z, length = k)
 end
 
 estimate_boxsizes(ts::AbstractMatrix; kwargs...) =

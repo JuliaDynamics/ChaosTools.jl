@@ -45,13 +45,13 @@ parameter values one should use the low level method that accepts
 an integrator, and `reinit!` it to new initial conditions.
 See the "advanced documentation" for info on the integrator object.
 The low level method is
-```
+```julia
 lyapunovs(tinteg, N, dt::Real, Ttr::Real)
 ```
 
 If you want to obtain the convergence timeseries of the Lyapunov spectrum,
 use the method
-```
+```julia
 ChaosTools.lyapunovs_convergence(tinteg, N, dt, Ttr)
 ```
 (not exported).

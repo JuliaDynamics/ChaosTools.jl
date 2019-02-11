@@ -84,13 +84,8 @@ function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
     return Dataset(data)
 end
 
-function _initialize_output(u::S, i::Int) where {S}
-    output = eltype(S)[]
-end
-function _initialize_output(u::S, i::SVector{Int}) where {S}
-    s = u[i]
-    output = typeof(s)[]
-end
+_initialize_output(u::S, i::Int) where {S} = eltype(S)[]
+_initialize_output(u::S, i::SVector{N, Int}) where {N, S} = typeof(u[i])[]
 function _initialize_output(u, i)
     error("The variable index when producing the PSOS must be Int or SVector{Int}")
 end
@@ -191,7 +186,7 @@ for the given parameter values (see [`poincaresos`](@ref)).
 
 `i` can be `Int` or `AbstractVector{Int}`.
 If `i` is `Int`, returns a vector of vectors. Else
-it returns vectors of vectors of vectors.
+it returns a vector of vectors of vectors.
 Each entry are the points at each parameter value.
 
 ## Keyword Arguments
@@ -214,20 +209,19 @@ and thus you must use a parameter container that supports this
 
 See also [`poincaresos`](@ref), [`orbitdiagram`](@ref).
 """
-function produce_orbitdiagram(
-    ds::CDS{IIP, S, D},
-    plane,
-    idxs,
-    p_index,
-    pvalues;
-    tfinal::Real = 100.0,
-    direction = +1,
-    printparams = false,
-    warning = true,
-    Ttr = 0.0,
-    u0 = get_state(ds),
-    rootkw = (xrtol = 1e-6, atol = 1e-6),
-    diffeq...) where {IIP, S, D}
+function produce_orbitdiagram(ds::CDS{IIP, S, D},
+                              plane,
+                              idxs,
+                              p_index,
+                              pvalues;
+                              tfinal::Real = 100.0,
+                              direction = +1,
+                              printparams = false,
+                              warning = true,
+                              Ttr = 0.0,
+                              u0 = get_state(ds),
+                              rootkw = (xrtol = 1e-6, atol = 1e-6),
+                              diffeq...) where {IIP, S, D}
 
     i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
 
@@ -237,10 +231,9 @@ function produce_orbitdiagram(
     integ = integrator(ds; diffeq...)
     planecrossing = PlaneCrossing(plane, direction > 0)
 
-    f = (t) -> planecrossing(integ(t))
     p0 = ds.p[p_index]
 
-    output = [_initialize_output(ds.u0, i) for k in 1:length(pvalues)]
+    output = Vector{typeof(ds.u0[i])}[]
 
     for (n, p) in enumerate(pvalues)
         integ.p[p_index] = p
@@ -253,10 +246,9 @@ function produce_orbitdiagram(
         end
 
         reinit!(integ, st)
-        poincare_cross!(output[n], integ,
-                        f, planecrossing, tfinal, Ttr, i, rootkw)
+        push!(output, poincaresos(integ, planecrossing, tfinal, Ttr, i, rootkw))
 
-        warning && length(output[n]) == 0 && @warn "For parameter $p $PSOS_ERROR"
+        warning && length(output[end]) == 0 && @warn "For parameter $p $PSOS_ERROR"
 
     end
     # Reset the parameter of the system:

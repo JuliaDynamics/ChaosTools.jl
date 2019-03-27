@@ -18,6 +18,10 @@ function distinguish_chaos(ds::DynamicalSystem)
 	Tλmax = 200 # Maximum lyapunov prediction time (see below)
 	n_samples = 1000
 	scale_ly = 50 # Scale factor for Lyapunov prediction time
+	# δ range
+	δmin = 1e-9
+	δmax = 1e-3
+	num_δ = 5
 	# Thresholds (can probably be defaults)
 	ν_thresh_low = 0.1
 	ν_thresh_upp = 0.9

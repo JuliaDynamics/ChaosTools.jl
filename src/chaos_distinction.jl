@@ -107,7 +107,7 @@ function distinguish_chaos(ds::DynamicalSystem)
 	C = mean(Cs)
 	
 	# Determine chaotic nature of the system
-	if ν > ν_thresh_upp
+	if ν > ν_thresh_upp && C > C_thresh_upp
 		chaos_type = :laminar
 	elseif ν < ν_thresh_low && C > C_thresh_upp
 		chaos_type = :ppc

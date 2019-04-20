@@ -7,7 +7,7 @@ using Statistics: mean
 # [1] H. Wernecke, B. Sándor, and C. Gros, ‘How to test for partially
 #     predictable chaos’, Scientific Reports, vol. 7, no. 1, Dec. 2017.
 
-function distinguish_chaos(ds::DynamicalSystem)
+function predictability(ds::DynamicalSystem)
 	# ========= Definitions of things which should be arguments =========== #
 	# TODO - implement as function parameters
 	alg = Vern9()

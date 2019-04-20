@@ -22,12 +22,13 @@ function predictability(ds::DynamicalSystem)
 	δmin = 1e-9
 	δmax = 1e-3
 	num_δ = 5
-	# Thresholds (can probably be defaults)
-	ν_thresh_low = 0.1
-	ν_thresh_upp = 0.9
-	C_thresh_low = 0.1
-	C_thresh_upp = 0.9
 	# ===================================================================== #
+
+	# ======================== Internal Constants ========================= #
+	const ν_thresh = 0.5
+	const C_thresh = 0.5
+	# ===================================================================== #
+
 
 	# Simulate initial transient
 	integ = integrator(ds, alg=alg, maxiters=maxiters)
@@ -107,14 +108,15 @@ function predictability(ds::DynamicalSystem)
 	C = mean(Cs)
 	
 	# Determine chaotic nature of the system
-	if ν > ν_thresh_upp && C > C_thresh_upp
-		chaos_type = :laminar
-	elseif ν < ν_thresh_low && C > C_thresh_upp
-		chaos_type = :ppc
-	elseif ν < ν_thresh_low && C < C_thresh_low
-		chaos_type = :chaotic
+	if ν > ν_thresh && C > C_thresh
+		chaos_type = :LAM
+	elseif ν <= ν_thresh && C > C_thresh
+		chaos_type = :PPC
+	elseif ν <= ν_thresh && C <= C_thresh
+		chaos_type = :SC
 	else
-		chaos_type = :indeterminate
+		# Covers the case when ν > ν_thresh but C <= C_thresh
+		chaos_type = :INDETERMINATE
 	end
 
 	return chaos_type, ν, C

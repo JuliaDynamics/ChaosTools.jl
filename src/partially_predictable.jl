@@ -18,10 +18,7 @@ function predictability(ds::DynamicalSystem)
     Tλmax = 200 # Maximum lyapunov prediction time (see below)
     n_samples = 1000
     scale_ly = 50 # Scale factor for Lyapunov prediction time
-    # δ range
-    δmin = 1e-9
-    δmax = 1e-3
-    num_δ = 5
+    δ_range = 10.0 .^ (-9:-6)
     # ===================================================================== #
 
     # ======================== Internal Constants ========================= #
@@ -66,15 +63,11 @@ function predictability(ds::DynamicalSystem)
     # 10/λmax doesn't seem to work in practice.
     Tλ = min(Tλ, Tλmax)
 
-
-    # Get log-spaced range of δs to test
-    δs = exp.(range(log(δmin), length=num_δ, stop=log(δmax)))
-
-    # Calculate TODO
+    # Calculate cross-distance scaling and correlation scaling
     ds = Float64[] # Mean distances at time T for different δ
     Cs = Float64[] # Cross-correlation at time T for different δ
     p_integ = parallel_integrator(lz, samples[1:2], alg=alg, maxiters=maxiters) #TODO options
-    for δ in δs
+    for δ in δ_range
         Σd = 0
         Σd² = 0
         for u in samples
@@ -104,7 +97,7 @@ function predictability(ds::DynamicalSystem)
     end
 
     # Perform regression to check cross-distance scaling
-    ν = slope(log.(δs), log.(ds))
+    ν = slope(log.(δ_range), log.(ds))
     C = mean(Cs)
     
     # Determine chaotic nature of the system

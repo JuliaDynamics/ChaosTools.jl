@@ -20,8 +20,8 @@ function predictability(ds::DynamicalSystem;
                        ) where T <: Real
 
     # ======================== Internal Constants ========================= #
-    ν_thresh = 0.5
-    C_thresh = 0.5
+    ν_threshold = 0.5
+    C_threshold = 0.5
     # ===================================================================== #
 
 
@@ -87,14 +87,14 @@ function predictability(ds::DynamicalSystem;
     C = mean(Cs)
     
     # Determine chaotic nature of the system
-    if ν > ν_thresh && C > C_thresh
+    if ν > ν_threshold && C > C_threshold
         chaos_type = :LAM
-    elseif ν <= ν_thresh && C > C_thresh
+    elseif ν <= ν_threshold && C > C_threshold
         chaos_type = :PPC
-    elseif ν <= ν_thresh && C <= C_thresh
+    elseif ν <= ν_threshold && C <= C_threshold
         chaos_type = :SC
     else
-        # Covers the case when ν > ν_thresh but C <= C_thresh
+        # Covers the case when ν > ν_threshold but C <= C_threshold
         chaos_type = :INDETERMINATE
     end
 

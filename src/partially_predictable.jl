@@ -12,7 +12,7 @@ function predictability(ds::DynamicalSystem)
     # TODO - implement as function parameters
     alg = Vern9()
     maxiters = 1e9
-    T_transient = 200 # Transient time
+    T_transient = 200 # Transient time before sampling
     T_sample = 1e5 # Time for generating samples
     λ_max = abs(lyapunov(ds, 5000)) # maximal Lyapunov exponent; default
     d_tol = 1e-3
@@ -34,9 +34,8 @@ function predictability(ds::DynamicalSystem)
         step!(integ)
     end
 
-    # Sample points
-    # This will sample *approximately* `n_samples` points. It does so by
-    # sampling the time to the next sample from an Exponential distribution with
+    # Samples *approximately* `n_samples` points.
+    # Time to the next sample is sampled from Exponential distribution with
     # mean λ set to the total time divided by the number of samples desired.
     samples = typeof(integ.u)[]
     λ = T_sample/n_samples
@@ -46,9 +45,8 @@ function predictability(ds::DynamicalSystem)
         push!(samples, integ.u)
     end
 
-    # Calculate the mean position and variance of the trajectory as described on
-    # pg. 5 of [1], using the samples generated rather than attempting
-    # integration again
+    # Calculate the mean position and variance of the trajectory. ([1] pg. 5)
+    # Using samples 'Monte Carlo' approach instead of direct integration
     μ = mean(samples)
     s² = mean(map(x->(x-μ)⋅(x-μ), samples))
 

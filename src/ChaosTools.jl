@@ -25,6 +25,8 @@ include("periodic.jl")
 
 include("chaos_detection.jl")
 
+include("partially_predictable.jl")
+
 # Ugly methods that shouldn't exist:
 include("ugliness.jl")
 

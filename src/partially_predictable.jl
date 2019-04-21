@@ -1,6 +1,6 @@
 using LinearAlgebra, Distributions
 using Statistics: mean
-#export #TODO
+export predictability
 
 # TODO - write docstring
 #

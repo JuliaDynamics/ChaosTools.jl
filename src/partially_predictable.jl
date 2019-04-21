@@ -12,12 +12,13 @@ function predictability(ds::DynamicalSystem)
     # TODO - implement as function parameters
     alg = Vern9()
     maxiters = 1e9
-    Ttr = 200 # Transient time
-    T = 1e5 # Time for generating samples
-    Tly =  2500 # Time for use by `lyapunov` TODO - principled way to choose?
-    Tλmax = 200 # Maximum lyapunov prediction time (see below)
+    T_transient = 200 # Transient time
+    T_sample = 1e5 # Time for generating samples
+    λ_max = abs(lyapunov(ds, 5000)) # maximal Lyapunov exponent; default
+    d_tol = 1e-3
+    T_multiplier = 10 # Scale factor from prediction time to evolution time
+    T_max = 200 # Maximum evolution time: TODO Inf
     n_samples = 1000
-    scale_ly = 50 # Scale factor for Lyapunov prediction time
     δ_range = 10.0 .^ (-9:-6)
     # ===================================================================== #
 
@@ -29,7 +30,7 @@ function predictability(ds::DynamicalSystem)
 
     # Simulate initial transient
     integ = integrator(ds, alg=alg, maxiters=maxiters)
-    while integ.t < Ttr
+    while integ.t < T_transient
         step!(integ)
     end
 
@@ -38,9 +39,9 @@ function predictability(ds::DynamicalSystem)
     # sampling the time to the next sample from an Exponential distribution with
     # mean λ set to the total time divided by the number of samples desired.
     samples = typeof(integ.u)[]
-    λ = T/n_samples
+    λ = T_sample/n_samples
     D = Exponential(λ)
-    while integ.t < Ttr + T
+    while integ.t < T_transient + T_sample
         step!(integ, rand(D), true)
         push!(samples, integ.u)
     end
@@ -50,24 +51,14 @@ function predictability(ds::DynamicalSystem)
     # integration again
     μ = mean(samples)
     s² = mean(map(x->(x-μ)⋅(x-μ), samples))
-    
-    # Calculate maximal Lyapunov exponent using library function `lyapunov`
-    # (i.e. Benettin's algorithm), and from this calculate Lyapunov prediction
-    # time
-    λmax = lyapunov(ds, Tly) # TODO options?
-    Tλ = abs(scale_ly/λmax)
-    # The Lyapunov prediction time is bounded by Tλmax, defined above (as
-    # option?) The reason for this is that laminar flows have very small maximal
-    # lyapunov exponents, which results in infeasibly long trajectories. In [1]
-    # they just 'choose' 200 which works nicely, but their suggested Tλ =
-    # 10/λmax doesn't seem to work in practice.
-    Tλ = min(Tλ, Tλmax)
 
     # Calculate cross-distance scaling and correlation scaling
     ds = Float64[] # Mean distances at time T for different δ
     Cs = Float64[] # Cross-correlation at time T for different δ
     p_integ = parallel_integrator(lz, samples[1:2], alg=alg, maxiters=maxiters) #TODO options
     for δ in δ_range
+        Tλ = log(d_tol/δ)/λ_max
+        T = min(T_multiplier * Tλ, T_max)
         Σd = 0
         Σd² = 0
         for u in samples
@@ -77,8 +68,8 @@ function predictability(ds::DynamicalSystem)
             û = u + δ*n
             # Update integrator with new initial conditions
             reinit!(p_integ, [u, û])
-            # Simulate trajectory until Tλ
-            while p_integ.t < Tλ
+            # Simulate trajectory until T
+            while p_integ.t < T
                 step!(p_integ)
             end
             # Accumulate distance and square-distance

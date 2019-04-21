@@ -7,20 +7,17 @@ using Statistics: mean
 # [1] H. Wernecke, B. Sándor, and C. Gros, ‘How to test for partially
 #     predictable chaos’, Scientific Reports, vol. 7, no. 1, Dec. 2017.
 
-function predictability(ds::DynamicalSystem)
-    # ========= Definitions of things which should be arguments =========== #
-    # TODO - implement as function parameters
-    alg = Vern9()
-    maxiters = 1e9
-    T_transient = 200 # Transient time before sampling
-    T_sample = 1e5 # Time for generating samples
-    λ_max = abs(lyapunov(ds, 5000)) # maximal Lyapunov exponent; default
-    d_tol = 1e-3
-    T_multiplier = 10 # Scale factor from prediction time to evolution time
-    T_max = 200 # Maximum evolution time: TODO Inf
-    n_samples = 1000
-    δ_range = 10.0 .^ (-9:-6)
-    # ===================================================================== #
+function predictability(ds::DynamicalSystem;
+                        T_transient::Real = 200,
+                        T_sample::Real = 1e5,
+                        n_samples::Integer = 1000,
+                        λ_max::Real = abs(lyapunov(ds, 5000)),
+                        d_tol::Real = 1e-3,
+                        T_multiplier::Real = 10,
+                        T_max::Real = Inf,
+                        δ_range::AbstractArray{T,1} = 10.0 .^ (-9:-6),
+                        diffeq...
+                       ) where T <: Real
 
     # ======================== Internal Constants ========================= #
     ν_thresh = 0.5
@@ -29,7 +26,7 @@ function predictability(ds::DynamicalSystem)
 
 
     # Simulate initial transient
-    integ = integrator(ds, alg=alg, maxiters=maxiters)
+    integ = integrator(ds, diffeq...)
     while integ.t < T_transient
         step!(integ)
     end
@@ -53,7 +50,7 @@ function predictability(ds::DynamicalSystem)
     # Calculate cross-distance scaling and correlation scaling
     ds = Float64[] # Mean distances at time T for different δ
     Cs = Float64[] # Cross-correlation at time T for different δ
-    p_integ = parallel_integrator(lz, samples[1:2], alg=alg, maxiters=maxiters) #TODO options
+    p_integ = parallel_integrator(lz, samples[1:2], diffeq...)
     for δ in δ_range
         Tλ = log(d_tol/δ)/λ_max
         T = min(T_multiplier * Tλ, T_max)

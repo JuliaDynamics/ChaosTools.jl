@@ -48,9 +48,9 @@ function predictability(ds::DynamicalSystem;
     s² = mean(map(x->(x-μ)⋅(x-μ), samples))
 
     # Calculate cross-distance scaling and correlation scaling
-    ds = Float64[] # Mean distances at time T for different δ
-    Cs = Float64[] # Cross-correlation at time T for different δ
-    p_integ = parallel_integrator(lz, samples[1:2]; diffeq...)
+    distances = Float64[] # Mean distances at time T for different δ
+    correlations = Float64[] # Cross-correlation at time T for different δ
+    p_integ = parallel_integrator(ds, samples[1:2]; diffeq...)
     for δ in δ_range
         Tλ = log(d_tol/δ)/λ_max
         T = min(T_multiplier * Tλ, T_max)
@@ -78,13 +78,13 @@ function predictability(ds::DynamicalSystem;
         # Convert mean square-distance into cross-correlation
         C = 1 - D/2s²
         # Store mean distance and cross-correlation
-        push!(ds, d)
-        push!(Cs, C)
+        push!(distances, d)
+        push!(correlations, C)
     end
 
     # Perform regression to check cross-distance scaling
-    ν = slope(log.(δ_range), log.(ds))
-    C = mean(Cs)
+    ν = slope(log.(δ_range), log.(distances))
+    C = mean(correlations)
     
     # Determine chaotic nature of the system
     if ν > ν_threshold && C > C_threshold

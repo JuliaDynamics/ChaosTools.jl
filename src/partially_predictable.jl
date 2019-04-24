@@ -25,22 +25,8 @@ function predictability(ds::DynamicalSystem;
     # ===================================================================== #
 
 
-    # Simulate initial transient
-    integ = integrator(ds; diffeq...)
-    while integ.t < T_transient
-        step!(integ)
-    end
-
-    # Samples *approximately* `n_samples` points.
-    # Time to the next sample is sampled from Exponential distribution with
-    # mean λ set to the total time divided by the number of samples desired.
-    samples = typeof(integ.u)[]
-    λ = T_sample/n_samples
-    D = Exponential(λ)
-    while integ.t < T_transient + T_sample
-        step!(integ, rand(D), true)
-        push!(samples, integ.u)
-    end
+    # Sample points from a single trajectory of the system
+    samples = sample_trajectory(ds, T_transient, T_sample, n_samples; diffeq...)
 
     # Calculate the mean position and variance of the trajectory. ([1] pg. 5)
     # Using samples 'Monte Carlo' approach instead of direct integration
@@ -99,4 +85,46 @@ function predictability(ds::DynamicalSystem;
     end
 
     return chaos_type, ν, C
+end
+
+
+function sample_trajectory(ds::ContinuousDynamicalSystem, 
+                           T_transient::Real, T_sample::Real, 
+                           n_samples::Real; 
+                           diffeq...)
+    # Samples *approximately* `n_samples` points.
+    β = T_sample/n_samples
+    D_sample = Exponential(β)
+    sample_trajectory(ds, T_transient, T_sample, D_sample; diffeq...)
+end
+
+function sample_trajectory(ds::DiscreteDynamicalSystem, 
+                           T_transient::Real, T_sample::Real, 
+                           n_samples::Real;
+                           diffeq...)
+    @assert n_samples < T_sample "DiscreteDynamicalSystems must satisfy n_samples < T_sample"
+    # Samples *approximately* `n_samples` points.
+    p = n_samples/T_sample
+    D_sample = Geometric(p)
+    sample_trajectory(ds, T_transient, T_sample, D_sample; diffeq...)
+end
+
+function sample_trajectory(ds::DynamicalSystem, 
+                           T_transient::Real, T_sample::Real,
+                           D_sample::UnivariateDistribution;
+                           diffeq...)
+    # Simulate initial transient
+    integ = integrator(ds; diffeq...)
+    while integ.t < T_transient
+        step!(integ)
+    end
+
+    # Time to the next sample is sampled from the distribution D_sample
+    # e.g. Continuous systems: D_sample is Exponential distribution
+    samples = typeof(integ.u)[]
+    while integ.t < T_transient + T_sample
+        step!(integ, rand(D_sample), true)
+        push!(samples, integ.u)
+    end
+    samples
 end

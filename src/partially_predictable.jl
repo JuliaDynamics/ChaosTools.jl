@@ -26,7 +26,7 @@ function predictability(ds::DynamicalSystem;
 
 
     # Simulate initial transient
-    integ = integrator(ds, diffeq...)
+    integ = integrator(ds; diffeq...)
     while integ.t < T_transient
         step!(integ)
     end
@@ -50,7 +50,7 @@ function predictability(ds::DynamicalSystem;
     # Calculate cross-distance scaling and correlation scaling
     ds = Float64[] # Mean distances at time T for different δ
     Cs = Float64[] # Cross-correlation at time T for different δ
-    p_integ = parallel_integrator(lz, samples[1:2], diffeq...)
+    p_integ = parallel_integrator(lz, samples[1:2]; diffeq...)
     for δ in δ_range
         Tλ = log(d_tol/δ)/λ_max
         T = min(T_multiplier * Tλ, T_max)

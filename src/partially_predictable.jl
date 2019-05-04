@@ -8,9 +8,9 @@ export predictability
 #     predictable chaos’, Scientific Reports, vol. 7, no. 1, Dec. 2017.
 
 function predictability(ds::DynamicalSystem;
-                        T_transient::Real = 200,
-                        T_sample::Real = 1e5,
-                        n_samples::Integer = 1000,
+                        Ttr::Real = 200,
+                        T_sample::Real = 1e4,
+                        n_samples::Integer = 500,
                         λ_max::Real = abs(lyapunov(ds, 5000)),
                         d_tol::Real = 1e-3,
                         T_multiplier::Real = 10,
@@ -26,7 +26,7 @@ function predictability(ds::DynamicalSystem;
 
 
     # Sample points from a single trajectory of the system
-    samples = sample_trajectory(ds, T_transient, T_sample, n_samples; diffeq...)
+    samples = sample_trajectory(ds, Ttr, T_sample, n_samples; diffeq...)
 
     # Calculate the mean position and variance of the trajectory. ([1] pg. 5)
     # Using samples 'Monte Carlo' approach instead of direct integration
@@ -38,6 +38,8 @@ function predictability(ds::DynamicalSystem;
     correlations = Float64[] # Cross-correlation at time T for different δ
     p_integ = parallel_integrator(ds, samples[1:2]; diffeq...)
     for δ in δ_range
+        # some kind of warning should be thrown for very large
+        # Tλ.
         Tλ = log(d_tol/δ)/λ_max
         T = min(T_multiplier * Tλ, T_max)
         Σd = 0
@@ -89,40 +91,40 @@ end
 
 
 function sample_trajectory(ds::ContinuousDynamicalSystem,
-                           T_transient::Real, T_sample::Real,
+                           Ttr::Real, T_sample::Real,
                            n_samples::Real;
                            diffeq...)
     # Samples *approximately* `n_samples` points.
     β = T_sample/n_samples
     D_sample = Exponential(β)
-    sample_trajectory(ds, T_transient, T_sample, D_sample; diffeq...)
+    sample_trajectory(ds, Ttr, T_sample, D_sample; diffeq...)
 end
 
 function sample_trajectory(ds::DiscreteDynamicalSystem,
-                           T_transient::Real, T_sample::Real,
+                           Ttr::Real, T_sample::Real,
                            n_samples::Real;
                            diffeq...)
     @assert n_samples < T_sample "discrete systems must satisfy n_samples < T_sample"
     # Samples *approximately* `n_samples` points.
     p = n_samples/T_sample
     D_sample = Geometric(p)
-    sample_trajectory(ds, T_transient, T_sample, D_sample; diffeq...)
+    sample_trajectory(ds, Ttr, T_sample, D_sample; diffeq...)
 end
 
 function sample_trajectory(ds::DynamicalSystem,
-                           T_transient::Real, T_sample::Real,
+                           Ttr::Real, T_sample::Real,
                            D_sample::UnivariateDistribution;
                            diffeq...)
     # Simulate initial transient
     integ = integrator(ds; diffeq...)
-    while integ.t < T_transient
+    while integ.t < Ttr
         step!(integ)
     end
 
     # Time to the next sample is sampled from the distribution D_sample
     # e.g. Continuous systems: D_sample is Exponential distribution
     samples = typeof(integ.u)[]
-    while integ.t < T_transient + T_sample
+    while integ.t < Ttr + T_sample
         step!(integ, rand(D_sample), true)
         push!(samples, integ.u)
     end

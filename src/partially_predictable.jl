@@ -17,7 +17,7 @@ function predictability(ds::DynamicalSystem;
                         T_max::Real = Inf,
                         δ_range::AbstractArray{T,1} = 10.0 .^ (-9:-6),
                         diffeq...
-                       ) where T <: Real
+                        ) where T <: Real
 
     # ======================== Internal Constants ========================= #
     ν_threshold = 0.5
@@ -71,13 +71,13 @@ function predictability(ds::DynamicalSystem;
     # Perform regression to check cross-distance scaling
     ν = slope(log.(δ_range), log.(distances))
     C = mean(correlations)
-    
+
     # Determine chaotic nature of the system
     if ν > ν_threshold && C > C_threshold
         chaos_type = :LAM
     elseif ν <= ν_threshold && C > C_threshold
         chaos_type = :PPC
-    elseif ν <= ν_threshold && C <= C_threshold
+    elseif ν <= ν_threshold && C ≤ C_threshold
         chaos_type = :SC
     else
         # Covers the case when ν > ν_threshold but C <= C_threshold
@@ -88,9 +88,9 @@ function predictability(ds::DynamicalSystem;
 end
 
 
-function sample_trajectory(ds::ContinuousDynamicalSystem, 
-                           T_transient::Real, T_sample::Real, 
-                           n_samples::Real; 
+function sample_trajectory(ds::ContinuousDynamicalSystem,
+                           T_transient::Real, T_sample::Real,
+                           n_samples::Real;
                            diffeq...)
     # Samples *approximately* `n_samples` points.
     β = T_sample/n_samples
@@ -98,18 +98,18 @@ function sample_trajectory(ds::ContinuousDynamicalSystem,
     sample_trajectory(ds, T_transient, T_sample, D_sample; diffeq...)
 end
 
-function sample_trajectory(ds::DiscreteDynamicalSystem, 
-                           T_transient::Real, T_sample::Real, 
+function sample_trajectory(ds::DiscreteDynamicalSystem,
+                           T_transient::Real, T_sample::Real,
                            n_samples::Real;
                            diffeq...)
-    @assert n_samples < T_sample "DiscreteDynamicalSystems must satisfy n_samples < T_sample"
+    @assert n_samples < T_sample "discrete systems must satisfy n_samples < T_sample"
     # Samples *approximately* `n_samples` points.
     p = n_samples/T_sample
     D_sample = Geometric(p)
     sample_trajectory(ds, T_transient, T_sample, D_sample; diffeq...)
 end
 
-function sample_trajectory(ds::DynamicalSystem, 
+function sample_trajectory(ds::DynamicalSystem,
                            T_transient::Real, T_sample::Real,
                            D_sample::UnivariateDistribution;
                            diffeq...)

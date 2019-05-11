@@ -1,3 +1,7 @@
+# 1.6
+* Implementation of  Wernecke, H., Sándor, B. & Gros, C.
+      *How to test for partially predictable chaos*. [Scientific Reports **7**, (2017)](https://www.nature.com/articles/s41598-017-01083-x). Thanks and welcome to our new contributor @efosong ! Implemented with the function `predictability`.
+
 # 1.5
 * Updated everything to new DiffEqBase 5.0 and the new default integrator (`SimpleATsit5`)
 * Simplified low-level call signature for `poincaresos`.

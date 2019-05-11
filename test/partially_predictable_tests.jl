@@ -40,3 +40,17 @@ println("\nTesting Partially predictable chaos...")
         end
     end
 end
+
+@testset "Predictability Discrete" begin
+    @testset "Henon map" begin
+        ds = Systems.henon()
+        a_reg = 0.8; a_ppc = 1.11; a_reg2 = 1.0; a_cha = 1.4
+        res = [:LAM, :LAM, :PPC, :SC]
+
+        for (i, a) in enumerate((a_reg, a_reg2, a_ppc, a_cha))
+            set_parameter!(ds, 1, a)
+            chaos_type, ν, C = predictability(ds; T_max = 400000)
+            @test chaos_type == res[i]
+        end
+    end
+end

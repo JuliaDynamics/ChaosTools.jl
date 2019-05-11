@@ -2,26 +2,14 @@ using LinearAlgebra, Distributions
 using Statistics: mean
 export predictability
 
-# TODO - write docstring
-#
-# [1] H. Wernecke, B. Sándor, and C. Gros, ‘How to test for partially
-#     predictable chaos’, Scientific Reports, vol. 7, no. 1, Dec. 2017.
-
 """
-   predictability(ds::DynamicalSystem, kwargs...) -> chaos_type, ν, C
+   predictability(ds::DynamicalSystem; kwargs...) -> chaos_type, ν, C
 
 Determine whether `ds` displays strongly chaotic, partially-predictable chaotic
-or laminar behaviour, using the method described in [1].
+or laminar behaviour, using the method by Wernecke et al. described in [1].
 
-## Return Values
-* `chaos_type`: 
-    * `:SC` for 'strongly chaos'
-    * `:PPC` for 'partially predictable chaos'
-    * `:LAM` for 'laminar flow'
-    * `:INDETERMINATE` for cases where the algorithm does not work as expected
-* `ν`: Cross-distance scaling coefficient
-* `C`: Cross-correlation
-
+Return the type of the behavior, the cross-distance scaling coefficient `ν`
+and the correlation coefficient `C`.
 Typical values for `ν`, `C` and `chaos_type` are given in Table 2 of [1]:
 
 | `chaos_type | `ν` | `C` |
@@ -37,26 +25,28 @@ Typical values for `ν`, `C` and `chaos_type` are given in Table 2 of [1]:
 * `T_sample = 1e4` : Time to evolve the system for taking samples. Should be
   `Int` for discrete systems.
 * `n_samples = 500` : Number of samples to take for use in calculating statistics.
-* `λ_max = abs(lyapunov(ds, 5000))` : Value to use for largest Lyapunov exponent
-  for finding the Lyapunov prediction time.
+* `λ_max = lyapunov(ds, 5000)` : Value to use for largest Lyapunov exponent
+  for finding the Lyapunov prediction time. If it is less than zero a laminar
+  result is returned immediatelly.
 * `d_tol = 1e-3` : tolerance distance to use for calculating Lyapunov prediction time.
 * `T_multiplier = 10` : Multiplier from the Lyapunov prediction time to the evaluation time.
 * `T_max = Inf` : Maximum time at which to evaluate trajectory distance. If the internally
    computed evaluation time is larger than `T_max`, stop at `T_max` instead.
-* `δ_range = 10.0 .^ (-9:-6)` : Range of initial condition perturbation distances 
-   to use to determine scaling
-* `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.  
+* `δ_range = 10.0 .^ (-9:-6)` : Range of initial condition perturbation distances
+   to use to determine scaling `ν`.
+* `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
   See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
 ## Description
 Samples points from a trajectory of the system to be used as initial conditions. Each of
 these initial conditions is randomly perturbed by a distance `δ`, and the trajectories for
 both the original and perturbed initial conditions are computed to the 'evaluation time'
-`T`. 
+`T`.
 
-The average (over the samples) distance and cross-correlation of the state at time `T` is
+The average (over the samples) distance and cross-correlation coefficient
+of the state at time `T` is
 computed. This is repeated for a range of `δ` (defined by `δ_range`), and linear
-regression is used to determine how the distance and cross-correlation scale with δ,
+regression is used to determine how the distance and cross-correlation scale with `δ`,
 allowing for identification of chaos type.
 
 The evaluation time `T` is calculated as `T = T_multiplier*Tλ`, where the Lyapunov
@@ -70,27 +60,25 @@ be increased, e.g. to 1e9. This is part of the `diffeq` kwargs.
 
 ## References
 
-[1] : Wernecke, H., Sándor, B. & Gros, C. 
-      *How to test for partially predictable chaos*. Scientific Reports **7**, (2017).
+[1] : Wernecke, H., Sándor, B. & Gros, C.
+      *How to test for partially predictable chaos*. [Scientific Reports **7**, (2017)](https://www.nature.com/articles/s41598-017-01083-x).
 """
-
 function predictability(ds::DynamicalSystem;
                         Ttr::Real = 200,
                         T_sample::Real = 1e4,
                         n_samples::Integer = 500,
-                        λ_max::Real = abs(lyapunov(ds, 5000)),
+                        λ_max::Real = lyapunov(ds, 5000),
                         d_tol::Real = 1e-3,
                         T_multiplier::Real = 10,
                         T_max::Real = Inf,
-                        δ_range::AbstractArray{T,1} = 10.0 .^ (-9:-6),
+                        δ_range::AbstractArray = 10.0 .^ (-9:-6),
                         diffeq...
-                        ) where T <: Real
+                        )
 
-    # ======================== Internal Constants ========================= #
+    λ_max < 0 && return :LAM, 1.0, 1.0
+    # Internal Constants
     ν_threshold = 0.5
     C_threshold = 0.5
-    # ===================================================================== #
-
 
     # Sample points from a single trajectory of the system
     samples = sample_trajectory(ds, Ttr, T_sample, n_samples; diffeq...)

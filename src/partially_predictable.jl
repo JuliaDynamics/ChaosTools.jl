@@ -57,6 +57,8 @@ a smaller `T_max` set by the user.
 ## Performance Notes
 For continuous systems, it is likely that the `maxiters` used by the integrators needs to
 be increased, e.g. to 1e9. This is part of the `diffeq` kwargs.
+In addition, be aware that this function does a *lot* of internal computations.
+It is operating in a different speed than e.g. [`lyapunov`](@ref).
 
 ## References
 

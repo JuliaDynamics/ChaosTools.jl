@@ -180,7 +180,7 @@ function sample_trajectory(ds::DynamicalSystem,
     # e.g. Continuous systems: D_sample is Exponential distribution
     samples = typeof(integ.u)[]
     while integ.t < Ttr + T_sample
-        step!(integ, rand(D_sample), true)
+        step!(integ, rand(D_sample))
         push!(samples, integ.u)
     end
     samples

@@ -14,9 +14,9 @@ Typical values for `ν`, `C` and `chaos_type` are given in Table 2 of [1]:
 
 | `chaos_type` | `ν` | `C` |
 |--------------|-----|-----|
-|     :SC      |  0  |  0  |
-|     :PPC     |  0  |  1  |
-|     :REG     |  1  |  1  |
+|    `:SC`     |  0  |  0  |
+|    `:PPC`    |  0  |  1  |
+|    `:REG`    |  1  |  1  |
 
 
 ## Keyword Arguments

@@ -3,8 +3,8 @@ using Test, StaticArrays
 using OrdinaryDiffEq: Vern9
 using DynamicalSystemsBase.Systems: lorenz
 
-ν_thresh_lower, ν_thresh_upper = 0.05, 0.95
-C_thresh_lower, C_thresh_upper = 0.05, 0.95
+ν_thresh_lower, ν_thresh_upper = 0.1, 0.9
+C_thresh_lower, C_thresh_upper = 0.1, 0.9
 
 println("\nTesting Partially predictable chaos...")
 

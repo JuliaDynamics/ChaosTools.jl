@@ -6,7 +6,7 @@ export predictability
    predictability(ds::DynamicalSystem; kwargs...) -> chaos_type, ν, C
 
 Determine whether `ds` displays strongly chaotic, partially-predictable chaotic
-or laminar behaviour, using the method by Wernecke et al. described in [1].
+or regular behaviour, using the method by Wernecke et al. described in [1].
 
 Return the type of the behavior, the cross-distance scaling coefficient `ν`
 and the correlation coefficient `C`.
@@ -16,7 +16,7 @@ Typical values for `ν`, `C` and `chaos_type` are given in Table 2 of [1]:
 |-------------|-----|-----|
 |     :SC     |  0  |  0  |
 |     :PPC    |  0  |  1  |
-|     :LAM    |  1  |  1  |
+|     :REG    |  1  |  1  |
 
 
 ## Keyword Arguments
@@ -26,7 +26,7 @@ Typical values for `ν`, `C` and `chaos_type` are given in Table 2 of [1]:
   `Int` for discrete systems.
 * `n_samples = 500` : Number of samples to take for use in calculating statistics.
 * `λ_max = lyapunov(ds, 5000)` : Value to use for largest Lyapunov exponent
-  for finding the Lyapunov prediction time. If it is less than zero a laminar
+  for finding the Lyapunov prediction time. If it is less than zero a regular
   result is returned immediatelly.
 * `d_tol = 1e-3` : tolerance distance to use for calculating Lyapunov prediction time.
 * `T_multiplier = 10` : Multiplier from the Lyapunov prediction time to the evaluation time.
@@ -51,7 +51,7 @@ allowing for identification of chaos type.
 
 The evaluation time `T` is calculated as `T = T_multiplier*Tλ`, where the Lyapunov
 prediction time `Tλ = log(d_tol/δ)/λ_max`. This may be very large if the `λ_max` is small,
-e.g. when the system is laminar, so this internally computed time `T` can be overridden by
+e.g. when the system is regular, so this internally computed time `T` can be overridden by
 a smaller `T_max` set by the user.
 
 ## Performance Notes
@@ -75,7 +75,7 @@ function predictability(ds::DynamicalSystem;
                         diffeq...
                         )
 
-    λ_max < 0 && return :LAM, 1.0, 1.0
+    λ_max < 0 && return :REG, 1.0, 1.0
     # Internal Constants
     ν_threshold = 0.5
     C_threshold = 0.5
@@ -131,7 +131,7 @@ function predictability(ds::DynamicalSystem;
 
     # Determine chaotic nature of the system
     if ν > ν_threshold && C > C_threshold
-        chaos_type = :LAM
+        chaos_type = :REG
     elseif ν <= ν_threshold && C > C_threshold
         chaos_type = :PPC
     elseif ν <= ν_threshold && C ≤ C_threshold

@@ -34,7 +34,7 @@ println("\nTesting Partially predictable chaos...")
         @testset "Lorenz map - laminar" begin
             lz = lorenz(ρ=181.10)
             chaos_type, ν, C = predictability(lz; T_max = 400, alg=Vern9(), maxiters=1e9)
-            @test chaos_type == :LAM
+            @test chaos_type == :REG
             @test ν > ν_thresh_upper
             @test C > C_thresh_upper
         end
@@ -45,7 +45,7 @@ end
     @testset "Henon map" begin
         ds = Systems.henon()
         a_reg = 0.8; a_ppc = 1.11; a_reg2 = 1.0; a_cha = 1.4
-        res = [:LAM, :LAM, :PPC, :SC]
+        res = [:REG, :REG, :PPC, :SC]
 
         for (i, a) in enumerate((a_reg, a_reg2, a_ppc, a_cha))
             set_parameter!(ds, 1, a)

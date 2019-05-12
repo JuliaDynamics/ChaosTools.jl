@@ -1,8 +1,11 @@
 ti = time()
 
-# Continuous
+# Continuous and discrete
 include("lyapunov_exponents.jl")
-include("chaos_detection_tests.jl")
+include("gali_tests.jl")
+include("partially_predictable_tests.jl")
+
+# Continuous
 include("poincare_tests.jl")
 
 # Discrete

@@ -5,7 +5,7 @@ using OrdinaryDiffEq: Tsit5
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
-println("\nTesting chaos detection algorithms...")
+println("\nTesting GALI...")
 
 @testset "GALI discrete" begin
 

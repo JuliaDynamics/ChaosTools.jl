@@ -1,12 +1,13 @@
 name = "ChaosTools"
 uuid = "608a59af-f2a3-5ad4-90b4-758bdf3122a7"
 repo = "https://github.com/JuliaDynamics/ChaosTools.jl.git"
-version = "1.5.1"
+version = "1.6.0"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DynamicalSystemsBase = "6e36e845-645a-534a-86f2-f5d4aa5a06b4"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"

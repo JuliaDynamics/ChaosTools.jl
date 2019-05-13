@@ -3,7 +3,7 @@ using Statistics: mean
 export predictability
 
 """
-   predictability(ds::DynamicalSystem; kwargs...) -> chaos_type, ν, C
+    predictability(ds::DynamicalSystem; kwargs...) -> chaos_type, ν, C
 
 Determine whether `ds` displays strongly chaotic, partially-predictable chaotic
 or regular behaviour, using the method by Wernecke et al. described in [1].

@@ -21,7 +21,8 @@ include("dimensions/dims.jl")
 
 include("nlts.jl")
 
-include("periodic.jl")
+include("periodicity/periodic_points.jl")
+include("periodicity/period.jl")
 
 include("chaos_detection.jl")
 

@@ -30,7 +30,7 @@ Return the index of the first entry that is 2π away (in phase) from the initial
 !!!note
 Currently implemented only for one dimension.
 """
-function find_period(data <: AbstractVector; atol = 0.005, ptol = 5*atol)
+function find_period(data::AbstractVector{<:Real}; atol = 0.005, ptol = 5*atol)
 
     # the function expects a 2d array but we're giving it a 1d timeseries
     H = Hilbert.hilbert(data[:, :])

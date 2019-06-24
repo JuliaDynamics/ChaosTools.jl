@@ -1,52 +1,43 @@
-using Hilbert
+using StatsBase
+export estimate_period
 
 """
-    arg(z::Complex)
+    estimate_period(v, t, method; kwargs...)
+Estimate the period of the signal `v`, with accompanying time vector `t`,
+using the given `method`:
 
-Computes the "angle" of the given complex number
-as a vector away from the real axis, counterclockwise.
+* `"ac"` : Use the autocorrelation function (AC). The value where the AC first
+  comes back close to 1 is the period of the signal. The keyword `ε = 0.05`
+  here identifies how close to 1 actually counts as 1.
 """
-arg(z::Complex) = atan(z.im, z.re)
+function estimate_period(v, t, method; kwargs...)
+    @assert length(v) == length(t)
+    if method ∉ ("ac",)
+        error("Unknown method given to `estimate_period`.")
+    elseif method == "ac"
+        period = _ac_period(v, t; kwargs...)
 
-"""
-    find_period(data; atol = 0.005, ptol = 5*atol)
+    return period
+end
 
-Use the Hilbert transform to determine
-the periodicity of the dataset.
-This function assumes that the data is known to be
-periodic.
-
-Return the index of the first entry that is 2π away (in phase) from the initial entry.
-
-## Arguments
-
-`data` - a 1-dimensional timeseries
-
-## Keywords
-
-- `atol` - The error tolerance for the phase difference between indices.
-- `ptol` - The error tolerance for what constitutes "one rotation" of the tangent vector.
-
-!!!note
-Currently implemented only for one dimension.
-"""
-function find_period(data::AbstractVector{<:Real}; atol = 0.005, ptol = 5*atol)
-
-    # the function expects a 2d array but we're giving it a 1d timeseries
-    H = Hilbert.hilbert(data[:, :])
-    ϕ = arg.(H)
-    ϕ₀ = ϕ[1]
-    Δϕ = 0.0
-
-    for i in eachindex(ϕ)[2:end]
-        Δϕ += abs(ϕ[i] - ϕ[i-1])
-
-        # if the tangent vector has completed a full rotation
-        if isapprox(Δϕ, 4π; atol = ptol) # why 4π?
-            println(i)  # debugging info
-            println(Δϕ) # debugging info
-            isapprox(ϕ[i], ϕ₀; atol = atol) && return i # second check - phase angle should be accurate...
-        end
+function _ac_period(v, t; ε = 0.05)
+    err = "The autocorrelation did not become close to 1."
+    ac = autocor(v)
+    j = 1
+    # find next local maximum of ac
+    while j < length(ac) && ac[j] ≥ ac[j+1]
+        j += 1
     end
-    return -1
+    # now j is a local minimum
+    j == length(ac) && error(err)
+    while j < length(ac) && ac[j] < ac[j+1]
+        j += 1
+    end
+    # now j is a local maximum
+    if j == length(ac) || ac[j] < 1 - ε
+        error(err)
+    end
+    # since now it holds that ac[j] is next local maximum within 1-ε:
+    period = t[j] - t[1]
+    return period
 end

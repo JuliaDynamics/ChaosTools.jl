@@ -70,11 +70,3 @@ println("\nTesting finding stable & unstable fixed points...")
     end
 end
 end
-
-@testset "Hilbert period estimation" begin
-
-        @test find_period(sin.(0:0.01:8π)) == 629
-
-#         @test find_period((x -> sin(x) + cos(2x)).(0:0.01:8π)) == 629 # broken, needs algorithm fix
-
-end

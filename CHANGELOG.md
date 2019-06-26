@@ -1,3 +1,7 @@
+# 1.7
+* New function `estimate_period` that attempts to estimate the period of a signal using the following methods:
+  * The autocorrelation function (when it comes close to 1 again)
+
 # 1.6
 * Implementation of  Wernecke, H., Sándor, B. & Gros, C.
       *How to test for partially predictable chaos*. [Scientific Reports **7**, (2017)](https://www.nature.com/articles/s41598-017-01083-x). Thanks and welcome to our new contributor @efosong ! Implemented with the function `predictability`.

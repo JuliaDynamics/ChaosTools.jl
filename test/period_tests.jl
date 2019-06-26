@@ -1,7 +1,7 @@
 using ChaosTools, Test
 
 println("\nTesting period estimation...")
-dt = 0.01
+dt = 0.05
 
 @testset "simple sine" begin
 tsin = 0:dt:22π
@@ -35,17 +35,29 @@ end
 end
 
 
-@testset "Modified FitzHugh-Nagumo"
+@testset "Modified FitzHugh-Nagumo" begin
 
 function FHN(u, p, t)
     e, b, g = p
     v, w = u
-    dv = min(max(-2 - v, v), 2 - v)
+    dv = min(max(-2 - v, v), 2 - v) - w
     dw = e*(v - g*w + b)
     return SVector(dv, dw)
 end
-fhn = ContinuousDynamicalSystem(FHN,SVector(-2, -0.6667),[0.04, 0, 0.8])
+
+g  = 0.8
+e = 0.04
+b = 0
+p0 = [e, b, g]
+
+fhn = ContinuousDynamicalSystem(FHN,SVector(-2, -0.6667),p0)
+T = 1000.0
+v = trajectory(fhn, T; dt = dt)[:, 1]
+real_p = 91
+
 @testset "ac" begin
+    p = estimate_period(v, "ac", 0:dt:T)
+    @test p ≈ real_p  atol = 0.1
 end
 
 end

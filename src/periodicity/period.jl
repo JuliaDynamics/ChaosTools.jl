@@ -4,21 +4,51 @@ import DSP: Periodograms
 export estimate_period
 
 """
-    estimate_period(v, method, t=0:length(v)-1; kwargs...)
+    estimate_period(v, t=0:length(v)-1, method; kwargs...)
 Estimate the period of the signal `v`, with accompanying time vector `t`,
 using the given `method`:
 
-* `"ac"` : Use the autocorrelation function (AC). The value where the AC first
+* `:ac` : Use the autocorrelation function (AC). The value where the AC first
   comes back close to 1 is the period of the signal. The keyword
   `L = length(v)÷10` denotes the length of the AC (thus, given the default
   setting, this method will fail if there less than 10 periods in the signal).
   The keyword `ε = 0.2` means that `1-ε` counts as "1" for the AC.
+
+* `:periodogram` or `:pg`: Use the fast Fourier transform to compute a
+   periodogram (power-spectrum) of the given data.  Data must be evenly sampled.
+
+* `:bartlett`: The Bartlett periodogram is aimed at tackling noisy or
+  undersampled data, by splitting the signal up into segments, then averaging
+  their periodograms.  The keyword `n`  controls the number of segments.
+  Using this method reduces the variance of the periodogram compared to the
+  standard method.
+
+* `:welch`: Use the Welch method.  The Welch periodogram is aimed at tackling
+  noisy or undersampled data, by splitting the signal up into overlapping
+  segments and windowing them, then averaging their periodograms. The keyword
+  `n`  controls the number of segments, and `noverlap` controls the number of
+  overlapping segments.  `window` is the windowing function to be used.
+
+* `:multitaper`: The multitaper method reduces estimation bias by obtaining
+  multiple independent estimates from the same sample. Data tapers are then
+  windowed and the power spectra are obtained.  Available keywords follow:
+  `nw` is the time-bandwidth product, and `ntapers` is the number of tapers.
+  If `window` is not specified, the signal is tapered with `ntapers` discrete
+  prolate spheroidal sequences with time-bandwidth product `nw`.
+  Each sequence is equally weighted; adaptive multitaper is not (yet) supported.
+  If `window` is specified, each column is applied as a taper. The sum of
+  periodograms is normalized by the total sum of squares of `window`.
+
 """
-function estimate_period(v, method, t = 0:length(v)-1; kwargs...)
+function estimate_period(v, t = 0:length(v)-1, method; kwargs...)
     @assert length(v) == length(t)
-    if method ∉ ("ac",)
+    methods = Set([
+                :ac, :periodogram, :pg, :welch,
+                :bartlett, :multitaper, :mt, :lombscargle,
+                :esprit])
+    if method ∉ methods
         error("Unknown method (`$method`) given to `estimate_period`.")
-    elseif method == "ac"
+    elseif method == :ac
         period = _ac_period(v, t; kwargs...)
     end
     return period

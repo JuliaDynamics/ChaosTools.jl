@@ -1,18 +1,20 @@
 using StatsBase
 import DSP
 import DSP: Periodograms
+import LombScargle
 export estimate_period
 
 """
-    estimate_period(v, t=0:length(v)-1, method; kwargs...)
+    estimate_period(v, method, t=0:length(v)-1; faith = false, kwargs...)
 Estimate the period of the signal `v`, with accompanying time vector `t`,
-using the given `method`:
+using the given `method`.  If `faith` is set to `true`, and the chosen
+method requires evenly sampled data, then the time data will not be checked;
+otherwise, it will.  It is recommended to provide an range in this case, instead
+of relying on the `faith` keyword.
 
-* `:ac` : Use the autocorrelation function (AC). The value where the AC first
-  comes back close to 1 is the period of the signal. The keyword
-  `L = length(v)÷10` denotes the length of the AC (thus, given the default
-  setting, this method will fail if there less than 10 periods in the signal).
-  The keyword `ε = 0.2` means that `1-ε` counts as "1" for the AC.
+# Methods requiring evenly sampled data
+
+These methods are faster, but some are error-prone.
 
 * `:periodogram` or `:pg`: Use the fast Fourier transform to compute a
    periodogram (power-spectrum) of the given data.  Data must be evenly sampled.
@@ -39,13 +41,38 @@ using the given `method`:
   If `window` is specified, each column is applied as a taper. The sum of
   periodograms is normalized by the total sum of squares of `window`.
 
+# Methods not requiring evenly sampled data
+
+These methods tend to be slow, but versatile and low-error.
+
+* `:ac` : Use the autocorrelation function (AC). The value where the AC first
+  comes back close to 1 is the period of the signal. The keyword
+  `L = length(v)÷10` denotes the length of the AC (thus, given the default
+  setting, this method will fail if there less than 10 periods in the signal).
+  The keyword `ε = 0.2` means that `1-ε` counts as "1" for the AC.
+
+* `:lombscargle` or `:ls`: Use the Lomb-Scargle algorithm to compute a
+  periodogram.  The advantage of the Lomb-Scargle method is that it does not
+  require an equally sampled dataset and performs well on undersampled datasets.
+  Constraints have been set on the period, since Lomb-Scargle tends to have
+  false peaks at very low frequencies.  That being said, it's a very flexible
+  method.  It is extremely customizable, and the keyword arguments that can be
+  passed to it are given [in the documentation](https://juliaastro.github.io/LombScargle.jl/stable/index.html#LombScargle.plan).
+
+For more information on the periodogram methods, see the documentation of
+`DSP.jl` and `LombScargle.jl`.
 """
-function estimate_period(v, t = 0:length(v)-1, method; kwargs...)
+function estimate_period(v, method, t = 0:length(v)-1; faith = false, kwargs...)
     @assert length(v) == length(t)
-    methods = Set([
-                :ac, :periodogram, :pg, :welch,
-                :bartlett, :multitaper, :mt, :lombscargle,
-                :esprit])
+
+    even_methods = [
+            :periodogram, :pg, :welch,
+            :bartlett, :multitaper, :mt
+    ]
+
+    other_methods = [:ac, :lombscargle, :ls]
+
+    methods = union(even_methods, other_methods)
     if method ∉ methods
         error("Unknown method (`$method`) given to `estimate_period`.")
     elseif method == :ac
@@ -106,8 +133,12 @@ function _periodogram_period(v, t; kwargs...)
 
     kwargs = Dict()
 
-    p = Periodograms.periodogram(v; kwargs...)
+    p = Periodograms.periodogram(v; fs = length(t)/(t[end] - t[1]), kwargs...)
 
-    return 1 / Periodograms.freq(p)[findmax(Periodograms.power(p))[2]] * (t[end] - t[1]) / length(t)
+    return 1 / Periodograms.freq(p)[findmax(Periodograms.power(p))[2]]
+
+end
+
+########################################
 
 end

@@ -185,3 +185,40 @@ of the periodogram compared to the standard method.
 _bartlett_period(v, t; n = length(v) ÷ 8, kwargs...) = _welch_period(v, t;
                                                         n = length(v) ÷ 8,
                                                         noverlap = 0, kwargs...)
+
+########################################
+#        Multitaper periodogram        #
+########################################
+
+"""
+    _mt_period(v, t;
+                    nw = 4, ntapers = DSP.ceil(2nw)-1,
+                    window = DSP.dpss(length(s), nw, ntapers), kwargs...)
+
+The multitaper method reduces estimation bias by obtaining multiple independent estimates from the same sample. Data tapers are then windowed and the power
+spectra are obtained.
+`nw` is the time-bandwidth product, and `ntapers` is the number of tapers.
+If `window` is not specified, the signal is tapered with `ntapers` discrete
+prolate spheroidal sequences with time-bandwidth product `nw`.
+Each sequence is equally weighted; adaptive multitaper is not (yet) supported.
+If `window` is specified, each column is applied as a taper. The sum of
+periodograms is normalized by the total sum of squares of `window`.
+"""
+function _mt_period(v, t;
+                        nw = 4,
+                        ntapers::Integer = ceil(Int, 2nw)-1,
+                        window = DSP.dpss(length(v), nw, ntapers),
+                        kwargs...
+                    )
+
+    p = Periodograms.mt_pgram(v;
+                                 fs = length(t)/(t[end] - t[1]),
+                                 nw = nw,
+                                 ntapers = ntapers,
+                                 window = window,
+                                 kwargs...
+                             )
+
+    return 1 / Periodograms.freq(p)[findmax(Periodograms.power(p))[2]]
+
+end

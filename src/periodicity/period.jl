@@ -19,18 +19,6 @@ These methods are faster, but some are error-prone.
 * `:periodogram` or `:pg`: Use the fast Fourier transform to compute a
    periodogram (power-spectrum) of the given data.  Data must be evenly sampled.
 
-* `:bartlett`: The Bartlett periodogram is aimed at tackling noisy or
-  undersampled data, by splitting the signal up into segments, then averaging
-  their periodograms.  The keyword `n`  controls the number of segments.
-  Using this method reduces the variance of the periodogram compared to the
-  standard method.
-
-* `:welch`: Use the Welch method.  The Welch periodogram is aimed at tackling
-  noisy or undersampled data, by splitting the signal up into overlapping
-  segments and windowing them, then averaging their periodograms. The keyword
-  `n`  controls the number of segments, and `noverlap` controls the number of
-  overlapping segments.  `window` is the windowing function to be used.
-
 * `:multitaper`: The multitaper method reduces estimation bias by obtaining
   multiple independent estimates from the same sample. Data tapers are then
   windowed and the power spectra are obtained.  Available keywords follow:
@@ -66,8 +54,8 @@ function estimate_period(v, method, t = 0:length(v)-1; faith = false, kwargs...)
     @assert length(v) == length(t)
 
     even_methods = [
-            :periodogram, :pg, :welch,
-            :bartlett, :multitaper, :mt
+            :periodogram, :pg,
+            :multitaper, :mt
     ]
 
     other_methods = [:ac, :lombscargle, :ls]
@@ -85,10 +73,6 @@ function estimate_period(v, method, t = 0:length(v)-1; faith = false, kwargs...)
 
                 if method == :periodogram || method == :pg
                     period = _periodogram_period(v, t; kwargs...)
-                elseif method == :welch
-                    period = _welch_period(v, t; kwargs...)
-                elseif method == :bartlett
-                    period = _bartlett_period(v, t; kwargs...)
                 elseif method == :multitaper || method == :mt
                     period = _mt_period(v, t; kwargs...)
                 end
@@ -172,53 +156,6 @@ function _periodogram_period(v, t; kwargs...)
     return 1 / Periodograms.freq(p)[findmax(Periodograms.power(p))[2]]
 
 end
-
-########################################
-#          Welch periodogram           #
-########################################
-
-"""
-    _welch_period(v, t; n = length(v) ÷ 8, noverlap = n ÷ 2,
-                  window = nothing, kwargs...)
-
-The Welch periodogram is aimed at tackling noisy or undersampled data,
-by splitting the signal up into overlapping segments and windowing
-them, then averaging their periodograms.
-`n`  controls the number of segments, and `noverlap` controls the number
-of overlapping segments.  `window` is the windowing function to be used.
-"""
-function _welch_period(v, t;
-                        n = length(v) ÷ 8,
-                        noverlap = n ÷ 2,
-                        window = nothing,
-                        kwargs...
-                        )
-
-    p = Periodograms.welch_pgram(v, n, noverlap;
-                                 fs = length(t)/(t[end] - t[1]),
-                                 window = window,
-                                 kwargs...
-                             )
-
-    return 1 / Periodograms.freq(p)[findmax(Periodograms.power(p))[2]]
-
-end
-
-########################################
-#         Bartlett periodogram         #
-########################################
-
-"""
-    _bartlett_period(v, t; n = length(v) ÷ 8, kwargs...)
-
-The Bartlett periodogram is aimed at tackling noisy or undersampled data,
-by splitting the signal up into segments, then averaging their periodograms.
-`n`  controls the number of segments.  Using this method reduces the variance
-of the periodogram compared to the standard method.
-"""
-_bartlett_period(v, t; n = length(v) ÷ 8, kwargs...) = _welch_period(v, t;
-                                                        n = length(v) ÷ 8,
-                                                        noverlap = 0, kwargs...)
 
 ########################################
 #        Multitaper periodogram        #

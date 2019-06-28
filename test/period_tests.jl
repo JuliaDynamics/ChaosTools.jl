@@ -1,11 +1,11 @@
 using ChaosTools, Test
-using Test
+
 println("\nTesting period estimation...")
-dt = 0.05
+dt = 0.005
 
 function test_algs(vs, ts, trueperiod, atol; methods = [
-            :ac, :periodogram, :welch,
-            :bartlett, :multitaper, :lombscargle
+            :ac, :periodogram,
+            :multitaper, :lombscargle
     ])
 
     for alg in methods
@@ -21,7 +21,7 @@ function test_algs(vs, ts, trueperiod, atol; methods = [
 end
 
 @testset "simple sine" begin
-
+    dt = 0.001
     tsin = 0:dt:22π
     vsin = sin.(tsin)
 
@@ -33,9 +33,9 @@ end
     tsin = 0:dt:22π
     vsin = sin.(2 .* tsin)
 
-    test_algs(vsin, tsin, π, dt)
+    test_algs(vsin, tsin, π, 3dt)
 end
-using DynamicalSystemsBase
+
 @testset "Roessler" begin
 
     ds = Systems.roessler(ones(3))
@@ -64,11 +64,11 @@ end
     b = 0
     p0 = [e, b, g]
 
-    fhn = ContinuousDynamicalSystem(FHN,SVector(-2, -0.6667),p0)
+    fhn = ContinuousDynamicalSystem(FHN, SVector(-2, -0.6667), p0)
     T = 1000.0
     v = trajectory(fhn, T; dt = dt)[:, 1]
     real_p = 91
 
-    test_algs(v, 0:dt:T, real_p, 0.1)
+    test_algs(v, 0:dt:T, real_p, 0.8)
 
 end

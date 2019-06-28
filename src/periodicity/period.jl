@@ -73,13 +73,48 @@ function estimate_period(v, method, t = 0:length(v)-1; faith = false, kwargs...)
     other_methods = [:ac, :lombscargle, :ls]
 
     methods = union(even_methods, other_methods)
+
     if method ∉ methods
         error("Unknown method (`$method`) given to `estimate_period`.")
-    elseif method == :ac
-        period = _ac_period(v, t; kwargs...)
     end
+
+    period = if method ∈ even_methods
+                faith || isevenlysampled(t) ||
+                error("Your time data was not evenly sampled,
+                and the algorithm `$method` requires evenly sampled data.")
+
+                if method == :periodogram || method == :pg
+                    period = _periodogram_period(v, t; kwargs...)
+                elseif method == :welch
+                    period = _welch_period(v, t; kwargs...)
+                elseif method == :bartlett
+                    period = _bartlett_period(v, t; kwargs...)
+                elseif method == :multitaper || method == :mt
+                    period = _mt_period(v, t; kwargs...)
+                end
+            else
+                if method == :ac
+                    period = _ac_period(v, t; kwargs...)
+                elseif method == :lombscargle || method == :ls
+                    period = _ls_period(v, t; kwargs...)
+                end
+            end
+
     return period
 end
+
+function isevenlysampled(t::AbstractArray)
+    for i in eachindex(t)[2:end-1]
+        if !(t[nextind(t, i)] - t[i] ≈ t[i] - t[prevind(t, i)])
+            return false
+            break
+        end
+    end
+    return true
+end
+
+# AbstractRanges are defined to be evenly sampled.
+isevenlysampled(::AbstractRange) = true
 
 ################################################################################
 #                           Autocorrelation Function                           #
@@ -117,7 +152,6 @@ end
 ################################################################################
 #                                 Periodograms                                 #
 ################################################################################
-
 
 ########################################
 #          Basic Periodogram           #

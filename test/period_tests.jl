@@ -1,23 +1,41 @@
 using ChaosTools, Test
-
+using Test
 println("\nTesting period estimation...")
 dt = 0.05
+
+function test_algs(vs, ts, trueperiod, atol; methods = [
+            :ac, :periodogram, :welch,
+            :bartlett, :multitaper, :lombscargle
+    ])
+
+    for alg in methods
+
+        @testset "$alg" begin
+
+            @test estimate_period(vs, alg, ts) ≈ trueperiod atol = atol
+
+        end
+
+    end
+
+end
 
 @testset "simple sine" begin
 
     tsin = 0:dt:22π
     vsin = sin.(tsin)
-    vsin2 = sin.(2tsin)
 
-    @testset "ac" begin
-        L = length(tsin)÷10
-        p1 = estimate_period(vsin, tsin, :ac; L = L)
-        @test p1 ≈ 2π   atol = dt
-        p2 = estimate_period(vsin2, tsin, :ac; L = L)
-        @test p2 ≈  π   atol = dt
-    end
+    test_algs(vsin, tsin, 2π, dt)
 end
 
+@testset "sin(2x)" begin
+
+    tsin = 0:dt:22π
+    vsin = sin.(2 .* tsin)
+
+    test_algs(vsin, tsin, π, dt)
+end
+using DynamicalSystemsBase
 @testset "Roessler" begin
 
     ds = Systems.roessler(ones(3))
@@ -26,12 +44,7 @@ end
     v = tr[:, 1]
     t = 0:dt:T
 
-    @testset "ac" begin
-        p = estimate_period(v, 0:dt:T, :ac)
-        # one oscillation of Roessler takes on average 6 time units
-        # from looking at the plot of v vs t
-        @test p ≈ 6  atol = 1
-    end
+    test_algs(v, t, 6, 1)
 
 end
 
@@ -56,9 +69,6 @@ end
     v = trajectory(fhn, T; dt = dt)[:, 1]
     real_p = 91
 
-    @testset "ac" begin
-        p = estimate_period(v, 0:dt:T, :ac)
-        @test p ≈ real_p  atol = 0.1
-    end
+    test_algs(v, 0:dt:T, real_p, 0.1)
 
 end

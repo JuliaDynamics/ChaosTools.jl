@@ -169,3 +169,19 @@ function _welch_period(v, t;
     return 1 / Periodograms.freq(p)[findmax(Periodograms.power(p))[2]]
 
 end
+
+########################################
+#         Bartlett periodogram         #
+########################################
+
+"""
+    _bartlett_period(v, t; n = length(v) ÷ 8, kwargs...)
+
+The Bartlett periodogram is aimed at tackling noisy or undersampled data,
+by splitting the signal up into segments, then averaging their periodograms.
+`n`  controls the number of segments.  Using this method reduces the variance
+of the periodogram compared to the standard method.
+"""
+_bartlett_period(v, t; n = length(v) ÷ 8, kwargs...) = _welch_period(v, t;
+                                                        n = length(v) ÷ 8,
+                                                        noverlap = 0, kwargs...)

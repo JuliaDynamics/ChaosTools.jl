@@ -222,3 +222,35 @@ function _mt_period(v, t;
     return 1 / Periodograms.freq(p)[findmax(Periodograms.power(p))[2]]
 
 end
+
+########################################
+#       Lomb-Scargle periodogram       #
+########################################
+
+"""
+    _ls_period(v, t;
+                minimum_period::Real = 2 * (t[end] - t[1]) / length(t),
+                maximum_period::Real = (t[end] - t[1]) / 1.5,
+                kwargs... # see the documentation of LombScargle.jl for these
+        )
+
+Uses the Lomb-Scargle algorithm to compute a periodogram.  The advantage of the Lomb-Scargle method is that it does not require an equally sampled dataset, and it performs well on undersampled datasets.
+Constraints have been set on the period, since Lomb-Scargle tends to have false peaks at very low frequencies.  That being said, it's a very flexible method.  It is extremely customizable, and the keyword arguments that can be passed to it are given [in the documentation](https://juliaastro.github.io/LombScargle.jl/stable/index.html#LombScargle.plan).
+"""
+function _ls_period(v, t;
+                    minimum_period::Real = 4 * (t[end] - t[1]) / length(t),
+                    maximum_period::Real = (t[end] - t[1]) / 1.5,
+                    kwargs...
+            )
+
+    plan = LombScargle.plan(t, v;
+                            minimum_frequency = 1/maximum_period,
+                            maximum_frequency = 1/minimum_period,
+                            kwargs...
+                        )
+
+    p = LombScargle.lombscargle(plan)
+
+    return LombScargle.findmaxperiod(p)[1]
+
+end

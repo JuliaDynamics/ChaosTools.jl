@@ -140,5 +140,32 @@ function _periodogram_period(v, t; kwargs...)
 end
 
 ########################################
+#          Welch periodogram           #
+########################################
+
+"""
+    _welch_period(v, t; n = length(v) ÷ 8, noverlap = n ÷ 2,
+                  window = nothing, kwargs...)
+
+The Welch periodogram is aimed at tackling noisy or undersampled data,
+by splitting the signal up into overlapping segments and windowing
+them, then averaging their periodograms.
+`n`  controls the number of segments, and `noverlap` controls the number
+of overlapping segments.  `window` is the windowing function to be used.
+"""
+function _welch_period(v, t;
+                        n = length(v) ÷ 8,
+                        noverlap = n ÷ 2,
+                        window = nothing,
+                        kwargs...
+                        )
+
+    p = Periodograms.welch_pgram(v, n, noverlap;
+                                 fs = length(t)/(t[end] - t[1]),
+                                 window = window,
+                                 kwargs...
+                             )
+
+    return 1 / Periodograms.freq(p)[findmax(Periodograms.power(p))[2]]
 
 end

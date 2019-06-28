@@ -12,7 +12,7 @@ method requires evenly sampled data, then the time data will not be checked;
 otherwise, it will.  It is recommended to provide an range in this case, instead
 of relying on the `faith` keyword.
 
-# Methods requiring evenly sampled data
+## Methods requiring evenly sampled data
 
 These methods are faster, but some are error-prone.
 
@@ -29,7 +29,7 @@ These methods are faster, but some are error-prone.
   If `window` is specified, each column is applied as a taper. The sum of
   periodograms is normalized by the total sum of squares of `window`.
 
-# Methods not requiring evenly sampled data
+## Methods not requiring evenly sampled data
 
 These methods tend to be slow, but versatile and low-error.
 
@@ -98,8 +98,8 @@ function estimate_period(v, method, t = 0:length(v)-1; faith = false, kwargs...)
     return period
 end
 
-function isevenlysampled(t::AbstractArray)
-    for i in eachindex(t)[2:end-1]
+function isevenlysampled(t::AbstractVector)
+    for i in 2:length(t)-1
         if !(t[nextind(t, i)] - t[i] ≈ t[i] - t[prevind(t, i)])
             return false
             break

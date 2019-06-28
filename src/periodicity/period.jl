@@ -58,20 +58,10 @@ For more information on the periodogram methods, see the documentation of
 function estimate_period(v, method, t = 0:length(v)-1; faith = false, kwargs...)
     @assert length(v) == length(t)
 
-    even_methods = [
-            :periodogram, :pg,
-            :multitaper, :mt
-    ]
-
-    other_methods = [
-            :autocorrelation, :ac,
-            :lombscargle, :ls,
-            :zerocrossing, :zc
-    ]
-
-    methods = union(even_methods, other_methods)
-
-    if method ∉ methods
+    even_methods  = [:periodogram, :pg, :multitaper, :mt]
+    other_methods = [:autocorrelation, :ac, :lombscargle, :ls,
+                     :zerocrossing, :zc]
+    if method ∉ even_methods && method ∉ other_methods
         error("Unknown method (`$method`) given to `estimate_period`.")
     end
 
@@ -83,7 +73,7 @@ function estimate_period(v, method, t = 0:length(v)-1; faith = false, kwargs...)
                 if method == :periodogram || method == :pg
                     _periodogram_period(v, t; kwargs...)
                 elseif method == :multitaper || method == :mt
-                    period = _mt_period(v, t; kwargs...)
+                    _mt_period(v, t; kwargs...)
                 end
             else
                 if method == :autocorrelation || method == :ac
@@ -114,7 +104,6 @@ isevenlysampled(::AbstractRange) = true
 ################################################################################
 #                           Autocorrelation Function                           #
 ################################################################################
-
 """
     _ac_period(v, t; ε = 0.2, L = length(v)÷10)
 
@@ -203,7 +192,6 @@ function _mt_period(v, t;
                              )
 
     return 1 / Periodograms.freq(p)[findmax(Periodograms.power(p))[2]]
-
 end
 
 ########################################
@@ -233,15 +221,12 @@ function _ls_period(v, t;
                         )
 
     p = LombScargle.lombscargle(plan)
-
     return LombScargle.findmaxperiod(p)[1]
-
 end
 
 ################################################################################
 #                                Zero crossings                                #
 ################################################################################
-
 """
     _zc_period(v, t; line = 0.0)
 
@@ -255,9 +240,6 @@ The implementation of the function was inspired by [this gist](https://gist.gith
 and has been modified for performance and to support arbitrary time grids.
 """
 function _zc_period(v, t; line = 0.0)
-
     inds = findall(@. ≥(line, $@view(v[2:end])) & <(line, $@view(v[1:end-1])))
-
     mean(diff(t[inds]))
-
 end

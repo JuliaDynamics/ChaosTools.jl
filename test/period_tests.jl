@@ -4,8 +4,8 @@ println("\nTesting period estimation...")
 dt = 0.005
 
 function test_algs(vs, ts, trueperiod, atol; methods = [
-            :ac, :periodogram,
-            :multitaper, :lombscargle
+            :autocorrelation, :periodogram,
+            :multitaper, :lombscargle, :zerocrossing
     ])
 
     for alg in methods
@@ -21,11 +21,10 @@ function test_algs(vs, ts, trueperiod, atol; methods = [
 end
 
 @testset "simple sine" begin
-    dt = 0.001
     tsin = 0:dt:22π
     vsin = sin.(tsin)
 
-    test_algs(vsin, tsin, 2π, dt)
+    test_algs(vsin, tsin, 2π, 11.53dt)
 end
 
 @testset "sin(2x)" begin

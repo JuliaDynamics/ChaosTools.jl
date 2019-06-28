@@ -47,6 +47,11 @@ These methods tend to be slow, but versatile and low-error.
   method.  It is extremely customizable, and the keyword arguments that can be
   passed to it are given [in the documentation](https://juliaastro.github.io/LombScargle.jl/stable/index.html#LombScargle.plan).
 
+*  `:zerocrossing` or `:zc`: Find the zero crossings of the data, and use the
+  average difference between zero crossings as the period.  This is a naïve
+  implementation, with only linear interpolation; however, it's useful as a
+  sanity check.  The keyword `line` controls where the "zero point" is.
+
 For more information on the periodogram methods, see the documentation of
 `DSP.jl` and `LombScargle.jl`.
 """
@@ -58,7 +63,11 @@ function estimate_period(v, method, t = 0:length(v)-1; faith = false, kwargs...)
             :multitaper, :mt
     ]
 
-    other_methods = [:ac, :lombscargle, :ls]
+    other_methods = [
+            :autocorrelation, :ac,
+            :lombscargle, :ls,
+            :zerocrossing, :zc
+    ]
 
     methods = union(even_methods, other_methods)
 
@@ -72,15 +81,17 @@ function estimate_period(v, method, t = 0:length(v)-1; faith = false, kwargs...)
                 and the algorithm `$method` requires evenly sampled data.")
 
                 if method == :periodogram || method == :pg
-                    period = _periodogram_period(v, t; kwargs...)
+                    _periodogram_period(v, t; kwargs...)
                 elseif method == :multitaper || method == :mt
                     period = _mt_period(v, t; kwargs...)
                 end
             else
-                if method == :ac
-                    period = _ac_period(v, t; kwargs...)
+                if method == :autocorrelation || method == :ac
+                    _ac_period(v, t; kwargs...)
                 elseif method == :lombscargle || method == :ls
-                    period = _ls_period(v, t; kwargs...)
+                    _ls_period(v, t; kwargs...)
+                elseif method == :zerocrossing || method == :zc
+                    _zc_period(v, t; kwargs...)
                 end
             end
 
@@ -166,7 +177,8 @@ end
                     nw = 4, ntapers = DSP.ceil(2nw)-1,
                     window = DSP.dpss(length(s), nw, ntapers), kwargs...)
 
-The multitaper method reduces estimation bias by obtaining multiple independent estimates from the same sample. Data tapers are then windowed and the power
+The multitaper method reduces estimation bias by obtaining multiple independent
+estimates from the same sample. Data tapers are then windowed and the power
 spectra are obtained.
 `nw` is the time-bandwidth product, and `ntapers` is the number of tapers.
 If `window` is not specified, the signal is tapered with `ntapers` discrete
@@ -223,5 +235,29 @@ function _ls_period(v, t;
     p = LombScargle.lombscargle(plan)
 
     return LombScargle.findmaxperiod(p)[1]
+
+end
+
+################################################################################
+#                                Zero crossings                                #
+################################################################################
+
+"""
+    _zc_period(v, t; line = 0.0)
+
+Find the zero crossings of the data, and use the average difference between
+zero crossings as the period.  This is a naïve implementation, with no
+interpolation; however, it's useful as a sanity check.
+
+The keyword `line` controls where the "zero point" is.
+
+The implementation of the function was inspired by [this gist](https://gist.github.com/endolith/255291),
+and has been modified for performance and to support arbitrary time grids.
+"""
+function _zc_period(v, t; line = 0.0)
+
+    inds = findall(@. ≥(line, $@view(v[2:end])) & <(line, $@view(v[1:end-1])))
+
+    mean(diff(t[inds]))
 
 end

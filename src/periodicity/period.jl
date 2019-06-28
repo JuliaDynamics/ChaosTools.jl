@@ -15,13 +15,26 @@ using the given `method`:
 function estimate_period(v, method, t = 0:length(v)-1; kwargs...)
     @assert length(v) == length(t)
     if method ∉ ("ac",)
-        error("Unknown method given to `estimate_period`.")
+        error("Unknown method (`$method`) given to `estimate_period`.")
     elseif method == "ac"
         period = _ac_period(v, t; kwargs...)
     end
     return period
 end
 
+################################################################################
+#                           Autocorrelation Function                           #
+################################################################################
+
+"""
+    _ac_period(v, t; ε = 0.2, L = length(v)÷10)
+
+Use the autocorrelation function (AC). The value where the AC first
+comes back close to 1 is the period of the signal. The keyword
+`L = length(v)÷10` denotes the length of the AC (thus, given the default
+setting, this method will fail if there less than 10 periods in the signal).
+The keyword `ε = 0.2` means that `1-ε` counts as "1" for the AC.
+"""
 function _ac_period(v, t; ε = 0.2, L = length(v)÷10)
     err = "The autocorrelation did not become close to 1."
     ac = autocor(v, 0:L)

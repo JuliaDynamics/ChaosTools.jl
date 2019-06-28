@@ -1,4 +1,6 @@
 using StatsBase
+import DSP
+import DSP: Periodograms
 export estimate_period
 
 """
@@ -52,4 +54,30 @@ function _ac_period(v, t; ε = 0.2, L = length(v)÷10)
     # since now it holds that ac[j] is a local maximum within 1-ε:
     period = t[j+1] - t[1]
     return period
+end
+
+
+################################################################################
+#                                 Periodograms                                 #
+################################################################################
+
+
+########################################
+#          Basic Periodogram           #
+########################################
+
+"""
+    _periodogram_period(v, t; kwargs...)
+
+Use the fast Fourier transform to compute a periodogram (power-spectrum) of the
+given data.  Data must be evenly sampled.
+"""
+function _periodogram_period(v, t; kwargs...)
+
+    kwargs = Dict()
+
+    p = Periodograms.periodogram(v; kwargs...)
+
+    return 1 / Periodograms.freq(p)[findmax(Periodograms.power(p))[2]] * (t[end] - t[1]) / length(t)
+
 end

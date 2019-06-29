@@ -183,6 +183,9 @@ function _mt_period(v, t;
                         kwargs...
                     )
 
+    Sys.WORD_SIZE == 32 &&
+        error("multitaper method doesn't work on 32-bit systems. Sorry!")
+
     p = Periodograms.mt_pgram(v;
                                  fs = length(t)/(t[end] - t[1]),
                                  nw = nw,

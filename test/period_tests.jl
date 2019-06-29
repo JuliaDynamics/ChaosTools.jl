@@ -10,6 +10,7 @@ function test_algs(vs, ts, trueperiod, atol; methods = [
 
     for alg in methods
         @testset "$alg" begin
+            Sys.WORD_SIZE == 32 && alg == :multitaper && continue
             @test estimate_period(vs, alg, ts) ≈ trueperiod atol = atol
         end
     end

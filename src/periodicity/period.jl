@@ -5,12 +5,14 @@ import LombScargle
 export estimate_period
 
 """
-    estimate_period(v, method, t=0:length(v)-1; faith = false, kwargs...)
+    estimate_period(v, method, t=0:length(v)-1;, method_specific_kwargs...)
 Estimate the period of the signal `v`, with accompanying time vector `t`,
-using the given `method`.  If `faith` is set to `true`, and the chosen
-method requires evenly sampled data, then the time data will not be checked;
-otherwise, it will.  It is recommended to provide an range in this case, instead
-of relying on the `faith` keyword.
+using the given `method`.
+
+If `t` is an AbstractArray, then it is iterated through to ensure that it's
+evenly sampled (if necessary for the algorithm).  To avoid this, you can pass
+any `AbstractRange`, like a `UnitRange` or a `LinRange`, which are defined to be
+evenly sampled.
 
 ## Methods requiring evenly sampled data
 
@@ -19,7 +21,7 @@ These methods are faster, but some are error-prone.
 * `:periodogram` or `:pg`: Use the fast Fourier transform to compute a
    periodogram (power-spectrum) of the given data.  Data must be evenly sampled.
 
-* `:multitaper`: The multitaper method reduces estimation bias by obtaining
+* `:multitaper` or `mt`: The multitaper method reduces estimation bias by using
   multiple independent estimates from the same sample. Data tapers are then
   windowed and the power spectra are obtained.  Available keywords follow:
   `nw` is the time-bandwidth product, and `ntapers` is the number of tapers.
@@ -29,15 +31,15 @@ These methods are faster, but some are error-prone.
   If `window` is specified, each column is applied as a taper. The sum of
   periodograms is normalized by the total sum of squares of `window`.
 
+* `:autocorrelation` or `:ac`: Use the autocorrelation function (AC). The value
+  where the AC first comes back close to 1 is the period of the signal. The
+  keyword `L = length(v)÷10` denotes the length of the AC (thus, given the
+  default setting, this method will fail if there less than 10 periods in the
+  signal). The keyword `ϵ = 0.2` means that `1-ϵ` counts as "1" for the AC.z
+
 ## Methods not requiring evenly sampled data
 
 These methods tend to be slow, but versatile and low-error.
-
-* `:ac` : Use the autocorrelation function (AC). The value where the AC first
-  comes back close to 1 is the period of the signal. The keyword
-  `L = length(v)÷10` denotes the length of the AC (thus, given the default
-  setting, this method will fail if there less than 10 periods in the signal).
-  The keyword `ε = 0.2` means that `1-ε` counts as "1" for the AC.
 
 * `:lombscargle` or `:ls`: Use the Lomb-Scargle algorithm to compute a
   periodogram.  The advantage of the Lomb-Scargle method is that it does not
@@ -50,23 +52,23 @@ These methods tend to be slow, but versatile and low-error.
 *  `:zerocrossing` or `:zc`: Find the zero crossings of the data, and use the
   average difference between zero crossings as the period.  This is a naïve
   implementation, with only linear interpolation; however, it's useful as a
-  sanity check.  The keyword `line` controls where the "zero point" is.
+  sanity check.  The keyword `line` controls where the "crossing point" is.
+  It deffaults to `mean(v)`.
 
 For more information on the periodogram methods, see the documentation of
 `DSP.jl` and `LombScargle.jl`.
 """
-function estimate_period(v, method, t = 0:length(v)-1; faith = false, kwargs...)
+function estimate_period(v, method, t = 0:length(v)-1; kwargs...)
     @assert length(v) == length(t)
 
-    even_methods  = [:periodogram, :pg, :multitaper, :mt]
-    other_methods = [:autocorrelation, :ac, :lombscargle, :ls,
-                     :zerocrossing, :zc]
+    even_methods  = [:periodogram, :pg, :multitaper, :mt, :autocorrelation, :ac]
+    other_methods = [:lombscargle, :ls, :zerocrossing, :zc]
     if method ∉ even_methods && method ∉ other_methods
         error("Unknown method (`$method`) given to `estimate_period`.")
     end
 
     period = if method ∈ even_methods
-                faith || isevenlysampled(t) ||
+                isevenlysampled(t) ||
                 error("Your time data was not evenly sampled,
                 and the algorithm `$method` requires evenly sampled data.")
 
@@ -74,11 +76,11 @@ function estimate_period(v, method, t = 0:length(v)-1; faith = false, kwargs...)
                     _periodogram_period(v, t; kwargs...)
                 elseif method == :multitaper || method == :mt
                     _mt_period(v, t; kwargs...)
+                elseif method == :autocorrelation || method == :ac
+                    _ac_period(v, t; kwargs...)
                 end
             else
-                if method == :autocorrelation || method == :ac
-                    _ac_period(v, t; kwargs...)
-                elseif method == :lombscargle || method == :ls
+                if method == :lombscargle || method == :ls
                     _ls_period(v, t; kwargs...)
                 elseif method == :zerocrossing || method == :zc
                     _zc_period(v, t; kwargs...)
@@ -105,29 +107,29 @@ isevenlysampled(::AbstractRange) = true
 #                           Autocorrelation Function                           #
 ################################################################################
 """
-    _ac_period(v, t; ε = 0.2, L = length(v)÷10)
+    _ac_period(v, t; ϵ = 0.2, L = length(v)÷10)
 
 Use the autocorrelation function (AC). The value where the AC first
 comes back close to 1 is the period of the signal. The keyword
 `L = length(v)÷10` denotes the length of the AC (thus, given the default
 setting, this method will fail if there less than 10 periods in the signal).
-The keyword `ε = 0.2` means that `1-ε` counts as "1" for the AC.
+The keyword `ϵ = 0.2` means that `1-ϵ` counts as "1" for the AC.
 """
-function _ac_period(v, t; ε = 0.2, L = length(v)÷10)
+function _ac_period(v, t; ϵ = 0.2, L = length(v)÷10)
     err = "The autocorrelation did not become close to 1."
     ac = autocor(v, 0:L)
     j = 0
     local_maxima = findall(i -> ac[i-1] < ac[i] ≥ ac[i+1], 2:length(ac)-1)
     isempty(local_maxima) && error("AC did not have any local maxima")
-    # progressively scan the local maxima and find the first within 1-ε
+    # progressively scan the local maxima and find the first within 1-ϵ
     for i in local_maxima
-        if ac[i] > 1-ε
+        if ac[i] > 1-ϵ
             j = i
             break
         end
     end
-    j == 0 && error("No local maximum of the AC exceeded 1-ε")
-    # since now it holds that ac[j] is a local maximum within 1-ε:
+    j == 0 && error("No local maximum of the AC exceeded 1-ϵ")
+    # since now it holds that ac[j] is a local maximum within 1-ϵ:
     period = t[j+1] - t[1]
     return period
 end
@@ -148,8 +150,6 @@ Use the fast Fourier transform to compute a periodogram (power-spectrum) of the
 given data.  Data must be evenly sampled.
 """
 function _periodogram_period(v, t; kwargs...)
-
-    kwargs = Dict()
 
     p = Periodograms.periodogram(v; fs = length(t)/(t[end] - t[1]), kwargs...)
 
@@ -228,7 +228,7 @@ end
 #                                Zero crossings                                #
 ################################################################################
 """
-    _zc_period(v, t; line = 0.0)
+    _zc_period(v, t; line = mean(v))
 
 Find the zero crossings of the data, and use the average difference between
 zero crossings as the period.  This is a naïve implementation, with no
@@ -239,7 +239,18 @@ The keyword `line` controls where the "zero point" is.
 The implementation of the function was inspired by [this gist](https://gist.github.com/endolith/255291),
 and has been modified for performance and to support arbitrary time grids.
 """
-function _zc_period(v, t; line = 0.0)
+function _zc_period(v, t; line = mean(v))
+    # This line might be a little opaque, so I'll provide some more detail.
+    # The macro @. applies the broadcast operator to all operations in the
+    # expression given to it, except for those which have an $ in front of
+    # them.  It also does some optimization to fuse the broadcasts into a
+    # single operation.
+    # So, @. a * b + c is more like fma.(a, b, c) than a .* b .+ c.
+    # The `@views` macro provides a view into an array without actually copying it,
+    # so this allocates less.
+    # What this is doing is finding all rising line crossings, which means all
+    # pairs of consecutive points for which the first is below the line and the
+    # second is above it.
     inds = findall(@. ≥(line, $@view(v[2:end])) & <(line, $@view(v[1:end-1])))
     mean(diff(t[inds]))
 end

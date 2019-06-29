@@ -35,7 +35,7 @@ These methods are faster, but some are error-prone.
   where the AC first comes back close to 1 is the period of the signal. The
   keyword `L = length(v)÷10` denotes the length of the AC (thus, given the
   default setting, this method will fail if there less than 10 periods in the
-  signal). The keyword `ϵ = 0.2` means that `1-ϵ` counts as "1" for the AC.z
+  signal). The keyword `ϵ = 0.2` (`\\epsilon`) means that `1-ϵ` counts as "1" for the AC.
 
 ## Methods not requiring evenly sampled data
 

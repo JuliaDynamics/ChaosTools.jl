@@ -9,25 +9,20 @@ function test_algs(vs, ts, trueperiod, atol; methods = [
     ])
 
     for alg in methods
-
         @testset "$alg" begin
-
             @test estimate_period(vs, alg, ts) ≈ trueperiod atol = atol
-
         end
-
     end
-
 end
 
-@testset "simple sine" begin
+@testset "sin(t)" begin
     tsin = 0:dt:22π
     vsin = sin.(tsin)
 
     test_algs(vsin, tsin, 2π, 11.53dt)
 end
 
-@testset "sin(2x)" begin
+@testset "sin(2t)" begin
 
     tsin = 0:dt:22π
     vsin = sin.(2 .* tsin)
@@ -37,14 +32,14 @@ end
 
 @testset "Roessler" begin
 
+    dt = 0.1
     ds = Systems.roessler(ones(3))
     T = 5000.0
     tr = trajectory(ds, T; Ttr = 100.0, dt = dt)
     v = tr[:, 1]
     t = 0:dt:T
 
-    test_algs(v, t, 6, 1)
-
+    test_algs(v, t, 6, 1.5)
 end
 
 
@@ -69,5 +64,4 @@ end
     real_p = 91
 
     test_algs(v, 0:dt:T, real_p, 0.8)
-
 end

@@ -28,8 +28,6 @@ include("chaosdetection/gali.jl")
 include("chaosdetection/partially_predictable.jl")
 include("chaosdetection/testchaos01.jl")
 
-include("partially_predictable.jl")
-
 # Ugly methods that shouldn't exist:
 include("ugliness.jl")
 

@@ -3,7 +3,7 @@ using Statistics
 export testchaos01
 
 """
-    testchaos01(φ::Vector, cs, N0 = length(φ)÷10) -> chaotic?
+    testchaos01(φ::Vector [, cs, N0]) -> chaotic?
 Perform the so called "0-1" test for chaos introduced by Gottwald and
 Melbourne [1] on the timeseries `φ`.
 Return `true` if `φ` is chaotic, `false` otherwise.
@@ -19,23 +19,29 @@ of `Kc for c ∈ cs`), and simply checks if `K > 0.5`.
 If you want to access the various `Kc` you should call the method
 `testchaos01(φ, c::Real, N0)` which returns `Kc`.
 
+`cs` defaults to `3π/5*rand(10) + π/4` and `N0`, the length
+of the two-dimensional process, is `N0 = length(φ)/10`.
+
+Notice that for data sampled from continous dynamical systems, some
+care must be taken regarding the values of `cs`, see [1].
+
 ## References
 
 [1] : Gottwald & Melbourne, “The 0-1 test for chaos: A review”
 [Lect. Notes Phys., vol. 915, pp. 221–247, 2016.](www.doi.org/10.1007/978-3-662-48410-4_7)
 """
+function testchaos01(φ::Vector, cs = 3π/5*rand(10) .+ π/4, N0 = Int(length(φ)÷10))
+    K = median(testchaos01(φ, c, N0) for c in cs)
+    return K > 0.5
+end
+
 function testchaos01(φ::Vector, c::Real, N0 = Int(length(φ)÷10))
     N, E = length(φ), mean(φ)
     @assert N0 ≤ N/10
     pc, qc = trigonometric_decomposition(φ, c)
-    Dc = mmsd(E, pc, qc, N0)
+    Dc = mmsd(E, pc, qc, N0, c)
     Kc = cor(Dc, 1:N0)
     return Kc
-end
-
-function testchaos01(φ::Vector, cs::AbstractVector, N0 = Int(length(φ)÷10))
-    K = median(testchaos01(φ, c, N0) for c in cs)
-    return K > 0.5
 end
 
 function trigonometric_decomposition(φ, c)
@@ -51,7 +57,7 @@ function trigonometric_decomposition(φ, c)
 end
 
 "modified mean square displacement"
-function mmsd(mf, pc::Vector{T}, qc, N0) where T
+function mmsd(mf, pc::Vector{T}, qc, N0, c) where T
     N, Dc = length(pc), zeros(T, N0)
     f = mf^2/(1-cos(c)) # constant factor for Dc
     for n in 1:N0

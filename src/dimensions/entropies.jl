@@ -35,10 +35,8 @@ function non0hist(ε::Real, data::AbstractDataset{D, T}) where {D, T<:Real}
     sort!(bins, alg=QuickSort)
 
     # Fill the histogram by counting consecutive equal bins:
-    prev_bin = bins[1]
-    count = 1
-    @inbounds for i in 2:L
-        bin = bins[i]
+    prev_bin, count = bins[1], 0
+    for bin in bins
         if bin == prev_bin
             count += 1
         else

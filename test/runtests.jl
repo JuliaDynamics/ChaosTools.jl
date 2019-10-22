@@ -16,6 +16,7 @@ include("periodicity_tests.jl")
 include("entropy_dimension.jl")
 include("nlts_tests.jl")
 include("period_tests.jl")
+include("01test.jl")
 
 ti = time() - ti
 println("\nTest took total time of:")

@@ -1,3 +1,6 @@
+# 1.8
+* new function `testchaos01` which implements the so called "0-1" test for chaos, that can test if a numeric timeseries is chaotic or not.
+
 # 1.7
 * New function `estimate_period` that attempts to estimate the period of a signal using the following methods:
   * The autocorrelation function (when it comes close to 1 again)

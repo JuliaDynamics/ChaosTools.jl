@@ -24,9 +24,9 @@ include("nlts.jl")
 include("periodicity/periodic_points.jl")
 include("periodicity/period.jl")
 
-include("chaos_detection.jl")
-
-include("partially_predictable.jl")
+include("chaosdetection/gali.jl")
+include("chaosdetection/partially_predictable.jl")
+include("chaosdetection/testchaos01.jl")
 
 # Ugly methods that shouldn't exist:
 include("ugliness.jl")

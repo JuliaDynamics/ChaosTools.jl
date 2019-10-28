@@ -105,17 +105,14 @@ function lyapunovs(integ, N, dt::Real, Ttr::Real = 0.0)
         for j in 1:k
             @inbounds λ[j] += log(abs(qrdec.R[j,j]))
         end
-        set_deviations!(integ, _get_Q(qrdec))
+        set_deviations!(integ, qrdec.Q)
     end
     λ ./= (integ.t - t0)
     return λ
 end
 
-_get_Q(qrdec::StaticArrays.QR) = qrdec.Q
-_get_Q(qrdec::LinearAlgebra.QRCompactWY) = Matrix(qrdec.Q)
-
-lyapunovs(ds::DynamicalSystem{IIP, T, 1}, a...; kw...) where {IIP, T} = error(
-"For 1D systems, only discrete & out-of-place method is implemented.")
+lyapunovs(ds::DynamicalSystem{IIP, T, 1}, a...; kw...) where {IIP, T} =
+error("For 1D systems, only discrete & out-of-place method is implemented.")
 
 function lyapunovs(ds::DDS{false, T, 1}, N; Ttr = 0) where {T}
 

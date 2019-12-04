@@ -6,7 +6,7 @@ function lyapunovs_convergence(integ, N, dt::Real, Ttr::Real = 0.0)
         while integ.t < t0 + Ttr
             step!(integ, dt)
             qrdec = LinearAlgebra.qr(get_deviations(integ))
-            set_deviations!(integ, _get_Q(qrdec))
+            set_deviations!(integ, qrdec.Q)
         end
     end
     k = size(get_deviations(integ))[2]
@@ -20,7 +20,7 @@ function lyapunovs_convergence(integ, N, dt::Real, Ttr::Real = 0.0)
             @inbounds λs[i][j] = λs[i-1][j] + log(abs(qrdec.R[j,j]))
         end
         t[i] = integ.t
-        set_deviations!(integ, _get_Q(qrdec))
+        set_deviations!(integ, qrdec.Q)
     end
     popfirst!(λs); popfirst!(t)
     for j in eachindex(t)

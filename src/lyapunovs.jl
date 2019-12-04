@@ -92,7 +92,7 @@ function lyapunovs(integ, N, dt::Real, Ttr::Real = 0.0)
         while integ.t < t0 + Ttr
             step!(integ, dt)
             qrdec = LinearAlgebra.qr(get_deviations(integ))
-            set_deviations!(integ, _get_Q(qrdec))
+            set_deviations!(integ, qrdec.Q)
         end
     end
     k = size(get_deviations(integ))[2]

@@ -132,7 +132,7 @@ function permentropy(
         base=Base.MathConstants.e) where {T}
 
     orderi > 255 && throw(ArgumentError("order = $orderi is too large, "*
-              "must be smaller than $(Int(typemax(UInt8))) can be used."))
+              "must be smaller than $(Int(typemax(UInt8)))."))
     order = UInt8(orderi)
     # To use `searchsortedfirst`, we need each permutation to be
     # "comparable" (ordered) type.  Let's use NTuple here:

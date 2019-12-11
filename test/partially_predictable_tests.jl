@@ -18,6 +18,7 @@ println("\nTesting Partially predictable chaos...")
             @test chaos_type == :SC
             @test ν < ν_thresh_lower
             @test C < C_thresh_lower
+            println("strongly chaotic: done")
         end
         @testset "Lorenz map - PPC 1" begin
             Random.seed!(12)
@@ -33,6 +34,7 @@ println("\nTesting Partially predictable chaos...")
             @test chaos_type == :PPC
             @test ν < ν_thresh_lower
             @test C > C_thresh_upper
+            println("ppc: done")
         end
         @testset "Lorenz map - laminar" begin
             lz = lorenz(ρ=181.10)
@@ -40,6 +42,7 @@ println("\nTesting Partially predictable chaos...")
             @test chaos_type == :REG
             @test ν > ν_thresh_upper
             @test C > C_thresh_upper
+            println("laminar: done")
         end
     end
 end

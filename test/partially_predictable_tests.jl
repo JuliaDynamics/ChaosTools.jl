@@ -2,15 +2,17 @@ using ChaosTools
 using Test, StaticArrays
 using OrdinaryDiffEq: Vern9
 using DynamicalSystemsBase.Systems: lorenz
+using Random
 
 ν_thresh_lower, ν_thresh_upper = 0.1, 0.9
-C_thresh_lower, C_thresh_upper = 0.1, 0.9
+C_thresh_lower, C_thresh_upper = 0.15, 0.9
 
 println("\nTesting Partially predictable chaos...")
 
 @testset "Predictability Continuous" begin
     @testset "Lorenz map" begin
         @testset "Lorenz map - strongly chaotic" begin
+            Random.seed!(12)
             lz = lorenz(ρ=180.70)
             chaos_type, ν, C = predictability(lz; alg=Vern9(), maxiters=1e9)
             @test chaos_type == :SC
@@ -18,6 +20,7 @@ println("\nTesting Partially predictable chaos...")
             @test C < C_thresh_lower
         end
         @testset "Lorenz map - PPC 1" begin
+            Random.seed!(12)
             lz = lorenz(ρ=180.78)
             chaos_type, ν, C = predictability(lz; alg=Vern9(), maxiters=1e9)
             @test chaos_type == :PPC

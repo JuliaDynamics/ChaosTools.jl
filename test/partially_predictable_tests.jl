@@ -1,7 +1,7 @@
 using ChaosTools
-using Test, StaticArrays
+using Test
 using OrdinaryDiffEq: Vern9
-using DynamicalSystemsBase.Systems: lorenz
+lorenz = Systems.lorenz
 using Random
 
 ν_thresh_lower, ν_thresh_upper = 0.1, 0.9
@@ -9,41 +9,42 @@ C_thresh_lower, C_thresh_upper = 0.15, 0.9
 
 println("\nTesting Partially predictable chaos...")
 
-@testset "Predictability Continuous" begin
-    @testset "Lorenz map" begin
-        @testset "Lorenz map - strongly chaotic" begin
-            Random.seed!(12)
-            lz = lorenz(ρ=180.70)
-            chaos_type, ν, C = predictability(lz; alg=Vern9(), maxiters=1e9)
-            @test chaos_type == :SC
-            @test ν < ν_thresh_lower
-            @test C < C_thresh_lower
-            println("strongly chaotic: done")
-        end
-        @testset "Lorenz map - PPC 1" begin
-            Random.seed!(12)
-            lz = lorenz(ρ=180.78)
-            chaos_type, ν, C = predictability(lz; alg=Vern9(), maxiters=1e9)
-            @test chaos_type == :PPC
-            @test ν < ν_thresh_lower
-            @test C > C_thresh_upper
-        end
-        @testset "Lorenz map - PPC 2" begin
-            lz = lorenz(ρ=180.95)
-            chaos_type, ν, C = predictability(lz; alg=Vern9(), maxiters=1e9)
-            @test chaos_type == :PPC
-            @test ν < ν_thresh_lower
-            @test C > C_thresh_upper
-            println("ppc: done")
-        end
-        @testset "Lorenz map - laminar" begin
-            lz = lorenz(ρ=181.10)
-            chaos_type, ν, C = predictability(lz; T_max = 400, alg=Vern9(), maxiters=1e9)
-            @test chaos_type == :REG
-            @test ν > ν_thresh_upper
-            @test C > C_thresh_upper
-            println("laminar: done")
-        end
+@testset "Predictability Lorenz" begin
+    @testset "strongly chaotic" begin
+        Random.seed!(12)
+        lz = lorenz(ρ=180.70)
+        @time chaos_type, ν, C = predictability(lz; λ_max = 1.22, alg=Vern9(), maxiters=1e9, T_max = 1e3)
+        @test chaos_type == :SC
+        @test ν < ν_thresh_lower
+        @test C < C_thresh_lower
+        println("strongly chaotic: done")
+    end
+    @testset "PPC 1" begin
+        Random.seed!(12)
+        lz = lorenz(ρ=180.78)
+        @time chaos_type, ν, C = predictability(lz; λ_max = 0.4, alg=Vern9(), maxiters=1e9, n_samples = 200, T_max = 400)
+        @test chaos_type == :PPC
+        @test ν < ν_thresh_lower
+        @test C > C_thresh_upper
+        println("ppc1: done")
+    end
+    @testset "PPC 2" begin
+        Random.seed!(12)
+        lz = lorenz(ρ=180.95)
+        @time chaos_type, ν, C = predictability(lz; λ_max = 0.1, alg=Vern9(), maxiters=1e9, n_samples = 100, T_max = 400)
+        @test chaos_type == :PPC
+        @test ν < ν_thresh_lower
+        @test C > C_thresh_upper
+        println("ppc2: done")
+    end
+    @testset "laminar" begin
+        Random.seed!(12)
+        lz = lorenz(ρ=181.10)
+        @time chaos_type, ν, C = predictability(lz; λ_max = 0.01, T_max = 400, alg=Vern9(), n_samples = 100, maxiters=1e9)
+        @test chaos_type == :REG
+        @test ν > ν_thresh_upper
+        @test C > C_thresh_upper
+        println("laminar: done")
     end
 end
 

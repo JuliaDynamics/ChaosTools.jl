@@ -1,7 +1,7 @@
 name = "ChaosTools"
 uuid = "608a59af-f2a3-5ad4-90b4-758bdf3122a7"
 repo = "https://github.com/JuliaDynamics/ChaosTools.jl.git"
-version = "1.8.2"
+version = "1.8.3"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
@@ -22,7 +22,7 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
-Combinatorics = "1"
+Combinatorics = "0.7, 1"
 DSP = "0.6"
 DiffEqBase = "5, 6"
 Distances = "0.7, 0.8"
@@ -34,7 +34,7 @@ NearestNeighbors = "0.4"
 OrdinaryDiffEq = "5"
 Reexport = "0.1, 0.2"
 Roots = "0.7, 0.8, 1.0"
-StaticArrays = "0.12.0"
+StaticArrays = "0.11, 0.12.0"
 StatsBase = "0.24.0, 0.32"
 julia = "1"
 

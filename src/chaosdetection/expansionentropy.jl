@@ -1,5 +1,7 @@
 export discreteEEsample, continuousEEsample, EEgraph, maximalexpansion
-using LinearAlgebra, DifferentialEquations
+using LinearAlgebra, DifferentialEquations, Statistics
+using OrdinaryDiffEq: Vern9
+using DynamicalSystemsBase, DifferentialEquations
 
 #=
 This package contains two main functions for calculating the expansion entropy
@@ -34,7 +36,7 @@ maximalexpansion(M) = prod(filter(x -> x>1.0, svdvals(M)))
 #####################################################################################
 
 """
-    discreteEEsample(system, samplegenerator, isinside; samplecount=1000, steps=40)
+    EEsample(system, samplegenerator, isinside; samplecount=1000, steps=40, dT=1)
 
 * `system` : The dynamical system on which to calculate the expansion entropy (EE).
 * `samplegenerator` : A nullary function that upon calling, returns a point in
@@ -45,6 +47,7 @@ maximalexpansion(M) = prod(filter(x -> x>1.0, svdvals(M)))
   space. All orbits must stay within this subset to be counted.
 * `samplecount=1000` : The number of samples.
 * `steps=40` : The maximal time for which the system will be run.
+
 
 Returns H::1×steps Array{Float64,2}, such that for any 1 ≤ t ≤ steps,
 letting ``T=```steps`,
@@ -74,8 +77,59 @@ with its motion defined by ``f_{T+t0, t0}``. That is, for all ``t0 \\le t \\le t
 
 [1] : [Hunt, Brian R., and Edward Ott, ‘Defining Chaos’, Chaos: An Interdisciplinary Journal of Nonlinear Science, 25.9 (2015)](https://doi.org/10/gdtkcf)
 """
-function discreteEEsample(system, samplegenerator, isinside; samplecount=1000, steps=40)
+function EEsample(system::DiscreteDynamicalSystem, samplegenerator, isinside; samplecount=1000, steps=40, dT=1)
     dim = dimension(system)
+    M = zeros(steps)
+    t_identity = SMatrix{dim, dim, Float64}(I)
+    # The identity matrix in tangent space
+    t_integ = tangent_integrator(system)
+
+    dT_int = Int(floor(dT))
+
+    for i ∈ 1:samplecount
+        u = samplegenerator()
+        reinit!(t_integ, u, t_identity)
+
+        for t ∈ 1:steps
+            step!(t_integ, dT_int)
+            u = get_state(t_integ)
+            !isinside(u) && break
+
+            Df = get_deviations(t_integ)
+            M[t] += maximalexpansion(Df)
+        end
+    end
+    return log.(M./samplecount)
+end
+
+function EEsample(system::ContinuousDynamicalSystem, samplegenerator, isinside; samplecount=1000, steps=40, dT=1.0)
+    dim = dimension(system)
+    M = zeros(steps)
+    t_identity = SMatrix{dim, dim, Float64}(I)
+    # The identity matrix in tangent space
+    t_integ = tangent_integrator(system, alg=Vern9())
+
+    for i ∈ 1:samplecount
+        u = samplegenerator()
+        reinit!(t_integ, u, t_identity)
+
+        for t ∈ 1:steps
+            step!(t_integ, dT, true)
+            u = get_state(t_integ)
+            !isinside(u) && break
+
+            Df = get_deviations(t_integ)
+            M[t] += maximalexpansion(Df)
+        end
+    end
+    return log.(M./samplecount)
+end
+
+"""
+This specialized version only deals with 1-dimensional discrete dynamical systems,
+but does it really fast. Haven't tested it yet.
+"""
+function EEsample_1dim(system::DiscreteDynamicalSystem, samplegenerator, isinside; samplecount=1000, steps=40)
     f = system.f
     p = system.p
     jacob = system.jacobian
@@ -90,15 +144,13 @@ function discreteEEsample(system, samplegenerator, isinside; samplecount=1000, s
     # whether the system is in-place or out-of-place
 
     if isinplace # Make some dummy variables to take in-place updates.
-        Df_new = Matrix{Float64}(I, dim, dim)
-        x_new = zeros(dim)
+        Df_new = Matrix{Float64}(I, 1, 1)
+        x_new = zeros(1)
     end
 
     for i ∈ 1:samplecount
-        Df = isnumber ? 1.0 : SMatrix{dim, dim}(Diagonal(fill(1.0, dim)))
+        Df = isnumber ? 1.0 : Matrix{Float64}(I, 1, 1)
         x = samplegenerator()
-        @assert isinside(x) "The sample generator \n $samplegenerator \n generated a point that does not exist in the region implicitly defined by the boolean function \n $isinside."
-        # sampled points must stay inside the region.
 
         for t ∈ 1:steps
             if isinplace
@@ -111,99 +163,7 @@ function discreteEEsample(system, samplegenerator, isinside; samplecount=1000, s
                 x = f(x, p, t0 + t-1)
             end
             !isinside(x) && break
-            M[t] += isnumber ? max(1.0, abs(Df)) : maximalexpansion(Df)
-        end
-    end
-    return log.(M./samplecount)
-end
-
-"""
-    __oop_ify(system)
-
-Make an oop version of an iip dynamical system. Written so I don't have to deal
-with iip dynamical systems. Only used in `continuousEEsample`.
-"""
-function __oop_ify(system)
-    f = system.f
-    u0 = system.u0
-    p = system.p
-    jacob = system.jacobian
-    t0 = system.t0
-
-    function f_oop(u, p, t)
-        new_u = copy(u)
-        f(new_u, u, p, t)
-        return new_u
-    end
-
-    function jacob_oop(u, p, t)
-        new_jacob = copy(system.J)
-        jacob(new_jacob, u, p, t)
-        return new_jacob
-    end
-
-    return ContinuousDynamicalSystem(f_oop, u0, p, jacob_oop)
-end
-
-"""
-    continuousEEsample(system::ContinuousDynamicalSystem, samplegenerator, isinside; samplecount=1000::Int, steps=40.0::Real)
-
-This function is essentially the same as discreteEEsample, with one extra option
-to specify dT. Also, due to technical difficulties, instead of checking if
-the whole trajectory remains inside the given region, it only checks if the
-trajectory remains inside at time steps {t0, t0 + dT, ... t0 + steps * dT}.
-"""
-function continuousEEsample(system::ContinuousDynamicalSystem, samplegenerator, isinside; samplecount=1000::Int, dT=1.0::Real, steps=20::Int)
-    if DynamicalSystemsBase.isinplace(system)
-        system = __oop_ify(system)
-    end
-
-    dim = dimension(system)
-    eom = system.f
-    p = system.p
-    jacob = system.jacobian
-    t0 = system.t0
-    t = 0
-
-    M = zeros(steps)
-    # M[t] = Σᵢ G(Dfₜ₀₊ₜ,ₜ₀(xᵢ)), if xᵢ stayed inside S during [t0, t0 + t].
-
-    if DynamicalSystemsBase.isinplace(system)
-        system = __oop_ify(system)
-    end
-
-    # The tangent dynamic
-    function uv_eom(uv, p, t)
-        u = @view uv[:, 1]
-        v = @view uv[:, 2:dim+1]
-        return hcat(eom(u, p, t), jacob(u, p, t)*v)
-    end
-
-    u0 = zeros(dim)
-    v0 = Matrix{Float64}(I, dim, dim)
-    uv0 = hcat(u0, v0)
-
-    prob = ODEProblem(uv_eom, uv0, (t0, t0+steps*dT), p)
-    integ = DiffEqBase.init(prob, Tsit5())
-
-    for i ∈ 1:samplecount
-        u0 = samplegenerator()
-        @assert isinside(u0) "The sample generator \n $samplegenerator \n generated a point that does not exist in the region implicitly defined by the boolean function \n $isinside."
-
-        uv0[:, 1] .= u0
-
-        # Reset integrator to t0, at uv0.
-        # reinit!(integ, uv0, t0)
-        # For some strange reason, this reinit! fails.
-
-        prob = ODEProblem(uv_eom, uv0, (t0, t0+steps*dT), p)
-        integ = DiffEqBase.init(prob, Tsit5())
-        for t in 1:steps
-            DifferentialEquations.step!(integ, dT, true)
-            u = @view integ.u[:, 1]
-            !isinside(u) && break
-            v = @view integ.u[:, 2:dim+1]
-            M[t] += maximalexpansion(v)
+            M[t] += isnumber ? max(1.0, abs(Df)) : max(1.0, abs(Df[1]))
         end
     end
     return log.(M./samplecount)
@@ -260,22 +220,20 @@ plot(tent_meanlist, yerr=tent_stdlist, leg=false)
 
 [1] : [Hunt, Brian R., and Edward Ott, ‘Defining Chaos’, Chaos: An Interdisciplinary Journal of Nonlinear Science, 25.9 (2015)](https://doi.org/10/gdtkcf)
 """
-
 function EEgraph(system, samplegenerator, isinside; batchcount=100, samplecount=1000, steps=40, dT=1.0)
     meanlist = zeros(steps)
     stdlist = zeros(steps)
-    EEsample = zeros(batchcount, steps)
-    # EEsample[k, t] = The k-th sample of expansion entropy from t0 to (t0 + t)
+    EEsamples = zeros(batchcount, steps)
+    # EEsamples[k, t] = The k-th sample of expansion entropy from t0 to (t0 + t)
 
+    # Collect all the samples
     for k in 1:batchcount
-        if isa(system, DiscreteDynamicalSystem)
-            EEsample[k, :] = discreteEEsample(system, samplegenerator, isinside; samplecount=samplecount, steps=steps)
-        else
-            EEsample[k, :] = continuousEEsample(system, samplegenerator, isinside; samplecount=samplecount, steps=steps, dT=dT)
-        end
+        EEsamples[k, :] = EEsample(system, samplegenerator, isinside; samplecount=samplecount, steps=steps, dT=dT)
     end
+
+    # Calculate the mean and standard deviations
     for t in 1:steps
-        entropysamples = filter(isfinite, EEsample[:, t])
+        entropysamples = filter(isfinite, EEsamples[:, t])
         # remove -Inf entries, which indicate all samples failed to stay inside the given region.
         if length(entropysamples) ≤ 1
             println("Warning: All samples have escaped the given region. Consider increasing sample or batch number. Terminating at steps = ", t)
@@ -305,12 +263,11 @@ tent_jacob(x, p, n) = (x < -0.2 ? 0 : (x < 0.4 ? 3 : -2))
 tent = DiscreteDynamicalSystem(tent_eom, 0.2, nothing, tent_jacob)
 
 # This replicates Figure 2.
-@time tent_meanlist, tent_stdlist = EEgraph(tent, rand, x -> 0 < x < 1; batchcount=100, samplecount=1000, steps=40)
+@time tent_meanlist, tent_stdlist = EEgraph(tent, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=60)
 plot(tent_meanlist, yerr=tent_stdlist, leg=false)
 
 # This replicates Figure 3.
-tent_gen() = rand()*2.5 - 1
-@time meanlist, stdlist = EEgraph(tent, tent_gen, x -> -1 < x < 1.5; batchcount=100, samplecount=100000, steps=60)
+@time meanlist, stdlist = EEgraph(tent, () -> rand()*2.5 - 1, x -> -1 < x < 1.5; batchcount=100, samplecount=100000, steps=60)
 plot(meanlist, yerr=stdlist, leg=false)
 
 # This replicates Figure 7

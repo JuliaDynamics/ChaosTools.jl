@@ -254,20 +254,3 @@ function EEgraph(system, samplegenerator, isinside; batchcount=100, samplecount=
     end
     return meanlist, stdlist
 end
-
-
-tent_eom(x, p, n) = (x < -0.2 ? -0.6 : (x < 0.4 ? 3x : 2(1-x)))
-tent_jacob(x, p, n) = (x < -0.2 ? 0 : (x < 0.4 ? 3 : -2))
-tent = DiscreteDynamicalSystem(tent_eom, 0.2, nothing, tent_jacob)
-tent_meanlist, tent_stdlist = EEgraph(tent, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=60)
-
-for (i, mean) in enumerate(tent_meanlist)
-    @assert 0.6< mean/i < 0.8
-end
-
-expand2_eom(x, p, n) = 2x
-expand2_jacob(x, p, n) = 2
-expand2 = DiscreteDynamicalSystem(expand2_eom, 0.2, nothing, expand2_jacob)
-@time meanlist, stdlist = EEgraph(expand2, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=10)
-
-plot(meanlist, yerr=stdlist, leg=false)

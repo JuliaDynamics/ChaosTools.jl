@@ -1,5 +1,6 @@
 export discreteEEsample, continuousEEsample, EEgraph, maximalexpansion
-using LinearAlgebra, DifferentialEquations, Statistics
+using LinearAlgebra
+using Statistics
 using OrdinaryDiffEq: Vern9
 using DynamicalSystemsBase, DifferentialEquations
 
@@ -8,10 +9,9 @@ This package contains two main functions for calculating the expansion entropy
 of dynamical systems. One handles the discrete case, the other the continuous.
 
 Expansion entropy is defined in (Hunt and Ott, 2015) [1] as a quantitative measure
-of chaos.
+of chaos. For details, read the docstrings of the functions below.
 
-[1] : : [Hunt, Brian R., and Edward Ott, ‘Defining Chaos’, Chaos: An Interdisciplinary Journal of Nonlinear Science, 25.9 (2015)](https://doi.org/10/gdtkcf)
-
+[1] : [Hunt, Brian R., and Edward Ott, ‘Defining Chaos’, Chaos: An Interdisciplinary Journal of Nonlinear Science, 25.9 (2015)](https://doi.org/10/gdtkcf)
 =#
 
 #####################################################################################
@@ -19,6 +19,8 @@ of chaos.
 #####################################################################################
 
 """
+    maximalexpansion(M)
+
 Calculates the maximal expansion rate of M among all possible subspaces,
 the product of all singular values of M that are greater than 1. In the
 notation of [1], it is the function ``G``.
@@ -27,12 +29,8 @@ notation of [1], it is the function ``G``.
 """
 maximalexpansion(M) = prod(filter(x -> x>1.0, svdvals(M)))
 
-@assert maximalexpansion([1. 0. 0. 0. 2.; 0. 0. 3. 0. 0.; 0. 0. 0. 0. 0.; 0. 2. 0. 0. 0.]) == 3.0 * 2.23606797749979 * 2.0
-@assert maximalexpansion([1 0; 0 1]) == 1
-
-
 #####################################################################################
-# Discrete expansion entropy
+# Expansion entropy
 #####################################################################################
 
 """
@@ -49,8 +47,8 @@ maximalexpansion(M) = prod(filter(x -> x>1.0, svdvals(M)))
 * `steps=40` : The maximal time for which the system will be run.
 
 
-Returns H::1×steps Array{Float64,2}, such that for any 1 ≤ t ≤ steps,
-letting ``T=```steps`,
+Returns H::1×steps Array{Float64,2}, such that for any 1 ≤ t ≤ T,
+where T = `steps`,
 ```math
 H[t] = \\log E_{t0+T, t0}(f, S),
 ```
@@ -80,20 +78,23 @@ with its motion defined by ``f_{T+t0, t0}``. That is, for all ``t0 \\le t \\le t
 function EEsample(system::DiscreteDynamicalSystem, samplegenerator, isinside; samplecount=1000, steps=40, dT=1)
     dim = dimension(system)
     M = zeros(steps)
+    # M[t] will be Σᵢ G(Dfₜ₀,ₜ₀₊ₜ(xᵢ))
+    # The summation is over all sampled xᵢ that stay inside S during [t0, t0 + t].
+
     t_identity = SMatrix{dim, dim, Float64}(I)
     # The identity matrix in tangent space
     t_integ = tangent_integrator(system)
 
-    dT_int = Int(floor(dT))
+    dT_int = max(Int(floor(dT)), 1)
 
     for i ∈ 1:samplecount
-        u = samplegenerator()
+        u = samplegenerator() # New sample point.
         reinit!(t_integ, u, t_identity)
 
-        for t ∈ 1:steps
+        for t ∈ 1:steps # Evolve the sample point for the duration [t0, t0+steps*dT]
             step!(t_integ, dT_int)
             u = get_state(t_integ)
-            !isinside(u) && break
+            !isinside(u) && break # Stop the integration if the orbit leaves the region.
 
             Df = get_deviations(t_integ)
             M[t] += maximalexpansion(Df)
@@ -102,12 +103,13 @@ function EEsample(system::DiscreteDynamicalSystem, samplegenerator, isinside; sa
     return log.(M./samplecount)
 end
 
+# This is essentially the same as the previous one, execept at commented lines.
 function EEsample(system::ContinuousDynamicalSystem, samplegenerator, isinside; samplecount=1000, steps=40, dT=1.0)
     dim = dimension(system)
     M = zeros(steps)
     t_identity = SMatrix{dim, dim, Float64}(I)
-    # The identity matrix in tangent space
     t_integ = tangent_integrator(system, alg=Vern9())
+    # Since it's continuous, it needs an integration algorithm.
 
     for i ∈ 1:samplecount
         u = samplegenerator()
@@ -115,6 +117,8 @@ function EEsample(system::ContinuousDynamicalSystem, samplegenerator, isinside; 
 
         for t ∈ 1:steps
             step!(t_integ, dT, true)
+            # The step size need to be stopped at exactly, thus `stop_at_tdt` is true.
+            # step!(integrator,dt[,stop_at_tdt=false])
             u = get_state(t_integ)
             !isinside(u) && break
 
@@ -125,18 +129,18 @@ function EEsample(system::ContinuousDynamicalSystem, samplegenerator, isinside; 
     return log.(M./samplecount)
 end
 
-"""
-This specialized version only deals with 1-dimensional discrete dynamical systems,
-but does it really fast. Haven't tested it yet.
-"""
-function EEsample_1dim(system::DiscreteDynamicalSystem, samplegenerator, isinside; samplecount=1000, steps=40)
+#=
+This version only deals with 1-dimensional discrete dynamical systems, but does
+it really fast, by avoiding `tangent_integrator` and `maximalexpansion`.
+=#
+function EEsample_1dim(system::DiscreteDynamicalSystem, samplegenerator, isinside; samplecount=1000, steps=40, dT=1)
     f = system.f
     p = system.p
     jacob = system.jacobian
     t0 = system.t0
 
+    dT_int = max(Int(floor(dT)), 1)
     M = zeros(steps)
-    # M[t] = Σᵢ G(Dfₜ₀₊ₜ,ₜ₀(xᵢ)), if xᵢ stayed inside S during [t0, t0 + t].
 
     isnumber = typeof(system.u0) <: Number
     # whether the state points of system is represented by naked numbers or vectors
@@ -152,16 +156,19 @@ function EEsample_1dim(system::DiscreteDynamicalSystem, samplegenerator, isinsid
         Df = isnumber ? 1.0 : Matrix{Float64}(I, 1, 1)
         x = samplegenerator()
 
-        for t ∈ 1:steps
-            if isinplace
-                f(x_new, x, p, t0 + t-1)
-                jacob(Df_new, x, p, t0 + t-1)
-                Df = Df_new * Df
-                x .= x_new
-            else
-                Df = jacob(x, p, t0 + t-1) * Df
-                x = f(x, p, t0 + t-1)
+        for t ∈ 1:steps # Evolve point x for `steps` steps.
+            for _ ∈ 1:dT_int # Evolve dT_int steps at a time.
+                if isinplace
+                    f(x_new, x, p, t0 + t-1)
+                    jacob(Df_new, x, p, t0 + t-1)
+                    Df = Df_new * Df
+                    x .= x_new
+                else
+                    Df = jacob(x, p, t0 + t-1) * Df
+                    x = f(x, p, t0 + t-1)
+                end
             end
+
             !isinside(x) && break
             M[t] += isnumber ? max(1.0, abs(Df)) : max(1.0, abs(Df[1]))
         end
@@ -193,7 +200,6 @@ This section provides functions for plotting in an easy-to-read format.
     * `steps=40` : The maximal steps for which the system will be run.
     * `dT=1.0` : If the system is a ContinuousDynamicalSystem, then each step
       lasts this long.
-
 
 Runs the `EEsample` function `batchcount` times, each time calculating the
 expansion entropy out to `steps` time-steps. After that, it combines the simulated
@@ -228,7 +234,11 @@ function EEgraph(system, samplegenerator, isinside; batchcount=100, samplecount=
 
     # Collect all the samples
     for k in 1:batchcount
-        EEsamples[k, :] = EEsample(system, samplegenerator, isinside; samplecount=samplecount, steps=steps, dT=dT)
+        if dimension(system) == 1 && isa(system, DiscreteDynamicalSystem)
+            EEsamples[k, :] = EEsample_1dim(system, samplegenerator, isinside; samplecount=samplecount, steps=steps, dT=dT)
+        else
+            EEsamples[k, :] = EEsample(system, samplegenerator, isinside; samplecount=samplecount, steps=steps, dT=dT)
+        end
     end
 
     # Calculate the mean and standard deviations
@@ -245,60 +255,19 @@ function EEgraph(system, samplegenerator, isinside; batchcount=100, samplecount=
     return meanlist, stdlist
 end
 
-### Tests
-# The following should be put into the documentation once this is finished.
 
-# Expand 2: is not chaotic, thus the plot should be a flat line.
+tent_eom(x, p, n) = (x < -0.2 ? -0.6 : (x < 0.4 ? 3x : 2(1-x)))
+tent_jacob(x, p, n) = (x < -0.2 ? 0 : (x < 0.4 ? 3 : -2))
+tent = DiscreteDynamicalSystem(tent_eom, 0.2, nothing, tent_jacob)
+tent_meanlist, tent_stdlist = EEgraph(tent, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=60)
+
+for (i, mean) in enumerate(tent_meanlist)
+    @assert 0.6< mean/i < 0.8
+end
+
 expand2_eom(x, p, n) = 2x
 expand2_jacob(x, p, n) = 2
 expand2 = DiscreteDynamicalSystem(expand2_eom, 0.2, nothing, expand2_jacob)
 @time meanlist, stdlist = EEgraph(expand2, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=10)
+
 plot(meanlist, yerr=stdlist, leg=false)
-
-(system, samplegenerator, isinside; batchcount=100, samplecount=1000, steps=40, dT=1.0)
-
-# Modified tent map. This replicates Example B in Hunt and Ott.
-tent_eom(x, p, n) = (x < -0.2 ? -0.6 : (x < 0.4 ? 3x : 2(1-x)))
-tent_jacob(x, p, n) = (x < -0.2 ? 0 : (x < 0.4 ? 3 : -2))
-tent = DiscreteDynamicalSystem(tent_eom, 0.2, nothing, tent_jacob)
-
-# This replicates Figure 2.
-@time tent_meanlist, tent_stdlist = EEgraph(tent, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=60)
-plot(tent_meanlist, yerr=tent_stdlist, leg=false)
-
-# This replicates Figure 3.
-@time meanlist, stdlist = EEgraph(tent, () -> rand()*2.5 - 1, x -> -1 < x < 1.5; batchcount=100, samplecount=100000, steps=60)
-plot(meanlist, yerr=stdlist, leg=false)
-
-# This replicates Figure 7
-henon_iip = Systems.henon_iip(zeros(2); a = 4.2, b = 0.3)
-henon_gen() = rand(2).*6 .- 3
-henon_isinside(x) = -3<x[1]<3 &&  -3<x[2]<3
-@time meanlist, stdlist = EEgraph(henon_iip, henon_gen, henon_isinside; batchcount=100, samplecount=100000, steps=25)
-plot(meanlist, yerr=stdlist, leg=false)
-
-# Exponential system
-exp_eom(x, p, t) = x*p[1]
-exp_u0 = [0.1]
-exp_p = [1.0]
-exp_jacob(x, p, t) = [1.0]
-exp_sys = ContinuousDynamicalSystem(exp_eom, exp_u0, exp_p, exp_jacob)
-
-exp_gen() = [rand()-0.5]
-exp_isinside(x) = -10.0 < x[1] < 10.0
-@time exp_meanlist, exp_stdlist = EEgraph(exp_sys, exp_gen, exp_isinside; batchcount=100, samplecount=10000, steps=20, dT=1.0)
-plot((1:20)*1.0, exp_meanlist, yerr=exp_stdlist, leg=false)
-
-
-#=
-The Lorenz attractor is roughly bounded within the box [-20, 20]×[-30, 30]×[0, 50]
-As can be seen in the plot, the Lorentz attractor has an expansion entropy of
-about 0.92
-=#
-
-lor = Systems.lorenz()
-lor_gen() = [rand()*40-20, rand()*60-30, rand()*50]
-lor_isinside(x) = -20 < x[1] < 20 && -30 < x[2] < 30 && 0 < x[3] < 50
-@time meanlist, stdlist = EEgraph(lor, lor_gen, lor_isinside; batchcount=100, samplecount=1000, steps=20, dT=1.0)
-plot(meanlist, yerr=stdlist, leg=false)
-plot!(x->0.92x+1.5, xlims=(0, 20))

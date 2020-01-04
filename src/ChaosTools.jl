@@ -25,6 +25,7 @@ include("periodicity/periodic_points.jl")
 include("periodicity/period.jl")
 
 include("chaosdetection/gali.jl")
+include("chaosdetection/expansionentropy.jl")
 include("chaosdetection/partially_predictable.jl")
 include("chaosdetection/testchaos01.jl")
 

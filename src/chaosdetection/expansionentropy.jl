@@ -1,8 +1,7 @@
 export discreteEEsample, continuousEEsample, EEgraph, maximalexpansion
 using LinearAlgebra
 using Statistics
-using OrdinaryDiffEq: Vern9
-using DynamicalSystemsBase, DifferentialEquations
+using DynamicalSystemsBase
 
 #=
 This package contains two main functions for calculating the expansion entropy
@@ -34,7 +33,7 @@ maximalexpansion(M) = prod(filter(x -> x>1.0, svdvals(M)))
 #####################################################################################
 
 """
-    EEsample(system, samplegenerator, isinside; samplecount=1000, steps=40, dT=1)
+    EEsample(system, samplegenerator, isinside; samplecount=1000, steps=40, dT=1, exactstepping=false)
 
 * `system` : The dynamical system on which to calculate the expansion entropy (EE).
 * `samplegenerator` : A nullary function that upon calling, returns a point in
@@ -45,10 +44,15 @@ maximalexpansion(M) = prod(filter(x -> x>1.0, svdvals(M)))
   space. All orbits must stay within this subset to be counted.
 * `samplecount=1000` : The number of samples.
 * `steps=40` : The maximal time for which the system will be run.
+* `dT=1` : The size of one step of time-evolution of the system.
+* `exactstepping=false` : If `system` is a ContinuousDynamicalSystem, and
+  exactstepping is true, then step by exactly dT. If exactstepping is false,
+  then the step-size is only guaranteed to be at least dT, since it would be chosen
+  by the integrator.
+  Setting this to true would improve accuracy, although usually unnecessary.
 
-
-Returns H::1×steps Array{Float64,2}, such that for any 1 ≤ t ≤ T,
-where T = `steps`,
+Returns `H`, an Array{Float64,2} of dimensions 1×steps, such that
+for any 1 ≤ t ≤ T, where T = `steps`,
 ```math
 H[t] = \\log E_{t0+T, t0}(f, S),
 ```
@@ -56,9 +60,8 @@ with
 ```math
 E_{t0+T, t0}(f, S) = \\left[\\frac 1 N \\sum_{i} G(Df_{t0+t, t0}(x_i)) \\right]
 ```
-in the notation of (Ott, 2015) [1].
+in the notation of (Ott, 2015) [1]:
 
-Here,
 * ``N`` is `samplecount`,
 * ``f_{steps+t0, t0}`` is the equation of motion for the system from time ``t0`` to ``t0+steps``,
 * ``D`` is the differential with respect to ``x``,
@@ -75,52 +78,37 @@ with its motion defined by ``f_{T+t0, t0}``. That is, for all ``t0 \\le t \\le t
 
 [1] : [Hunt, Brian R., and Edward Ott, ‘Defining Chaos’, Chaos: An Interdisciplinary Journal of Nonlinear Science, 25.9 (2015)](https://doi.org/10/gdtkcf)
 """
-function EEsample(system::DiscreteDynamicalSystem, samplegenerator, isinside; samplecount=1000, steps=40, dT=1)
+function EEsample(system::DynamicalSystem, samplegenerator, isinside; samplecount=1000, steps=40, dT=1, exactstepping=false, diffeq...)
     dim = dimension(system)
     M = zeros(steps)
     # M[t] will be Σᵢ G(Dfₜ₀,ₜ₀₊ₜ(xᵢ))
     # The summation is over all sampled xᵢ that stay inside S during [t0, t0 + t].
 
+    # The identity matrix representing a volume element in tangent space.
     t_identity = SMatrix{dim, dim, Float64}(I)
-    # The identity matrix in tangent space
-    t_integ = tangent_integrator(system)
 
-    dT_int = max(Int(floor(dT)), 1)
+    # Construct an integrator that evolves the volume element in tangent space.
+    if isa(system, DiscreteDynamicalSystem)
+        t_integ = tangent_integrator(system)
+        dT = max(Int(floor(dT)), 1)
+    else
+        # Send the keywords into the integrator.
+        t_integ = tangent_integrator(system, diffeq...)
+    end
 
     for i ∈ 1:samplecount
         u = samplegenerator() # New sample point.
         reinit!(t_integ, u, t_identity)
 
         for t ∈ 1:steps # Evolve the sample point for the duration [t0, t0+steps*dT]
-            step!(t_integ, dT_int)
+            if exactstepping && isa(system, ContinuousDynamicalSystem)
+                step!(t_integ, dT, true)
+            else
+                step!(t_integ, dT)
+            end
+
             u = get_state(t_integ)
             !isinside(u) && break # Stop the integration if the orbit leaves the region.
-
-            Df = get_deviations(t_integ)
-            M[t] += maximalexpansion(Df)
-        end
-    end
-    return log.(M./samplecount)
-end
-
-# This is essentially the same as the previous one, execept at commented lines.
-function EEsample(system::ContinuousDynamicalSystem, samplegenerator, isinside; samplecount=1000, steps=40, dT=1.0)
-    dim = dimension(system)
-    M = zeros(steps)
-    t_identity = SMatrix{dim, dim, Float64}(I)
-    t_integ = tangent_integrator(system, alg=Vern9())
-    # Since it's continuous, it needs an integration algorithm.
-
-    for i ∈ 1:samplecount
-        u = samplegenerator()
-        reinit!(t_integ, u, t_identity)
-
-        for t ∈ 1:steps
-            step!(t_integ, dT, true)
-            # The step size need to be stopped at exactly, thus `stop_at_tdt` is true.
-            # step!(integrator,dt[,stop_at_tdt=false])
-            u = get_state(t_integ)
-            !isinside(u) && break
 
             Df = get_deviations(t_integ)
             M[t] += maximalexpansion(Df)
@@ -185,21 +173,27 @@ end
 This section provides functions for plotting in an easy-to-read format.
 =#
 """
-    EEgraph(system, samplegenerator, isinside; batchcount=100, samplecount=1000, steps=40, dT=1.0)
+    EEgraph(system, samplegenerator, isinside; batchcount=100, samplecount=1000, steps=40, dT=1, exactstepping=false, diffeq...)
 
-    * `system` : The dynamical system on which to calculate the expansion entropy (EE).
-    * `samplegenerator` : A nullary function that upon calling, returns a point in
-      state space that falls within the region implicitly defined by `isinside`.
-      This sampling function must sample evenly, otherwise the result will be biased.
-      Future implementation may allow importance sampling.
-    * `isinside` : A boolean function that implicitly defines a subset of the state
-      space. All orbits must stay within this subset to be counted.
-    * `batchcount=100` : The number of batches to run the experiment with.
-      These batches are then aggregated to produce the mean and standard deviation.
-    * `samplecount=1000` : The number of samples.
-    * `steps=40` : The maximal steps for which the system will be run.
-    * `dT=1.0` : If the system is a ContinuousDynamicalSystem, then each step
-      lasts this long.
+* `system` : The dynamical system on which to calculate the expansion entropy (EE).
+* `samplegenerator` : A nullary function that upon calling, returns a point in
+  state space that falls within the region implicitly defined by `isinside`.
+  This sampling function must sample evenly, otherwise the result will be biased.
+  Future implementation may allow importance sampling.
+* `isinside` : A boolean function that implicitly defines a subset of the state
+  space. All orbits must stay within this subset to be counted.
+* `batchcount=100` : The number of batches to run the experiment with.
+  These batches are then aggregated to produce the mean and standard deviation.
+* `samplecount=1000` : The number of samples.
+* `steps=40` : The maximal steps for which the system will be run.
+* `dT=1` : The size of one step of time-evolution of the system.
+* `exactstepping=false` : If `system` is a ContinuousDynamicalSystem, and
+  exactstepping is true, then step by exactly dT. If exactstepping is false,
+  then the step-size is only guaranteed to be at least dT, since it would be chosen
+  by the integrator.
+  Setting this to true would improve accuracy, although usually unnecessary.
+* `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
+  Only valid for continuous systems.
 
 Runs the `EEsample` function `batchcount` times, each time calculating the
 expansion entropy out to `steps` time-steps. After that, it combines the simulated
@@ -226,7 +220,7 @@ plot(tent_meanlist, yerr=tent_stdlist, leg=false)
 
 [1] : [Hunt, Brian R., and Edward Ott, ‘Defining Chaos’, Chaos: An Interdisciplinary Journal of Nonlinear Science, 25.9 (2015)](https://doi.org/10/gdtkcf)
 """
-function EEgraph(system, samplegenerator, isinside; batchcount=100, samplecount=1000, steps=40, dT=1.0)
+function EEgraph(system, samplegenerator, isinside; batchcount=100, samplecount=1000, steps=40, dT=1, exactstepping=false, diffeq...)
     meanlist = zeros(steps)
     stdlist = zeros(steps)
     EEsamples = zeros(batchcount, steps)
@@ -237,7 +231,7 @@ function EEgraph(system, samplegenerator, isinside; batchcount=100, samplecount=
         if dimension(system) == 1 && isa(system, DiscreteDynamicalSystem)
             EEsamples[k, :] = EEsample_1dim(system, samplegenerator, isinside; samplecount=samplecount, steps=steps, dT=dT)
         else
-            EEsamples[k, :] = EEsample(system, samplegenerator, isinside; samplecount=samplecount, steps=steps, dT=dT)
+            EEsamples[k, :] = EEsample(system, samplegenerator, isinside; samplecount=samplecount, steps=steps, dT=dT, exactstepping=exactstepping, diffeq...)
         end
     end
 

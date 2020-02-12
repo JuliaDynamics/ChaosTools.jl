@@ -1,10 +1,5 @@
-export EEgraph, EEsample, maximalexpansion
-using LinearAlgebra
-using Statistics
-using DynamicalSystemsBase
-
 #=
-This package contains two main functions for calculating the expansion entropy
+This file contains two main functions for calculating the expansion entropy
 of dynamical systems. One handles the discrete case, the other the continuous.
 
 Expansion entropy is defined in (Hunt and Ott, 2015) [1] as a quantitative measure
@@ -12,6 +7,10 @@ of chaos. For details, read the docstrings of the functions below.
 
 [1] : [Hunt, Brian R., and Edward Ott, ‘Defining Chaos’, Chaos: An Interdisciplinary Journal of Nonlinear Science, 25.9 (2015)](https://doi.org/10/gdtkcf)
 =#
+export EEgraph, expansionentropy_sample, maximalexpansion
+using LinearAlgebra
+using Statistics
+
 
 #####################################################################################
 # Maxmal expansion rate
@@ -20,20 +19,20 @@ of chaos. For details, read the docstrings of the functions below.
 """
     maximalexpansion(M)
 
-Calculates the maximal expansion rate of M among all possible subspaces,
-the product of all singular values of M that are greater than 1. In the
+Calculates the maximal expansion rate of M,
+i.e. the product of all singular values of M that are greater than 1. In the
 notation of [1], it is the function ``G``.
 
 [1] : [Hunt, Brian R., and Edward Ott, ‘Defining Chaos’, Chaos: An Interdisciplinary Journal of Nonlinear Science, 25.9 (2015)](https://doi.org/10/gdtkcf)
 """
-maximalexpansion(M) = prod(filter(x -> x>1.0, svdvals(M)))
+maximalexpansion(M) = prod(filter(x -> x > 1.0, svdvals(M)))
 
 #####################################################################################
 # Expansion entropy
 #####################################################################################
 
 """
-    EEsample(system, samplegenerator, isinside; samplecount=1000, steps=40, dT=1, exactstepping=false)
+    expansionentropy_sample(system, samplegenerator, isinside; samplecount=1000, steps=40, dT=1, exactstepping=false)
 
 * `system` : The dynamical system on which to calculate the expansion entropy (EE).
 * `samplegenerator` : A nullary function that upon calling, returns a point in
@@ -78,38 +77,22 @@ with its motion defined by ``f_{T+t0, t0}``. That is, for all ``t0 \\le t \\le t
 
 [1] : [Hunt, Brian R., and Edward Ott, ‘Defining Chaos’, Chaos: An Interdisciplinary Journal of Nonlinear Science, 25.9 (2015)](https://doi.org/10/gdtkcf)
 """
-function EEsample(system::DynamicalSystem, samplegenerator, isinside; samplecount=1000, steps=40, dT=1, exactstepping=false, diffeq...)
-    dim = dimension(system)
+function expansionentropy_sample(system::DynamicalSystem, samplegenerator, isinside; samplecount=1000, steps=40, dT=1, exactstepping=false, diffeq...)
+    D = dimension(system)
     M = zeros(steps)
     # M[t] will be Σᵢ G(Dfₜ₀,ₜ₀₊ₜ(xᵢ))
     # The summation is over all sampled xᵢ that stay inside S during [t0, t0 + t].
 
-    # The identity matrix representing a volume element in tangent space.
-    t_identity = SMatrix{dim, dim, Float64}(I)
-
-    # Construct an integrator that evolves the volume element in tangent space.
-    if isa(system, DiscreteDynamicalSystem)
-        t_integ = tangent_integrator(system)
-        dT = max(Int(floor(dT)), 1)
-    else
-        # Send the keywords into the integrator.
-        t_integ = tangent_integrator(system, diffeq...)
-    end
+    t_identity = SMatrix{D, D, Float64}(I)
+    t_integ = tangent_integrator(system)
 
     for i ∈ 1:samplecount
         u = samplegenerator() # New sample point.
         reinit!(t_integ, u, t_identity)
-
         for t ∈ 1:steps # Evolve the sample point for the duration [t0, t0+steps*dT]
-            if exactstepping && isa(system, ContinuousDynamicalSystem)
-                step!(t_integ, dT, true)
-            else
-                step!(t_integ, dT)
-            end
-
+            step!(t_integ, dT, exactstepping)
             u = get_state(t_integ)
             !isinside(u) && break # Stop the integration if the orbit leaves the region.
-
             Df = get_deviations(t_integ)
             M[t] += maximalexpansion(Df)
         end
@@ -121,7 +104,7 @@ end
 This version only deals with 1-dimensional discrete dynamical systems, but does
 it really fast, by avoiding `tangent_integrator` and `maximalexpansion`.
 =#
-function EEsample_1dim(system::DiscreteDynamicalSystem, samplegenerator, isinside; samplecount=1000, steps=40, dT=1)
+function expansionentropy_sample(system::DiscreteDynamicalSystem{IIP, S, 1}, samplegenerator, isinside; samplecount=1000, steps=40, dT=1) where {IIP, S}
     f = system.f
     p = system.p
     jacob = system.jacobian
@@ -130,12 +113,10 @@ function EEsample_1dim(system::DiscreteDynamicalSystem, samplegenerator, isinsid
     dT_int = max(Int(floor(dT)), 1)
     M = zeros(steps)
 
-    isnumber = typeof(system.u0) <: Number
     # whether the state points of system is represented by naked numbers or vectors
-    isinplace = DynamicalSystemsBase.isinplace(system)
-    # whether the system is in-place or out-of-place
+    isnumber = typeof(system.u0) <: Number
 
-    if isinplace # Make some dummy variables to take in-place updates.
+    if IIP # Make some dummy variables to take in-place updates.
         Df_new = Matrix{Float64}(I, 1, 1)
         x_new = zeros(1)
     end
@@ -195,7 +176,7 @@ This section provides functions for plotting in an easy-to-read format.
 * `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
   Only valid for continuous systems.
 
-Runs the `EEsample` function `batchcount` times, each time calculating the
+Runs the `expansionentropy_sample` function `batchcount` times, each time calculating the
 expansion entropy out to `steps` time-steps. After that, it combines the simulated
 results from each run, thus obtaining `batchcount` number of estimates of
 log Eₜ₀₊ₜ,ₜ₀(f, S) for each t ∈ 1:steps.
@@ -231,7 +212,7 @@ function EEgraph(system, samplegenerator, isinside; batchcount=100, samplecount=
         if dimension(system) == 1 && isa(system, DiscreteDynamicalSystem)
             EEsamples[k, :] = EEsample_1dim(system, samplegenerator, isinside; samplecount=samplecount, steps=steps, dT=dT)
         else
-            EEsamples[k, :] = EEsample(system, samplegenerator, isinside; samplecount=samplecount, steps=steps, dT=dT, exactstepping=exactstepping, diffeq...)
+            EEsamples[k, :] = expansionentropy_sample(system, samplegenerator, isinside; samplecount=samplecount, steps=steps, dT=dT, exactstepping=exactstepping, diffeq...)
         end
     end
 
@@ -239,8 +220,8 @@ function EEgraph(system, samplegenerator, isinside; batchcount=100, samplecount=
     for t in 1:steps
         entropysamples = filter(isfinite, EEsamples[:, t])
         # remove -Inf entries, which indicate all samples failed to stay inside the given region.
-        if length(entropysamples) ≤ 1
-            println("Warning: All samples have escaped the given region. Consider increasing sample or batch number. Terminating at steps = ", t)
+        if length(entropysamples) < 1
+            println("Warning: All samples have escaped the given region. Consider increasing sample or batch number. Terminating at step = ", t)
             break
         end
         meanlist[t] = mean(entropysamples)

@@ -1,11 +1,13 @@
-using ChaosTools, Test, DynamicalSystemsBase
+using ChaosTools, Test
 
-# Test `maximalexpansion`
-@assert maximalexpansion([1. 0. 0. 0. 2.; 0. 0. 3. 0. 0.; 0. 0. 0. 0. 0.; 0. 2. 0. 0. 0.]) == 3.0 * 2.23606797749979 * 2.0
-@assert maximalexpansion([1 0; 0 1]) == 1
+@testset "maximalexpansion" begin
+@test maximalexpansion([1. 0. 0. 0. 2.; 0. 0. 3. 0. 0.; 0. 0. 0. 0. 0.; 0. 2. 0. 0. 0.]) ≈ 3.0 * 2.23606797749979 * 2.0
+@test maximalexpansion([1 0; 0 1]) == 1
+end
 
+
+@testset "discrete 1D" begin
 # Test EEGraph on discrete dynamical systems.
-
 tent_eom(x, p, n) = (x < -0.2 ? -0.6 : (x < 0.4 ? 3x : 2(1-x)))
 tent_jacob(x, p, n) = (x < -0.2 ? 0 : (x < 0.4 ? 3 : -2))
 tent = DiscreteDynamicalSystem(tent_eom, 0.2, nothing, tent_jacob)
@@ -14,20 +16,23 @@ tent_meanlist, tent_stdlist = EEgraph(tent, rand, x -> 0 < x < 1; batchcount=100
 for (i, mean) in enumerate(tent_meanlist)
     @assert 0.6< mean/i < 0.8
 end
+end
 
+@testset "discrete 1D regular" begin
+    expand2 = DiscreteDynamicalSystem(expand2_eom, 0.2, nothing, expand2_jacob)
 expand2_eom(x, p, n) = 2x
 expand2_jacob(x, p, n) = 2
-expand2 = DiscreteDynamicalSystem(expand2_eom, 0.2, nothing, expand2_jacob)
 expand_meanlist, expand_stdlist = EEgraph(expand2, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=10)
 
 for (i, mean) in enumerate(expand_meanlist)
     @assert -0.1< mean/i < 0.1
 end
+end
 
 lor = Systems.lorenz()
 lor_gen() = [rand()*40-20, rand()*60-30, rand()*50]
 lor_isinside(x) = -20 < x[1] < 20 && -30 < x[2] < 30 && 0 < x[3] < 50
-@time lor_meanlist, lor_stdlist = EEgraph(lor, lor_gen, lor_isinside; batchcount=10, samplecount=100, steps=20, dT=1.0)
+lor_meanlist, lor_stdlist = EEgraph(lor, lor_gen, lor_isinside; batchcount=10, samplecount=100, steps=20, dT=1.0)
 
 @assert 0.85 < (lor_meanlist[20] - lor_meanlist[1])/19 < 1.0
 

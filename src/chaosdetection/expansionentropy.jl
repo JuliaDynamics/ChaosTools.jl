@@ -1,4 +1,4 @@
-export discreteEEsample, continuousEEsample, EEgraph, maximalexpansion
+export EEgraph, EEsample, maximalexpansion
 using LinearAlgebra
 using Statistics
 using DynamicalSystemsBase

@@ -30,7 +30,7 @@ multidimension box.
 * `steps = 40` : The maximal steps for which the system will be run.
 * `Ttr = 0` : Transient time to evolve each initial condition before starting to comute ``E``.
   This is `t0` of [1] and of the following notation.
-* `batch = 100` : Number of batches to run the calculation, see below.
+* `batches = 100` : Number of batches to run the calculation, see below.
 * `diffeq...` : Other keywords are propagated to the solvers of DifferentialEquations.jl.
 
 ## Description
@@ -56,6 +56,8 @@ When plotted versus ``t``, these create the curves and error bars of e.g. Figs 2
 
 This function `expansionentropy` simply returns the slope of the biggest linear region
 of the curve ``H`` versus ``t``, which approximates the expansion entropy ``H_0``.
+It is therefore *recommended* to use [`expansionentropy_batch`](@ref) directly and
+evaluate the result yourself.
 
 [1] : B. & E. Ott, ‘Defining Chaos’, [Chaos 25.9 (2015)](https://doi.org/10/gdtkcf)
 """
@@ -80,9 +82,6 @@ and `restraining` that returns `true` if a given state is in the box.
 """
 function boxregion(as, bs)
     @assert length(as) == length(bs) > 0
-    zipped = zip(as, bs)
-    as = map(minimum, zipped)
-    bs = map(maximum, zipped)
     gen() = [rand()*(bs[i]-as[i]) + as[i] for i in 1:length(as)]
     restraining(x) = all(as .< x .< bs)
     return gen, restraining
@@ -117,8 +116,10 @@ maximalexpansion(M) = prod(filter(x -> x > 1.0, svdvals(M)))
     expansionentropy_sample(ds, sampler, restraining; kwargs...)
 
 Return `times, H` for one sample of `ds` (see [`expansionentropy`](@ref)).
+Accepts the same argumets as `expansionentropy`, besides `batches`.
 """
-function expansionentropy_sample(system::DynamicalSystem, sampler, restraining; samplecount=1000, steps=40, dt=1, Ttr=0, diffeq...)
+function expansionentropy_sample(system::DynamicalSystem, sampler, restraining;
+    N=1000, steps=40, dt=1, Ttr=0, diffeq...)
     D = dimension(system)
     M = zeros(steps)
     # M[t] will be Σᵢ G(Dfₜ₀,ₜ₀₊ₜ(xᵢ))
@@ -144,16 +145,16 @@ function expansionentropy_sample(system::DynamicalSystem, sampler, restraining; 
         Ttr = max(Int(floor(Ttr)), 0)
     end
 
-    for i ∈ 1:samplecount
+    for i ∈ 1:N
         u = sampler() # New sample point.
 
         # TODO: This is correct, but fix in general
         if Ttr > 0 # Evolve through transient time.
             reinit!(u_integ, u)
-            step!(u_integ, Ttr)
+            step!(u_integ, Ttr, true) # stepping must be exact here for correct time vector
             u = u_integ.u
         end
-
+        # TODO: reduce this
         reinit!(t_integ, u, t_identity) # Start integrating the tangents.
 
         for t ∈ 1:steps # Evolve the sample point for the duration [t0, t0+steps*dt]
@@ -166,7 +167,7 @@ function expansionentropy_sample(system::DynamicalSystem, sampler, restraining; 
             M[t] += maximalexpansion(Df)
         end
     end
-    return times, log.(M./samplecount)
+    return times, log.(M./N)
 end
 
 function _timeshift(system, Ttr)
@@ -188,7 +189,8 @@ end
 This version only deals with 1-dimensional discrete dynamical systems, but does
 it really fast, by avoiding `tangent_integrator` and `maximalexpansion`.
 =#
-function expansionentropy_sample(system::DiscreteDynamicalSystem{IIP, S, 1}, sampler, restraining; samplecount=1000, steps=40, dt=1, Ttr=0, kwargs...) where {IIP, S}
+function expansionentropy_sample(system::DiscreteDynamicalSystem{IIP, S, 1}, sampler, restraining;
+    N=1000, steps=40, dt=1, Ttr=0, kwargs...) where {IIP, S}
     f = system.f
     p = system.p
     jacob = system.jacobian
@@ -202,7 +204,7 @@ function expansionentropy_sample(system::DiscreteDynamicalSystem{IIP, S, 1}, sam
     # whether the state points of system is represented by naked numbers or vectors
     isnumber = typeof(system.u0) <: Number
 
-    for i ∈ 1:samplecount
+    for i ∈ 1:N
         x = sampler()
         t = t0
 
@@ -212,7 +214,7 @@ function expansionentropy_sample(system::DiscreteDynamicalSystem{IIP, S, 1}, sam
             t += 1
         end
 
-        Df = isnumber ? 1.0 : Matrix{Float64}(I, 1, 1)
+        Df = 1.0
         for step ∈ 1:steps # Evolve point x for `steps` steps.
             for _ ∈ 1:dt # Evolve dt steps at a time.
                 Df = jacob(x, p, t) * Df
@@ -224,7 +226,7 @@ function expansionentropy_sample(system::DiscreteDynamicalSystem{IIP, S, 1}, sam
             M[step] += isnumber ? max(1.0, abs(Df)) : max(1.0, abs(Df[1]))
         end
     end
-    return times, log.(M./samplecount)
+    return times, log.(M./N)
 end
 
 
@@ -236,22 +238,24 @@ end
 
 Run [`expansionentropy_sample`](@ref) `batch` times, and return
 `times, mean(H), std(H)` for all resulting `H`, see [`expansionentropy`](@ref).
+
+Accepts the same arguments as `expansionentropy`.
 """
-function expansionentropy_batch(system, sampler, restraining; batchcount=100, steps=40, kwargs...)
+function expansionentropy_batch(system, sampler, restraining; batches=100, steps=40, kwargs...)
     meanlist = zeros(steps)
     stdlist = zeros(steps)
-    eesamples = zeros(batchcount, steps)
+    eesamples = zeros(batches, steps)
     # eesamples[k, t] = The k-th sample of expansion entropy from t0 to (t0 + t)
 
     times = undef
     # Collect all the samples
-    for k in 1:batchcount
+    for k in 1:batches
         times, eesamples[k, :] = expansionentropy_sample(system, sampler, restraining; steps=steps, kwargs...)
     end
 
     # Calculate the mean and standard deviations
     for t in 1:steps
-        entropysamples = filter(isfinite, eesamples[:, t])
+        entropysamples = filter(isfinite, @view eesamples[:, t])
         # remove -Inf entries, which indicate all samples failed to stay inside the given region.
         if length(entropysamples) < 1
             println("Warning: All samples have escaped the given region. Consider increasing sample or batch number. Terminating at step = ", t)

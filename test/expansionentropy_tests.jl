@@ -1,5 +1,8 @@
 using ChaosTools, Test
 
+println("\nTesting expansion entropy...")
+@testset "Expansion entropy" begin
+
 @testset "maximalexpansion" begin
 @test ChaosTools.maximalexpansion([1. 0. 0. 0. 2.; 0. 0. 3. 0. 0.; 0. 0. 0. 0. 0.; 0. 2. 0. 0. 0.]) ≈ 3.0 * 2.23606797749979 * 2.0
 @test ChaosTools.maximalexpansion([1 0; 0 1]) == 1
@@ -48,7 +51,7 @@ end
     @test ee ≈ exact_ee
 end
 
-@testset "continuous 3D" begin
+@testset "continuous chaotic (lorenz)" begin
     lor = DynamicalSystemsBase.Systems.lorenz()
     lor_gen() = [rand()*40-20, rand()*60-30, rand()*50]
     lor_isinside(x) = -20 < x[1] < 20 && -30 < x[2] < 30 && 0 < x[3] < 50
@@ -57,17 +60,14 @@ end
     @test abs(ee - 0.9) < 0.05
 end
 
-@testset "continusou 3D regular" begin
-    lor2 = DynamicalSystemsBase.Systems.lorenz(ρ=160)
-    tr = trajectory(lor2, 100.0, dt = 0.1, Ttr=20)
-    x, y, z = columns(tr)
-    lor2_gen, lor2_isinside = boxregion(map(minimum, [x,y,z]), map(maximum, [x,y,z]))
+@testset "continuous regular (henon)" begin
+    hh = Systems.henonheiles([0.0, 0.1, 0.5, 0.0])
+    tr = trajectory(hh, 100.0, dt = 0.1, Ttr=200)
+    x, y, z, w = columns(tr)
+    gen, restr = boxregion(map(minimum, columns(tr)), map(maximum, columns(tr)))
 
-    ee = expansionentropy(lor2, lor2_gen, lor2_isinside;
-    batches=100, N=100, steps=40, dt=0.1, Ttr=100.0)
-    @test abs(ee) < 0.05
-
-    t, m, s = expansionentropy_batch(lor2, lor2_gen, lor2_isinside;
-    batches=100, N=100, steps=20, dt=1.0, Ttr=40)
-    @test all(meanlist[10:20] .< 0.01)
+    t, m, s = expansionentropy_batch(hh, gen, restr;
+              batches=1000, N=100, steps=40, dt=0.1, Ttr=1.0)
+    @test all(m[10:20] .< 0.01)
+end
 end

@@ -7,11 +7,11 @@ end
 
 
 @testset "discrete 1D" begin
-    # Test expansionentropy_graph on discrete dynamical systems.
+    # Test expansionentropy_batch on discrete dynamical systems.
     tent_eom(x, p, n) = (x < -0.2 ? -0.6 : (x < 0.4 ? 3x : 2(1-x)))
     tent_jacob(x, p, n) = (x < -0.2 ? 0 : (x < 0.4 ? 3 : -2))
     tent = DiscreteDynamicalSystem(tent_eom, 0.2, nothing, tent_jacob)
-    _, tent_meanlist, tent_stdlist = expansionentropy_graph(tent, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=60)
+    _, tent_meanlist, tent_stdlist = expansionentropy_batch(tent, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=60)
 
     exact_ee = log(2)
     for (i, mean) in enumerate(tent_meanlist)
@@ -26,7 +26,7 @@ end
     expand2_eom(x, p, n) = 2*x
     expand2_jacob(x, p, n) = 2
     expand2 = DiscreteDynamicalSystem(expand2_eom, 0.2, nothing, expand2_jacob)
-    _, expand_meanlist, _ = expansionentropy_graph(expand2, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=10)
+    _, expand_meanlist, _ = expansionentropy_batch(expand2, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=10)
 
     for (i, mean) in enumerate(expand_meanlist)
         @test -0.1< mean/i < 0.1
@@ -38,7 +38,7 @@ end
     cat_gen() = [rand(), rand()]
     cat_inside(x) = true
 
-    _, cat_meanlist, _ = expansionentropy_graph(cat, cat_gen, cat_inside; batchcount=100, samplecount=100, steps=30, dT=1)
+    _, cat_meanlist, _ = expansionentropy_batch(cat, cat_gen, cat_inside; batchcount=100, samplecount=100, steps=30, dT=1)
 
     exact_ee = log( 1/2 * (3 + sqrt(5)))
     for i in 1:length(cat_meanlist)
@@ -65,6 +65,6 @@ end
     ee = expansionentropy(lor2, lor2_gen, lor2_isinside; batchcount=100, samplecount=100, steps=20, dT=1.0, Ttr=40)
     @test abs(ee) < 0.05
 
-    _, meanlist, _ = expansionentropy_graph(lor2, lor2_gen, lor2_isinside; batchcount=100, samplecount=100, steps=20, dT=1.0, Ttr=40)
+    _, meanlist, _ = expansionentropy_batch(lor2, lor2_gen, lor2_isinside; batchcount=100, samplecount=100, steps=20, dT=1.0, Ttr=40)
     @test all(meanlist[10:20] .< 0.01)
 end

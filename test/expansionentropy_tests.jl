@@ -1,4 +1,4 @@
-using ChaosTools, Test
+using ChaosTools, DynamicalSystemsBase, Test
 
 @testset "maximalexpansion" begin
 @test maximalexpansion([1. 0. 0. 0. 2.; 0. 0. 3. 0. 0.; 0. 0. 0. 0. 0.; 0. 2. 0. 0. 0.]) ≈ 3.0 * 2.23606797749979 * 2.0
@@ -7,93 +7,64 @@ end
 
 
 @testset "discrete 1D" begin
-# Test EEGraph on discrete dynamical systems.
-tent_eom(x, p, n) = (x < -0.2 ? -0.6 : (x < 0.4 ? 3x : 2(1-x)))
-tent_jacob(x, p, n) = (x < -0.2 ? 0 : (x < 0.4 ? 3 : -2))
-tent = DiscreteDynamicalSystem(tent_eom, 0.2, nothing, tent_jacob)
-tent_meanlist, tent_stdlist = EEgraph(tent, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=60)
+    # Test expansionentropy_graph on discrete dynamical systems.
+    tent_eom(x, p, n) = (x < -0.2 ? -0.6 : (x < 0.4 ? 3x : 2(1-x)))
+    tent_jacob(x, p, n) = (x < -0.2 ? 0 : (x < 0.4 ? 3 : -2))
+    tent = DiscreteDynamicalSystem(tent_eom, 0.2, nothing, tent_jacob)
+    _, tent_meanlist, tent_stdlist = expansionentropy_graph(tent, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=60)
 
-for (i, mean) in enumerate(tent_meanlist)
-    @assert 0.6< mean/i < 0.8
-end
+    exact_ee = log(2)
+    for (i, mean) in enumerate(tent_meanlist)
+        @test abs(mean/i - exact_ee) < 0.05
+    end
+
+    ee = expansionentropy(tent, rand, x->0<x<1; batchcount=100, samplecount=100000, steps=60)
+    @test abs(ee/exact_ee - 1) < 0.05
 end
 
 @testset "discrete 1D regular" begin
+    expand2_eom(x, p, n) = 2*x
+    expand2_jacob(x, p, n) = 2
     expand2 = DiscreteDynamicalSystem(expand2_eom, 0.2, nothing, expand2_jacob)
-expand2_eom(x, p, n) = 2x
-expand2_jacob(x, p, n) = 2
-expand_meanlist, expand_stdlist = EEgraph(expand2, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=10)
+    _, expand_meanlist, _ = expansionentropy_graph(expand2, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=10)
 
-for (i, mean) in enumerate(expand_meanlist)
-    @assert -0.1< mean/i < 0.1
-end
+    for (i, mean) in enumerate(expand_meanlist)
+        @test -0.1< mean/i < 0.1
+    end
 end
 
-lor = Systems.lorenz()
-lor_gen() = [rand()*40-20, rand()*60-30, rand()*50]
-lor_isinside(x) = -20 < x[1] < 20 && -30 < x[2] < 30 && 0 < x[3] < 50
-lor_meanlist, lor_stdlist = EEgraph(lor, lor_gen, lor_isinside; batchcount=10, samplecount=100, steps=20, dT=1.0)
+@testset "discrete 2D" begin
+    cat = DynamicalSystemsBase.Systems.arnoldcat()
+    cat_gen() = [rand(), rand()]
+    cat_inside(x) = true
 
-@assert 0.85 < (lor_meanlist[20] - lor_meanlist[1])/19 < 1.0
+    _, cat_meanlist, _ = expansionentropy_graph(cat, cat_gen, cat_inside; batchcount=100, samplecount=100, steps=30, dT=1)
 
-#####################################################################
-# The following should be put into the documentation once this is finished.
-#####################################################################
+    exact_ee = log( 1/2 * (3 + sqrt(5)))
+    for i in 1:length(cat_meanlist)
+        @test abs(cat_meanlist[i]/i - exact_ee) < 1e-10
+    end
+end
 
-# # Expand 2: is not chaotic, thus the plot should be a flat line.
-# expand2_eom(x, p, n) = 2x
-# expand2_jacob(x, p, n) = 2
-# expand2 = DiscreteDynamicalSystem(expand2_eom, 0.2, nothing, expand2_jacob)
-# @time meanlist, stdlist = EEgraph(expand2, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=10)
-# plot(meanlist, yerr=stdlist, leg=false)
-#
-#
-# # Modified tent map. This replicates Example B in Hunt and Ott.
-# tent_eom(x, p, n) = (x < -0.2 ? -0.6 : (x < 0.4 ? 3x : 2(1-x)))
-# tent_jacob(x, p, n) = (x < -0.2 ? 0 : (x < 0.4 ? 3 : -2))
-# tent = DiscreteDynamicalSystem(tent_eom, 0.2, nothing, tent_jacob)
-#
-#
-# # This replicates Figure 2.
-# @time tent_meanlist, tent_stdlist = EEgraph(tent, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=60)
-# plot(tent_meanlist, yerr=tent_stdlist, leg=false)
-#
-#
-# # This replicates Figure 3.
-# @time meanlist, stdlist = EEgraph(tent, () -> rand()*2.5 - 1, x -> -1 < x < 1.5; batchcount=100, samplecount=100000, steps=60)
-# plot(meanlist, yerr=stdlist, leg=false)
-#
-#
-# # This replicates Figure 7
-# henon_iip = Systems.henon_iip(zeros(2); a = 4.2, b = 0.3)
-# henon_gen() = rand(2).*6 .- 3
-# henon_isinside(x) = -3<x[1]<3 &&  -3<x[2]<3
-# @time meanlist, stdlist = EEgraph(henon_iip, henon_gen, henon_isinside; batchcount=100, samplecount=100000, steps=25)
-# plot(meanlist, yerr=stdlist, leg=false)
-#
-#
-# # Exponential system
-# exp_eom(x, p, t) = x*p[1]
-# exp_u0 = [0.1]
-# exp_p = [1.0]
-# exp_jacob(x, p, t) = [1.0]
-# exp_sys = ContinuousDynamicalSystem(exp_eom, exp_u0, exp_p, exp_jacob)
-#
-# exp_gen() = [rand()-0.5]
-# exp_isinside(x) = -10.0 < x[1] < 10.0
-# @time exp_meanlist, exp_stdlist = EEgraph(exp_sys, exp_gen, exp_isinside; batchcount=100, samplecount=10000, steps=20, dT=1.0)
-# plot((1:20)*1.0, exp_meanlist, yerr=exp_stdlist, leg=false)
-#
-#
-# #=
-# The Lorenz attractor is roughly bounded within the box [-20, 20]×[-30, 30]×[0, 50]
-# As can be seen in the plot, the Lorentz attractor has an expansion entropy of
-# about 0.92
-# =#
-#
-# lor = Systems.lorenz()
-# lor_gen() = [rand()*40-20, rand()*60-30, rand()*50]
-# lor_isinside(x) = -20 < x[1] < 20 && -30 < x[2] < 30 && 0 < x[3] < 50
-# @time meanlist, stdlist = EEgraph(lor, lor_gen, lor_isinside; batchcount=100, samplecount=1000, steps=20, dT=1.0)
-# plot(meanlist, yerr=stdlist, leg=false)
-# plot!(x->0.92x+1.5, xlims=(0, 20))
+@testset "continuous 3D" begin
+    lor = DynamicalSystemsBase.Systems.lorenz()
+    lor_gen() = [rand()*40-20, rand()*60-30, rand()*50]
+    lor_isinside(x) = -20 < x[1] < 20 && -30 < x[2] < 30 && 0 < x[3] < 50
+    ee = expansionentropy(lor, lor_gen, lor_isinside; batchcount=100, samplecount=100, steps=40, dT=1.0)
+
+    @test abs(ee - 0.9) < 0.05
+end
+
+@testset "continusou 3D regular" begin
+    lor2 = DynamicalSystemsBase.Systems.lorenz(ρ=24)
+    tr = trajectory(lor2, 200.0, dt = 0.005, Ttr=20)
+    x, y, z = columns(tr)
+
+    lor2_gen, lor2_isinside = boxregion(map(minimum, [x,y,z]), map(maximum, [x,y,z]))
+
+    ee = expansionentropy(lor2, lor2_gen, lor2_isinside; batchcount=100, samplecount=100, steps=20, dT=1.0, Ttr=40)
+    @test abs(ee) < 0.05
+
+    _, meanlist, _ = expansionentropy_graph(lor2, lor2_gen, lor2_isinside; batchcount=100, samplecount=100, steps=20, dT=1.0, Ttr=40)
+    @test all(meanlist[10:20] .< 0.01)
+end

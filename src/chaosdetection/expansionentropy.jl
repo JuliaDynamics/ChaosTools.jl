@@ -30,9 +30,7 @@ multidimension box.
 * `steps = 40` : The maximal steps for which the system will be run.
 * `Ttr = 0` : Transient time to evolve each initial condition before starting to comute ``E``.
   This is `t0` of [1] and of the following notation.
-* `batch = 100` : Number of batches to run the calculation of ``E``. Across these
-  batches the mean value and standard deviation of ``\\log E_{t0+T, t0}(f, S)`` are computed
-  which when plotted create the curves and error bars of e.g. Figs 2, 3 of [1].
+* `batch = 100` : Number of batches to run the calculation, see below.
 * `diffeq...` : Other keywords are propagated to the solvers of DifferentialEquations.jl.
 
 ## Description
@@ -54,6 +52,7 @@ This process is done by the [`expansionentropy_sample`](@ref) function.
 Then, this is repeated for `batches` amount of times, as recommended in [1].
 From all these batches, the mean and std of ``H`` is computed at every time point.
 This is done by the [`expansionentropy_batch`](@ref) function.
+When plotted versus ``t``, these create the curves and error bars of e.g. Figs 2, 3 of [1].
 
 This function `expansionentropy` simply returns the slope of the biggest linear region
 of the curve ``H`` versus ``t``, which approximates the expansion entropy ``H_0``.
@@ -73,38 +72,25 @@ function expansionentropy(system, sampler, restraining; kwargs...)
 end
 
 """
-    boxregion(as::Vector{Real}, bs::Vector{Real})
+    boxregion(as, bs) -> sampler, restraining
 
-`as`, `bs` defines a box in `\\mathbb{R}`, the smallest box that is parallel to
-the axes, and contains `as, bs`.
-
-Returns two functions `gen, restraining`. `gen` generates points uniformly randomly
-in the box, and is used as `gen()`.
-
-`restraining` takes one point and returns `true` if the point is in the box, else
-it returns `false`.
-
-Points are represented as `Vector{Real}` objects.
+Define a box in ``\\mathbb{R}^d`` with edges the `as` and `bs` and then
+return two functions: `sampler`, which generates a random initial condition in that box
+and `restraining` that returns `true` if a given state is in the box.
 """
-function boxregion(as::Vector{T}, bs::Vector{T}) where T <: Real
+function boxregion(as, bs)
     @assert length(as) == length(bs) > 0
     zipped = zip(as, bs)
     as = map(minimum, zipped)
     bs = map(maximum, zipped)
-    gen() = [rand()*(bs[i]-as[i])+as[i] for i in 1:length(as)]
+    gen() = [rand()*(bs[i]-as[i]) + as[i] for i in 1:length(as)]
     restraining(x) = all(as .< x .< bs)
     return gen, restraining
 end
 
-"""
-    boxregion(a::Real, b::Real)
-
-Specialized version in one dimension.
-"""
+# Specialized 1-d version
 function boxregion(a::Real, b::Real)
-    zipped = (a,b)
-    a = minimum(zipped)
-    b = maximum(zipped)
+    a, b = extrema((a, b))
     gen() = rand()*(b-a) + a
     restraining = x -> a < x < b
     return gen, restraining
@@ -120,8 +106,6 @@ end
 Calculates the maximal expansion rate of M,
 i.e. the product of all singular values of M that are greater than 1. In the
 notation of [1], it is the function ``G``.
-
-[1] : [Hunt, Brian R., and Edward Ott, ‘Defining Chaos’, Chaos: An Interdisciplinary Journal of Nonlinear Science, 25.9 (2015)](https://doi.org/10/gdtkcf)
 """
 maximalexpansion(M) = prod(filter(x -> x > 1.0, svdvals(M)))
 
@@ -130,57 +114,11 @@ maximalexpansion(M) = prod(filter(x -> x > 1.0, svdvals(M)))
 #####################################################################################
 
 """
-    expansionentropy_sample(system, sampler, restraining; samplecount=1000, steps=40, dt=1, Ttr=0, exactstepping=false, diffeq...)
+    expansionentropy_sample(ds, sampler, restraining; kwargs...)
 
-* `system` : The dynamical system on which to calculate the expansion entropy (EE).
-* `sampler` : A nullary function that upon calling, returns a point in
-  state space that falls within the region implicitly defined by `restraining`.
-  This sampling function must sample evenly, otherwise the result will be biased.
-  Future implementation may allow importance sampling.
-* `restraining` : A boolean function that implicitly defines a subset of the state
-  space. All orbits must stay within this subset to be counted.
-* `samplecount=1000` : The number of samples.
-* `steps=40` : The maximal time for which the system will be run.
-* `dt=1` : The size of one step of time-evolution of the system.
-* `Ttr=0` : Transient time to evolve the system with, after each point sampling,
-  before starting the expansion entropy sampling.
-* `exactstepping=false` : If `system` is a ContinuousDynamicalSystem, and
-  exactstepping is true, then step by exactly dt. If exactstepping is false,
-  then the step-size is only guaranteed to be at least dt, since it would be chosen
-  by the integrator.
-  Setting this to true would improve accuracy, although usually unnecessary.
-* `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
-  Only valid for continuous systems.
-
-Returns `times` and `H`. `times` is a vector of [t0+dt, t0+2dT, ... t0+steps*dt].
-`H` is a Vector{Float64} of length `steps`, such that
-for any 1 ≤ t ≤ T, where T = `steps`,
-```math
-H[t] = \\log E_{t0+T, t0}(f, S),
-```
-with
-```math
-E_{t0+T, t0}(f, S) = \\left[\\frac 1 N \\sum_{i} G(Df_{t0+t, t0}(x_i)) \\right]
-```
-in the notation of (Ott, 2015) [1]:
-
-* ``N`` is `samplecount`,
-* ``f_{steps+t0, t0}`` is the equation of motion for the system from time ``t0`` to ``t0+steps``,
-* ``D`` is the differential with respect to ``x``,
-* ``p`` is the set of other parameters for ``f`,
-* ``S`` is a region implicitly defined by the boolean function `restraining`,
-* ``G`` denotes the product of all singular values greater than ``1``,
-* ``x_i`` are random points in the region ``S``, sampled by `sampler`.
-* ``i`` is the index of the sample points, ranging from 1 to `samplecount`.
-
-The summation is only over ``x_i`` that stays inside the region ``S`` implicitly
-defined by the boolean function `restraining` as ``x`` moves during ``[t0, t0+T]``,
-with its motion defined by ``f_{T+t0, t0}``. That is, for all ``t0 \\le t \\le t0+T``,
-``f_{t, t0}(x) \\in S``, that is, ``f_{t, t0}(x)`` evaluates to `true` by `restraining`.
-
-[1] : [Hunt, Brian R., and Edward Ott, ‘Defining Chaos’, Chaos: An Interdisciplinary Journal of Nonlinear Science, 25.9 (2015)](https://doi.org/10/gdtkcf)
+Return `times, H` for one sample of `ds` (see [`expansionentropy`](@ref)).
 """
-function expansionentropy_sample(system::DynamicalSystem, sampler, restraining; samplecount=1000, steps=40, dt=1, Ttr=0, exactstepping=false, diffeq...)
+function expansionentropy_sample(system::DynamicalSystem, sampler, restraining; samplecount=1000, steps=40, dt=1, Ttr=0, diffeq...)
     D = dimension(system)
     M = zeros(steps)
     # M[t] will be Σᵢ G(Dfₜ₀,ₜ₀₊ₜ(xᵢ))
@@ -191,6 +129,7 @@ function expansionentropy_sample(system::DynamicalSystem, sampler, restraining; 
 
     t_identity = SMatrix{D, D, Float64}(I)
 
+    # TODO: Fix this
     if Ttr > 0
         shifted_system = _timeshift(system, Ttr)
         t_integ = tangent_integrator(shifted_system)
@@ -208,6 +147,7 @@ function expansionentropy_sample(system::DynamicalSystem, sampler, restraining; 
     for i ∈ 1:samplecount
         u = sampler() # New sample point.
 
+        # TODO: This is correct, but fix in general
         if Ttr > 0 # Evolve through transient time.
             reinit!(u_integ, u)
             step!(u_integ, Ttr)
@@ -291,48 +231,11 @@ end
 #####################################################################################
 # Graphing functions
 #####################################################################################
-
-#=
-This section provides functions for plotting in an easy-to-read format.
-=#
 """
-    expansionentropy_batch(system, sampler, restraining; batchcount=100, steps=40, kwargs...)
+    expansionentropy_batch(ds, sampler, restraining; kwargs...)
 
-* `system` : The dynamical system on which to calculate the expansion entropy (EE).
-* `sampler` : A nullary function that upon calling, returns a point in
-  state space that falls within the region implicitly defined by `restraining`.
-  This sampling function must sample evenly, otherwise the result will be biased.
-  Future implementation may allow importance sampling.
-* `restraining` : A boolean function that implicitly defines a subset of the state
-  space. All orbits must stay within this subset to be counted.
-* `batchcount=100` : The number of batches to run the experiment with.
-  These batches are then aggregated to produce the mean and standard deviation.
-* `steps=40` : The maximal steps for which the system will be run.
-* `kwargs...` : Keyword arguments propagated into `expansionentropy_sample`.
-
-Runs the `expansionentropy_sample` function `batchcount` times, each time calculating the
-expansion entropy out to `steps` time-steps. After that, it combines the simulated
-results from each run, thus obtaining `batchcount` number of estimates of
-log Eₜ₀₊ₜ,ₜ₀(f, S) for each t ∈ 1:steps.
-
-It then calculates the mean and standard deviation for each t ∈ 1:steps, and return
-them as two lists.
-
-In the notation of (Hunt and Ott, 2015) [1], ``f`` is the equation of motion of
-the dynamical system, ``S`` is the region defined implicitly by `restraining`.
-
-As an example usage, this reproduces plot 1 of [1]:
-
-```julia
-using Plots
-tent_eom(x, p, n) = (x < -0.2 ? -0.6 : (x < 0.4 ? 3x : 2(1-x)))
-tent_jacob(x, p, n) = (x < -0.2 ? 0 : (x < 0.4 ? 3 : -2))
-tent = DiscreteDynamicalSystem(tent_eom, 0.2, nothing, tent_jacob)
-times, tent_meanlist, tent_stdlist = expansionentropy_batch(tent, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=60, dt=1)
-plot(times, tent_meanlist, yerr=tent_stdlist, leg=false)
-```
-
-[1] : [Hunt, Brian R., and Edward Ott, ‘Defining Chaos’, Chaos: An Interdisciplinary Journal of Nonlinear Science, 25.9 (2015)](https://doi.org/10/gdtkcf)
+Run [`expansionentropy_sample`](@ref) `batch` times, and return
+`times, mean(H), std(H)` for all resulting `H`, see [`expansionentropy`](@ref).
 """
 function expansionentropy_batch(system, sampler, restraining; batchcount=100, steps=40, kwargs...)
     meanlist = zeros(steps)

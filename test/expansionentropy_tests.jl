@@ -7,11 +7,10 @@ end
 
 
 @testset "discrete 1D" begin
-    # Test expansionentropy_batch on discrete dynamical systems.
     tent_eom(x, p, n) = (x < -0.2 ? -0.6 : (x < 0.4 ? 3x : 2(1-x)))
     tent_jacob(x, p, n) = (x < -0.2 ? 0 : (x < 0.4 ? 3 : -2))
     tent = DiscreteDynamicalSystem(tent_eom, 0.2, nothing, tent_jacob)
-    _, tent_meanlist, tent_stdlist = expansionentropy_batch(tent, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=60)
+    t, tent_meanlist, tent_stdlist = expansionentropy_batch(tent, rand, x -> 0 < x < 1; batchcount=100, samplecount=100000, steps=60)
 
     exact_ee = log(2)
     for (i, mean) in enumerate(tent_meanlist)
@@ -19,10 +18,10 @@ end
     end
 
     ee = expansionentropy(tent, rand, x->0<x<1; batchcount=100, samplecount=100000, steps=60)
-    @test abs(ee/exact_ee - 1) < 0.05
+    @test ee ≈ exact_ee
 end
 
-@testset "discrete 1D regular" begin
+@testset "discrete 1D nonchaotic" begin
     expand2_eom(x, p, n) = 2*x
     expand2_jacob(x, p, n) = 2
     expand2 = DiscreteDynamicalSystem(expand2_eom, 0.2, nothing, expand2_jacob)

@@ -1,8 +1,8 @@
 using ChaosTools, DynamicalSystemsBase, Test
 
 @testset "maximalexpansion" begin
-@test maximalexpansion([1. 0. 0. 0. 2.; 0. 0. 3. 0. 0.; 0. 0. 0. 0. 0.; 0. 2. 0. 0. 0.]) ≈ 3.0 * 2.23606797749979 * 2.0
-@test maximalexpansion([1 0; 0 1]) == 1
+@test ChaosTools.maximalexpansion([1. 0. 0. 0. 2.; 0. 0. 3. 0. 0.; 0. 0. 0. 0. 0.; 0. 2. 0. 0. 0.]) ≈ 3.0 * 2.23606797749979 * 2.0
+@test ChaosTools.maximalexpansion([1 0; 0 1]) == 1
 end
 
 
@@ -38,33 +38,36 @@ end
     cat_gen() = [rand(), rand()]
     cat_inside(x) = true
 
-    _, cat_meanlist, _ = expansionentropy_batch(cat, cat_gen, cat_inside; batchcount=100, samplecount=100, steps=30, dT=1)
+    _, cat_meanlist, _ = expansionentropy_batch(cat, cat_gen, cat_inside; batchcount=100, samplecount=100, steps=30, dt=1)
 
     exact_ee = log( 1/2 * (3 + sqrt(5)))
     for i in 1:length(cat_meanlist)
-        @test abs(cat_meanlist[i]/i - exact_ee) < 1e-10
+        @test abs(cat_meanlist[i]/i - exact_ee) < 1e-6
     end
+
+    ee = expansionentropy(cat, cat_gen, cat_inside; batchcount=100, samplecount=100, steps=30, dt=1)
+    @test ee ≈ exact_ee
 end
 
 @testset "continuous 3D" begin
     lor = DynamicalSystemsBase.Systems.lorenz()
     lor_gen() = [rand()*40-20, rand()*60-30, rand()*50]
     lor_isinside(x) = -20 < x[1] < 20 && -30 < x[2] < 30 && 0 < x[3] < 50
-    ee = expansionentropy(lor, lor_gen, lor_isinside; batchcount=100, samplecount=100, steps=40, dT=1.0)
+    ee = expansionentropy(lor, lor_gen, lor_isinside; batchcount=100, samplecount=100, steps=40, dt=1.0)
 
     @test abs(ee - 0.9) < 0.05
 end
 
 @testset "continusou 3D regular" begin
-    lor2 = DynamicalSystemsBase.Systems.lorenz(ρ=24)
+    lor2 = DynamicalSystemsBase.Systems.lorenz(ρ=160)
     tr = trajectory(lor2, 200.0, dt = 0.005, Ttr=20)
     x, y, z = columns(tr)
 
     lor2_gen, lor2_isinside = boxregion(map(minimum, [x,y,z]), map(maximum, [x,y,z]))
 
-    ee = expansionentropy(lor2, lor2_gen, lor2_isinside; batchcount=100, samplecount=100, steps=20, dT=1.0, Ttr=40)
+    ee = expansionentropy(lor2, lor2_gen, lor2_isinside; batchcount=100, samplecount=100, steps=20, dt=1.0, Ttr=40)
     @test abs(ee) < 0.05
 
-    _, meanlist, _ = expansionentropy_batch(lor2, lor2_gen, lor2_isinside; batchcount=100, samplecount=100, steps=20, dT=1.0, Ttr=40)
+    _, meanlist, _ = expansionentropy_batch(lor2, lor2_gen, lor2_isinside; batchcount=100, samplecount=100, steps=20, dt=1.0, Ttr=40)
     @test all(meanlist[10:20] .< 0.01)
 end

@@ -22,6 +22,9 @@ This is an approximation of the expansion entropy ``H_0``, according to [1].
 of `ds`. `restraining` is a 1-argument function `restraining(u)` that given the state
 `u` it returns `true` if the state is inside the restraining region ``S``.
 
+Use [`boxregion`](@ref) for an easy way to define `sampler` and `restraining` on a
+multidimension box.
+
 ## Keyword Arguments
 * `N = 1000` : Number of samples taken at each batch (same as ``N`` of [1]).
 * `steps = 40` : The maximal steps for which the system will be run.
@@ -33,9 +36,8 @@ of `ds`. `restraining` is a 1-argument function `restraining(u)` that given the 
 * `diffeq...` : Other keywords are propagated to the solvers of DifferentialEquations.jl.
 
 ## Description
-`N` samples are initialized and propagated
-forwards in time (along with their tangent space). At every time ``t`` in
-`[t0+dt, t0+2dt, ... t0+steps*dt]` we calculate ``H``:
+`N` samples are initialized and propagated forwards in time (along with their tangent space).
+At every time ``t`` in `[t0+dt, t0+2dt, ... t0+steps*dt]` we calculate ``H``:
 ```math
 H[t] = \\log E_{t0+T, t0}(f, S),
 ```
@@ -215,12 +217,7 @@ function expansionentropy_sample(system::DynamicalSystem, sampler, restraining; 
         reinit!(t_integ, u, t_identity) # Start integrating the tangents.
 
         for t ∈ 1:steps # Evolve the sample point for the duration [t0, t0+steps*dt]
-            # TODO: Temporary hack until DynamicalSystemsBase\src\discrete.jl is fixed.
-            if isa(system, DiscreteDynamicalSystem)
-                step!(t_integ, dt)
-            else
-                step!(t_integ, dt, exactstepping)
-            end
+            step!(t_integ, dt, true)
             # step!(t_integ, dt, exactstepping)
 
             u = get_state(t_integ)

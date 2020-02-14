@@ -32,4 +32,23 @@ include("chaosdetection/testchaos01.jl")
 # Ugly methods that shouldn't exist:
 include("ugliness.jl")
 
+display_update = true
+update_name = "update_v1.3.0"
+
+if display_update
+if !isfile(joinpath(@__DIR__, update_name))
+printstyled(stdout,
+"""
+\nUpdate message: ChaosTools v1.9
+
+A method to calculate the expansion entropy for discrete and
+continuous systems is now included as `expansionentropy`!
+
+See B. Hunt & E. Ott, ‘Defining Chaos’, Chaos 25.9 (2015).
+\n
+"""; color = :light_magenta)
+touch(joinpath(@__DIR__, update_name))
+end
+end
+
 end # module

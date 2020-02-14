@@ -60,7 +60,7 @@ It is therefore *recommended* to use [`expansionentropy_batch`](@ref) directly a
 evaluate the result yourself, as this step is known to be inaccurate for
 non-chaotic systems (where ``H`` fluctuates strongly around 0).
 
-[1] : B. & E. Ott, ‘Defining Chaos’, [Chaos 25.9 (2015)](https://doi.org/10/gdtkcf)
+[1] : B. Hunt & E. Ott, ‘Defining Chaos’, [Chaos 25.9 (2015)](https://doi.org/10/gdtkcf)
 """
 function expansionentropy(system, sampler, restraining; kwargs...)
     times, means, stds = expansionentropy_batch(system, sampler, restraining; kwargs...)
@@ -133,8 +133,7 @@ function expansionentropy_sample(system::DynamicalSystem, sampler, restraining;
             step!(u_integ, Ttr, true) # stepping must be exact here for correct time vector
             u = u_integ.u
         end
-        reinit!(t_integ, u, t_identity) # Start integrating the tangents.
-
+        reinit!(t_integ, u, t_identity; t0 = t_integ.t0 + Ttr)
         for i ∈ 1:steps # Evolve the sample point for the duration [t0, t0+steps*dt]
             step!(t_integ, dt, true)
             u = get_state(t_integ)

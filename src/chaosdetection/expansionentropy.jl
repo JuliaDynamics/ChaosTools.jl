@@ -66,7 +66,7 @@ function expansionentropy(system, sampler, restraining; kwargs...)
     times, means, stds = expansionentropy_batch(system, sampler, restraining; kwargs...)
     if any(isnan, stds)
         i = findfirst(isnan, stds)
-        println("Warning: All samples have escaped the given region at time = ", times[i])
+        println("Warning: All (or all except one) samples have escaped the given region at time = ", times[i])
         times = times[1:i-1]
         means = means[1:i-1]
     end
@@ -194,8 +194,8 @@ Run [`expansionentropy_sample`](@ref) `batch` times, and return
 Accepts the same arguments as `expansionentropy`.
 """
 function expansionentropy_batch(system, sampler, restraining; batches=100, steps=40, kwargs...)
-    means = zeros(steps)
-    stds = zeros(steps)
+    means = fill(NaN, steps)
+    stds = fill(NaN, steps)
     eesamples = zeros(batches, steps)
     # eesamples[k, t] = The k-th sample of expansion entropy from t0 to (t0 + t)
 
@@ -209,8 +209,8 @@ function expansionentropy_batch(system, sampler, restraining; batches=100, steps
     for t in 1:steps
         entropysamples = filter(isfinite, @view eesamples[:, t])
         # remove -Inf entries, which indicate all samples failed to stay inside the given region.
-        if length(entropysamples) < 1
-            println("Warning: All samples have escaped the given region. Consider increasing sample or batch number. Terminating at step = ", t)
+        if length(entropysamples) ≤ 1
+            println("Warning: All (or all except one) samples have escaped the given region. Consider increasing sample or batch number. Terminating at step = ", t)
             break
         end
         means[t] = mean(entropysamples)

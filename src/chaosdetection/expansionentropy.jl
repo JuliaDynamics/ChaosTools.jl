@@ -210,7 +210,7 @@ function expansionentropy_batch(system, sampler, restraining; batches=100, steps
         entropysamples = filter(isfinite, @view eesamples[:, t])
         # remove -Inf entries, which indicate all samples failed to stay inside the given region.
         if length(entropysamples) ≤ 1
-            println("Warning: All (or all except one) samples have escaped the given region. Consider increasing sample or batch number. Terminating at step = ", t)
+        @warn "All (or all except one) samples have escaped the given region.  Consider increasing sample or batch number. Terminating at step = $(t)."
             break
         end
         means[t] = mean(entropysamples)

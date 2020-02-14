@@ -66,7 +66,7 @@ function expansionentropy(system, sampler, restraining; kwargs...)
     times, means, stds = expansionentropy_batch(system, sampler, restraining; kwargs...)
     if any(isnan, stds)
         i = findfirst(isnan, stds)
-        println("Warning: All (or all except one) samples have escaped the given region at time = ", times[i])
+        @warn "All (or all except one) samples have escaped the given region at time = $(times[i])."
         times = times[1:i-1]
         means = means[1:i-1]
     end

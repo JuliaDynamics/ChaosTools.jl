@@ -1,3 +1,6 @@
+# 1.9
+* The expansion entropy from Hunt and Ott (defining chaos 2015) is now included as `expansionentropy`! Thanks and welcome to our new contributor @yuxiliu1995 !
+
 # 1.8
 * new function `testchaos01` which implements the so called "0-1" test for chaos, that can test if a numeric timeseries is chaotic or not.
 

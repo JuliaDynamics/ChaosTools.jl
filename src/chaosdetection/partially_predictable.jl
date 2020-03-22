@@ -6,11 +6,11 @@ export predictability
     predictability(ds::DynamicalSystem; kwargs...) -> chaos_type, ν, C
 
 Determine whether `ds` displays strongly chaotic, partially-predictable chaotic
-or regular behaviour, using the method by Wernecke et al. described in [1].
+or regular behaviour, using the method by Wernecke et al. described in[^Wernecke2017].
 
 Return the type of the behavior, the cross-distance scaling coefficient `ν`
 and the correlation coefficient `C`.
-Typical values for `ν`, `C` and `chaos_type` are given in Table 2 of [1]:
+Typical values for `ν`, `C` and `chaos_type` are given in Table 2 of[^Wernecke2017]:
 
 | `chaos_type` | `ν` | `C` |
 |--------------|-----|-----|
@@ -62,8 +62,7 @@ It is operating in a different speed than e.g. [`lyapunov`](@ref).
 
 ## References
 
-[1] : Wernecke, H., Sándor, B. & Gros, C.
-      *How to test for partially predictable chaos*. [Scientific Reports **7**, (2017)](https://www.nature.com/articles/s41598-017-01083-x).
+[^Wernecke2017]: Wernecke, H., Sándor, B. & Gros, C. *How to test for partially predictable chaos*. [Scientific Reports **7**, (2017)](https://www.nature.com/articles/s41598-017-01083-x).
 """
 function predictability(ds::DynamicalSystem;
                         Ttr::Real = 200,
@@ -95,8 +94,7 @@ function predictability(ds::DynamicalSystem;
     correlations = Float64[] # Cross-correlation at time T for different δ
     p_integ = parallel_integrator(ds, samples[1:2]; diffeq...)
     for δ in δ_range
-        # some kind of warning should be thrown for very large
-        # Tλ.
+        # TODO: some kind of warning should be thrown for very large Tλ
         Tλ = log(d_tol/δ)/λ_max
         T = min(T_multiplier * Tλ, T_max)
         Σd = 0

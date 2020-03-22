@@ -56,7 +56,7 @@ These methods tend to be slow, but versatile and low-error.
   It deffaults to `mean(v)`.
 
 For more information on the periodogram methods, see the documentation of
-[DSP.jl and LombScargle.jl.
+DSP.jl and LombScargle.jl.
 """
 function estimate_period(v, method, t = 0:length(v)-1; kwargs...)
     @assert length(v) == length(t)

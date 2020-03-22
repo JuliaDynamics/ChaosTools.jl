@@ -5,7 +5,7 @@ export testchaos01
 """
     testchaos01(φ::Vector [, cs, N0]) -> chaotic?
 Perform the so called "0-1" test for chaos introduced by Gottwald and
-Melbourne [1] on the timeseries `φ`.
+Melbourne[^Gottwald2016] on the timeseries `φ`.
 Return `true` if `φ` is chaotic, `false` otherwise.
 
 ## Description
@@ -27,8 +27,7 @@ care must be taken regarding the values of `cs`, see [1].
 
 ## References
 
-[1] : Gottwald & Melbourne, “The 0-1 test for chaos: A review”
-[Lect. Notes Phys., vol. 915, pp. 221–247, 2016.](www.doi.org/10.1007/978-3-662-48410-4_7)
+[^Gottwald2016]: Gottwald & Melbourne, “The 0-1 test for chaos: A review” [Lect. Notes Phys., vol. 915, pp. 221–247, 2016.](www.doi.org/10.1007/978-3-662-48410-4_7)
 """
 function testchaos01(φ::Vector, cs = 3π/5*rand(10) .+ π/4, N0 = Int(length(φ)÷10))
     K = median(testchaos01(φ, c, N0) for c in cs)

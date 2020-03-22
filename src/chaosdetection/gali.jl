@@ -5,7 +5,7 @@ using LinearAlgebra
 #####################################################################################
 """
     gali(ds::DynamicalSystem, tmax, k::Int | Q0; kwargs...) -> GALI_k, t
-Compute ``\\text{GALI}_k`` [1] for a given `k` up to time `tmax`.
+Compute ``\\text{GALI}_k``[^Skokos2007] for a given `k` up to time `tmax`.
 Return ``\\text{GALI}_k(t)`` and time vector ``t``.
 
 The third argument, which sets the order of `gali`, can be an integer `k`, or
@@ -53,7 +53,7 @@ the `threshold` until `tmax`
 the given orbit is said to be chaotic, otherwise it is regular.
 
 Our implementation is not based on the original paper, but rather in
-the method described in [2], which uses the product of the singular values of ``A``,
+the method described in[^Skokos2016b], which uses the product of the singular values of ``A``,
 a matrix that has as *columns* the deviation vectors.
 
 ## Performance Notes
@@ -69,9 +69,9 @@ ChaosTools.gali(tinteg, tmax, dt, threshold)
 
 ## References
 
-[1] : Skokos, C. H. *et al.*, Physica D **231**, pp 30–54 (2007)
+[^Skokos2007]: Skokos, C. H. *et al.*, Physica D **231**, pp 30–54 (2007)
 
-[2] : Skokos, C. H. *et al.*, *Chaos Detection and Predictability* - Chapter 5
+[^Skokos2016b]: Skokos, C. H. *et al.*, *Chaos Detection and Predictability* - Chapter 5
 (section 5.3.1 and ref. [85] therein), Lecture Notes in Physics **915**,
 Springer (2016)
 """

@@ -9,7 +9,7 @@ const ROOTS_ALG = A42()
 #####################################################################################
 """
     poincaresos(ds::ContinuousDynamicalSystem, plane, tfinal = 1000.0; kwargs...)
-Calculate the Poincaré surface of section (also called Poincaré map) [1, 2]
+Calculate the Poincaré surface of section (also called Poincaré map)[^Tabor1989]
 of the given system with the given `plane`.
 The system is evolved for total time of `tfinal`.
 
@@ -28,6 +28,8 @@ In code, `plane` can be either:
   vector correspond to ``\\mathbf{a}`` while the last element is ``b``.
 
 Returns a [`Dataset`](@ref) of the points that are on the surface of section.
+
+See also [`orbitdiagram`](@ref), [`produce_orbitdiagram`](@ref).
 
 ## Keyword Arguments
 * `direction = -1` : Only crossings with `sign(direction)` are considered to belong to
@@ -59,14 +61,7 @@ planecrossing = PlaneCrossing(plane, direction > 0)
 ```
 and `idxs` must be `Int` or `SVector{Int}`.
 
-## References
-[1] : H. Poincaré, *Les Methods Nouvelles de la Mécanique Celeste*,
-Paris: Gauthier-Villars (1892)
-
-[2] : M. Tabor, *Chaos and Integrability in Nonlinear Dynamics: An Introduction*,
-§4.1, in pp. 118-126, New York: Wiley (1989)
-
-See also [`orbitdiagram`](@ref), [`produce_orbitdiagram`](@ref).
+[^Tabor1989]: M. Tabor, *Chaos and Integrability in Nonlinear Dynamics: An Introduction*, §4.1, in pp. 118-126, New York: Wiley (1989)
 """
 function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
     direction = -1, Ttr::Real = 0.0, warning = true, idxs = 1:D, u0 = get_state(ds),

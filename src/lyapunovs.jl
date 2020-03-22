@@ -58,11 +58,11 @@ ChaosTools.lyapunovs_convergence(tinteg, N, dt, Ttr)
 
 ## References
 
-[^Lyapunov1992] : A. M. Lyapunov, *The General Problem of the Stability of Motion*, Taylor & Francis (1992)
+[^Lyapunov1992]: A. M. Lyapunov, *The General Problem of the Stability of Motion*, Taylor & Francis (1992)
 
-[^Geist1990] : K. Geist *et al.*, Progr. Theor. Phys. **83**, pp 875 (1990)
+[^Geist1990]: K. Geist *et al.*, Progr. Theor. Phys. **83**, pp 875 (1990)
 
-[^Benettin1980] : G. Benettin *et al.*, Meccanica **15**, pp 9-20 & 21-30 (1980)
+[^Benettin1980]: G. Benettin *et al.*, Meccanica **15**, pp 9-20 & 21-30 (1980)
 """
 lyapunovs(ds::DS, N, k::Int = dimension(ds); kwargs...) =
 lyapunovs(ds, N, orthonormal(dimension(ds), k); kwargs...)
@@ -196,7 +196,7 @@ lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
 ```
 
 ## References
-[^Benettin1976] : G. Benettin *et al.*, Phys. Rev. A **14**, pp 2338 (1976)
+[^Benettin1976]: G. Benettin *et al.*, Phys. Rev. A **14**, pp 2338 (1976)
 """
 function lyapunov(ds::DS, T;
                   Ttr = 0,

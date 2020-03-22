@@ -31,15 +31,13 @@ of `inds` *must be unique* such that the resulting matrix is orthogonal
 and represents the group of special reflections and permutations.
 
 Deciding the appropriate values for `λ, inds, sings` is not trivial. However, in
-ref. [2] there is a lot of information that can help with that decision. Also,
+ref.[^Pingel2000] there is a lot of information that can help with that decision. Also,
 by appropriately choosing various values for `λ`, one can sort periodic
-orbits from e.g. least unstable to most unstable, see [3] for details.
+orbits from e.g. least unstable to most unstable, see[^Diakonos1998] for details.
 
-## References
+[^Pingel2000]: D. Pingel *et al.*, Phys. Rev. E **62**, pp 2119 (2000)
 
-[2] : D. Pingel *et al.*, Phys. Rev. E **62**, pp 2119 (2000)
-
-[3] : F. K. Diakonos *et al.*, Phys. Rev. Lett. **81**, pp 4349 (1998)
+[^Diakonos1998]: F. K. Diakonos *et al.*, Phys. Rev. Lett. **81**, pp 4349 (1998)
 """
 function lambdamatrix(λ::Real, inds::AbstractVector{<:Integer},
     sings::AbstractVector{<:Real})
@@ -83,7 +81,7 @@ end
     periodicorbits(ds::DiscreteDynamicalSystem,
                    o, ics [, λs, indss, singss]; kwargs...) -> FP
 Find fixed points `FP` of order `o` for the map `ds`
-using the algorithm due to Schmelcher & Diakonos [1].
+using the algorithm due to Schmelcher & Diakonos[^Schmelcher1997].
 `ics` is a collection of initial conditions (container of vectors) to be evolved.
 
 ## Optional Arguments
@@ -123,9 +121,7 @@ possible ``\\mathbf{\\Lambda}_k``.
 evolved for *all* ``\\mathbf{\\Lambda}_k`` which can very quickly lead to
 long computation times.
 
-## References
-
-[1] : P. Schmelcher & F. K. Diakonos, Phys. Rev. Lett. **78**, pp 4733 (1997)
+[^Schmelcher1997]: P. Schmelcher & F. K. Diakonos, Phys. Rev. Lett. **78**, pp 4733 (1997)
 """
 function periodicorbits(ds::DDS{false, S},
                         o::Int,

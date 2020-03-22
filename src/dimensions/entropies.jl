@@ -57,7 +57,7 @@ end
 
 """
     genentropy(α, ε, dataset::AbstractDataset; base = e)
-Compute the `α` order generalized (Rényi) entropy [1] of a dataset,
+Compute the `α` order generalized (Rényi) entropy[^Rényi1960] of a dataset,
 by first partitioning it into boxes of length `ε` using [`non0hist`](@ref).
 ```julia
 genentropy(α, p::AbstractArray; base = e)
@@ -74,16 +74,13 @@ H_\\alpha(p) = \\frac{1}{1-\\alpha} \\log \\left(\\sum_i p[i]^\\alpha\\right)
 ```
 and generalizes other known entropies,
 like e.g. the information entropy
-(``\\alpha = 1``, see [2]), the maximum entropy (``\\alpha=0``,
+(``\\alpha = 1``, see [^Shannon1948]), the maximum entropy (``\\alpha=0``,
 also known as Hartley entropy), or the correlation entropy
 (``\\alpha = 2``, also known as collision entropy).
 
-## References
+[^Rényi1960]: A. Rényi, *Proceedings of the fourth Berkeley Symposium on Mathematics, Statistics and Probability*, pp 547 (1960)
 
-[1] : A. Rényi, *Proceedings of the fourth Berkeley Symposium on Mathematics,
-Statistics and Probability*, pp 547 (1960)
-
-[2] : C. E. Shannon, Bell Systems Technical Journal **27**, pp 379 (1948)
+[^Shannon1948]: C. E. Shannon, Bell Systems Technical Journal **27**, pp 379 (1948)
 """
 function genentropy(α::Real, ε::Real, data::AbstractDataset;
     base=Base.MathConstants.e)
@@ -113,7 +110,7 @@ end
 """
     permentropy(x::AbstractVector, order [, interval=1]; base = e)
 
-Compute the permutation entropy [1] of given `order`
+Compute the permutation entropy[^Brandt2002] of given `order`
 from the `x` timeseries.
 
 Optionally, `interval` can be specified to
@@ -122,9 +119,7 @@ sliding windows between `t0` and `t1 = t0 + interval * (order - 1)`.
 
 Optionally use `base` for the logarithms.
 
-## References
-
-[1] : C. Bandt, & B. Pompe, [Phys. Rev. Lett. **88** (17), pp 174102 (2002)](http://doi.org/10.1103/PhysRevLett.88.174102)
+[^Bandt2002]: C. Bandt, & B. Pompe, [Phys. Rev. Lett. **88** (17), pp 174102 (2002)](http://doi.org/10.1103/PhysRevLett.88.174102)
 """
 function permentropy(
         time_series::AbstractArray{T, 1}, orderi::Integer,

@@ -6,7 +6,7 @@ export predictability
     predictability(ds::DynamicalSystem; kwargs...) -> chaos_type, ν, C
 
 Determine whether `ds` displays strongly chaotic, partially-predictable chaotic
-or regular behaviour, using the method by Wernecke et al. described in[1].
+or regular behaviour, using the method by Wernecke et al. described in[^Wernecke2017].
 
 Return the type of the behavior, the cross-distance scaling coefficient `ν`
 and the correlation coefficient `C`.

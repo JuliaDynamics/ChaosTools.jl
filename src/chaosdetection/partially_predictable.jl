@@ -60,8 +60,6 @@ be increased, e.g. to 1e9. This is part of the `diffeq` kwargs.
 In addition, be aware that this function does a *lot* of internal computations.
 It is operating in a different speed than e.g. [`lyapunov`](@ref).
 
-## References
-
 [^Wernecke2017]: Wernecke, H., Sándor, B. & Gros, C. *How to test for partially predictable chaos*. [Scientific Reports **7**, (2017)](https://www.nature.com/articles/s41598-017-01083-x).
 """
 function predictability(ds::DynamicalSystem;

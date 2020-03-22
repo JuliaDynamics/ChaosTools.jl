@@ -215,7 +215,7 @@ information_dim(args...) = generalized_dim(1, args...)
 
 """
     kaplanyorke_dim(lyapunovs::AbstractVector)
-Calculate the Kaplan-Yorke dimension, a.k.a. Lyapunov dimension [1].
+Calculate the Kaplan-Yorke dimension, a.k.a. Lyapunov dimension[^Kaplan1970].
 
 ## Description
 The Kaplan-Yorke dimension is simply the point where
@@ -225,11 +225,7 @@ will return the length of the input vector.
 
 Useful in combination with [`lyapunovs`](@ref).
 
-## References
-
-[1] :  J. Kaplan & J. Yorke,
-*Chaotic behavior of multidimensional difference equations*,
-Lecture Notes in Mathematics vol. **730**, Springer (1979)
+[^Kaplan1970]: J. Kaplan & J. Yorke, *Chaotic behavior of multidimensional difference equations*, Lecture Notes in Mathematics vol. **730**, Springer (1979)
 """
 function kaplanyorke_dim(v::AbstractVector)
     issorted(v, rev = true) || throw(ArgumentError(

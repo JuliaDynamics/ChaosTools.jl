@@ -25,8 +25,6 @@ of the two-dimensional process, is `N0 = length(φ)/10`.
 Notice that for data sampled from continous dynamical systems, some
 care must be taken regarding the values of `cs`, see [1].
 
-## References
-
 [^Gottwald2016]: Gottwald & Melbourne, “The 0-1 test for chaos: A review” [Lect. Notes Phys., vol. 915, pp. 221–247, 2016.](www.doi.org/10.1007/978-3-662-48410-4_7)
 """
 function testchaos01(φ::Vector, cs = 3π/5*rand(10) .+ π/4, N0 = Int(length(φ)÷10))

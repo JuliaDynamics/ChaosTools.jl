@@ -56,8 +56,6 @@ ChaosTools.lyapunovs_convergence(tinteg, N, dt, Ttr)
 ```
 (not exported).
 
-## References
-
 [^Lyapunov1992]: A. M. Lyapunov, *The General Problem of the Stability of Motion*, Taylor & Francis (1992)
 
 [^Geist1990]: K. Geist *et al.*, Progr. Theor. Phys. **83**, pp 875 (1990)
@@ -195,7 +193,6 @@ The low level method is
 lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
 ```
 
-## References
 [^Benettin1976]: G. Benettin *et al.*, Phys. Rev. A **14**, pp 2338 (1976)
 """
 function lyapunov(ds::DS, T;

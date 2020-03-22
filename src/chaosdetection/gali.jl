@@ -67,8 +67,6 @@ The low level method is
 ChaosTools.gali(tinteg, tmax, dt, threshold)
 ```
 
-## References
-
 [^Skokos2007]: Skokos, C. H. *et al.*, Physica D **231**, pp 30–54 (2007)
 
 [^Skokos2016b]: Skokos, C. H. *et al.*, *Chaos Detection and Predictability* - Chapter 5

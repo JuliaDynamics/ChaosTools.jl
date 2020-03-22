@@ -66,7 +66,7 @@ of the reconstruction `R` (distance ``d_F`` in ref. [^Skokos2016]).
 
 [^Skokos2016]: Skokos, C. H. *et al.*, *Chaos Detection and Predictability* - Chapter 1 (section 1.3.2), Lecture Notes in Physics **915**, Springer (2016)
 
-[^Kantz1994] : Kantz, H., Phys. Lett. A **185**, pp 77–87 (1994)
+[^Kantz1994]: Kantz, H., Phys. Lett. A **185**, pp 77–87 (1994)
 """
 function numericallyapunov(R::AbstractDataset{D, T}, ks;
                            refstates = 1:(length(R) - ks[end]),
@@ -165,7 +165,7 @@ Return the Broomhead-King coordinates of a timeseries `s`
 by performing `svd` on the so-called trajectory matrix with dimension `d`.
 
 ## Description
-Broomhead and King coordinates is an approach proposed in [^BroomheadKing1987] that applies the
+Broomhead and King coordinates is an approach proposed in [^Broomhead1987] that applies the
 Karhunen–Loève theorem to delay coordinates embedding with smallest possible delay.
 
 The function performs singular value decomposition
@@ -185,7 +185,7 @@ The columns of ``U`` can then be used as a new coordinate system, and by
 considering the values of the singular values ``S`` you can decide how many
 columns of ``U`` are "important". See the documentation page for example application.
 
-[^BroomheadKing1987]:  D. S. Broomhead, R. Jones and G. P. King, J. Phys. A **20**, 9, pp L563 (1987)
+[^Broomhead1987]:  D. S. Broomhead, R. Jones and G. P. King, J. Phys. A **20**, 9, pp L563 (1987)
 """
 function broomhead_king(x::AbstractArray, d::Int)
     X = trajectory_matrix(x, d)

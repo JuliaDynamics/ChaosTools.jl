@@ -9,7 +9,7 @@ export lyapunovs, lyapunov
 """
     lyapunovs(ds::DynamicalSystem, N [, k::Int | Q0]; kwargs...) -> λs
 
-Calculate the spectrum of Lyapunov exponents [1] of `ds` by applying
+Calculate the spectrum of Lyapunov exponents [^Lyapunov1992] of `ds` by applying
 a QR-decomposition on the parallelepiped matrix `N` times. Return the
 spectrum sorted from maximum to minimum.
 
@@ -30,7 +30,7 @@ a pre-initialized matrix `Q0` whose columns are initial deviation vectors (then
   See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
 ## Description
-The method we employ is "H2" of [2], originally stated in [3]. The deviation vectors
+The method we employ is "H2" of [^Geist1990], originally stated in [^Benettin1980]. The deviation vectors
 defining a `D`-dimensional parallepiped in tangent space
 are evolved using the tangent dynamics of the system.
 A QR-decomposition at each step yields the local growth rate for each dimension
@@ -58,12 +58,11 @@ ChaosTools.lyapunovs_convergence(tinteg, N, dt, Ttr)
 
 ## References
 
-[1] : A. M. Lyapunov, *The General Problem of the Stability of Motion*,
-Taylor & Francis (1992)
+[^Lyapunov1992] : A. M. Lyapunov, *The General Problem of the Stability of Motion*, Taylor & Francis (1992)
 
-[2] : K. Geist *et al.*, Progr. Theor. Phys. **83**, pp 875 (1990)
+[^Geist1990] : K. Geist *et al.*, Progr. Theor. Phys. **83**, pp 875 (1990)
 
-[3] : G. Benettin *et al.*, Meccanica **15**, pp 9-20 & 21-30 (1980)
+[^Benettin1980] : G. Benettin *et al.*, Meccanica **15**, pp 9-20 & 21-30 (1980)
 """
 lyapunovs(ds::DS, N, k::Int = dimension(ds); kwargs...) =
 lyapunovs(ds, N, orthonormal(dimension(ds), k); kwargs...)
@@ -142,7 +141,7 @@ inittest_default(D) = (state1, d0) -> state1 .+ d0/sqrt(D)
 """
     lyapunov(ds::DynamicalSystem, Τ; kwargs...) -> λ
 
-Calculate the maximum Lyapunov exponent `λ` using a method due to Benettin [1],
+Calculate the maximum Lyapunov exponent `λ` using a method due to Benettin [^Benettin1976],
 which simply
 evolves two neighboring trajectories (one called "given" and one called "test")
 while constantly rescaling the test one.
@@ -197,7 +196,7 @@ lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
 ```
 
 ## References
-[1] : G. Benettin *et al.*, Phys. Rev. A **14**, pp 2338 (1976)
+[^Benettin1976] : G. Benettin *et al.*, Phys. Rev. A **14**, pp 2338 (1976)
 """
 function lyapunov(ds::DS, T;
                   Ttr = 0,

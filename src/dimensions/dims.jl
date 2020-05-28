@@ -77,7 +77,7 @@ Identify regions where the curve `y(x)` is linear, by scanning the
 `x`-axis every `dxi` indices (e.g. at `x[1] to x[5], x[5] to x[10], x[10] to x[15]`
 and so on if `dxi=5`).
 
-If the slope (calculated using `LsqFit`) of a region of width `dxi` is
+If the slope (calculated via linear regression) of a region of width `dxi` is
 approximatelly equal to that of the previous region,
 within tolerance `tol`,
 then these two regions belong to the same linear region.
@@ -126,7 +126,7 @@ end
 
 
 #######################################################################################
-# Dimensions
+# Common Dimensions
 #######################################################################################
 """
     estimate_boxsizes(dataset::AbstractDataset; k::Int = 12, z = -1, w = 1)

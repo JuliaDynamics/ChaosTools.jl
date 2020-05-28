@@ -15,6 +15,7 @@ export Cityblock, Euclidean
 Return `E = [E(k) for k ∈ ks]`, where `E(k)` is the average logarithmic distance
 between states of a [`neighborhood`](@ref)
 that are evolved in time for `k` steps (`k` must be integer).
+Typically `R` is the result of delay coordinates of a single timeseries.
 
 ## Keyword Arguments
 
@@ -92,7 +93,6 @@ function numericallyapunov(R::AbstractDataset{D, T},
     # ⩅(n) = \Cup<tab> = neighborhood of reference state n
     # which is evaluated for each n and for the given neighborhood ntype
 
-    # Initialize:
     timethres = length(R) - ks[end]
     if maximum(ℜ) > timethres
         erstr = "Maximum index of reference states is > length(R) - ks[end] "
@@ -108,7 +108,7 @@ function numericallyapunov(R::AbstractDataset{D, T},
 
     for n in ℜ
         # The ⋓(n) can be evaluated on the spot instead of being pre-calculated
-        # for all reference states. (it would take too much memory)
+        # for all reference states. Precalculating is faster, but allocates more memory.
         # Since ⋓[n] doesn't depend on `k` one can then interchange the loops:
         # Instead of k being the outermost loop, it becomes the innermost loop!
         point = data[n]

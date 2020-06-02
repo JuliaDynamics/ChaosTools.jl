@@ -227,7 +227,7 @@ p_j = \\frac{1}{N}\\sum_{i=1}^N I(||X_i - X_j|| < \\epsilon)
 ```
 where ``N`` is its length and ``I`` gives 1 if the argument is `true`.
 Because ``p`` is further normalized, it can be used as
-an alternative for the [`genentropy`](@ref) function (usnig the second method).
+an alternative for the [`genentropy`](@ref) function (using the second method).
 """
 function kernelprob(X, ε, norm = Euclidean())
     N = length(X)

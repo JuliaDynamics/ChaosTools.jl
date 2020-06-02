@@ -247,6 +247,7 @@ for a given radius `ε` and `norm`, using the formula:
 C(\\epsilon) = \\frac{2}{N(N-1)}\\sum_{1 ≤ i < j ≤ N} I(||X_i - X_j|| < \\epsilon)
 ```
 where ``N`` is its length and ``I`` gives 1 if the argument is `true`.
+Notice that `correlationsum` has ``N^2`` performance scaling.
 
 See [`grassberger`](@ref) for more.
 """

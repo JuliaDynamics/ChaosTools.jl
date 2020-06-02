@@ -59,10 +59,11 @@ end
     genentropy(α, ε, dataset::AbstractDataset; base = e)
 Compute the `α` order generalized (Rényi) entropy[^Rényi1960] of a dataset,
 by first partitioning it into boxes of length `ε` using [`non0hist`](@ref).
+
 ```julia
 genentropy(α, p::AbstractArray; base = e)
 ```
-Compute the entropy of an array `p` directly, assuming that `p` is
+Compute the entropy of an array of probabilities `p`, assuming that `p` is
 sum-normalized.
 
 Optionally use `base` for the logarithms.

@@ -76,3 +76,23 @@ println("\nTesting permutation entropy...")
         @test_throws ArgumentError permentropy([], order)
     end
 end
+
+println("\nTesting correlation dimension...")
+@testset "Correlation dim" begin
+  @testset "Henon Map" begin
+    ds = Systems.henon()
+    ts = trajectory(ds, 5000)
+    es = 10 .^ range(-0, stop = -3, length = 7)
+    cs = correlationsum.(Ref(ts), es)
+    linr, dim = linear_region(log.(es), log.(cs))
+    test_value(dim, 1.1, 1.3)
+  end
+  @testset "Lorenz System" begin
+    ds = Systems.lorenz()
+    ts = trajectory(ds, 2000; dt = 0.1)
+    es = 10 .^ range(1, stop = -3, length = 8)
+    cs = correlationsum.(Ref(ts), es)
+    linr, dim = linear_region(log.(es), log.(cs))
+    test_value(dim, 1.85, 2.1)
+  end
+end

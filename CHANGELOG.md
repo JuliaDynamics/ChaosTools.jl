@@ -1,3 +1,7 @@
+# 1.10
+* Added method for estimating correlation dimension (and as a pre-requisite, also the correlation sum) based on the method of Grassberger-Proccacia.
+* Added "kernel density nearest neighbor" estimator for probabilistic description of a dataset.
+
 # 1.9
 * The expansion entropy from Hunt and Ott (defining chaos 2015) is now included as `expansionentropy`! Thanks and welcome to our new contributor @yuxiliu1995 !
 

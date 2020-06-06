@@ -240,7 +240,7 @@ function kernelprob(X, ε, norm = Euclidean())
 end
 
 """
-    correlationsum(X, ε, norm = Euclidean())
+    correlationsum(X, ε::Real, norm = Euclidean()) → C(ε)
 Calculate the correlation sum of `X` (`Dataset` or timeseries)
 for a given radius `ε` and `norm`, using the formula:
 ```math
@@ -251,12 +251,39 @@ Notice that `correlationsum` has ``N^2`` performance scaling.
 
 See [`grassberger`](@ref) for more.
 """
-function correlationsum(X, ε, norm = Euclidean())
+function correlationsum(X, ε::Real, norm = Euclidean())
     N, C = length(X), 0
     @inbounds for i in 1:N
         C += count(evaluate(norm, X[i], X[j]) < ε for j in i+1:N)
     end
     return 2C/(N*(N-1))
+end
+
+"""
+    correlationsum(X, εs::AbstractVector, norm = Euclidean()) → Cs
+Calculate the correlation sum for every `ε ∈ εs` using an optimized version.
+"""
+function correlationsum(X, εs::AbstractVector, norm = Euclidean())
+    d = distancematrix(X, norm)
+    Cs = zeros(length(εs))
+    N = length(X)
+    @inbounds for (k, ε) in enumerate(εs)
+        for i in 1:N
+            @inbounds Cs[k] += count(d[j, i] < ε for j in i+1:N)
+        end
+    end
+    return 2Cs ./ (N*(N-1))
+end
+
+function distancematrix(X, norm = Euclidean())
+    N = length(X)
+    d = zeros(eltype(X), N, N)
+    @inbounds for i in 1:N
+        for j in i+1:N
+            d[j, i] = evaluate(norm, X[i], X[j])
+        end
+    end
+    return d
 end
 
 """
@@ -266,7 +293,7 @@ dimension of the given `data`.
 
 This function does something extrely simple:
 ```julia
-cm = correlationsum.(Ref(data), εs, Ref(norm))
+cm = correlationsum(data, εs, norm)
 return linear_region(log.(sizes), log(cm))[2]
 ```
 i.e. it calculates [`correlationsum`](@ref) for various radii and then tries to find
@@ -276,7 +303,7 @@ See [`generalized_dim`](@ref) for a more thorough explanation.
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
 function grassberger(data::AbstractDataset, εs = estimate_boxsizes(data), norm = Euclidean())
-    cm = correlationsum.(Ref(data), εs, Ref(norm))
+    cm = correlationsum(data, εs, norm)
     return linear_region(log.(εs), log.(cm))[2]
 end
 

@@ -240,39 +240,43 @@ function kernelprob(X, ε, norm = Euclidean())
 end
 
 """
-    correlationsum(X, ε::Real, norm = Euclidean()) → C(ε)
+    correlationsum(X, ε::Real; w = 1, norm = Euclidean()) → C(ε)
 Calculate the correlation sum of `X` (`Dataset` or timeseries)
 for a given radius `ε` and `norm`, using the formula:
 ```math
-C(\\epsilon) = \\frac{2}{N(N-1)}\\sum_{1 ≤ i < j ≤ N} I(||X_i - X_j|| < \\epsilon)
+C(\\epsilon) = \\frac{2}{(N-w)(N-w-1)}\\sum_{i=1}^{N}\\sum_{j=1+w+i}^{N} I(||X_i - X_j|| < \\epsilon)
 ```
 where ``N`` is its length and ``I`` gives 1 if the argument is `true`.
-Notice that `correlationsum` has ``N^2`` performance scaling.
+`w` is the Theiler window, a correction to the correlation sum that skips points
+that are temporally close with each other, with the aim of removing spurious correlations.
+
+See discussion in the book "Nonlinear Time Series Analysis", Ch. 6, for a discussion
+around `w` and choosing best values.
 
 See [`grassberger`](@ref) for more.
 """
-function correlationsum(X, ε::Real, norm = Euclidean())
+function correlationsum(X, ε::Real; norm = Euclidean(), w = 1)
     N, C = length(X), 0
     @inbounds for i in 1:N
-        C += count(evaluate(norm, X[i], X[j]) < ε for j in i+1:N)
+        C += count(evaluate(norm, X[i], X[j]) < ε for j in i+1+w:N)
     end
-    return 2C/(N*(N-1))
+    return 2C/((N-w)*(N-1-w))
 end
 
 """
-    correlationsum(X, εs::AbstractVector, norm = Euclidean()) → Cs
+    correlationsum(X, εs::AbstractVector; kwargs...) → Cs
 Calculate the correlation sum for every `ε ∈ εs` using an optimized version.
 """
-function correlationsum(X, εs::AbstractVector, norm = Euclidean())
+function correlationsum(X, εs::AbstractVector; norm = Euclidean(), w = 1)
     d = distancematrix(X, norm)
     Cs = zeros(length(εs))
     N = length(X)
     @inbounds for (k, ε) in enumerate(εs)
         for i in 1:N
-            @inbounds Cs[k] += count(d[j, i] < ε for j in i+1:N)
+            @inbounds Cs[k] += count(d[j, i] < ε for j in i+1+w:N)
         end
     end
-    return 2Cs ./ (N*(N-1))
+    return 2Cs ./ ((N-w)*(N-1-w))
 end
 
 function distancematrix(X, norm = Euclidean())
@@ -287,13 +291,13 @@ function distancematrix(X, norm = Euclidean())
 end
 
 """
-    grassberger(data, εs = estimate_boxsizes(data), norm = Euclidean())
-Use the method of Grassberger and Proccacia[^Grassberger1983] to estimate a correlation
-dimension of the given `data`.
+    grassberger(data, εs = estimate_boxsizes(data); kwargs...)
+Use the method of Grassberger and Proccacia[^Grassberger1983], and the correction by
+Theiler[^Theiler1986], to estimate the correlation dimension of the given `data`.
 
 This function does something extrely simple:
 ```julia
-cm = correlationsum(data, εs, norm)
+cm = correlationsum(data, εs; kwargs...)
 return linear_region(log.(sizes), log(cm))[2]
 ```
 i.e. it calculates [`correlationsum`](@ref) for various radii and then tries to find
@@ -301,9 +305,11 @@ a linear region in the plot of the log of the correlation sum versus -log(ε).
 See [`generalized_dim`](@ref) for a more thorough explanation.
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
+
+[^Theiler1986]: Theiler, [Spurious dimension from correlation algorithms applied to limited time-series data. Physical Review A, 34](https://doi.org/10.1103/PhysRevA.34.2427)
 """
-function grassberger(data::AbstractDataset, εs = estimate_boxsizes(data), norm = Euclidean())
-    cm = correlationsum(data, εs, norm)
+function grassberger(data::AbstractDataset, εs = estimate_boxsizes(data); kwargs...)
+    cm = correlationsum(data, εs; kwargs...)
     return linear_region(log.(εs), log.(cm))[2]
 end
 

@@ -1,3 +1,6 @@
+# 1.11
+* Theiler's correction is now possible in estimating the correlation sum (as a result, `norm` is now a keyword).
+
 # 1.10
 * Added method for estimating correlation dimension (and as a pre-requisite, also the correlation sum) based on the method of Grassberger-Proccacia.
 * Added "kernel density nearest neighbor" estimator for probabilistic description of a dataset.

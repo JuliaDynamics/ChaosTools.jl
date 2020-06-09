@@ -268,13 +268,16 @@ end
 Calculate the correlation sum for every `ε ∈ εs` using an optimized version.
 """
 function correlationsum(X, εs::AbstractVector; norm = Euclidean(), w = 1)
+    @assert issorted(εs) "Sorted εs required for optimized version."
     d = distancematrix(X, norm)
     Cs = zeros(length(εs))
     N = length(X)
-    @inbounds for (k, ε) in enumerate(εs)
+    for k in length(εs):-1:1
+        ε = εs[k]
         for i in 1:N
             @inbounds Cs[k] += count(d[j, i] < ε for j in i+1+w:N)
         end
+        Cs[k] == 0 && break
     end
     return 2Cs ./ ((N-w)*(N-1-w))
 end

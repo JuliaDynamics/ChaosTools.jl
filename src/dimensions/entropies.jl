@@ -22,11 +22,9 @@ wish to keep information about the edges of the binning as well
 as the zero elements.
 """
 function non0hist(ε::Real, data::AbstractDataset{D, T}) where {D, T<:Real}
-    # Initialize:
     mini = minima(data)
     L = length(data)
     hist = Vector{Float64}()
-
     # Reserve enough space for histogram:
     sizehint!(hist, L)
 
@@ -49,7 +47,6 @@ function non0hist(ε::Real, data::AbstractDataset{D, T}) where {D, T<:Real}
 
     # Shrink histogram capacity to fit its size:
     sizehint!(hist, length(hist))
-
     return hist
 end
 

@@ -1,11 +1,9 @@
 using Combinatorics: permutations
 
-export non0hist, genentropy, permentropy
+export non0hist, binhist, genentropy, permentropy
 
 """
-```julia
-non0hist(ε, dataset::AbstractDataset)
-```
+    non0hist(ε, dataset::AbstractDataset) → p
 Partition a dataset into tabulated intervals (boxes) of
 size `ε` and return the sum-normalized histogram in an unordered 1D form,
 discarding all zero elements and bin edge information.
@@ -13,15 +11,14 @@ discarding all zero elements and bin edge information.
 ## Performances Notes
 This method has a linearithmic time complexity (`n log(n)` for `n = length(data)`)
 and a linear space complexity (`l` for `l = dimension(data)`).
-This allows computation of entropies of high-dimensional
-datasets and with small box sizes `ε` without memory overflow.
+This allows computation of histograms of high-dimensional
+datasets and with small box sizes `ε` without memory overflow and with maximum performance.
 
-Use e.g. `fit(Histogram, ...)` from
-[`StatsBase`](http://juliastats.github.io/StatsBase.jl/stable/) if you
-wish to keep information about the edges of the binning as well
-as the zero elements.
+Use [`binhist`](@ref) to retain bin edge information.
 """
-function non0hist(ε::Real, data::AbstractDataset{D, T}) where {D, T<:Real}
+non0hist(args...) = _non0hist(args...)[1]
+
+function _non0hist(ε::Real, data::AbstractDataset{D, T}) where {D, T<:Real}
     mini = minima(data)
     L = length(data)
     hist = Vector{Float64}()
@@ -47,9 +44,19 @@ function non0hist(ε::Real, data::AbstractDataset{D, T}) where {D, T<:Real}
 
     # Shrink histogram capacity to fit its size:
     sizehint!(hist, length(hist))
-    return hist
+    return hist, bins, mini
 end
 
+"""
+    binhist(ε, data) → p, bins
+Do the same as [`non0hist`](@ref) but also return the bin edge information.
+"""
+function binhist(ε, data)
+    hist, bins, mini = _non0hist(ε, data)
+    unique!(bins)
+    b = [β .* ε .+ mini for β in bins]
+    return hist, b
+end
 
 
 """
@@ -57,9 +64,7 @@ end
 Compute the `α` order generalized (Rényi) entropy[^Rényi1960] of a dataset,
 by first partitioning it into boxes of length `ε` using [`non0hist`](@ref).
 
-```julia
-genentropy(α, p::AbstractArray; base = e)
-```
+    genentropy(α, p::AbstractArray; base = e)
 Compute the entropy of an array of probabilities `p`, assuming that `p` is
 sum-normalized.
 

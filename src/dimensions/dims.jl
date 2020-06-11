@@ -250,7 +250,7 @@ where ``N`` is its length and ``I`` gives 1 if the argument is `true`.
 `w` is the Theiler window, a correction to the correlation sum that skips points
 that are temporally close with each other, with the aim of removing spurious correlations.
 
-See discussion in the book "Nonlinear Time Series Analysis", Ch. 6, for a discussion
+See the book "Nonlinear Time Series Analysis", Ch. 6, for a discussion
 around `w` and choosing best values.
 
 See [`grassberger`](@ref) for more.
@@ -272,14 +272,25 @@ function correlationsum(X, εs::AbstractVector; norm = Euclidean(), w = 1)
     d = distancematrix(X, norm)
     Cs = zeros(length(εs))
     N = length(X)
-    for k in length(εs):-1:1
+    factor = 2/((N-w)*(N-1-w))
+    for k in length(εs)÷2:-1:1
         ε = εs[k]
         for i in 1:N
             @inbounds Cs[k] += count(d[j, i] < ε for j in i+1+w:N)
         end
         Cs[k] == 0 && break
     end
-    return 2Cs ./ ((N-w)*(N-1-w))
+    for k in (length(εs)÷2 + 1):length(εs)
+        ε = εs[k]
+        for i in 1:N
+            @inbounds Cs[k] += count(d[j, i] < ε for j in i+1+w:N)
+        end
+        if Cs[k] ≈ 1/factor
+            Cs[k:end] .= 1/factor
+            break
+        end
+    end
+    return Cs .* factor
 end
 
 function distancematrix(X, norm = Euclidean())

@@ -1,5 +1,7 @@
 # 1.12
 * `binhist` method that returns data histogram and bin edges
+* further optimization of `correlationsum` for vector `εs`.
+
 # 1.11
 * Theiler's correction is now possible in estimating the correlation sum (as a result, `norm` is now a keyword).
 

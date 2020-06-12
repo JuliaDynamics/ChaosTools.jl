@@ -60,9 +60,12 @@ end
 
 
 """
-    genentropy(α, ε, dataset::AbstractDataset; base = e)
+    genentropy(α, ε::Real, dataset::AbstractDataset; base = e)
 Compute the `α` order generalized (Rényi) entropy[^Rényi1960] of a dataset,
 by first partitioning it into boxes of length `ε` using [`non0hist`](@ref).
+
+    genentropy(α, εs::AbstractVector, dataset::AbstractDataset; base = e)
+Same as `[genentropy(α, ε, dataset) for ε in εs]`.
 
     genentropy(α, p::AbstractArray; base = e)
 Compute the entropy of an array of probabilities `p`, assuming that `p` is
@@ -93,6 +96,8 @@ function genentropy(α::Real, ε::Real, data::AbstractDataset;
 end
 genentropy(α::Real, ε::Real, matrix; base = Base.MathConstants.e) =
 genentropy(α, ε, Dataset(matrix); base = base)
+genentropy(α::Real, ε::AbstractVector, X::AbstractDataset; base = Base.MathConstants.e) =
+[genentropy(α, e, X; base = base) for e in ε]
 
 function genentropy(α::Real, p::AbstractArray{T}; base = e) where {T<:Real}
     α < 0 && throw(ArgumentError("Order of generalized entropy must be ≥ 0."))

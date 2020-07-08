@@ -1,6 +1,7 @@
 using ChaosTools
 using Test
 using StatsBase
+using Statistics
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
@@ -93,13 +94,13 @@ println("\nTesting correlation dimension...")
     es = 10 .^ range(-3, stop = 1, length = 8)
     cs = correlationsum(ts, es)
     linr, dim = linear_region(log.(es), log.(cs))
-    test_value(dim, 1.85, 2.1)
+    test_value(dim, 1.85, 2.2)
   end
 end
 
 println("\nTesting Takens' best estimate")
 @testset "Takens best" begin
-  @testeset "Henon map" begin
+  @testset "Henon map" begin
     ds = Systems.henon()
     ts = trajectory(ds, 5000)
     x = ts[:, 1]

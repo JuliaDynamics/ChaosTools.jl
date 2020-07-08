@@ -123,7 +123,7 @@ end
 export takens_best_estimate
 
 """
-    takens_best_estimate(X, εmax, metric = Maximum()) → D_C
+    takens_best_estimate(X, εmax, metric = Chebyshev()) → D_C
 Use the so-called "Takens' best estimate" [^Takens1985][^Theiler1987]
 method for estimating the correlation dimension
 `D_C` for the given dataset `X`.
@@ -145,4 +145,16 @@ for ``\\epsilon_\\text{max}`` is `std(x)/4`.
 [^Takens1985]: Takens, On the numerical determination of the dimension of an attractor, in: B.H.W. Braaksma, B.L.J.F. Takens (Eds.), Dynamical Systems and Bifurcations, in: Lecture Notes in Mathematics, Springer, Berlin, 1985, pp. 99–106.
 [^Theiler1987]: Theiler [Efficient algorithm for estimating the correlation dimension from a set of discrete points, Phys. Rev. A 36 (9) (1987)](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.36.4456)
 """
-function takens_best_estimate end
+function takens_best_estimate(X, εmax, metric = Chebyshev())
+    n, η, N = 0, zero(eltype(X)), length(X)
+    @inbounds for i in 1:N
+        for j in i+1:N
+            d = evaluate(metric, X[i], X[j])
+            if d < εmax
+                n += 1
+                η += log(d/εmax)
+            end
+        end
+    end
+    return -n/η
+end

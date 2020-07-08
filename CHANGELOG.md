@@ -1,3 +1,6 @@
+# 1.13
+* Takens' best estimate method for estimating the correlation dimension is available as `takens_best_estimate`.
+
 # 1.12
 * `binhist` method that returns data histogram and bin edges
 * further optimization of `correlationsum` for vector `εs`.

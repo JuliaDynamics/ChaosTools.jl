@@ -18,6 +18,7 @@ include("orbitdiagrams/poincare.jl")
 
 include("dimensions/entropies.jl")
 include("dimensions/dims.jl")
+include("dimensions/correlationdim.jl")
 
 include("nlts.jl")
 

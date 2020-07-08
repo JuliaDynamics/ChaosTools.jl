@@ -1,6 +1,5 @@
-
 #######################################################################################
-# Correlation-sum based
+# Original correlation sum
 #######################################################################################
 using Distances
 export kernelprob, correlationsum, grassberger
@@ -41,6 +40,7 @@ See the book "Nonlinear Time Series Analysis", Ch. 6, for a discussion
 around `w` and choosing best values.
 
 See [`grassberger`](@ref) for more.
+See also [`takens_best_estimate`](@ref).
 """
 function correlationsum(X, ε::Real; norm = Euclidean(), w = 1)
     N, C = length(X), 0
@@ -92,9 +92,9 @@ function distancematrix(X, norm = Euclidean())
 end
 
 """
-    grassberger(data, εs = estimate_boxsizes(data); kwargs...)
+    grassberger(data, εs = estimate_boxsizes(data); kwargs...) → D_C
 Use the method of Grassberger and Proccacia[^Grassberger1983], and the correction by
-Theiler[^Theiler1986], to estimate the correlation dimension of the given `data`.
+Theiler[^Theiler1986], to estimate the correlation dimension `D_C` of the given `data`.
 
 This function does something extrely simple:
 ```julia
@@ -102,8 +102,10 @@ cm = correlationsum(data, εs; kwargs...)
 return linear_region(log.(sizes), log(cm))[2]
 ```
 i.e. it calculates [`correlationsum`](@ref) for various radii and then tries to find
-a linear region in the plot of the log of the correlation sum versus -log(ε).
+a linear region in the plot of the log of the correlation sum versus log(ε).
 See [`generalized_dim`](@ref) for a more thorough explanation.
+
+See also [`takens_best_estimate`](@ref).
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 
@@ -113,3 +115,34 @@ function grassberger(data::AbstractDataset, εs = estimate_boxsizes(data); kwarg
     cm = correlationsum(data, εs; kwargs...)
     return linear_region(log.(εs), log.(cm))[2]
 end
+
+
+#######################################################################################
+# Takens' best estimate
+#######################################################################################
+export takens_best_estimate
+
+"""
+    takens_best_estimate(X, εmax, metric = Maximum()) → D_C
+Use the so-called "Takens' best estimate" [^Takens1985][^Theiler1987]
+method for estimating the correlation dimension
+`D_C` for the given dataset `X`.
+
+The original formula is
+```math
+D_C \\approx \\frac{C(\\epsilon_\\text{max})}{\\int_0^{\\epsilon_\\text{max}}(C(\\epsilon) / \\epsilon) \\, d\\epsilon}
+```
+where ``C`` is the [`correlationsum`](@ref) and ``\\epsilon_\\text{max}`` is an upper cutoff.
+Here we use the later expression
+```math
+D_C \\approx - \\frac{1}{\\eta},\\quad \\eta = \\frac{1}{N^*}\\sum_{[i, j]^*}\\log(||X_i - X_j|| / \\epsilon_\\text{max})
+```
+where the sum happens for all ``i, j`` so that ``i < j`` and ``||X_i - X_j|| < \\epsilon_\\text{max}``.
+
+If `X` comes from a delay coordinates embedding of a timseries `x`, a recommended value
+for ``\\epsilon_\\text{max}`` is `std(x)/4`.
+
+[^Takens1985]: Takens, On the numerical determination of the dimension of an attractor, in: B.H.W. Braaksma, B.L.J.F. Takens (Eds.), Dynamical Systems and Bifurcations, in: Lecture Notes in Mathematics, Springer, Berlin, 1985, pp. 99–106.
+[^Theiler1987]: Theiler [Efficient algorithm for estimating the correlation dimension from a set of discrete points, Phys. Rev. A 36 (9) (1987)](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.36.4456)
+"""
+function takens_best_estimate end

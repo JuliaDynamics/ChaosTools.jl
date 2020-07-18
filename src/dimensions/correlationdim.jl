@@ -124,7 +124,7 @@ export takens_best_estimate
 
 """
     takens_best_estimate(X, εmax, metric = Chebyshev()) → D_C
-Use the so-called "Takens' best estimate" [^Takens1985][^Theiler1987]
+Use the so-called "Takens' best estimate" [^Takens1985][^Theiler1988]
 method for estimating the correlation dimension
 `D_C` for the given dataset `X`.
 
@@ -143,7 +143,7 @@ If `X` comes from a delay coordinates embedding of a timseries `x`, a recommende
 for ``\\epsilon_\\text{max}`` is `std(x)/4`.
 
 [^Takens1985]: Takens, On the numerical determination of the dimension of an attractor, in: B.H.W. Braaksma, B.L.J.F. Takens (Eds.), Dynamical Systems and Bifurcations, in: Lecture Notes in Mathematics, Springer, Berlin, 1985, pp. 99–106.
-[^Theiler1987]: Theiler [Efficient algorithm for estimating the correlation dimension from a set of discrete points, Phys. Rev. A 36 (9) (1987)](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.36.4456)
+[^Theiler1988]: Theiler, [Lacunarity in a best estimator of fractal dimension. Physics Letters A, 133(4–5)](https://doi.org/10.1016/0375-9601(88)91016-X)
 """
 function takens_best_estimate(X, εmax, metric = Chebyshev())
     n, η, N = 0, zero(eltype(X)), length(X)

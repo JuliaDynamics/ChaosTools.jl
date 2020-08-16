@@ -1,5 +1,5 @@
 using DynamicalSystemsBase: DEFAULT_DIFFEQ_KWARGS, _get_solver
-using Roots: find_zero, A42, AlefeldPotraShi, Brent
+using Roots: find_zero, A42
 export poincaresos, produce_orbitdiagram, PlaneCrossing
 
 const ROOTS_ALG = A42()
@@ -135,7 +135,7 @@ function poincaresos(integ, planecrossing, tfinal, Ttr, j, rootkw)
         integ.t > tfinal + Ttr && break
 
         # I am now guaranteed to have `t` in negative and `tprev` in positive
-        tcross = find_zero(f, (integ.tprev, integ.t), ROOTS_ALG; rootkw...)
+        tcross = Roots.find_zero(f, (integ.tprev, integ.t), ROOTS_ALG; rootkw...)
         ucross = integ(tcross)
 
         push!(data, ucross[j])

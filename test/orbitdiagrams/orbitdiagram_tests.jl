@@ -33,12 +33,28 @@ println("\nTesting orbit diagrams...")
         ds = Systems.standardmap()
         i = 2
         parameter = 1
-        pvalues = 0:0.005:2
-        ics = [0.001rand(2) for m in 1:10]
+        pvalues = 0:0.05:2
+        ics = [0.001rand(2) for m in pvalues]
         n = 50
         Ttr = 5000
         output = orbitdiagram(ds, i, parameter, pvalues; n = n, Ttr = Ttr)
         @test length(output[1]) == n
+        output = orbitdiagram(ds, i, parameter, pvalues; n = n, Ttr = Ttr, u0=ics)
+        @test length(output[1]) == n
+    end
+
+    @testset "Vector values collection" begin
+        ds = Systems.coupledstandardmaps(4)
+        i = SVector(2, 3)
+        parameter = 1
+        pvalues = 0:0.05:2
+        ics = [0.001rand(8) for m in pvalues]
+        n = 50
+        Ttr = 500
+        output = orbitdiagram(ds, i, parameter, pvalues; n = n, Ttr = Ttr)
+        @test length(output) == length(pvalues)
+        @test length(output[1]) == n
+        @test length(output[1][1]) == 2
     end
 
     @testset "IIP" begin

@@ -36,9 +36,9 @@ function orbitdiagram(
         error("You have a 1D system and yet you gave `i=$i`. What's up with that!?")
     end
 
-    typeof(u0) <: Vector{<:AbstractVector} && @assert length(u0)==length(p)
+    typeof(u0) <: Vector{<:AbstractVector} && @assert length(u0)==length(pvalues)
     i = idxs isa Int ? idxs : SVector{length(idxs), Int}(idxs...)
-    isnothing(ulims) && i isa SVector && error("If `i` is a vector, you can't use `ulims`.")
+    !isnothing(ulims) && i isa SVector && error("If `i` is a vector, you can't use `ulims`.")
 
     output = _initialize_od_output(ds.u0, i, n, length(pvalues))
     integ = integrator(ds)
@@ -46,7 +46,6 @@ function orbitdiagram(
     ds.p[p_index] = p0
     return output
 end
-
 
 function _initialize_od_output(u::S, i::Int, n, l) where {S}
     output = [zeros(eltype(S), n) for k in 1:l]
@@ -60,7 +59,7 @@ function _fill_orbitdiagram!(output, integ, i, pvalues, p_index, n, Ttr, u0, dt,
     isavector = i isa AbstractVector
     for (j, p) in enumerate(pvalues)
         integ.p[p_index] = p
-        st = u0 isa AbstractVector ? st = u0[j] : u0
+        st = u0 isa Vector{<:AbstractVector} ? st = u0[j] : u0
         reinit!(integ, st)
         step!(integ, Ttr)
         if isavector || isnothing(ulims) # if-clause gets compiled away (I hope)

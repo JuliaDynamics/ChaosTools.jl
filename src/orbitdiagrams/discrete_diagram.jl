@@ -37,10 +37,10 @@ function orbitdiagram(
     end
 
     typeof(u0) <: Vector{<:AbstractVector} && @assert length(u0)==length(p)
+    i = idxs isa Int ? idxs : SVector{length(idxs), Int}(idxs...)
+    isnothing(ulims) && i isa SVector && error("If `i` is a vector, you can't use `ulims`.")
 
-    i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
-
-    output = _initialize_output(ds.u0, i, n, length(pvalues))
+    output = _initialize_od_output(ds.u0, i, n, length(pvalues))
     integ = integrator(ds)
     _fill_orbitdiagram!(output, integ, i, pvalues, p_index, n, Ttr, u0, dt, ulims)
     ds.p[p_index] = p0
@@ -48,30 +48,32 @@ function orbitdiagram(
 end
 
 
-function _initialize_output(u::S, i::Int, n, l) where {S}
+function _initialize_od_output(u::S, i::Int, n, l) where {S}
     output = [zeros(eltype(S), n) for k in 1:l]
 end
-function _initialize_output(u::S, i::SVector, n, l) where {S}
+function _initialize_od_output(u::S, i::SVector, n, l) where {S}
     s = u[i]
     output = [Vector{typeof(s)}(undef, n) for k in 1:l]
 end
 
 function _fill_orbitdiagram!(output, integ, i, pvalues, p_index, n, Ttr, u0, dt, ulims)
+    isavector = i isa AbstractVector
     for (j, p) in enumerate(pvalues)
         integ.p[p_index] = p
-        isavector = typeof(u0) <: Vector{<:AbstractVector}
-        st = isavector ? st = u0[j] : u0
+        st = u0 isa AbstractVector ? st = u0[j] : u0
         reinit!(integ, st)
         step!(integ, Ttr)
-        k = 0
-        @inbounds while k < n
-            step!(integ, dt)
-            if isavector || isnothing(ulims) # if-clause gets compiled away (I hope)
+        if isavector || isnothing(ulims) # if-clause gets compiled away (I hope)
+            @inbounds for k in 1:n
+                step!(integ, dt)
                 output[j][k] = integ.u[i]
-                k += 1
-            else
+            end
+        else
+            k = 1
+            while k ≤ n
+                step!(integ, dt)
                 u = integ.u[i]
-                if ulims[1] ≤ u ≤ ulims[2]
+                @inbounds if ulims[1] ≤ u ≤ ulims[2]
                     output[j][k] = u
                     k += 1
                 end

@@ -11,8 +11,6 @@ using DynamicalSystemsBase: MDI, TDI
 using DynamicalSystemsBase: stateeltype
 using DiffEqBase: AbstractODEIntegrator, u_modified!
 
-include("lyapunovs.jl")
-
 include("orbitdiagrams/discrete_diagram.jl")
 include("orbitdiagrams/poincare.jl")
 
@@ -22,9 +20,10 @@ include("dimensions/correlationdim.jl")
 
 include("nlts.jl")
 
-include("periodicity/periodic_points.jl")
-include("periodicity/period.jl")
+include("period_return/periodic_points.jl")
+include("period_return/period.jl")
 
+include("chaosdetection/lyapunovs.jl")
 include("chaosdetection/gali.jl")
 include("chaosdetection/expansionentropy.jl")
 include("chaosdetection/partially_predictable.jl")

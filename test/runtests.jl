@@ -1,23 +1,19 @@
-ti = time()
+using Test
 
-# Continuous and discrete
-include("lyapunov_exponents.jl")
-include("gali_tests.jl")
-include("partially_predictable_tests.jl")
+include("chaosdetection/lyapunov_exponents.jl")
+include("chaosdetection/gali_tests.jl")
+include("chaosdetection/partially_predictable_tests.jl")
+include("chaosdetection/01test.jl")
+include("chaosdetection/expansionentropy_tests.jl")
 
-# Continuous
-include("poincare_tests.jl")
+include("orbitdiagrams/poincare_tests.jl")
+include("orbitdiagrams/orbitdiagram_tests.jl")
 
-# Discrete
-include("orbitdiagram_tests.jl")
-include("periodicity_tests.jl")
+include("period_return/periodicity_tests.jl")
+include("period_return/period_tests.jl")
 
-# Numeric
-include("entropy_dimension.jl")
+include("dimensions/entropy_dimension.jl")
 include("nlts_tests.jl")
-include("period_tests.jl")
-include("01test.jl")
-include("expansionentropy_tests.jl")
 
 ti = time() - ti
 println("\nTest took total time of:")

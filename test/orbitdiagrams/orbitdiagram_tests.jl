@@ -16,6 +16,7 @@ println("\nTesting orbit diagrams...")
         @test output[2][1] == 0.5024875621890547
         @test output[end][1] != output[end][2] != output[end][3]
 
+        @testset "specific range" begin
         ulims = (0.0, 0.5)
         ics = zeros(length(pvalues)); ics[end] = 0.5112661
         output = orbitdiagram(
@@ -25,6 +26,7 @@ println("\nTesting orbit diagrams...")
         @test all(iszero, output[1])
         @test !all(iszero, output[end])
         @test all(≤(0.5), output[end])
+        end
     end
 
     @testset "2D" begin
@@ -50,13 +52,4 @@ println("\nTesting orbit diagrams...")
         output = orbitdiagram(ds, i, parameter, pvalues; n = n, Ttr = Ttr)
         @test length(output[1]) == n
     end
-
-    @testset "specific range" begin
-        ds = Systems.logistic()
-        ds = Systems.logistic()
-        i = 1
-        parameter = 1
-        pvalues = 2:0.01:4
-        n = 50
-        Ttr = 500
 end

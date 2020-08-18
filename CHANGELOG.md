@@ -1,3 +1,5 @@
+# 1.14
+* `orbitdiagram` now allows only collecting states within user-provided limits.
 # 1.13
 * Takens' best estimate method for estimating the correlation dimension is available as `takens_best_estimate`.
 

@@ -204,19 +204,12 @@ and thus you must use a parameter container that supports this
 
 See also [`poincaresos`](@ref), [`orbitdiagram`](@ref).
 """
-function produce_orbitdiagram(ds::CDS{IIP, S, D},
-                              plane,
-                              idxs,
-                              p_index,
-                              pvalues;
-                              tfinal::Real = 100.0,
-                              direction = -1,
-                              printparams = false,
-                              warning = true,
-                              Ttr = 0.0,
-                              u0 = get_state(ds),
-                              rootkw = (xrtol = 1e-6, atol = 1e-6),
-                              diffeq...) where {IIP, S, D}
+function produce_orbitdiagram(
+        ds::CDS{IIP, S, D}, plane, idxs, p_index, pvalues;
+        tfinal::Real = 100.0, direction = -1, printparams = false, warning = true,
+        Ttr = 0.0, u0 = get_state(ds), rootkw = (xrtol = 1e-6, atol = 1e-6),
+        diffeq...
+    ) where {IIP, S, D}
 
     i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
 

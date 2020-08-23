@@ -32,7 +32,7 @@ distance(x, u0) = norm(x-u0)
 diffeq = (;)
 
 # START
-eltype(εs) isa Real && @assert issorted(εs)
+εs isa Vector && @assert issorted(εs)
 emax = εs[end]
 
 integ = integrator(ds, u0; diffeq...)
@@ -47,8 +47,12 @@ collected_times = [typeof(tprev)[] for _ in 1:length(εs)]
 # also keeping track of the exit time and then the full loop starts!
 # Thankfully, this function is the same for discrete and continuous systems!
 
-# TODO: instead of checking whether it is inside ball, check whether distance to
-# center is minimized.
+# TODO: For continuous systems, I need two versions of this function.
+# One that works as is now, and just checks at every step.
+# then, I need another one that checks at every local minimum of the distance
+# to the center point, and at that minimum it interpolates to see if there is
+# any crossing
+
 function step_until_in_outer_ball!(integ, u0, emax)
     tprev = integ.t
     while isoutside(integ.u, u0, emax)

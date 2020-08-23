@@ -13,7 +13,7 @@ println("\nTesting orbit diagrams...")
         Ttr = 5000
         output = orbitdiagram(ds, i, parameter, pvalues; n = n, Ttr = Ttr)
         @test output[1][1] ≈ 0.5
-        @test output[2][1] == 0.5024875621890547
+        @test output[2][1] ≈ 0.502487562
         @test output[end][1] != output[end][2] != output[end][3]
 
         @testset "specific range" begin

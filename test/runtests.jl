@@ -1,5 +1,7 @@
 using Test
 
+ti = time()
+
 include("orbitdiagrams/orbitdiagram_tests.jl")
 include("orbitdiagrams/poincare_tests.jl")
 

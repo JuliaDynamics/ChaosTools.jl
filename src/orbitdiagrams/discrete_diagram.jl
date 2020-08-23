@@ -60,7 +60,6 @@ function _fill_orbitdiagram!(output, integ, i, pvalues, p_index, n, Ttr, u0, dt,
     for (j, p) in enumerate(pvalues)
         integ.p[p_index] = p
         st = (u0 isa Vector{ <: _innertype(integ.u) }) ? u0[j] : u0
-        @show st
         reinit!(integ, st)
         step!(integ, Ttr)
         if isavector || isnothing(ulims) # if-clause gets compiled away (I hope)

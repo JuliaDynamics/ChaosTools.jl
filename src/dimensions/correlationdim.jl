@@ -156,5 +156,5 @@ function takens_best_estimate(X, εmax, metric = Chebyshev())
             end
         end
     end
-    return -n/η
+    return -(n-1)/η
 end

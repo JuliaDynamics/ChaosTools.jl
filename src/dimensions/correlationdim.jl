@@ -137,13 +137,14 @@ Here we use the later expression
 ```math
 D_C \\approx - \\frac{1}{\\eta},\\quad \\eta = \\frac{1}{(N-1)^*}\\sum_{[i, j]^*}\\log(||X_i - X_j|| / \\epsilon_\\text{max})
 ```
-where the sum happens for all ``i, j`` so that ``i < j`` and ``||X_i - X_j|| < \\epsilon_\\text{max}``.
+where the sum happens for all ``i, j`` so that ``i < j`` and ``||X_i - X_j|| < \\epsilon_\\text{max}``. In the above expression, the bias in the original paper has already been corrected, as suggested in [^Borovkova1999].
 
 If `X` comes from a delay coordinates embedding of a timseries `x`, a recommended value
 for ``\\epsilon_\\text{max}`` is `std(x)/4`.
 
 [^Takens1985]: Takens, On the numerical determination of the dimension of an attractor, in: B.H.W. Braaksma, B.L.J.F. Takens (Eds.), Dynamical Systems and Bifurcations, in: Lecture Notes in Mathematics, Springer, Berlin, 1985, pp. 99–106.
 [^Theiler1988]: Theiler, [Lacunarity in a best estimator of fractal dimension. Physics Letters A, 133(4–5)](https://doi.org/10.1016/0375-9601(88)91016-X)
+[^Borovkova1999]: Borovkova et al., [Consistency of the Takens estimator for the correlation dimension. The Annals of Applied Probability, 9, 05 1999.] (https://doi.org/10.1214/aoap/1029962747)
 """
 function takens_best_estimate(X, εmax, metric = Chebyshev())
     n, η, N = 0, zero(eltype(X)), length(X)

@@ -6,6 +6,8 @@ using Distances
 # MDI = DynamicalSystemsBase.MinimalDiscreteIntegrator
 # DEI = DynamicalSystemsBase.DiffEqBase.DEIntegrator
 
+# TODO: Add example with rectangle, perhaps not clear
+
 export transit_time_statistics, transit_return
 
 """
@@ -28,13 +30,20 @@ and can even be connected with the fractal dimension of chaotic sets[^Boev2014].
 
 The current algorithm collects exit and re-entry times to given sets in the state space,
 which are centered at `u₀` (**algorithm always starts at `u₀`** and the initial state of
-`ds` is irrelevant). The sets are either balls of radius `ε ∈ εs`, *or* they are
-hyper-rectangles, if each entry of `εs` is a vector itself (where each entry of the
-inner vector denotes the size of the hyper-rectangle along each dimension).
-The reason to input multiple `ε` at once is purely for performance.
+`ds` is irrelevant). `εs` is always a `Vector`.
 
-For discrete systems, exit time is recorded immediatelly after exit of the set, and
-re-entry is recorded immediatelly on re-entry. For continuous systems high-order
+The sets around `u₀` are either nested hyper-spheres of radius `ε ∈ εs`, if each entry of
+`εs` is a real number. The sets can also be
+hyper-rectangles (boxes), if each entry of `εs` is a vector itself.
+Then, the `i`-th box is defined by the space covered by `u0 .± εs[i]` (thus the actual
+box size is `2εs[i]`!).
+
+The reason to input multiple `εs` at once is purely for performance.
+
+For discrete systems, exit time is recorded immediatelly after exitting of the set, and
+re-entry is recorded immediatelly on re-entry. This means that if an orbit needs
+1 step to leave the set and then it re-enters immediatelly on the next step, the return time
+is 1. For continuous systems high-order
 interpolation is done to accurately record the time of exactly crossing the `ε`-ball/box.
 
 [^Meiss1997]: Meiss, J. D. *Average exit time for volume-preserving maps*, Chaos (1997)](https://doi.org/10.1063/1.166245)
@@ -46,7 +55,7 @@ function transit_time_statistics(ds::DynamicalSystem, u0, εs, T; diffeq...)
     transit_time_statistics(integ, u0, εs, T)
 end
 function transit_time_statistics(integ, u0, εs, T)
-    E = length(εs); check_εs_sorting(εs)
+    E = length(εs); check_εs_sorting(εs, length(u0))
     pre_outside = fill(false, length(εs)) # `true` if outside the ball. Previous step
     cur_outside = copy(pre_outside)       # current step.
     exits = [typeof(integ.t)[] for _ in 1:length(εs)]
@@ -69,6 +78,10 @@ function transit_time_statistics(integ, u0, εs, T)
     return exits, entries
 end
 
+"""
+    transit_return(exits, entries) → transit, return
+Convert the output of [`return_time_statistics`](@ref) to the transit and return times.
+"""
 function transit_return(exits, entries)
     returns = [en .- view(ex, 1:length(en)) for (en, ex) in zip(entries, exits)]
     transits = similar(entries)
@@ -81,16 +94,17 @@ function transit_return(exits, entries)
 end
 
 ##########################################################################################
-# ε-distances & discrete version
+# ε-distances
 ##########################################################################################
-function check_εs_sorting(εs)
+function check_εs_sorting(εs, L)
     correct = if εs[1] isa Real
         issorted(εs; rev = true)
     elseif εs[1] isa AbstractVector
+        @assert all(e -> length(e) == L, εs) "Boxes must have same dimension as state space!"
         issorted(εs; by = maximum, rev = true)
     end
     if !correct
-        error("`εs` must be sorted from largest to smallest ball/box size.")
+        throw(ArgumentError("`εs` must be sorted from largest to smallest ball/box size."))
     end
     return correct
 end
@@ -116,6 +130,9 @@ function εdistance(u, u0, ε::AbstractVector)
 end
 εdistance(u, u0, ε::Real) = euclidean(u, u0) - ε
 
+##########################################################################################
+# Discrete systems
+##########################################################################################
 function first_outside_index(integ::MDI, u0, εs, E)::Int
     i = findfirst(e -> isoutside(integ.u, u0, e), εs)
     return isnothing(i) ? E+1 : i

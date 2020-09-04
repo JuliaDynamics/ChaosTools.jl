@@ -97,10 +97,48 @@ end
     @test returns[1][1] > 5
     @test mean(returns[1]) < mean(returns[2])
 end
-# ds = Systems.roessler()
-# T = 1000.0 # maximum time
-# u0 = trajectory(ds, 10; Ttr = 100)[end] # return center
-# εs = sort!([0.1, 0.01, 0.001]; rev=true)
-# diffeq = (;)
+
+@testset "Continuous Roessler" begin
+
+# %%
+ro = Systems.roessler(ones(3))
+T = 1000.0 # maximum time
+tr = trajectory(ro, 5000; Ttr = 100)
+u0 = trajectory(ro, 30; Ttr = 100)[end] # return center
+εs = sort!([1.0, 0.1, 0.01]; rev=true)
+
+# Visual guidance
+using PyPlot
+tr0 = trajectory(ro, 50, u0)
+fig, axs = subplots(1,3)
+comb = ((1, 2), (1, 3), (2, 3))
+for i in 1:3
+    j, k = comb[i]
+    ax = axs[i]
+    ax.plot(tr[:, j], tr[:, k], lw = 0.5, color = "C$(i-1)", alpha = 0.5)
+    ax.scatter([u0[j]], [u0[k]], s = 20, color = "k")
+    ax.plot(tr0[:, j], tr0[:, k], color = "k", lw = 1.0, ls = "--")
+    if eltype(εs[1]) <: Vector
+        for l in 1:length(εs)
+            rect = matplotlib.patches.Rectangle(
+            u0[[j, k]] .- εs[l][[j, k]], 2εs[l][j], 2εs[l][k],
+            alpha = 0.25, color = "k"
+            )
+            ax.add_artist(rect)
+        end
+    else
+        for l in 1:length(εs)
+            circ = matplotlib.patches.Circle(
+                u0[[j, k]], εs[l]; alpha = 0.25, color = "k"
+            )
+            ax.add_artist(circ)
+        end
+    end
+end
+
+exits, entries = transit_time_statistics(ro, u0, εs, T)
+transits, returns = transit_return(exits, entries)
+
+end
 
 end

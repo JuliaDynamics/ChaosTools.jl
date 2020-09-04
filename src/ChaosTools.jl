@@ -9,7 +9,8 @@ using Reexport
 using DynamicalSystemsBase: DS, DDS, CDS
 using DynamicalSystemsBase: MDI, TDI
 using DynamicalSystemsBase: stateeltype
-using DiffEqBase: AbstractODEIntegrator, u_modified!
+using DiffEqBase: AbstractODEIntegrator, u_modified!, DEIntegrator
+DEI = DEIntegrator
 
 include("orbitdiagrams/discrete_diagram.jl")
 include("orbitdiagrams/poincare.jl")
@@ -22,6 +23,7 @@ include("nlts.jl")
 
 include("period_return/periodic_points.jl")
 include("period_return/period.jl")
+include("period_return/transit_times_statistics.jl")
 
 include("chaosdetection/lyapunovs.jl")
 include("chaosdetection/gali.jl")

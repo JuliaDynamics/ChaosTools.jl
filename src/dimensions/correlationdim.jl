@@ -123,7 +123,7 @@ end
 export takens_best_estimate
 
 """
-    takens_best_estimate(X, εmax, metric = Chebyshev()) → D_C
+    takens_best_estimate(X, εmax, metric = Chebyshev(),εmin = 0) → D_C
 Use the so-called "Takens' best estimate" [^Takens1985][^Theiler1988]
 method for estimating the correlation dimension
 `D_C` for the given dataset `X`.
@@ -146,16 +146,47 @@ for ``\\epsilon_\\text{max}`` is `std(x)/4`.
 [^Theiler1988]: Theiler, [Lacunarity in a best estimator of fractal dimension. Physics Letters A, 133(4–5)](https://doi.org/10.1016/0375-9601(88)91016-X)
 [^Borovkova1999]: Borovkova et al., [Consistency of the Takens estimator for the correlation dimension. The Annals of Applied Probability, 9, 05 1999.](https://doi.org/10.1214/aoap/1029962747)
 """
-function takens_best_estimate(X, εmax, metric = Chebyshev())
+function takens_best_estimate(X, εmax, metric = Chebyshev(), εmin=0)
     n, η, N = 0, zero(eltype(X)), length(X)
     @inbounds for i in 1:N
         for j in i+1:N
             d = evaluate(metric, X[i], X[j])
-            if d < εmax
+            if εmin < d < εmax
                 n += 1
                 η += log(d/εmax)
             end
         end
     end
     return -(n-1)/η
+end
+
+"""
+    shirer_estimate(X, εmax, metric = Chebyshev(),εmin = 0) → D_C
+Use the extension by Shirer [^Shirer1997] of the so-called "Takens' best estimate" [^Takens1985][^Theiler1988]
+method for estimating the correlation dimension
+`D_C` for the given dataset `X`.
+
+The formula depends on `p` and `k` and is given by
+```math
+D_{pk}(ε_0) \\approx  \\frac{\\sum_{r_i<\\varepsilon_0}\\left(\\frac{r_i}{\\varepsilon_0}\\right)^p\\bigg\\vert\\ln\\left(\\frac{r_i}{\\varepsilon_0}\\right)\\bigg\\vert^{k-1}}{\\sum_{r_i<\\varepsilon_0}\\left(\\frac{r_i}{\\varepsilon_0}\\right)^p\\bigg\\vert\\ln\\left(\\frac{r_i}{\\varepsilon_0}\\right)\\bigg\\vert^{k}}-p
+```
+where the sum happens for all ``i, j`` so that ``i < j`` and ``||X_i - X_j|| < \\epsilon_\\text{max}``.
+
+
+[^Takens1985]: Takens, On the numerical determination of the dimension of an attractor, in: B.H.W. Braaksma, B.L.J.F. Takens (Eds.), Dynamical Systems and Bifurcations, in: Lecture Notes in Mathematics, Springer, Berlin, 1985, pp. 99–106.
+[^Theiler1988]: Theiler, [Lacunarity in a best estimator of fractal dimension. Physics Letters A, 133(4–5)](https://doi.org/10.1016/0375-9601(88)91016-X)
+[^Shirer1997]: Shirer et al., [Estimating the Correlation Dimension of Atmospheric Time Series. Journal of the atmospheric sciences, 54.1 (1997), pp. 211–230.](https://doi.org/10.1175/1520-0469(1997)054%3C0211:ETCDOA%3E2.0.CO;2)
+"""
+function shirer_estimate(X, εmax, p, k, metric = Chebyshev(), εmin=0)
+    n, nom, den, N = 0, zero(eltype(X)),zero(eltype(X)), length(X)
+    @inbounds for i in 1:N
+        for j in i+1:N
+            d = evaluate(metric, X[i], X[j])
+            if εmin < d < εmax
+                nom += (d/ε_max)^p * abs(log(d/εmax))^(k-1)
+                den += (d/ε_max)^p * abs(log(d/εmax))^k
+            end
+        end
+    end
+    return nom/den-p
 end

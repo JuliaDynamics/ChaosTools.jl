@@ -51,31 +51,9 @@ interpolation is done to accurately record the time of exactly crossing the `ε`
 [^Boev2014]: Boev, Vadivasova, & Anishchenko, *Poincaré recurrence statistics as an indicator of chaos synchronization*, Chaos (2014)](https://doi.org/10.1063/1.4873721)
 """
 function transit_time_statistics(ds::DynamicalSystem, u0, εs, T; diffeq...)
+    check_εs_sorting(εs, length(u0))
     integ = integrator(ds, u0; diffeq...)
     transit_time_statistics(integ, u0, εs, T)
-end
-function transit_time_statistics(integ, u0, εs, T)
-    E = length(εs); check_εs_sorting(εs, length(u0))
-    pre_outside = fill(false, length(εs)) # `true` if outside the ball. Previous step
-    cur_outside = copy(pre_outside)       # current step.
-    exits = [typeof(integ.t)[] for _ in 1:length(εs)]
-    entries = [typeof(integ.t)[] for _ in 1:length(εs)]
-
-    while integ.t < T
-        step!(integ)
-
-        # here i gives the index of the largest ε-ball that the trajectory is out of.
-        # It is guaranteed that the trajectory is thus outside all other boxes
-        i = first_outside_index(integ, u0, εs, E) # TODO: Continuous version
-        cur_outside[i:end] .= true
-        cur_outside[1:i-1] .= false
-
-        update_exit_times!(exits, i, pre_outside, cur_outside, integ)
-        update_entry_times!(entries, i, pre_outside, cur_outside, integ)
-        pre_outside .= cur_outside
-    end
-    return_times = [en .- view(ex, 1:length(en)) for (en, ex) in zip(entries, exits)]
-    return exits, entries
 end
 
 """
@@ -133,6 +111,30 @@ end
 ##########################################################################################
 # Discrete systems
 ##########################################################################################
+function transit_time_statistics(integ::MDI, u0, εs, T)
+    E = length(εs); check_εs_sorting(εs, length(u0))
+    pre_outside = fill(false, length(εs)) # `true` if outside the ball. Previous step
+    cur_outside = copy(pre_outside)       # current step.
+    exits = [typeof(integ.t)[] for _ in 1:length(εs)]
+    entries = [typeof(integ.t)[] for _ in 1:length(εs)]
+
+    while integ.t < T
+        step!(integ)
+
+        # here i gives the index of the largest ε-ball that the trajectory is out of.
+        # It is guaranteed that the trajectory is thus outside all other boxes
+        i = first_outside_index(integ, u0, εs, E) # TODO: Continuous version
+        cur_outside[i:end] .= true
+        cur_outside[1:i-1] .= false
+
+        update_exit_times!(exits, i, pre_outside, cur_outside, integ)
+        update_entry_times!(entries, i, pre_outside, cur_outside, integ)
+        pre_outside .= cur_outside
+    end
+    return_times = [en .- view(ex, 1:length(en)) for (en, ex) in zip(entries, exits)]
+    return exits, entries
+end
+
 function first_outside_index(integ::MDI, u0, εs, E)::Int
     i = findfirst(e -> isoutside(integ.u, u0, e), εs)
     return isnothing(i) ? E+1 : i
@@ -155,8 +157,3 @@ end
 ##########################################################################################
 # Continuous
 ##########################################################################################
-# TODO: For continuous systems, I need two versions of this function.
-# One that works as is now, and just checks at every step.
-# then, I need another one that checks at every local minimum of the distance
-# to the center point, and at that minimum it interpolates to see if there is
-# any crossing

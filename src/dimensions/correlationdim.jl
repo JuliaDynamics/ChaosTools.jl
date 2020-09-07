@@ -160,6 +160,8 @@ function takens_best_estimate(X, εmax, metric = Chebyshev(), εmin=0)
     return -(n-1)/η
 end
 
+export shirer_estimate
+
 """
     shirer_estimate(X, εmax, metric = Chebyshev(),εmin = 0) → D_C
 Use the extension by Shirer [^Shirer1997] of the so-called "Takens' best estimate" [^Takens1985][^Theiler1988]

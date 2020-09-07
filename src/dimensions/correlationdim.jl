@@ -163,7 +163,7 @@ end
 export shirer_estimate
 
 """
-    shirer_estimate(X, εmax, metric = Chebyshev(),εmin = 0) → D_C
+    shirer_estimate(X, εmax, p, k, metric = Chebyshev(),εmin = 0) → D_C
 Use the extension by Shirer [^Shirer1997] of the so-called "Takens' best estimate" [^Takens1985][^Theiler1988]
 method for estimating the correlation dimension
 `D_C` for the given dataset `X`.

@@ -102,9 +102,8 @@ end
 
 # %%
 ro = Systems.roessler(ones(3))
-T = 1000.0 # maximum time
 tr = trajectory(ro, 5000; Ttr = 100)
-u0 = trajectory(ro, 30; Ttr = 100)[end] # return center
+u0 = trajectory(ro, 11; Ttr = 100)[end] # return center
 εs = sort!([1.0, 0.1, 0.01]; rev=true)
 
 # Visual guidance
@@ -136,8 +135,20 @@ for i in 1:3
     end
 end
 
+T = 100000.0 # maximum time
 exits, entries = transit_time_statistics(ro, u0, εs, T)
 transits, returns = transit_return(exits, entries)
+
+@test all(issorted, exits)
+@test all(issorted, entries)
+@test length(exits[1]) > length(exits[2])
+@test length(entries[1]) > length(entries[2])
+
+# We know the average period of the Roessler system. Therefore the return times
+# cannot be possibly larger than it (because u0 is in the xy plane)
+avg_period = 6.0
+@test all(r -> r > avg_period/2, returns[1])
+
 
 end
 

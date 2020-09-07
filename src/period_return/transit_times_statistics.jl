@@ -165,24 +165,34 @@ end
 ##########################################################################################
 # Continuous
 ##########################################################################################
-using OrdinaryDiffEq: Tsit5
-using DynamicalSystemsBase.DiffEqBase: ContinuousCallback, ODEProblem, solve
+# using OrdinaryDiffEq: Tsit5
+using DynamicalSystemsBase.DiffEqBase: ODEProblem, solve
+using DynamicalSystemsBase.DiffEqBase: ContinuousCallback, CallbackSet
 
 function transit_time_statistics(ds::ContinuousDynamicalSystem, u0, εs, T;
-        alg = Tsit5(), diffeq...
+        diffeq...
     )
+    # alg = Tsit5()
+
+    error("Continuous system version is not yet ready.")
+
     eT = eltype(ds.t0)
     check_εs_sorting(εs, length(u0))
     exits = [eT[] for _ in 1:length(εs)]
     entries = [eT[] for _ in 1:length(εs)]
 
-    # Make the magic callback:
-    crossing(u, t, integ) = ChaosTools.εdistance(u, u0, εs[1])
-    negative_affect!(integ) = push!(entries[1], integ.t)
-    positive_affect!(integ) = push!(exits[1], integ.t)
-    cb = ContinuousCallback(crossing, positive_affect!, negative_affect!;
-        save_positions = (false, false)
-    )
+    # Make the magic callbacks:
+    callbacks = ContinuousCallback[]
+    for i in eachindex(εs)
+        crossing(u, t, integ) = ChaosTools.εdistance(u, u0, εs[i])
+        negative_affect!(integ) = push!(entries[i], integ.t)
+        positive_affect!(integ) = push!(exits[i], integ.t)
+        cb = ContinuousCallback(crossing, positive_affect!, negative_affect!;
+            save_positions = (false, false)
+        )
+        push!(callbacks, cb)
+    end
+    cb = CallbackSet(callbacks...)
 
     prob = ODEProblem(ds, (eT(0), eT(T)); u0 = u0)
     sol = solve(prob, alg;

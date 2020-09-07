@@ -32,7 +32,7 @@ The current algorithm collects exit and re-entry times to given sets in the stat
 which are centered at `u₀` (**algorithm always starts at `u₀`** and the initial state of
 `ds` is irrelevant). `εs` is always a `Vector`.
 
-The sets around `u₀` are either nested hyper-spheres of radius `ε ∈ εs`, if each entry of
+The sets around `u₀` are nested hyper-spheres of radius `ε ∈ εs`, if each entry of
 `εs` is a real number. The sets can also be
 hyper-rectangles (boxes), if each entry of `εs` is a vector itself.
 Then, the `i`-th box is defined by the space covered by `u0 .± εs[i]` (thus the actual
@@ -50,17 +50,15 @@ interpolation is done to accurately record the time of exactly crossing the `ε`
 
 [^Boev2014]: Boev, Vadivasova, & Anishchenko, *Poincaré recurrence statistics as an indicator of chaos synchronization*, Chaos (2014)](https://doi.org/10.1063/1.4873721)
 """
-function transit_time_statistics(ds::DynamicalSystem, u0, εs, T; diffeq...)
-    check_εs_sorting(εs, length(u0))
-    integ = integrator(ds, u0; diffeq...)
-    transit_time_statistics(integ, u0, εs, T)
-end
+function transit_time_statistics end
 
 """
     transit_return(exits, entries) → transit, return
 Convert the output of [`return_time_statistics`](@ref) to the transit and return times.
 """
 function transit_return(exits, entries)
+    # the main reason this function exists is because entry times can be one less
+    # than entry times. (otherwise you could just directly subtract)
     returns = [en .- view(ex, 1:length(en)) for (en, ex) in zip(entries, exits)]
     transits = similar(entries)
     for (j, (en, ex)) in enumerate(zip(entries, exits))
@@ -79,7 +77,12 @@ function check_εs_sorting(εs, L)
         issorted(εs; rev = true)
     elseif εs[1] isa AbstractVector
         @assert all(e -> length(e) == L, εs) "Boxes must have same dimension as state space!"
-        issorted(εs; by = maximum, rev = true)
+        for j in 1:L
+            if !issorted([εs[i][j] for i in 1:length(εs)]; rev = true)
+                return false
+            end
+        end
+        true
     end
     if !correct
         throw(ArgumentError("`εs` must be sorted from largest to smallest ball/box size."))
@@ -111,12 +114,18 @@ end
 ##########################################################################################
 # Discrete systems
 ##########################################################################################
+function transit_time_statistics(ds::DiscreteDynamicalSystem, u0, εs, T; diffeq...)
+    check_εs_sorting(εs, length(u0))
+    integ = integrator(ds, u0)
+    transit_time_statistics(integ, u0, εs, T)
+end
+
 function transit_time_statistics(integ::MDI, u0, εs, T)
-    E = length(εs); check_εs_sorting(εs, length(u0))
-    pre_outside = fill(false, length(εs)) # `true` if outside the ball. Previous step
+    E = length(εs)
+    pre_outside = fill(false, E) # `true` if outside the ball. Previous step
     cur_outside = copy(pre_outside)       # current step.
-    exits = [typeof(integ.t)[] for _ in 1:length(εs)]
-    entries = [typeof(integ.t)[] for _ in 1:length(εs)]
+    exits   = [Int[] for _ in 1:E]
+    entries = [Int[] for _ in 1:E]
 
     while integ.t < T
         step!(integ)
@@ -131,7 +140,6 @@ function transit_time_statistics(integ::MDI, u0, εs, T)
         update_entry_times!(entries, i, pre_outside, cur_outside, integ)
         pre_outside .= cur_outside
     end
-    return_times = [en .- view(ex, 1:length(en)) for (en, ex) in zip(entries, exits)]
     return exits, entries
 end
 
@@ -157,3 +165,39 @@ end
 ##########################################################################################
 # Continuous
 ##########################################################################################
+# using OrdinaryDiffEq: Tsit5
+using DynamicalSystemsBase.DiffEqBase: ODEProblem, solve
+using DynamicalSystemsBase.DiffEqBase: ContinuousCallback, CallbackSet
+
+function transit_time_statistics(ds::ContinuousDynamicalSystem, u0, εs, T;
+        diffeq...
+    )
+    # alg = Tsit5()
+
+    error("Continuous system version is not yet ready.")
+
+    eT = eltype(ds.t0)
+    check_εs_sorting(εs, length(u0))
+    exits = [eT[] for _ in 1:length(εs)]
+    entries = [eT[] for _ in 1:length(εs)]
+
+    # Make the magic callbacks:
+    callbacks = ContinuousCallback[]
+    for i in eachindex(εs)
+        crossing(u, t, integ) = ChaosTools.εdistance(u, u0, εs[i])
+        negative_affect!(integ) = push!(entries[i], integ.t)
+        positive_affect!(integ) = push!(exits[i], integ.t)
+        cb = ContinuousCallback(crossing, positive_affect!, negative_affect!;
+            save_positions = (false, false)
+        )
+        push!(callbacks, cb)
+    end
+    cb = CallbackSet(callbacks...)
+
+    prob = ODEProblem(ds, (eT(0), eT(T)); u0 = u0)
+    sol = solve(prob, alg;
+        callback=cb, save_everystep = false, dense = false,
+        save_start=false, save_end = false, diffeq...
+    )
+    return exits, entries
+end

@@ -9,7 +9,7 @@ using Reexport
 using DynamicalSystemsBase: DS, DDS, CDS
 using DynamicalSystemsBase: MDI, TDI
 using DynamicalSystemsBase: stateeltype
-using DiffEqBase: AbstractODEIntegrator, u_modified!, DEIntegrator
+using DynamicalSystemsBase.DiffEqBase: AbstractODEIntegrator, u_modified!, DEIntegrator
 DEI = DEIntegrator
 
 include("orbitdiagrams/discrete_diagram.jl")

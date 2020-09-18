@@ -145,6 +145,9 @@ the values of `D_C` where the function has fallen by 2 from its maximum, see e.g
 Because the CLT does not apply (no independent measurements), the limits are not
 neccesarily symmetric.
 
+According to [^Borovkova1999], introducing a lower cutoff `εmin` can make the
+algorithm more stable (no divergence), this option is given but defaults to zero.
+
 If `X` comes from a delay coordinates embedding of a timseries `x`, a recommended value
 for ``\\epsilon_\\text{max}`` is `std(x)/4`.
 

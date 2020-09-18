@@ -123,10 +123,10 @@ end
 export takens_best_estimate
 
 """
-    takens_best_estimate(X, εmax, metric = Chebyshev(),εmin = 0) → D_C
+    takens_best_estimate(X, εmax, metric = Chebyshev(),εmin = 0) → D_C, D_C_95u, D_C_95l
 Use the so-called "Takens' best estimate" [^Takens1985][^Theiler1988]
 method for estimating the correlation dimension
-`D_C` for the given dataset `X`.
+`D_C` and the upper (`D_C_95u`) and lower (`D_C_95l`) confidence limit for the given dataset `X`.
 
 The original formula is
 ```math
@@ -139,12 +139,19 @@ D_C \\approx - \\frac{1}{\\eta},\\quad \\eta = \\frac{1}{(N-1)^*}\\sum_{[i, j]^*
 ```
 where the sum happens for all ``i, j`` so that ``i < j`` and ``||X_i - X_j|| < \\epsilon_\\text{max}``. In the above expression, the bias in the original paper has already been corrected, as suggested in [^Borovkova1999].
 
+The confidence limits are estimated from the log-likelihood function by finding
+the values of `D_C` where the function has fallen by 2 from its maximum, see e.g.
+[^Barlow] chapter 5.3
+Because the CLT does not apply (no independent measurements), the limits are not
+neccesarily symmetric.
+
 If `X` comes from a delay coordinates embedding of a timseries `x`, a recommended value
 for ``\\epsilon_\\text{max}`` is `std(x)/4`.
 
 [^Takens1985]: Takens, On the numerical determination of the dimension of an attractor, in: B.H.W. Braaksma, B.L.J.F. Takens (Eds.), Dynamical Systems and Bifurcations, in: Lecture Notes in Mathematics, Springer, Berlin, 1985, pp. 99–106.
 [^Theiler1988]: Theiler, [Lacunarity in a best estimator of fractal dimension. Physics Letters A, 133(4–5)](https://doi.org/10.1016/0375-9601(88)91016-X)
 [^Borovkova1999]: Borovkova et al., [Consistency of the Takens estimator for the correlation dimension. The Annals of Applied Probability, 9, 05 1999.](https://doi.org/10.1214/aoap/1029962747)
+[^Barlow]: Barlow, R., Statistics - A Guide to the Use of Statistical Methods in the Physical Sciences. Vol 29. John Wiley & Sons, 1993
 """
 function takens_best_estimate(X, εmax, metric = Chebyshev(); εmin=0)
     n, η, N = 0, zero(eltype(X)), length(X)
@@ -175,37 +182,4 @@ function takens_best_estimate(X, εmax, metric = Chebyshev(); εmin=0)
     α95l = α - α_b + mx
 
     return α, α95u, α95l
-end
-
-export shirer_estimate
-
-"""
-    shirer_estimate(X, εmax, p, k, metric = Chebyshev(),εmin = 0) → D_C
-Use the extension by Shirer [^Shirer1997] of the so-called "Takens' best estimate" [^Takens1985][^Theiler1988]
-method for estimating the correlation dimension
-`D_C` for the given dataset `X`.
-
-The formula depends on `p` and `k` and is given by
-```math
-D_{pk}(ε_0) \\approx  \\frac{\\sum_{r_i<\\varepsilon_0}\\left(\\frac{r_i}{\\varepsilon_0}\\right)^p\\bigg\\vert\\ln\\left(\\frac{r_i}{\\varepsilon_0}\\right)\\bigg\\vert^{k-1}}{\\sum_{r_i<\\varepsilon_0}\\left(\\frac{r_i}{\\varepsilon_0}\\right)^p\\bigg\\vert\\ln\\left(\\frac{r_i}{\\varepsilon_0}\\right)\\bigg\\vert^{k}}-p
-```
-where the sum happens for all ``i, j`` so that ``i < j`` and ``||X_i - X_j|| < \\epsilon_\\text{max}``.
-
-
-[^Takens1985]: Takens, On the numerical determination of the dimension of an attractor, in: B.H.W. Braaksma, B.L.J.F. Takens (Eds.), Dynamical Systems and Bifurcations, in: Lecture Notes in Mathematics, Springer, Berlin, 1985, pp. 99–106.
-[^Theiler1988]: Theiler, [Lacunarity in a best estimator of fractal dimension. Physics Letters A, 133(4–5)](https://doi.org/10.1016/0375-9601(88)91016-X)
-[^Shirer1997]: Shirer et al., [Estimating the Correlation Dimension of Atmospheric Time Series. Journal of the atmospheric sciences, 54.1 (1997), pp. 211–230.](https://doi.org/10.1175/1520-0469(1997)054%3C0211:ETCDOA%3E2.0.CO;2)
-"""
-function shirer_estimate(X, εmax, p, k, metric = Chebyshev(), εmin=0)
-    n, nom, den, N = 0, zero(eltype(X)),zero(eltype(X)), length(X)
-    @inbounds for i in 1:N
-        for j in i+1:N
-            d = evaluate(metric, X[i], X[j])
-            if εmin < d < εmax
-                nom += (d/εmax)^p * abs(log(d/εmax))^(k-1)
-                den += (d/εmax)^p * abs(log(d/εmax))^k
-            end
-        end
-    end
-    return nom/den-p
 end

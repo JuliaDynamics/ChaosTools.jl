@@ -1,7 +1,7 @@
 #######################################################################################
 # Original correlation sum
 #######################################################################################
-using Distances
+using Distances, Roots
 export kernelprob, correlationsum, grassberger
 
 """
@@ -146,7 +146,7 @@ for ``\\epsilon_\\text{max}`` is `std(x)/4`.
 [^Theiler1988]: Theiler, [Lacunarity in a best estimator of fractal dimension. Physics Letters A, 133(4–5)](https://doi.org/10.1016/0375-9601(88)91016-X)
 [^Borovkova1999]: Borovkova et al., [Consistency of the Takens estimator for the correlation dimension. The Annals of Applied Probability, 9, 05 1999.](https://doi.org/10.1214/aoap/1029962747)
 """
-function takens_best_estimate(X, εmax, metric = Chebyshev(), εmin=0)
+function takens_best_estimate(X, εmax, metric = Chebyshev(); εmin=0)
     n, η, N = 0, zero(eltype(X)), length(X)
     @inbounds for i in 1:N
         for j in i+1:N
@@ -157,7 +157,24 @@ function takens_best_estimate(X, εmax, metric = Chebyshev(), εmin=0)
             end
         end
     end
-    return -(n-1)/η
+    # bias-corrected version (log-likelihood function shifted on x-axis)
+    α = -(n-1)/η
+    # biased version (maximum of original log-likelihood function)
+    α_b = -n/η
+    # value of maximum of original log-likelihood function
+    mxl = n*log.(α_b) .+ α_b * η
+    # at the 95%-confidence interval, the log-l function has dropped by 2
+    # -> log_l(x) - mxl + 2 = 0
+    # this is a result of the invariance of the MLE, a really nice property
+    # THIS IS NOT GOING TO BE PERFECTLY SYMMETRIC, AS THE CLT DOES NOT APPLY!
+    mn, mx = fzeros(x-> n * log.(x) .+ η * x .- mxl .+2 , 0,2*α)
+
+    # Since the bias-correction is just a shift of the log-l function on the
+    # x-axis, we can easily shift the confidence limits by the bias α-α_b
+    α95u = α - α_b + mn
+    α95l = α - α_b + mx
+
+    return α, α95u, α95l
 end
 
 export shirer_estimate
@@ -185,8 +202,8 @@ function shirer_estimate(X, εmax, p, k, metric = Chebyshev(), εmin=0)
         for j in i+1:N
             d = evaluate(metric, X[i], X[j])
             if εmin < d < εmax
-                nom += (d/ε_max)^p * abs(log(d/εmax))^(k-1)
-                den += (d/ε_max)^p * abs(log(d/εmax))^k
+                nom += (d/εmax)^p * abs(log(d/εmax))^(k-1)
+                den += (d/εmax)^p * abs(log(d/εmax))^k
             end
         end
     end

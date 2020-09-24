@@ -180,7 +180,7 @@ function exit_entry_times(ds::ContinuousDynamicalSystem, u0, εs, T;
     exits = [eT[] for _ in 1:length(εs)]
     entries = [eT[] for _ in 1:length(εs)]
 
-    # Make the magic callbacks:
+    # This callback fails, see https://github.com/SciML/DiffEqBase.jl/issues/580
     callbacks = ContinuousCallback[]
     for i in eachindex(εs)
         crossing(u, t, integ) = ChaosTools.εdistance(u, u0, εs[i])
@@ -192,6 +192,14 @@ function exit_entry_times(ds::ContinuousDynamicalSystem, u0, εs, T;
         push!(callbacks, cb)
     end
     cb = CallbackSet(callbacks...)
+
+    # This callback works, but it is only for 1 nesting level
+    crossing(u, t, integ) = ChaosTools.εdistance(u, u0, εs[1])
+    negative_affect!(integ) = push!(entries[1], integ.t)
+    positive_affect!(integ) = push!(exits[1], integ.t)
+    cb = ContinuousCallback(crossing, positive_affect!, negative_affect!;
+        save_positions = (false, false)
+    )
 
     prob = ODEProblem(ds, (eT(0), eT(T)); u0 = u0)
     sol = solve(prob, alg;

@@ -1,3 +1,7 @@
+# 1.15
+* New function `transit_time_statistics` that allows computing return times and transit times to subsets of the state space. (Currently for discrete systems only)
+* Moved support to Julia 1.5+.
+
 # 1.14
 * `orbitdiagram` now allows only collecting states within user-provided limits.
 # 1.13

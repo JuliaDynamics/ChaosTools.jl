@@ -64,7 +64,11 @@ the meaning of `u₀` and `εs`.
 For continuous systems the special keyword `interp_points=10` controls how many
 interpolations should be done to find a crossing of the `ε`-sets, see
 [`ContinuousCallbac`](https://diffeq.sciml.ai/latest/features/callback_functions/#DiffEqBase.ContinuousCallback)
-for more details. All other keywords are propagated to `solve` like in [`trajectory`](@ref).
+for more details. It is strongly recommended to increase `interp_points` and decrease
+`dtmax` for small `ε`. There is no performance optimization in this version for
+nested `ε`-sets, however for a consistent interface always give `εs` as a vector of
+`ε`, even if you only need 1 `ε` with high `interp_points` and small `dtmax`.
+All other `diffeq...` keywords are propagated like in [`trajectory`](@ref).
 """
 function mean_return_times end
 

@@ -8,7 +8,7 @@ using Distances
 
 # TODO: Add example with rectangle, perhaps not clear
 
-export exit_entry_times, transit_return
+export exit_entry_times, transit_return, mean_return_times
 
 @deprecate transit_time_statistics entry_exit_times
 
@@ -50,6 +50,19 @@ interpolation is done to accurately record the time of exactly crossing the `ε`
 [^Boev2014]: Boev, Vadivasova, & Anishchenko, *Poincaré recurrence statistics as an indicator of chaos synchronization*, Chaos (2014)](https://doi.org/10.1063/1.4873721)
 """
 function exit_entry_times end
+
+
+"""
+    mean_return_times(ds::DynamicalSystem, u₀, εs, T; diffeq...) → τ, c
+Return them mean return times to subsets of the state space of `ds` defined by `u₀, εs`
+as well as the amount of returns `c`.
+The `ds` is evolved for a maximum of `T` time.
+
+This function behaves similarly to [`exit_entry_times`](@ref) and thus see that one for
+the meaning of `u₀` and `εs`.
+`mean_return_times` works also for continuous systems, but is much, much less performant.
+"""
+function mean_return_times end
 
 """
     transit_return(exits, entries) → transit, return
@@ -154,8 +167,7 @@ function update_exit_times!(exits, i, pre_outside, cur_outside, integ::MDI)
 end
 
 function update_entry_times!(entries, i, pre_outside, cur_outside, integ::MDI)
-    # TODO: Can I use `i` here? I think I can do `1:i`. I can test that!
-    @inbounds for j in 1:length(pre_outside)
+    @inbounds for j in 1:i-1
         pre_outside[j] && !cur_outside[j] && push!(entries[j], integ.t)
     end
 end
@@ -166,7 +178,7 @@ function mean_return_times(ds::DiscreteDynamicalSystem, u0, εs, T; diffeq...)
     mean_return_times(integ, u0, εs, T)
 end
 
-function exit_entry_times(integ::MDI, u0, εs, T)
+function mean_return_times(integ::MDI, u0, εs, T)
     E = length(εs)
     pre_outside = fill(false, E)      # `true` if outside the set. Previous step.
     cur_outside = copy(pre_outside)   # `true` if outside the set. Current step.
@@ -182,11 +194,11 @@ function exit_entry_times(integ::MDI, u0, εs, T)
         cur_outside[1:i-1] .= false
 
         update_exit_times_single!(exits, i, pre_outside, cur_outside, integ)
-        update_entry_times_single!(entries, i, pre_outside, cur_outside, integ)
+        update_entries_and_returns!(entries, i, pre_outside, cur_outside, integ)
         update_returns!(mrt, counts, exits, entries, i)
         pre_outside .= cur_outside
     end
-    return exits, entries
+    return mrt ./ counts, counts
 end
 
 function update_exit_times_single!(exits, i, pre_outside, cur_outside, integ::MDI)
@@ -195,29 +207,19 @@ function update_exit_times_single!(exits, i, pre_outside, cur_outside, integ::MD
     end
 end
 
-function update_entry_times!(entries, i, pre_outside, cur_outside, integ::MDI)
-    # TODO: Can I use `i` here?
-    @inbounds for j in 1:length(pre_outside)
-        pre_outside[j] && !cur_outside[j] && (entries[j] = integ.t)
-    end
-end
-
-function update_returns!(mrt, counts, exits, entries, i)
-    for j in 1:i-1
-        if entries[j] > exits[j]
+function update_entries_and_returns!(entries, i, pre_outside, cur_outside, integ::MDI)
+    @inbounds for j in 1:i-1 # only when inside the set it makes sense to calculate returns
+        if pre_outside[j] && !cur_outside[j] # we just entered the set
+            entries[j] = integ.t
             mrt[j] += entries[j] - exits[j]
             counts[j] += 1
         end
     end
 end
 
-
-
-
 ##########################################################################################
 # Continuous
 ##########################################################################################
-# using OrdinaryDiffEq: Tsit5
 using DynamicalSystemsBase.DiffEqBase: ODEProblem, solve
 using DynamicalSystemsBase.DiffEqBase: ContinuousCallback, CallbackSet
 
@@ -234,17 +236,17 @@ function exit_entry_times(ds::ContinuousDynamicalSystem, u0, εs, T;
     entries = [eT[] for _ in 1:length(εs)]
 
     # This callback fails, see https://github.com/SciML/DiffEqBase.jl/issues/580
-    callbacks = ContinuousCallback[]
-    for i in eachindex(εs)
-        crossing(u, t, integ) = ChaosTools.εdistance(u, u0, εs[i])
-        negative_affect!(integ) = push!(entries[i], integ.t)
-        positive_affect!(integ) = push!(exits[i], integ.t)
-        cb = ContinuousCallback(crossing, positive_affect!, negative_affect!;
-            save_positions = (false, false)
-        )
-        push!(callbacks, cb)
-    end
-    cb = CallbackSet(callbacks...)
+    # callbacks = ContinuousCallback[]
+    # for i in eachindex(εs)
+    #     crossing(u, t, integ) = ChaosTools.εdistance(u, u0, εs[i])
+    #     negative_affect!(integ) = push!(entries[i], integ.t)
+    #     positive_affect!(integ) = push!(exits[i], integ.t)
+    #     cb = ContinuousCallback(crossing, positive_affect!, negative_affect!;
+    #         save_positions = (false, false)
+    #     )
+    #     push!(callbacks, cb)
+    # end
+    # cb = CallbackSet(callbacks...)
 
     # This callback works, but it is only for 1 nesting level
     crossing(u, t, integ) = ChaosTools.εdistance(u, u0, εs[1])

@@ -8,21 +8,20 @@ using Distances
 
 # TODO: Add example with rectangle, perhaps not clear
 
-export transit_time_statistics, transit_return
+export exit_entry_times, transit_return
+
+@deprecate transit_time_statistics entry_exit_times
 
 """
-    transit_time_statistics(ds::DynamicalSystem, u₀, εs, T; diffeq...) → exits, entries
-Collect transit time statistics for a ball/box centered at `u₀` with radii `εs` (see below),
-in the state space of the given dynamical system.
+    exit_entry_times(dds, u₀, εs, T) → exits, entries
+Collect exit and entry times for a ball/box centered at `u₀` with radii `εs` (see below),
+in the state space of the given discrete dynamical system (function not yet available
+for continuous systems).
 Return the exit and (re-)entry return times to the set(s), where each of these is a vector
 containing all collected times for the respective `ε`-radius set, for `ε ∈ εs`.
 
-Use `transit_return(exits, entries)` to transform the result to transit and return time
-statistics instead.
-
-## Keywords
-* `diffeq...`: All keywords are propagated to the integrators of DifferentialEquations.jl
-  for continuous systems (discrete have no keywords).
+Use `transit_return(exits, entries)` to transform the output into transit and return
+times, and see also [`mean_return_time`](@ref) for both continuous and discrete systems.
 
 ## Description
 Transit time statistics are important for the transport properties of dynamical systems[^Meiss1997]
@@ -50,7 +49,7 @@ interpolation is done to accurately record the time of exactly crossing the `ε`
 
 [^Boev2014]: Boev, Vadivasova, & Anishchenko, *Poincaré recurrence statistics as an indicator of chaos synchronization*, Chaos (2014)](https://doi.org/10.1063/1.4873721)
 """
-function transit_time_statistics end
+function exit_entry_times end
 
 """
     transit_return(exits, entries) → transit, return
@@ -114,13 +113,13 @@ end
 ##########################################################################################
 # Discrete systems
 ##########################################################################################
-function transit_time_statistics(ds::DiscreteDynamicalSystem, u0, εs, T; diffeq...)
+function exit_entry_times(ds::DiscreteDynamicalSystem, u0, εs, T; diffeq...)
     check_εs_sorting(εs, length(u0))
     integ = integrator(ds, u0)
-    transit_time_statistics(integ, u0, εs, T)
+    exit_entry_times(integ, u0, εs, T)
 end
 
-function transit_time_statistics(integ::MDI, u0, εs, T)
+function exit_entry_times(integ::MDI, u0, εs, T)
     E = length(εs)
     pre_outside = fill(false, E) # `true` if outside the ball. Previous step
     cur_outside = copy(pre_outside)       # current step.
@@ -169,7 +168,7 @@ end
 using DynamicalSystemsBase.DiffEqBase: ODEProblem, solve
 using DynamicalSystemsBase.DiffEqBase: ContinuousCallback, CallbackSet
 
-function transit_time_statistics(ds::ContinuousDynamicalSystem, u0, εs, T;
+function exit_entry_times(ds::ContinuousDynamicalSystem, u0, εs, T;
         diffeq...
     )
     # alg = Tsit5()

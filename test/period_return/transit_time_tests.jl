@@ -15,7 +15,7 @@ println("\nTesting transit time statistics...")
     # the first point. Therefore:
     # all first return times must be 1, and all second return times must be 2,
     # and 3rd must be same as second (because it doesn't matter how close are)
-    exits, entries = transit_time_statistics(ds, u0, εs, T)
+    exits, entries = exit_entry_times(ds, u0, εs, T)
     transits, returns = transit_return(exits, entries)
 
     @test all(x -> length(x) > 5, exits)
@@ -32,7 +32,7 @@ println("\nTesting transit time statistics...")
     # quasiperiodic around period 3:
     u0 = SVector(0.877, 1.565)
     εs = sort!([4.0, 0.5, 0.1]; rev=true)
-    exits, entries = transit_time_statistics(ds, u0, εs, T)
+    exits, entries = exit_entry_times(ds, u0, εs, T)
     transits, returns = transit_return(exits, entries)
 
     @test all(issorted, exits)
@@ -88,7 +88,7 @@ end
     #     end
     # end
 
-    exits, entries = transit_time_statistics(to, u0, εs, 10000)
+    exits, entries = exit_entry_times(to, u0, εs, 10000)
     transits, returns = transit_return(exits, entries)
 
     @test all(issorted, exits)
@@ -136,7 +136,7 @@ end
 # end
 #
 # T = 100000.0 # maximum time
-# exits, entries = transit_time_statistics(ro, u0, εs, T)
+# exits, entries = exit_entry_times(ro, u0, εs, T)
 # transits, returns = transit_return(exits, entries)
 #
 # @test all(issorted, exits)

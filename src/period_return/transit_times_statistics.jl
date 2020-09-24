@@ -61,6 +61,10 @@ The `ds` is evolved for a maximum of `T` time.
 This function behaves similarly to [`exit_entry_times`](@ref) and thus see that one for
 the meaning of `u₀` and `εs`.
 `mean_return_times` works also for continuous systems, but is much, much less performant.
+For continuous systems the special keyword `interp_points=10` controls how many
+interpolations should be done to find a crossing of the `ε`-sets, see
+[`ContinuousCallbac`](https://diffeq.sciml.ai/latest/features/callback_functions/#DiffEqBase.ContinuousCallback)
+for more details. All other keywords are propagated to `solve` like in [`trajectory`](@ref).
 """
 function mean_return_times end
 
@@ -265,4 +269,48 @@ function exit_entry_times(ds::ContinuousDynamicalSystem, u0, εs, T;
         save_start=false, save_end = false, diffeq...
     )
     return exits, entries
+end
+
+function mean_return_times(ds::ContinuousDynamicalSystem, u0, εs, T; diffeq...)
+    if !haskey(diffeq, :alg) || diffeq[:alg] == DynamicalSystemsBase.DEFAULT_SOLVER
+        error(
+        "Please use a solver that supports callbacks using `OrdinaryDiffEq`. "*
+        "For example `using OrdinaryDiffEq: Tsit5; mean_return_times(...; alg = Tsit5())`."
+        )
+    end
+
+    eT = eltype(ds.t0)
+    check_εs_sorting(εs, length(u0))
+    c = zeros(Int, length(εs)); τ = zeros(eT, length(εs))
+    for i ∈ 1:length(εs)
+        τ[i], c[i] = mean_return_times_single(ds, u0, εs[i], T; diffeq...)
+    end
+    return τ, c
+end
+
+function mean_return_times_single(
+        ds::ContinuousDynamicalSystem, u0, ε, T;
+        interp_points=10, diffeq...
+    )
+
+    eT = eltype(ds.t0)
+    eeτc = zeros(eT, 4) # exit, entry, τ and count are the respective entries
+
+    crossing(u, t, integ) = ChaosTools.εdistance(u, u0, ε)
+    positive_affect!(integ) = (eeτc[1] = integ.t)
+    function negative_affect!(integ)
+        eeτc[2] = integ.t
+        eeτc[3] += eeτc[2] - eeτc[1]
+        eeτc[4] += 1
+    end
+    cb = ContinuousCallback(crossing, positive_affect!, negative_affect!;
+        save_positions = (false, false), interp_points,
+    )
+
+    prob = ODEProblem(ds, (eT(0), eT(T)); u0 = u0)
+    sol = solve(prob;
+        callback=cb, save_everystep = false, dense = false,
+        save_start=false, save_end = false, diffeq...
+    )
+    return eeτc[3]/eeτc[4], round(Int, eeτc[4])
 end

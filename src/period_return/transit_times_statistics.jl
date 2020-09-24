@@ -193,24 +193,27 @@ function mean_return_times(integ::MDI, u0, εs, T)
         cur_outside[i:end] .= true
         cur_outside[1:i-1] .= false
 
-        update_exit_times_single!(exits, i, pre_outside, cur_outside, integ)
-        update_entries_and_returns!(entries, i, pre_outside, cur_outside, integ)
-        update_returns!(mrt, counts, exits, entries, i)
+        update_exit_times_single!(exits, i, pre_outside, cur_outside, integ.t)
+        update_entries_and_returns!(
+            mrt, counts, entries, exits, i, pre_outside, cur_outside, integ.t
+        )
         pre_outside .= cur_outside
     end
     return mrt ./ counts, counts
 end
 
-function update_exit_times_single!(exits, i, pre_outside, cur_outside, integ::MDI)
+function update_exit_times_single!(exits, i, pre_outside, cur_outside, t)
     @inbounds for j in i:length(pre_outside)
-        cur_outside[j] && !pre_outside[j] && (exits[j] = integ.t)
+        cur_outside[j] && !pre_outside[j] && (exits[j] = t)
     end
 end
 
-function update_entries_and_returns!(entries, i, pre_outside, cur_outside, integ::MDI)
+function update_entries_and_returns!(
+        mrt, counts, entries, exits, i, pre_outside, cur_outside, t
+    )
     @inbounds for j in 1:i-1 # only when inside the set it makes sense to calculate returns
         if pre_outside[j] && !cur_outside[j] # we just entered the set
-            entries[j] = integ.t
+            entries[j] = t
             mrt[j] += entries[j] - exits[j]
             counts[j] += 1
         end

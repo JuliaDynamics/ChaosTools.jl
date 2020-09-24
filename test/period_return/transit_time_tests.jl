@@ -29,7 +29,12 @@ transits, returns = transit_return(exits, entries)
 @test all(isequal(2), returns[2])
 @test returns[2] == returns[3]
 
-# quasiperiodic around period 3:
+τ, c = mean_return_times(ds, u0, εs, T)
+@test τ == mean.(returns)
+@test length(unique(c)) == 1
+@test c[1] == T÷3 # should return exactly 1 every 3 steps.
+
+### quasiperiodic around period 3:
 u0 = SVector(0.877, 1.565)
 εs = sort!([4.0, 0.5, 0.1]; rev=true)
 exits, entries = exit_entry_times(ds, u0, εs, T)
@@ -55,9 +60,17 @@ transits, returns = transit_return(exits, entries)
 @test any(>(3), returns[3])
 @test all(isequal(1), transits[3]) # still need only one step to exit
 
+τ, c = mean_return_times(ds, u0, εs, T)
+@test τ == mean.(returns)
+@test length(unique(c)) == 2
+@test c[1] == T÷3
+@test c[2] == T÷3
+@test c[3] < T÷3
+
 end
 
 @testset "Towel map (boxes)" begin
+
 to = Systems.towel()
 tr = trajectory(to, 5000; Ttr = 10)
 u0 = tr[3000]
@@ -97,6 +110,11 @@ transits, returns = transit_return(exits, entries)
 @test length(exits[1]) > length(exits[2])
 @test returns[1][1] > 5
 @test mean(returns[1]) < mean(returns[2])
+
+τ, c = mean_return_times(to, u0, εs, T)
+@test τ == mean.(returns)
+@test c[1] > c[2] > 0
+
 end
 #
 # @testset "Continuous Roessler" begin

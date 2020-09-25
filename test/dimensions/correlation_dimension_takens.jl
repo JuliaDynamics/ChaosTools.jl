@@ -10,7 +10,7 @@ println("\nTesting Takens' best estimate")
     ts = trajectory(ds, 5000)
     x = ts[:, 1]
     X = embed(x, 2, 1)
-    D_C = takens_best_estimate(X, std(x)/4)
+    D_C, D_C_95u, D_C_95l = takens_best_estimate(X, std(x)/4)
     @test 1.15 < D_C < 1.25
   end
   @testset "Lorenz System" begin
@@ -19,7 +19,7 @@ println("\nTesting Takens' best estimate")
     x = tr[:, 1]
     τ = estimate_delay(x, "mi_min", 1:20)
     X = embed(x, 4, τ)
-    D_C = takens_best_estimate(X, std(x)/4)
+    D_C, D_C_95u, D_C_95l = takens_best_estimate(X, std(x)/4)
     @test 1.85 < D_C < 2.1
   end
 end

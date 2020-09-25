@@ -299,13 +299,34 @@ function mean_return_times_single(
 
     eT = eltype(ds.t0)
     eeτc = zeros(eT, 4) # exit, entry, τ and count are the respective entries
+    isoutside = Ref(false)
 
     crossing(u, t, integ) = ChaosTools.εdistance(u, u0, ε)
-    positive_affect!(integ) = (eeτc[1] = integ.t)
+    function positive_affect!(integ)
+        println("Positive affect (crossing out) at time $(integ.t) and state:")
+        println(integ.u)
+        if isoutside[]
+            return
+        else
+            # When crossing ε-set outwards, outside becomes true
+            isoutside[] = true
+            eeτc[1] = integ.t
+            return
+        end
+    end
     function negative_affect!(integ)
-        eeτc[2] = integ.t
-        eeτc[3] += eeτc[2] - eeτc[1]
-        eeτc[4] += 1
+        println("Negative affect (crossing in) at time $(integ.t) and state:")
+        println(integ.u)
+        # we have crossed the ε-set, but let's check whether we were already inside
+        if isoutside[]
+            isoutside[] = false
+            eeτc[2] = integ.t
+            eeτc[3] += eeτc[2] - eeτc[1]
+            eeτc[4] += 1
+            return
+        else
+            return
+        end
     end
     cb = ContinuousCallback(crossing, positive_affect!, negative_affect!;
         save_positions = (false, false), interp_points,

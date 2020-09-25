@@ -111,17 +111,18 @@ transits, returns = transit_return(exits, entries)
 @test returns[1][1] > 5
 @test mean(returns[1]) < mean(returns[2])
 
-τ, c = mean_return_times(to, u0, εs, T)
+τ, c = mean_return_times(to, u0, εs, 10000)
 @test τ == mean.(returns)
 @test c[1] > c[2] > 0
 
 end
 #
 @testset "Continuous Roessler" begin
-using OrdinaryDiffEq: Tsit5
-alg = Tsit5()
-
 # %%
+using ChaosTools
+# using OrdinaryDiffEq: Tsit5
+alg = DynamicalSystemsBase.DEFAULT_SOLVER
+
 ro = Systems.roessler(ones(3))
 tr = trajectory(ro, 5000; Ttr = 100, alg)
 u0 = trajectory(ro, 11; Ttr = 100, alg)[end] # return center
@@ -130,15 +131,16 @@ avg_period = 6.0
 
 # # Visual guidance
 # using PyPlot
-# tr = trajectory(ro, 5000, u0; alg, dtmax = 0.01)
-# tr0 = trajectory(ro, avg_period, u0; alg, dtmax = 0.01)
-# tr2 = trajectory(ro, 3avg_period, u0; alg, dtmax = 0.01)
+# tr = trajectory(ro, 5000, u0; alg)
+# tr0 = trajectory(ro, avg_period, u0; alg)
+# tr2 = trajectory(ro, 3avg_period, u0; alg)
 # fig, axs = subplots(1,3)
 # comb = ((1, 2), (1, 3), (2, 3))
 # for i in 1:3
 #     j, k = comb[i]
 #     ax = axs[i]
-#     ax.plot(tr[:, j], tr[:, k], lw = 2.0, color = "C$(i-1)", alpha = 0.5, marker = "o", ms = 2)
+#     # ax.plot(tr[:, j], tr[:, k], lw = 2.0, color = "C$(i-1)", alpha = 0.5, marker = "o", ms = 2)
+#     ax.plot(tr[:, j], tr[:, k], lw = 2.0, color = "C$(i-1)")
 #     ax.scatter([u0[j]], [u0[k]], s = 20, color = "k")
 #     ax.plot(tr2[:, j], tr2[:, k], color = "C4", lw = 1.0, ls = "--")
 #     ax.plot(tr0[:, j], tr0[:, k], color = "k", lw = 1.0, ls = "--")
@@ -164,15 +166,27 @@ avg_period = 6.0
 # We know the average period of the Roessler system. Therefore the return times
 # cannot be possibly smaller than it (because u0 is in the xy plane)
 # We also know (from the plot) that the first returns after around 3 periods.
-# We aaaalso know (by zooming in the plot) that the innermost ball is recurred exactly once
+# We aaaalso know (by zooming in the plot) that the innermost ball is recurred exactly twice,
+# however one of the two crossings is grazing and thus likely to not be spotted by the
+# algorithm
+τ, c = mean_return_times(ro, u0, εs, 3avg_period; alg, interp_points=20)
+@test c[1] == 1
+@test c[2] == c[3] == 0
+@test 2avg_period < τ[1] < 3avg_period
 
-# τ, c = mean_return_times(ro, u0, εs, 5000.0; alg, interp_points=20, dtmax = 0.01)
-
-
-τ, c = mean_return_times(ro, u0, [εs[end]], 5000.0; alg, interp_points=20, dtmax = 0.01, maxiters = 1e30)
+τ, c = mean_return_times(ro, u0, εs, 5000.0; alg, interp_points=20)
 @test all(τ .> avg_period/2)
+@test 0 < c[3] ≤ 2
 
-#
-# end
+x = sort!(MathConstants.e .^ (-4:0.5:-1); rev = true)
+τ, c = mean_return_times(ro, u0, x, 50000.0; interp_points=30)
 
+# figure()
+# plot(log.(x), log.(τ); marker ="o")
+
+# the slope should approximate fractal dimension
+d = -ChaosTools.slope(log.(x), log.(τ))
+@test 1.8 < d < 2.2
+
+end
 end

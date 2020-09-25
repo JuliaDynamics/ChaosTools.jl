@@ -172,12 +172,12 @@ function takens_best_estimate(X, εmax, metric = Chebyshev(); εmin=0)
     # biased version (maximum of original log-likelihood function)
     α_b = -n/η
     # value of maximum of original log-likelihood function
-    mxl = n*log.(α_b) .+ α_b * η
+    mxl = n*log(α_b) + α_b * η
     # at the 95%-confidence interval, the log-l function has dropped by 2
     # -> log_l(x) - mxl + 2 = 0
     # this is a result of the invariance of the MLE, a really nice property
-    # THIS IS NOT GOING TO BE PERFECTLY SYMMETRIC, AS THE CLT DOES NOT APPLY!
-    mn, mx = fzeros(x-> n * log.(x) .+ η * x .- mxl .+2 , 0,2*α)
+    # these limits are not going to be perfectly symmetric (CLT does not apply)
+    mn, mx = fzeros(x-> n * log(x) + η * x - mxl +2 , 0,2*α)
 
     # Since the bias-correction is just a shift of the log-l function on the
     # x-axis, we can easily shift the confidence limits by the bias α-α_b

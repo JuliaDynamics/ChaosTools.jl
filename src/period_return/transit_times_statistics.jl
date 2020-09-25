@@ -129,7 +129,19 @@ function εdistance(u, u0, ε::AbstractVector)
     end
     return m
 end
+
 εdistance(u, u0, ε::Real) = euclidean(u, u0) - ε
+
+"Return the true distance of `u` from `u0` according to metric defined by `ε`."
+function distance(u, u0, ε::AbstractVector)
+    m = eltype(u)(-Inf)
+    @inbounds for i in 1:length(u)
+        m2 = abs(u[i] - u0[i])
+        m2 > m && (m = m2)
+    end
+    return m
+end
+distance(u, u0, ε::Real) = euclidean(u, u0)
 
 ##########################################################################################
 # Discrete systems
@@ -276,23 +288,76 @@ function exit_entry_times(ds::ContinuousDynamicalSystem, u0, εs, T;
 end
 
 function mean_return_times(ds::ContinuousDynamicalSystem, u0, εs, T; diffeq...)
-    if !haskey(diffeq, :alg) || diffeq[:alg] == DynamicalSystemsBase.DEFAULT_SOLVER
-        error(
-        "Please use a solver that supports callbacks using `OrdinaryDiffEq`. "*
-        "For example `using OrdinaryDiffEq: Tsit5; mean_return_times(...; alg = Tsit5())`."
-        )
-    end
+    # if !haskey(diffeq, :alg) || diffeq[:alg] == DynamicalSystemsBase.DEFAULT_SOLVER
+    #     error(
+    #     "Please use a solver that supports callbacks using `OrdinaryDiffEq`. "*
+    #     "For example `using OrdinaryDiffEq: Tsit5; mean_return_times(...; alg = Tsit5())`."
+    #     )
+    # end
 
     eT = eltype(ds.t0)
     check_εs_sorting(εs, length(u0))
     c = zeros(Int, length(εs)); τ = zeros(eT, length(εs))
     for i ∈ 1:length(εs)
-        τ[i], c[i] = mean_return_times_single(ds, u0, εs[i], T; diffeq...)
+        t = T isa Vector ? T[i] : T
+        τ[i], c[i] = mean_return_times_single(ds, u0, εs[i], t; diffeq...)
     end
     return τ, c
 end
 
+
 function mean_return_times_single(
+        ds::ContinuousDynamicalSystem, u0, ε, T;
+        interp_points=10, m = 10.0, rootkw = (xrtol = 1e-12, atol = 1e-12), diffeq...
+    )
+
+    # m is multiplier
+    integ = integrator(ds, u0; diffeq...)
+    exit = entry = integ.t
+    τ, c = zero(exit), 0
+    isoutside = false
+    crossing(t) = εdistance(integ(t), u0, ε)
+
+    while integ.t < T
+        step!(integ)
+        # Check distance of uprev (because interpolation can happen only between
+        # tprev and t) and if it is "too far away", then don't bother checking crossings.
+        d = distance(integ.uprev, u0, ε)
+        d > m*max(ε) && continue
+
+        r = range(integ.tprev, integ.t; length = interp_points)
+        dp = εdistance(integ.uprev, u0, ε) # `≡ crossing(r[1])`, crossing of previous step
+        for j in 2:interp_points
+            dc = crossing(r[j])
+            if dc*dp < 0 # the distances have different sign (== 0 case is dismissed)
+                tcross = Roots.find_zero(crossing, (r[j-1], r[j]), ROOTS_ALG; rootkw...)
+                if dp < 0 # here the trajectory goes from inside to outside
+                    exit = tcross
+                    break # if we get out of the box we don't check whether we go inside
+                          # again: assume in 1 step we can't cross out two times
+                else # otherwise the trajectory goes from outside to inside
+                    entry = tcross
+                    exit > entry && continue # scenario where exit was not calculated
+                    τ += entry - exit
+                    c += 1
+                    # here we don't `break` because we might cross
+                end
+            end
+            dp = dc
+        end
+        # Notice that the possibility of a trajectory going fully through the `ε`-set
+        # within one of the interpolation points is NOT considered: simply increase
+        # `interp_points` to increase accuracy and make this scenario possible.
+    end
+    return τ/c, c
+end
+
+
+# This method is not only very much inaccurate, but I've learned that calling a callback
+# affects the integrator state EVEN IF NO MODIFICATION IS DONE TO the `integ` object.
+# I confirmed this by simply evolving the trajectory and looking at the plotting code
+# at the `transit_time_tests.jl` file.
+function mean_return_times_single_callbacks(
         ds::ContinuousDynamicalSystem, u0, ε, T;
         interp_points=10, diffeq...
     )

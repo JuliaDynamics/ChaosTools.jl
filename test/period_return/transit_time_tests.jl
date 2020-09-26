@@ -124,8 +124,11 @@ using ChaosTools
 alg = DynamicalSystemsBase.DEFAULT_SOLVER
 
 ro = Systems.roessler(ones(3))
-tr = trajectory(ro, 5000; Ttr = 100, alg)
-u0 = trajectory(ro, 11; Ttr = 100, alg)[end] # return center
+u0 = SVector(
+    4.705494942754781,
+    -10.221120945130545,
+    0.06186563933318555
+)
 εs = sort!([1.0, 0.1, 0.01]; rev=true)
 avg_period = 6.0
 
@@ -173,15 +176,18 @@ avg_period = 6.0
 @test c[1] == 1
 @test c[2] == c[3] == 0
 @test 2avg_period < τ[1] < 3avg_period
+@test issorted(c; rev=true)
 
 τ, c = mean_return_times(ro, u0, εs, 5000.0; alg, i=20)
 @test all(τ .> avg_period/2)
 @test 0 < c[3] ≤ 2
+@test issorted(c; rev=true)
 
 x = sort!(MathConstants.e .^ (-4:0.5:-1); rev = true)
 Ts = 10.0 .^ range(3, 6, length = 7)
 is = range(10; step = 4, length = 7)
 τd, cd_ = mean_return_times(ro, u0, x, Ts; i=is)
+@test issorted(cd_; rev=true)
 @test all(z -> z > 0, cd_)
 
 # figure()
@@ -189,7 +195,7 @@ is = range(10; step = 4, length = 7)
 
 # the slope should approximate fractal dimension
 d = -ChaosTools.slope(log.(x), log.(τd))
-@test 1.8 < d < 2.2
+@test 1.75 < d < 2.25
 
 # Test with hyper rectangles. Both same outcome because we are anyway in the flat part
 εs = [

@@ -60,14 +60,15 @@ are not done here yet, which leads to disproportionally lower performance since
 each `ε`-related set is checked individually from start. Continuous systems
 allow for the following keywords:
 
-`mean_return_times` works also for continuous systems, but much less performant and
+`mean_return_times` works also for continuous systems, but is much less performant and
 much less accurate than the discrete version. Continuous systems allow the keywords:
-- `i=10` How many points to interpolate the trajectory in-between steps to
+- `i=10` How many points to interpolate the trajectory in-between steps to find
   candidate crossing regions.
 - `m=10.0` A multiplier. If the thrajectory is at least `m*ε` distance away from `u0`,
   the algorithm that checks for crossings of the `ε`-set is not initiated.
 
-Also, for continuous systems `i, m, T` can all be vectors with same size as `εs`.
+For continuous systems `T, i, m` can be vectors with same size as `εs`, to help increase
+accuracy of small `ε`.
 """
 function mean_return_times end
 
@@ -324,7 +325,7 @@ function mean_return_times_single(
         # Check distance of uprev (because interpolation can happen only between
         # tprev and t) and if it is "too far away", then don't bother checking crossings.
         d = distance(integ.uprev, u0, ε)
-        d > m && continue
+        d > m*maximum(ε) && continue
 
         r = range(integ.tprev, integ.t; length = i)
         dp = εdistance(integ.uprev, u0, ε) # `≡ crossing(r[1])`, crossing of previous step

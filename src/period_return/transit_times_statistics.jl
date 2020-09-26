@@ -2,12 +2,6 @@ using LinearAlgebra
 using Roots
 using Distances
 
-# Shortcuts (already defined)
-# MDI = DynamicalSystemsBase.MinimalDiscreteIntegrator
-# DEI = DynamicalSystemsBase.DiffEqBase.DEIntegrator
-
-# TODO: Add example with rectangle, perhaps not clear
-
 export exit_entry_times, transit_return, mean_return_times
 
 @deprecate transit_time_statistics entry_exit_times
@@ -53,22 +47,27 @@ function exit_entry_times end
 
 
 """
-    mean_return_times(ds::DynamicalSystem, u₀, εs, T; diffeq...) → τ, c
+    mean_return_times(ds::DynamicalSystem, u₀, εs, T; kwargs...) → τ, c
 Return them mean return times to subsets of the state space of `ds` defined by `u₀, εs`
-as well as the amount of returns `c`.
+as well as the amount of returns `c` for each subset.
 The `ds` is evolved for a maximum of `T` time.
-
 This function behaves similarly to [`exit_entry_times`](@ref) and thus see that one for
 the meaning of `u₀` and `εs`.
-`mean_return_times` works also for continuous systems, but is much, much less performant.
-For continuous systems the special keyword `interp_points=10` controls how many
-interpolations should be done to find a crossing of the `ε`-sets, see
-[`ContinuousCallbac`](https://diffeq.sciml.ai/latest/features/callback_functions/#DiffEqBase.ContinuousCallback)
-for more details. It is strongly recommended to increase `interp_points` and decrease
-`dtmax` for small `ε`. There is no performance optimization in this version for
-nested `ε`-sets, however for a consistent interface always give `εs` as a vector of
-`ε`, even if you only need 1 `ε` with high `interp_points` and small `dtmax`.
-All other `diffeq...` keywords are propagated like in [`trajectory`](@ref).
+
+This function supports both discrete and continuous systems, however the optimizations
+done in discrete systems (where all nested `ε`-sets are checked at the same time),
+are not done here yet, which leads to disproportionally lower performance since
+each `ε`-related set is checked individually from start. Continuous systems
+allow for the following keywords:
+
+`mean_return_times` works also for continuous systems, but much less performant and
+much less accurate than the discrete version. Continuous systems allow the keywords:
+- `i=10` How many points to interpolate the trajectory in-between steps to
+  candidate crossing regions.
+- `m=10.0` A multiplier. If the thrajectory is at least `m*ε` distance away from `u0`,
+  the algorithm that checks for crossings of the `ε`-set is not initiated.
+
+Also, for continuous systems `i, m, T` can all be vectors with same size as `εs`.
 """
 function mean_return_times end
 
@@ -287,7 +286,7 @@ function exit_entry_times(ds::ContinuousDynamicalSystem, u0, εs, T;
     return exits, entries
 end
 
-function mean_return_times(ds::ContinuousDynamicalSystem, u0, εs, T; diffeq...)
+function mean_return_times(ds::ContinuousDynamicalSystem, u0, εs, T; i=10,m=10.0,diffeq...)
     # if !haskey(diffeq, :alg) || diffeq[:alg] == DynamicalSystemsBase.DEFAULT_SOLVER
     #     error(
     #     "Please use a solver that supports callbacks using `OrdinaryDiffEq`. "*
@@ -298,9 +297,11 @@ function mean_return_times(ds::ContinuousDynamicalSystem, u0, εs, T; diffeq...)
     eT = eltype(ds.t0)
     check_εs_sorting(εs, length(u0))
     c = zeros(Int, length(εs)); τ = zeros(eT, length(εs))
-    for i ∈ 1:length(εs)
-        t = T isa Vector ? T[i] : T
-        τ[i], c[i] = mean_return_times_single(ds, u0, εs[i], t; diffeq...)
+    for j ∈ 1:length(εs)
+        t = T isa AbstractVector ? T[j] : T
+        μ = m isa AbstractVector ? m[j] : m
+        ι = i isa AbstractVector ? i[j] : i
+        τ[j], c[j] = mean_return_times_single(ds, u0, εs[j], t; i=ι, m=μ, diffeq...)
     end
     return τ, c
 end
@@ -308,7 +309,7 @@ end
 
 function mean_return_times_single(
         ds::ContinuousDynamicalSystem, u0, ε, T;
-        interp_points=10, m = 10.0, rootkw = (xrtol = 1e-12, atol = 1e-12), diffeq...
+        i=10, m = 10.0, rootkw = (xrtol = 1e-12, atol = 1e-12), diffeq...
     )
 
     # m is multiplier
@@ -323,11 +324,11 @@ function mean_return_times_single(
         # Check distance of uprev (because interpolation can happen only between
         # tprev and t) and if it is "too far away", then don't bother checking crossings.
         d = distance(integ.uprev, u0, ε)
-        d > m*maximum(ε) && continue
+        d > m && continue
 
-        r = range(integ.tprev, integ.t; length = interp_points)
+        r = range(integ.tprev, integ.t; length = i)
         dp = εdistance(integ.uprev, u0, ε) # `≡ crossing(r[1])`, crossing of previous step
-        for j in 2:interp_points
+        for j in 2:i
             dc = crossing(r[j])
             if dc*dp < 0 # the distances have different sign (== 0 case is dismissed)
                 tcross = Roots.find_zero(crossing, (r[j-1], r[j]), ROOTS_ALG; rootkw...)

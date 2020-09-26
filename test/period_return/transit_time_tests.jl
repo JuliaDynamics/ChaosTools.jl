@@ -169,20 +169,23 @@ avg_period = 6.0
 # We aaaalso know (by zooming in the plot) that the innermost ball is recurred exactly twice,
 # however one of the two crossings is grazing and thus likely to not be spotted by the
 # algorithm
-τ, c = mean_return_times(ro, u0, εs, 3avg_period; alg, interp_points=20)
+τ, c = mean_return_times(ro, u0, εs, 3avg_period; alg, i=20)
 @test c[1] == 1
 @test c[2] == c[3] == 0
 @test 2avg_period < τ[1] < 3avg_period
 
-τ, c = mean_return_times(ro, u0, εs, 5000.0; alg, interp_points=20)
+τ, c = mean_return_times(ro, u0, εs, 5000.0; alg, i=20)
 @test all(τ .> avg_period/2)
 @test 0 < c[3] ≤ 2
 
 x = sort!(MathConstants.e .^ (-4:0.5:-1); rev = true)
-τd, cd = mean_return_times(ro, u0, x, 50000.0; interp_points=30)
+Ts = 10.0 .^ range(3, 6, length = 7)
+is = range(10; step = 4, length = 7)
+τd, cd_ = mean_return_times(ro, u0, x, Ts; i=is)
+@test all(z -> z > 0, cd_)
 
 # figure()
-# plot(log.(x), log.(τ); marker ="o")
+# plot(log.(x), log.(τd); marker ="o")
 
 # the slope should approximate fractal dimension
 d = -ChaosTools.slope(log.(x), log.(τd))
@@ -193,7 +196,7 @@ d = -ChaosTools.slope(log.(x), log.(τd))
     SVector(0.1, 0.1, 0.5),
     SVector(0.1, 0.1, 0.05),
 ]
-τ2, c2 = mean_return_times(ro, u0, εs, 5000.0; alg, interp_points=20)
+τ2, c2 = mean_return_times(ro, u0, εs, 5000.0; alg, i=20)
 
 @test τ2[1] < τ[2]
 

@@ -323,7 +323,7 @@ function mean_return_times_single(
         # Check distance of uprev (because interpolation can happen only between
         # tprev and t) and if it is "too far away", then don't bother checking crossings.
         d = distance(integ.uprev, u0, ε)
-        d > m*max(ε) && continue
+        d > m*maximum(ε) && continue
 
         r = range(integ.tprev, integ.t; length = interp_points)
         dp = εdistance(integ.uprev, u0, ε) # `≡ crossing(r[1])`, crossing of previous step
@@ -354,7 +354,7 @@ end
 
 
 # This method is not only very much inaccurate, but I've learned that calling a callback
-# affects the integrator state EVEN IF NO MODIFICATION IS DONE TO the `integ` object.
+# affects the trajectory solution EVEN IF NO MODIFICATION IS DONE TO the `integ` object.
 # I confirmed this by simply evolving the trajectory and looking at the plotting code
 # at the `transit_time_tests.jl` file.
 function mean_return_times_single_callbacks(

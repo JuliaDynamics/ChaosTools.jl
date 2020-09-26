@@ -179,14 +179,23 @@ avg_period = 6.0
 @test 0 < c[3] ≤ 2
 
 x = sort!(MathConstants.e .^ (-4:0.5:-1); rev = true)
-τ, c = mean_return_times(ro, u0, x, 50000.0; interp_points=30)
+τd, cd = mean_return_times(ro, u0, x, 50000.0; interp_points=30)
 
 # figure()
 # plot(log.(x), log.(τ); marker ="o")
 
 # the slope should approximate fractal dimension
-d = -ChaosTools.slope(log.(x), log.(τ))
+d = -ChaosTools.slope(log.(x), log.(τd))
 @test 1.8 < d < 2.2
+
+# Test with hyper rectangles. Both same outcome because we are anyway in the flat part
+εs = [
+    SVector(0.1, 0.1, 0.5),
+    SVector(0.1, 0.1, 0.05),
+]
+τ2, c2 = mean_return_times(ro, u0, εs, 5000.0; alg, interp_points=20)
+
+@test τ2[1] < τ[2]
 
 end
 end

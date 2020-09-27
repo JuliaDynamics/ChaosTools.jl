@@ -313,9 +313,8 @@ function mean_return_times_single(
         i=10, m = 10.0, rootkw = (xrtol = 1e-12, atol = 1e-12), diffeq...
     )
 
-    # m is multiplier
     integ = integrator(ds, u0; diffeq...)
-    exit = entry = integ.t
+    exit = integ.t
     τ, c = zero(exit), 0
     isoutside = false
     crossing(t) = εdistance(integ(t), u0, ε)
@@ -338,11 +337,10 @@ function mean_return_times_single(
                     break # if we get out of the box we don't check whether we go inside
                           # again: assume in 1 step we can't cross out two times
                 else # otherwise the trajectory goes from outside to inside
-                    entry = tcross
-                    exit > entry && continue # scenario where exit was not calculated
-                    τ += entry - exit
+                    exit > tcross && continue # scenario where exit was not calculated
+                    τ += tcross - exit
                     c += 1
-                    # here we don't `break` because we might cross
+                    # here we don't `break` because we might cross out in the same step
                 end
             end
             dp = dc

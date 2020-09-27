@@ -187,7 +187,7 @@ x = sort!(MathConstants.e .^ (-4:0.5:-1); rev = true)
 Ts = 10.0 .^ range(3, 6, length = 7)
 is = range(10; step = 4, length = 7)
 τd, cd_ = mean_return_times(ro, u0, x, Ts; i=is)
-@test issorted(cd_; rev=true)
+@test issorted(τd)
 @test all(z -> z > 0, cd_)
 
 # figure()

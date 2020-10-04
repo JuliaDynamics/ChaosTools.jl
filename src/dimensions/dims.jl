@@ -211,6 +211,101 @@ boxcounting_dim = capacity_dim
 "information_dim(args...) = generalized_dim(1, args...)"
 information_dim(args...) = generalized_dim(1, args...)
 
+################################################################################
+# Molteno histogram based dimension by boxing values
+################################################################################
+"""
+	float_to_int(data::AbstractDataset{D,T}) where {D, T}
+Calculates maximum and minimum value of `data` of type `AbstractDataset` to then project the values onto ``[0 + \\epsilon, 1 + \\epsilon] \\cdot M`` where ``\\epsilon`` is the precision of the used Type and ``M`` is the maximum value of the UInt64 type.
+"""
+function float_to_int(data::AbstractDataset{D,T}) where {D, T}
+	N = length(data)
+    mins, maxs = minmaxima(data)
+    sizes = maxs .- mins
+    ε_0 = maximum(sizes)
+    # Let f:[min,max] -> [0+eps(T),1-eps(T)]*typemax(UInt64), then f(x) = m*x + b
+    m = (1-2eps(T)) ./ ε_0 .* typemax(UInt64)
+    b = eps(T) * typemax(UInt64) .- mins .* m
+
+    res = Vector{SVector{D,UInt64}}()
+    sizehint!(res, N)
+    for x in data
+        int_val = UInt64.(m .* x .+ b)
+        push!(res, int_val)
+    end
+    res, ε_0
+end
+
+"""
+	subboxes(box, data::AbstractVector{S}, iteration) where {D,S<:SVector{D,UInt64}}
+Divides a `box` containing indices into `data` to `2^D` smaller boxes and sorts the points contained in the box into the new boxes. Implemented according to Molteno[^Molteno]. Sorts the elements of the former box into the smaller boxes using cheap bit shifting and `&` operations on the value of `data` at each box element. `iteration` determines which bit of the array should be shifted to the last position.
+
+[^Molteno]:
+Molteno, T. C. A., [Fast O(N) box-counting algorithm for estimating dimensions. Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/10.1103/PhysRevE.48.R3263)
+"""
+function subboxes(box, data::AbstractVector{S}, iteration) where {D,S<:SVector{D,UInt64}}
+    new_boxes = [UInt64[] for i in 1:2^D]
+	index_multipliers = [2^(i-1) for i in 1:D]
+	sorting_number = 64-iteration
+    for elem in box
+        index = one(UInt64)
+        for (i, multi) in enumerate(index_multipliers)
+			# index shifting magic
+            index += ((data[elem][i] >> sorting_number) & 1) * multi
+        end
+        push!(new_boxes[index], elem)
+    end
+    filter!(!isempty, new_boxes)
+end
+
+"""
+	molteno_boxing(data, k0 = 10)
+Calculates the number of elements per box. Does so by reducing the sidelengths of a box by half as long as the average box population (`N / length(boxes)`) is greater than `k0`. `data` is a time series of type UInt in form of a `Vector` containing `Vector`s.
+
+Implements the method by Molteno[^Molteno] where most of the benefits are used in the function `subboxes` and the data structure used here is more reduced than the one proposed in the paper.
+
+See also [`subboxes`](@ref).
+
+[^Molteno]: Molteno, T. C. A., [Fast O(N) box-counting algorithm for estimating dimensions. Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/10.1103/PhysRevE.48.R3263)
+"""
+function molteno_boxing(data, k0 = 10)
+	N = length(data[])
+    box_probs = Vector{Float64}[]
+    iteration = 1
+    boxes = [[1:N;]]
+    while N / length(boxes) > k0
+        l = length(boxes)
+        for t in 1:l
+			# takes the first box
+            box = popfirst!(boxes)
+			# checks if only one element is contained
+			if length(box) == 1
+				push!(boxes, box)
+				continue
+			end
+            # appends new partitioned box
+            append!(boxes, subboxes(box, data[], iteration))
+        end
+        # counts all the probabilities by dividing the elements of the box by N
+        push!(box_probs, length.(boxes) ./ N)
+        iteration += 1
+    end
+    box_probs
+end
+
+"""
+	molteno_dim(α, data::AbstractDataset, k0 = 10)
+Calculates the generalized dimension using `float_to_int` for projection of `data` onto `UInt64`, `molteno_boxing` as algorithm for box division defined by Molteno[^Molteno], `genentropy` for the calculation of approximation of the limit and `linear_region` to identify the linear region and approximate its slope.
+
+[^Molteno]: Molteno, T. C. A., [Fast O(N) box-counting algorithm for estimating dimensions. Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/10.1103/PhysRevE.48.R3263)
+"""
+function molteno_dim(α, data::AbstractDataset, k0 = 10)
+	integers, ϵ_0 = float_to_int(data)
+    boxes = molteno_boxing(Ref(integers), k0)
+    dd = genentropy.(α, boxes, base = Base.MathConstants.e)
+    return linear_region(-log.([ϵ_0/2^i for i in 1:length(dd)]), dd)[2]
+end
+
 #######################################################################################
 # Miscelaneous
 #######################################################################################

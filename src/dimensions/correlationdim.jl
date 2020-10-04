@@ -158,3 +158,53 @@ function takens_best_estimate(X, εmax, metric = Chebyshev())
     end
     return -n/η
 end
+
+
+################################################################################
+# q-order correlationsum
+################################################################################
+
+"""
+    q_order_correlationsum(q, X, ε::Real, norm = Euclidean()) → C_q(ε)
+Calculates the q-order correlation sum for a time series `data`. `q` is the exponent of all points that are in radius `ϵ` of a point of data. Uses the method by Kantz and Schreiber[^Kantz] In accordance to the formula:
+```math
+C_q(\\varepsilon) = \\frac{1}{N(N-1)^{(q-1)}} \\sum_{i=1}^N\\left[\\sum_{i \\ne j} \\Theta(\\varepsilon - ||X_i - X_j||)\\right]
+```
+where ``\\Theta`` is the Heaviside function yielding one if the argument is greater than 1.
+
+[^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)
+"""
+function q_order_correlationsum(q, X, ε::Real, norm = Euclidean())
+    N, C_q = length(X), 0.
+    for i in 1:N
+        # the minus 1 is for correction of i = j which is cheaper than [1:i-1;i+1:N]
+        C_q += (count(evaluate(norm, X[i], X[j]) < ε for j in 1:N)-1)^(q-1)
+    end
+    C_q / (N * (N-1)^(q-1))
+end
+
+
+"""
+    q_order_correlationsum(q, X, ε::AbstractVector, norm = Euclidean()) → C_q.(εs)
+Calculates the q_order correlationsum for ever `ε ∈ εs` using an optimized version.
+"""
+function q_order_correlationsum(q, X, εs::AbstractVector, norm = Euclidean())
+    @assert issorted(εs) "Sorted εs required for optimized version."
+    Nε = length(εs)
+    C_qs = zeros(Nε)
+    N = length(X)
+    for i in 1:N
+        for j in 1:N
+            for iε in N:-1:1
+                if evaluate(norm, X[i], X[j]) < εs[iε]
+                    C_qs[iε] += 1
+                else
+                    break
+                end
+            end
+        end
+        # The minus 1 corrects i = j, which is cheaper than [1:i-1;i+1:N].
+        C_qs = (C_qs .- 1).^(q-1)
+    end
+    C_qs ./ (N * (N-1)^(q-1))
+end

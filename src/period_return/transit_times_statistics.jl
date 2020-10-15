@@ -48,7 +48,7 @@ function exit_entry_times end
 
 """
     mean_return_times(ds::DynamicalSystem, u₀, εs, T; kwargs...) → τ, c
-Return them mean return times to subsets of the state space of `ds` defined by `u₀, εs`
+Return the mean return times to subsets of the state space of `ds` defined by `u₀, εs`
 as well as the amount of returns `c` for each subset.
 The `ds` is evolved for a maximum of `T` time.
 This function behaves similarly to [`exit_entry_times`](@ref) and thus see that one for
@@ -57,14 +57,13 @@ the meaning of `u₀` and `εs`.
 This function supports both discrete and continuous systems, however the optimizations
 done in discrete systems (where all nested `ε`-sets are checked at the same time),
 are not done here yet, which leads to disproportionally lower performance since
-each `ε`-related set is checked individually from start. Continuous systems
-allow for the following keywords:
+each `ε`-related set is checked individually from start.
 
-`mean_return_times` works also for continuous systems, but is much less performant and
-much less accurate than the discrete version. Continuous systems allow the keywords:
+Continuous systems allow for the following keywords:
+
 - `i=10` How many points to interpolate the trajectory in-between steps to find
   candidate crossing regions.
-- `m=10.0` A multiplier. If the thrajectory is at least `m*ε` distance away from `u0`,
+- `m=10.0` A multiplier. If the trajectory is at least `m*ε` distance away from `u0`,
   the algorithm that checks for crossings of the `ε`-set is not initiated.
 
 For continuous systems `T, i, m` can be vectors with same size as `εs`, to help increase

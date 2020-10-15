@@ -5,6 +5,33 @@ export poincaresos, produce_orbitdiagram, PlaneCrossing
 const ROOTS_ALG = A42()
 
 #####################################################################################
+#                               Hyperplane                                          #
+#####################################################################################
+"""
+    PlaneCrossing(plane, dir) → z
+Create a struct that can be called as a function `z(u)` and returns the signed distance
+of state `u` from the hyperplane represented by `z`. See [`poincaresos`](@ref) for
+the what `plane` can be (tuple or vector).
+"""
+struct PlaneCrossing{P}
+    plane::P
+    dir::Bool
+end
+function (hp::PlaneCrossing{P})(u::AbstractVector) where {P<:Tuple}
+    @inbounds x = u[hp.plane[1]] - hp.plane[2]
+    hp.dir ? x : -x
+end
+function (hp::PlaneCrossing{P})(u::AbstractVector) where {P<:AbstractVector}
+    x = zero(eltype(u))
+    D = length(u)
+    @inbounds for i in 1:D
+        x += u[i]*hp.plane[i]
+    end
+    @inbounds x -= hp.plane[D+1]
+    hp.dir ? x : -x
+end
+
+#####################################################################################
 #                               Poincare Section                                    #
 #####################################################################################
 """
@@ -87,25 +114,6 @@ end
 
 const PSOS_ERROR =
 "the Poincaré surface of section did not have any points!"
-
-struct PlaneCrossing{P}
-    plane::P
-    dir::Bool
-end
-PlaneCrossing(p::P, b) where {P} = PlaneCrossing{P}(p, b)
-function (hp::PlaneCrossing{P})(u::AbstractVector) where {P<:Tuple}
-    @inbounds x = u[hp.plane[1]] - hp.plane[2]
-    hp.dir ? x : -x
-end
-function (hp::PlaneCrossing{P})(u::AbstractVector) where {P<:AbstractVector}
-    x = zero(eltype(u))
-    D = length(u)
-    @inbounds for i in 1:D
-        x += u[i]*hp.plane[i]
-    end
-    @inbounds x -= hp.plane[D+1]
-    hp.dir ? x : -x
-end
 
 function poincaresos(integ, planecrossing, tfinal, Ttr, j, rootkw)
 

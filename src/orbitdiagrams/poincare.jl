@@ -13,10 +13,23 @@ Create a struct that can be called as a function `z(u)` and returns the signed d
 of state `u` from the hyperplane represented by `z`. See [`poincaresos`](@ref) for
 the what `plane` can be (tuple or vector).
 """
-struct PlaneCrossing{P}
+struct PlaneCrossing{P, D, T}
     plane::P
     dir::Bool
+    n::SVector{D, T}  # normal vector
+    p₀::SVector{D, T} # arbitrary point on plane
 end
+PlaneCrossing(plane::Tuple, dir) = PlaneCrossing(plane, dir, SVector(true), SVector(true))
+function PlaneCrossing(plane::AbstractVector, dir)
+    n = plane[1:end-1] # normal vector to hyperplane
+    i = findfirst(!iszero, plane)
+    D = length(plane)-1; T = eltype(plane)
+    p₀ = zeros(D)
+    p₀[i] = plane[end]/plane[i] # p₀ is a point on the plane.
+    PlaneCrossing(plane, dir, SVector{D, T}(n), SVector{D, T}(p₀))
+end
+
+# Definition of functional behavior
 function (hp::PlaneCrossing{P})(u::AbstractVector) where {P<:Tuple}
     @inbounds x = u[hp.plane[1]] - hp.plane[2]
     hp.dir ? x : -x
@@ -300,11 +313,7 @@ end
 
 function interpolate_crossing(A, B, pc::PlaneCrossing{<:AbstractVector})
     # https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
-    n = @view pc.plane[1:end-1] # normal vector to hyperplane
-    i = findfirst(!iszero, pc.plane)
-    p₀ = zeros(length(A))
-    p₀[i] = pc.plane[end]/pc.plane[i] # p₀ is a point on the plane.
-    t = LinearAlgebra.dot(n, (p₀ .- A))/LinearAlgebra.dot((B .- A), n)
+    t = LinearAlgebra.dot(pc.n, (pc.p₀ .- A))/LinearAlgebra.dot((B .- A), pc.n)
     return A .+ (B .- A) .* t
 end
 

@@ -262,9 +262,7 @@ Rettua
 
 Keywords `direction, warning, idxs` are the same as above.
 """
-function poincaresos(A::Dataset, plane;
-    direction = -1, warning = true, idxs = 1:D) where {IIP, S, D}
-
+function poincaresos(A::Dataset, plane; direction = -1, warning = true, idxs = 1:D)
     _check_plane(plane, D)
     i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
     planecrossing = PlaneCrossing(plane, direction > 0)
@@ -273,31 +271,27 @@ function poincaresos(A::Dataset, plane;
     return Dataset(data)
 end
 function poincaresos(A::Dataset, planecrossing::PlaneCrossing, j)
-    i = 1 # point index
+    i, L = 1, length(A)
     data = _initialize_output(A[1], j)
     # Check if initial condition is already on the plane
-    side = planecrossing(A[i])
-    side == 0 && push!(data, A[i][j])
+    planecrossing(A[i]) == 0 && push!(data, A[i][j])
     i += 1
     side = planecrossing(A[i])
 
-    while i < length(A) # We always check point i vs point i-1
-        while side < 0
-            i == length(A) && break
-            step!(integ)
-            side = planecrossing(integ.u)
+    while i ≤ L # We always check point i vs point i-1
+        while side < 0 # bring trajectory infront of hyperplane
+            i == L && break
+            i += 1
+            side = planecrossing(A[i])
         end
-        while side ≥ 0
-            integ.t > tfinal + Ttr && break
-            step!(integ)
-            side = planecrossing(integ.u)
+        while side ≥ 0 # iterate until behind the hyperplane
+            i == L && break
+            i += 1
+            side = planecrossing(A[i])
         end
-        integ.t > tfinal + Ttr && break
-
-        # I am now guaranteed to have `t` in negative and `tprev` in positive
-        tcross = Roots.find_zero(f, (integ.tprev, integ.t), ROOTS_ALG; rootkw...)
-        ucross = integ(tcross)
-
+        i == L && break
+        # It is now guaranteed that A crosses hyperplane between i-1 and i
+        ucross = interpolate_crossing(A[i], A[i-1], planecrossing)
         push!(data, ucross[j])
     end
     return data

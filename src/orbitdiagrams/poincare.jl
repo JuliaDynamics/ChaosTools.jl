@@ -262,8 +262,8 @@ Rettua
 
 Keywords `direction, warning, idxs` are the same as above.
 """
-function poincaresos(A::Dataset, plane; direction = -1, warning = true, idxs = 1:D)
-    _check_plane(plane, D)
+function poincaresos(A::Dataset, plane; direction = -1, warning = true, idxs = 1:size(A, 2))
+    _check_plane(plane, size(A, 2))
     i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
     planecrossing = PlaneCrossing(plane, direction > 0)
     data = poincaresos(A, planecrossing, i)
@@ -305,7 +305,7 @@ end
 
 function interpolate_crossing(A, B, pc::PlaneCrossing{<:Tuple})
     # https://en.wikipedia.org/wiki/Linear_interpolation
-    y₀ = A[pc[1]]; y₁ = B[pc[1]]; y = pc[2]
+    y₀ = A[pc.plane[1]]; y₁ = B[pc.plane[1]]; y = pc.plane[2]
     t = (y - y₀) / (y₁ - y₀) # linear interpolation with t₀ = 0, t₁ = 1
     return A .+ (B .- A) .* t
 end

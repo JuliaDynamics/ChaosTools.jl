@@ -243,7 +243,7 @@ function float_to_int(data::AbstractDataset{D,T}) where {D, T}
     res = Vector{SVector{D,UInt64}}()
     sizehint!(res, N)
     for x in data
-        int_val = UInt64.(m .* x .+ b)
+        int_val = floor.(UInt64, m .* x .+ b)
         push!(res, int_val)
     end
     res, ε_0

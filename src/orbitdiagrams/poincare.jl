@@ -258,9 +258,10 @@ end
 #####################################################################################
 """
     poincaresos(A::Dataset, plane; kwargs...)
-Rettua
+Calculate the Poincaré surface of section of the given dataset with the given `plane`
+by performing linear interpolation betweeen points that sandwich the hyperplane.
 
-Keywords `direction, warning, idxs` are the same as above.
+Argument `plane` and keywords `direction, warning, idxs` are the same as above.
 """
 function poincaresos(A::Dataset, plane; direction = -1, warning = true, idxs = 1:size(A, 2))
     _check_plane(plane, size(A, 2))
@@ -299,8 +300,12 @@ end
 
 function interpolate_crossing(A, B, pc::PlaneCrossing{<:AbstractVector})
     # https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
-    line = t -> A .+ (B .- A) .* t  # line equation, t ∈ [0, 1]
-    error("# TODO: Finish this")
+    n = @view pc.plane[1:end-1] # normal vector to hyperplane
+    i = findfirst(!iszero, pc.plane)
+    p₀ = zeros(length(A))
+    p₀[i] = pc.plane[end]/pc.plane[i] # p₀ is a point on the plane.
+    t = LinearAlgebra.dot(n, (p₀ .- A))/LinearAlgebra.dot((B .- A), n)
+    return A .+ (B .- A) .* t
 end
 
 function interpolate_crossing(A, B, pc::PlaneCrossing{<:Tuple})

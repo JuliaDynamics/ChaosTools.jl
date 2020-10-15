@@ -291,8 +291,21 @@ function poincaresos(A::Dataset, planecrossing::PlaneCrossing, j)
         end
         i == L && break
         # It is now guaranteed that A crosses hyperplane between i-1 and i
-        ucross = interpolate_crossing(A[i], A[i-1], planecrossing)
+        ucross = interpolate_crossing(A[i-1], A[i], planecrossing)
         push!(data, ucross[j])
     end
     return data
+end
+
+function interpolate_crossing(A, B, pc::PlaneCrossing{<:AbstractVector})
+    # https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
+    line = t -> A .+ (B .- A) .* t  # line equation, t ∈ [0, 1]
+    error("# TODO: Finish this")
+end
+
+function interpolate_crossing(A, B, pc::PlaneCrossing{<:Tuple})
+    # https://en.wikipedia.org/wiki/Linear_interpolation
+    y₀ = A[pc[1]]; y₁ = B[pc[1]]; y = pc[2]
+    t = (y - y₀) / (y₁ - y₀) # linear interpolation with t₀ = 0, t₁ = 1
+    return A .+ (B .- A) .* t
 end

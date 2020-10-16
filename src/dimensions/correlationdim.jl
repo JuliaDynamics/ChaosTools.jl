@@ -116,6 +116,99 @@ function grassberger(data::AbstractDataset, εs = estimate_boxsizes(data); kwarg
     return linear_region(log.(εs), log.(cm))[2]
 end
 
+################################################################################
+# q-order correlationsum
+################################################################################
+"""
+	q_order_correlationsum(q, X, ε, norm = Euclidean()) → C_q(ε)
+	q_order_correlationsum(q, X, Y, ε, norm = Euclidean()) → C_q(ε)
+Calculates the q-order correlation sum for data points `X`. `q` is the exponent of all points that are in radius `ε` of a point. Uses the method by Kantz and Schreiber[^Kantz] In accordance to the formula:
+```math
+C_q(\\varepsilon) = \\frac{1}{N(N-1)^{(q-1)}} \\sum_{i=1}^N\\left[\\sum_{i \\ne j} \\Theta(\\varepsilon - ||X_i - X_j||)\\right]^{q-1}
+```
+where ``\\Theta`` is the Heaviside function yielding one if the argument is greater than 1.
+
+If `ε` is a vector of radii, it uses a slight optimisation to calculate the correlationsums. In this case `ε` should be ordered in increasing order.
+
+If `X` and `Y` are given, it computes the between all points in `X` and `Y`. In the folllowing formula:
+```math
+C_q(\\varepsilon) = \\sum_{i=1}^N\\left[\\sum_{i \\ne j}^M \\Theta(\\varepsilon - ||X_i - Y_j||)\\right]^{q-1}.
+```
+Here ``M`` is the number of points in `Y`. Since the version with `X` and `Y` is optimized for data that was boxed beforehand, the normalisation is not calculated. Note that the first elements of `Y` should be `X` for the case of `q = 2` to allow for optimisation.
+
+[^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)
+"""
+function q_order_correlationsum(q, X, ε, norm = Euclidean())
+	N = length(X)
+	C_q = q_order_correlationsum(q, X, X, ε, norm) ./ (N * (N-1)^(q-1))
+end
+
+function q_order_correlationsum(q, X, Y, ε::Real, norm = Euclidean())
+	C_q = 0.
+	if q == 2
+		Ny = length(Y)
+		for (ix, x) in enumerate(X)
+			# assumes that in case of q == 2 the first Nx elements are X itself
+			for iy in ix+1:Ny
+				y = Y[iy]
+				C_q += evaluate(norm, x, y) < ε
+			end
+		end
+		# corrects the omitted terms
+		C_q *= 2
+	else
+		for x in X
+			C_current
+			for y in Y
+				C_current += evaluate(norm, x, y) < ε
+			end
+			# the minus 1 is for correction of i = j,
+			# which is cheaper than calculating [1:i-1;i+1:N].
+			C_q += (C_current - 1)^(q - 1)
+		end
+	end
+	C_q
+end
+
+function q_order_correlationsum(q, X, Y, εs::AbstractVector, norm = Euclidean())
+	@assert issorted(εs) "Sorted εs required for optimized version."
+	Nε = length(εs)
+	C_qs = zeros(Nε)
+	if q == 2
+		Ny = length(Y)
+		for (ix, x) in enumerate(X)
+			for iy in ix+1:Ny
+				dist = evaluate(norm, Y[iy], x)
+				for iε in Nε:-1:1
+					if dist < εs[iε]
+						C_qs[iε] += 1
+					else
+						break
+					end
+				end
+			end
+		end
+		C_qs .*= 2
+	else
+		for x in X
+			C_current = zeros(Nε)
+			for y in Y
+				dist = evaluate(norm, x, y)
+				for iε in Nε:-1:1
+					if dist < εs[iε]
+						C_current[iε] += 1
+					else
+						break
+					end
+				end
+			end
+			# The minus 1 corrects i = j.
+			C_qs .+= (C_current .- 1).^(q-1)
+		end
+	end
+	C_qs
+end
+
 
 #######################################################################################
 # Takens' best estimate
@@ -157,54 +250,4 @@ function takens_best_estimate(X, εmax, metric = Chebyshev())
         end
     end
     return -n/η
-end
-
-
-################################################################################
-# q-order correlationsum
-################################################################################
-
-"""
-    q_order_correlationsum(q, X, ε::Real, norm = Euclidean()) → C_q(ε)
-Calculates the q-order correlation sum for a time series `data`. `q` is the exponent of all points that are in radius `ϵ` of a point of data. Uses the method by Kantz and Schreiber[^Kantz] In accordance to the formula:
-```math
-C_q(\\varepsilon) = \\frac{1}{N(N-1)^{(q-1)}} \\sum_{i=1}^N\\left[\\sum_{i \\ne j} \\Theta(\\varepsilon - ||X_i - X_j||)\\right]
-```
-where ``\\Theta`` is the Heaviside function yielding one if the argument is greater than 1.
-
-[^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)
-"""
-function q_order_correlationsum(q, X, ε::Real, norm = Euclidean())
-    N, C_q = length(X), 0.
-    for i in 1:N
-        # the minus 1 is for correction of i = j which is cheaper than [1:i-1;i+1:N]
-        C_q += (count(evaluate(norm, X[i], X[j]) < ε for j in 1:N)-1)^(q-1)
-    end
-    C_q / (N * (N-1)^(q-1))
-end
-
-
-"""
-    q_order_correlationsum(q, X, ε::AbstractVector, norm = Euclidean()) → C_q.(εs)
-Calculates the q_order correlationsum for ever `ε ∈ εs` using an optimized version.
-"""
-function q_order_correlationsum(q, X, εs::AbstractVector, norm = Euclidean())
-    @assert issorted(εs) "Sorted εs required for optimized version."
-    Nε = length(εs)
-    C_qs = zeros(Nε)
-    N = length(X)
-    for i in 1:N
-        for j in 1:N
-            for iε in N:-1:1
-                if evaluate(norm, X[i], X[j]) < εs[iε]
-                    C_qs[iε] += 1
-                else
-                    break
-                end
-            end
-        end
-        # The minus 1 corrects i = j, which is cheaper than [1:i-1;i+1:N].
-        C_qs = (C_qs .- 1).^(q-1)
-    end
-    C_qs ./ (N * (N-1)^(q-1))
 end

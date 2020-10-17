@@ -269,6 +269,8 @@ end
 #####################################################################################
 # Poincare Section for Datasets (trajectories)                                      #
 #####################################################################################
+# TODO: Nice improvement would be to use cubic interpolation instead of linear,
+# using points i-2, i-1, i, i+1
 """
     poincaresos(A::Dataset, plane; kwargs...)
 Calculate the Poincaré surface of section of the given dataset with the given `plane`

@@ -9,9 +9,9 @@ const ROOTS_ALG = A42()
 #####################################################################################
 """
     PlaneCrossing(plane, dir) → z
-Create a struct that can be called as a function `z(u)` and returns the signed distance
-of state `u` from the hyperplane represented by `z`. See [`poincaresos`](@ref) for
-the what `plane` can be (tuple or vector).
+Create a struct that can be called as a function `z(u)` that returns the signed distance
+of state `u` from the hyperplane `plane` (positive means in front of the hyperplane).
+See [`poincaresos`](@ref) for what `plane` can be (tuple or vector).
 """
 struct PlaneCrossing{P, D, T}
     plane::P
@@ -25,7 +25,7 @@ function PlaneCrossing(plane::AbstractVector, dir)
     i = findfirst(!iszero, plane)
     D = length(plane)-1; T = eltype(plane)
     p₀ = zeros(D)
-    p₀[i] = plane[end]/plane[i] # p₀ is a point on the plane.
+    p₀[i] = plane[end]/plane[i] # p₀ is an arbitrary point on the plane.
     PlaneCrossing(plane, dir, SVector{D, T}(n), SVector{D, T}(p₀))
 end
 
@@ -52,6 +52,7 @@ end
 Calculate the Poincaré surface of section (also called Poincaré map)[^Tabor1989]
 of the given system with the given `plane`.
 The system is evolved for total time of `tfinal`.
+Return a [`Dataset`](@ref) of the points that are on the surface of section.
 
 If the state of the system is ``\\mathbf{u} = (u_1, \\ldots, u_D)`` then the
 equation defining a hyperplane is
@@ -67,9 +68,9 @@ In code, `plane` can be either:
 * A vector of length `D+1`. The first `D` elements of the
   vector correspond to ``\\mathbf{a}`` while the last element is ``b``.
 
-Returns a [`Dataset`](@ref) of the points that are on the surface of section.
-
-See also [`orbitdiagram`](@ref), [`produce_orbitdiagram`](@ref).
+This function uses `ds` and higher order interpolation from DifferentialEquations.jl
+to create a high accuracy estimate of the section.
+See also [`produce_orbitdiagram`](@ref).
 
 ## Keyword Arguments
 * `direction = -1` : Only crossings with `sign(direction)` are considered to belong to
@@ -129,7 +130,6 @@ const PSOS_ERROR =
 "the Poincaré surface of section did not have any points!"
 
 function poincaresos(integ, planecrossing, tfinal, Ttr, j, rootkw)
-
     f = (t) -> planecrossing(integ(t))
     data = _initialize_output(integ.u, j)
     Ttr != 0 && step!(integ, Ttr)
@@ -158,7 +158,6 @@ function poincaresos(integ, planecrossing, tfinal, Ttr, j, rootkw)
         # I am now guaranteed to have `t` in negative and `tprev` in positive
         tcross = Roots.find_zero(f, (integ.tprev, integ.t), ROOTS_ALG; rootkw...)
         ucross = integ(tcross)
-
         push!(data, ucross[j])
     end
     return data
@@ -236,29 +235,22 @@ function produce_orbitdiagram(
 
     _check_plane(plane, D)
     typeof(u0) <: Vector{<:AbstractVector} && @assert length(u0)==length(p)
-
     integ = integrator(ds; diffeq...)
     planecrossing = PlaneCrossing(plane, direction > 0)
-
     p0 = ds.p[p_index]
-
     output = Vector{typeof(ds.u0[i])}[]
 
     for (n, p) in enumerate(pvalues)
         integ.p[p_index] = p
         printparams && println("parameter = $p")
-
         if typeof(u0) <: Vector{<:AbstractVector}
             st = u0[n]
         else
             st = u0
         end
-
         reinit!(integ, st)
         push!(output, poincaresos(integ, planecrossing, tfinal, Ttr, i, rootkw))
-
         warning && length(output[end]) == 0 && @warn "For parameter $p $PSOS_ERROR"
-
     end
     # Reset the parameter of the system:
     ds.p[p_index] = p0

@@ -1,3 +1,6 @@
+# 1.18
+* `poincaresos` function now also works with input `Dataset` (and does linear interpolation between points sandwiching the dataset)
+
 # 1.17
 * `transit_time_statistics` deprecated in favor of `exit_entry_times`.
 * Added `mean_return_times` function for discrete systems.

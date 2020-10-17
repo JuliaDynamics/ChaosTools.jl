@@ -93,3 +93,15 @@ end
 
   end
 end
+
+@testset "PoincareSOS of trajectory" begin
+    ds = Systems.lorenz()
+    tr = trajectory(ds, 1000.0; Ttr = 10.0)
+    psos = poincaresos(tr, (2, 0.0))
+    @test all(abs.(psos[:, 2]) .≤ 1e-15)
+    psos = poincaresos(tr, [0, 1.0, 0, 0])
+    @test all(abs.(psos[:, 2]) .≤ 1e-15)
+    psos = poincaresos(tr, [1.0, 1.0, 0, 0])
+    g = generalized_dim(0.0, psos)
+    @test g ≤ 1
+end

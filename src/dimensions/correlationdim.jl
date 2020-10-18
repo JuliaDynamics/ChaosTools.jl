@@ -25,60 +25,111 @@ function kernelprob(X, ε, norm = Euclidean())
     return p
 end
 
+
 """
-    correlationsum(X, ε::Real; w = 1, norm = Euclidean()) → C(ε)
-Calculate the correlation sum of `X` (`Dataset` or timeseries)
+    correlationsum(X, ε; w = 0, norm = Euclidean(), q = 2) → C_q(ε)
+Calculate the `q`-order correlation sum of `X` (`Dataset` or timeseries)
 for a given radius `ε` and `norm`, using the formula:
 ```math
-C(\\epsilon) = \\frac{2}{(N-w)(N-w-1)}\\sum_{i=1}^{N}\\sum_{j=1+w+i}^{N} I(||X_i - X_j|| < \\epsilon)
+C_2(\\epsilon) = \\frac{2}{(N-w)(N-w-1)}\\sum_{i=1}^{N}\\sum_{j=1+w+i}^{N} I(||X_i - X_j|| < \\epsilon)
 ```
-where ``N`` is its length and ``I`` gives 1 if the argument is `true`.
-`w` is the Theiler window, a correction to the correlation sum that skips points
+for `q=2` and
+```math
+C_q(\\epsilon) = \\frac{1}{(N-w)(N-w-1)^{(q-1)}} \\sum_{i=1}^N\\left[\\sum_{|i-j| > w} I(||X_i - X_j|| < \\epsilon)\\right]^{q-1}
+```
+for `q≠2`, where ``N`` is its length and ``I`` gives 1 if the argument is `true`. `w` is the Theiler window, a correction to the correlation sum that skips points
 that are temporally close with each other, with the aim of removing spurious correlations.
-
-See the book "Nonlinear Time Series Analysis", Ch. 6, for a discussion
-around `w` and choosing best values.
+See the book "Nonlinear Time Series Analysis"[^Kantz2003], Ch. 6, for a discussion
+around `w` and choosing best values and Ch. 11.3 for the definition of the q-order correlationsum.
 
 See [`grassberger`](@ref) for more.
 See also [`takens_best_estimate`](@ref).
+
+[^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)
 """
-function correlationsum(X, ε::Real; norm = Euclidean(), w = 1)
-    N, C = length(X), 0
-    @inbounds for i in 1:N
-        C += count(evaluate(norm, X[i], X[j]) < ε for j in i+1+w:N)
+function correlationsum(X, ε::Real; q = 2, norm = Euclidean(), w = 0)
+    N, C = length(X), 0.
+    if q == 2
+        for (i, x) in enumerate(X)
+            # assumes that the first Nx elements are X itself
+            for j in i+1+w:N
+                C += evaluate(norm, x, X[j]) < ε
+            end
+        end
+        return C * 2 / ((N-w-1)*(N-w))
+    else
+        for i in 1+w:N-w
+            x = X[i]
+            C_current = 0.
+            # computes all distances from 0 up to i-w
+            for j in 1:i-w-1
+                C_current += evaluate(norm, x, X[j]) < ε
+            end
+            # computes all distances after i+w till the end
+            for j in i+w+1:N
+                C_current += evaluate(norm, x, X[j]) < ε
+            end
+            C += C_current^(q - 1)
+        end
+        return C / ((N-2w)*(N-2w-1)^(q-1))
     end
-    return 2C/((N-w)*(N-1-w))
 end
 
+
+
 """
-    correlationsum(X, εs::AbstractVector; kwargs...) → Cs
-Calculate the correlation sum for every `ε ∈ εs` using an optimized version.
+correlationsum(X, εs::AbstractVector; q = 2, norm = Euclidean(), w = 0) → [C_q(ε) for ε ∈ εs]
+If `εs` is a vector containing radii, a slight optimisation is applied to prevent calculating distances twice. For this optimisation `εs` needs to be of increasing order.
 """
-function correlationsum(X, εs::AbstractVector; norm = Euclidean(), w = 1)
+function correlationsum(X, εs::AbstractVector; q = 2, norm = Euclidean(), w = 0)
     @assert issorted(εs) "Sorted εs required for optimized version."
-    d = distancematrix(X, norm)
-    Cs = zeros(length(εs))
-    N = length(X)
-    factor = 2/((N-w)*(N-1-w))
-    for k in length(εs)÷2:-1:1
-        ε = εs[k]
-        for i in 1:N
-            @inbounds Cs[k] += count(d[j, i] < ε for j in i+1+w:N)
+    Cs, N, Nε = zeros(length(εs)), length(X), length(εs)
+    if q == 2
+        for (i, x) in enumerate(X)
+            for j in i+1+w:N
+                dist = evaluate(norm, X[j], x)
+                for k in Nε:-1:1
+                    if dist < εs[k]
+                        Cs[k] += 1
+                    else
+                        break
+                    end
+                end
+            end
         end
-        Cs[k] == 0 && break
+        return Cs .* 2 / ((N-w)*(N-w-1))
+    else
+        for i in 1+w:N-w
+            x = X[i]
+            C_current = zeros(Nε)
+            # Compute distances from 1 to the start of the w-intervall around i.
+            for j in 1:i-w-1
+                dist = evaluate(norm, x, X[j])
+                for k in Nε:-1:1
+                    if dist < εs[k]
+                        C_current[k] += 1
+                    else
+                        break
+                    end
+                end
+            end
+            # Compute distances from the end of w-intervall around i till the end.
+            for j in i+w+1:N
+                dist = evaluate(norm, x, X[j])
+                for k in Nε:-1:1
+                    if dist < εs[k]
+                        C_current[k] += 1
+                    else
+                        break
+                    end
+                end
+            end
+            Cs .+= C_current.^(q-1)
+        end
+        return Cs ./ ((N-2w)*(N-2w-1)^(q-1))
     end
-    for k in (length(εs)÷2 + 1):length(εs)
-        ε = εs[k]
-        for i in 1:N
-            @inbounds Cs[k] += count(d[j, i] < ε for j in i+1+w:N)
-        end
-        if Cs[k] ≈ 1/factor
-            Cs[k:end] .= 1/factor
-            break
-        end
-    end
-    return Cs .* factor
 end
+
 
 function distancematrix(X, norm = Euclidean())
     N = length(X)
@@ -114,99 +165,6 @@ See also [`takens_best_estimate`](@ref).
 function grassberger(data::AbstractDataset, εs = estimate_boxsizes(data); kwargs...)
     cm = correlationsum(data, εs; kwargs...)
     return linear_region(log.(εs), log.(cm))[2]
-end
-
-################################################################################
-# q-order correlationsum
-################################################################################
-"""
-	q_order_correlationsum(q, X, ε, norm = Euclidean()) → C_q(ε)
-	q_order_correlationsum(q, X, Y, ε, norm = Euclidean()) → C_q(ε)
-Calculates the q-order correlation sum for data points `X`. `q` is the exponent of all points that are in radius `ε` of a point. Uses the method by Kantz and Schreiber[^Kantz] In accordance to the formula:
-```math
-C_q(\\varepsilon) = \\frac{1}{N(N-1)^{(q-1)}} \\sum_{i=1}^N\\left[\\sum_{i \\ne j} \\Theta(\\varepsilon - ||X_i - X_j||)\\right]^{q-1}
-```
-where ``\\Theta`` is the Heaviside function yielding one if the argument is greater than 1.
-
-If `ε` is a vector of radii, it uses a slight optimisation to calculate the correlationsums. In this case `ε` should be ordered in increasing order.
-
-If `X` and `Y` are given, it computes the between all points in `X` and `Y`. In the folllowing formula:
-```math
-C_q(\\varepsilon) = \\sum_{i=1}^N\\left[\\sum_{i \\ne j}^M \\Theta(\\varepsilon - ||X_i - Y_j||)\\right]^{q-1}.
-```
-Here ``M`` is the number of points in `Y`. Since the version with `X` and `Y` is optimized for data that was boxed beforehand, the normalisation is not calculated. Note that the first elements of `Y` should be `X` for the case of `q = 2` to allow for optimisation.
-
-[^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)
-"""
-function q_order_correlationsum(q, X, ε, norm = Euclidean())
-	N = length(X)
-	C_q = q_order_correlationsum(q, X, X, ε, norm) ./ (N * (N-1)^(q-1))
-end
-
-function q_order_correlationsum(q, X, Y, ε::Real, norm = Euclidean())
-	C_q = 0.
-	if q == 2
-		Ny = length(Y)
-		for (ix, x) in enumerate(X)
-			# assumes that in case of q == 2 the first Nx elements are X itself
-			for iy in ix+1:Ny
-				y = Y[iy]
-				C_q += evaluate(norm, x, y) < ε
-			end
-		end
-		# corrects the omitted terms
-		C_q *= 2
-	else
-		for x in X
-			C_current
-			for y in Y
-				C_current += evaluate(norm, x, y) < ε
-			end
-			# the minus 1 is for correction of i = j,
-			# which is cheaper than calculating [1:i-1;i+1:N].
-			C_q += (C_current - 1)^(q - 1)
-		end
-	end
-	C_q
-end
-
-function q_order_correlationsum(q, X, Y, εs::AbstractVector, norm = Euclidean())
-	@assert issorted(εs) "Sorted εs required for optimized version."
-	Nε = length(εs)
-	C_qs = zeros(Nε)
-	if q == 2
-		Ny = length(Y)
-		for (ix, x) in enumerate(X)
-			for iy in ix+1:Ny
-				dist = evaluate(norm, Y[iy], x)
-				for iε in Nε:-1:1
-					if dist < εs[iε]
-						C_qs[iε] += 1
-					else
-						break
-					end
-				end
-			end
-		end
-		C_qs .*= 2
-	else
-		for x in X
-			C_current = zeros(Nε)
-			for y in Y
-				dist = evaluate(norm, x, y)
-				for iε in Nε:-1:1
-					if dist < εs[iε]
-						C_current[iε] += 1
-					else
-						break
-					end
-				end
-			end
-			# The minus 1 corrects i = j.
-			C_qs .+= (C_current .- 1).^(q-1)
-		end
-	end
-	C_qs
 end
 
 

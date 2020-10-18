@@ -259,6 +259,37 @@ function correlationsum_boxes(q::Real, X, Y, εs; norm = Euclidean())
     return Cs
 end
 
+"""
+	estimate_r0_theiler(data)
+Estimates a reasonable size for boxing the data before calculating the correlation dimension proposed by Theiler[^Theiler1987].
+To do so the dimension is estimated by running the algorithm by Grassberger and Procaccia[^Grassberger1983] with `√N` points where `N` is the number of total data points. Then the optimal boxsize ``r_0`` computes as
+```math
+r_0 = R (2/N)^{1/\\nu}
+```
+where ``R`` is the size of the chaotic attractor and ``\\nu`` is the estimated dimension.
+
+[^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
+
+[^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
+"""
+function estimate_r0_theiler(data)
+	N = length(data)
+	mini, maxi = minmaxima(data)
+	R = maximum(maxi .- mini)
+	# Sample √N datapoints for a rough estimate of the dimension.
+	data_sample = data[unique(rand(1:N, ceil(Int, sqrt(N))))] |> Dataset
+	# Define radii for the rough dimension estimate
+	lower = log10(min_pairwise_distance(data_sample)[2])
+	εs = 10 .^ range(lower, stop = log10(R), length = 12)
+	# Actually estimate the dimension.
+	cm = correlationsum(data_sample, εs)
+	ν = linear_region(log.(εs), log.(cm), tol = 0.5)[2]
+	# The combination yields the optimal box size
+	r0 = R * (2/N)^(1/ν)
+end
+
+
+
 #######################################################################################
 # Takens' best estimate
 #######################################################################################

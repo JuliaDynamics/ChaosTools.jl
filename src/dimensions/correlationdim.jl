@@ -48,6 +48,8 @@ See also [`takens_best_estimate`](@ref).
 [^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)
 """
 function correlationsum(X, ε::Real; q = 2, norm = Euclidean(), w = 0)
+    q <= 1 && @warn "This function is currently not specialized for q <= 1" *
+			" and may show unexpected behaviour for these values."
     N, C = length(X), 0.
     if q == 2
         for (i, x) in enumerate(X)
@@ -83,6 +85,8 @@ If `εs` is a vector containing radii, a slight optimisation is applied to preve
 """
 function correlationsum(X, εs::AbstractVector; q = 2, norm = Euclidean(), w = 0)
     @assert issorted(εs) "Sorted εs required for optimized version."
+	q <= 1 && @warn "This function is currently not specialized for q <= 1" *
+			" and may show unexpected behaviour for these values."
     Cs, N, Nε = zeros(length(εs)), length(X), length(εs)
     if q == 2
         for (i, x) in enumerate(X)

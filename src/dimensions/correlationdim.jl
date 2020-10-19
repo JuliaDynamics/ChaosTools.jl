@@ -38,7 +38,7 @@ for `q=2` and
 C_q(\\epsilon) = \\frac{1}{(N-w)(N-w-1)^{(q-1)}} \\sum_{i=1}^N\\left[\\sum_{|i-j| > w} I(||X_i - X_j|| < \\epsilon)\\right]^{q-1}
 ```
 for `q≠2`, where ``N`` is its length and ``I`` gives 1 if the argument is `true`. `w` is the Theiler window, a correction to the correlation sum that skips points
-that are temporally close with each other, with the aim of removing spurious correlations.
+that are temporally close with each other, with the aim of removing spurious correlations. If `ε` is a vector its values have to be ordered. 
 See the book "Nonlinear Time Series Analysis"[^Kantz2003], Ch. 6, for a discussion
 around `w` and choosing best values and Ch. 11.3 for the definition of the q-order correlationsum.
 
@@ -47,93 +47,106 @@ See also [`takens_best_estimate`](@ref).
 
 [^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)
 """
-function correlationsum(X, ε::Real; q = 2, norm = Euclidean(), w = 0)
-    q <= 1 && @warn "This function is currently not specialized for q <= 1" *
-			" and may show unexpected behaviour for these values."
+function correlationsum(X, ε; q = 2, norm = Euclidean(), w = 0)
+    if q == 2
+        correlationsum_2(X, ε, norm, w)
+    else
+        correlationsum_q(X, ε, q, norm, w)
+    end
+end
+
+function correlationsum_2(X, ε::Real, norm = Euclidean(), w = 0)
     N, C = length(X), 0.
-    if q == 2
-        for (i, x) in enumerate(X)
-            # assumes that the first Nx elements are X itself
-            for j in i+1+w:N
-                C += evaluate(norm, x, X[j]) < ε
-            end
+    for (i, x) in enumerate(X)
+        # assumes that the first Nx elements are X itself
+        for j in i+1+w:N
+            C += evaluate(norm, x, X[j]) < ε
         end
-        return C * 2 / ((N-w-1)*(N-w))
-    else
-        for i in 1+w:N-w
-            x = X[i]
-            C_current = 0.
-            # computes all distances from 0 up to i-w
-            for j in 1:i-w-1
-                C_current += evaluate(norm, x, X[j]) < ε
-            end
-            # computes all distances after i+w till the end
-            for j in i+w+1:N
-                C_current += evaluate(norm, x, X[j]) < ε
-            end
-            C += C_current^(q - 1)
-        end
-        return C / ((N-2w)*(N-2w-1)^(q-1))
     end
+    return C * 2 / ((N-w-1)*(N-w))
+end
+
+function correlationsum_q(X, ε::Real, q, norm = Euclidean(), w = 0)
+    q <= 1 && @warn "This function is currently not specialized for q <= 1" *
+    " and may show unexpected behaviour for these values."
+    N, C = length(X), 0.
+    for i in 1+w:N-w
+        x = X[i]
+        C_current = 0.
+        # computes all distances from 0 up to i-w
+        for j in 1:i-w-1
+            C_current += evaluate(norm, x, X[j]) < ε
+        end
+        # computes all distances after i+w till the end
+        for j in i+w+1:N
+            C_current += evaluate(norm, x, X[j]) < ε
+        end
+        C += C_current^(q - 1)
+    end
+    return C / ((N-2w)*(N-2w-1)^(q-1))
 end
 
 
-
-"""
-correlationsum(X, εs::AbstractVector; q = 2, norm = Euclidean(), w = 0) → [C_q(ε) for ε ∈ εs]
-If `εs` is a vector containing radii, a slight optimisation is applied to prevent calculating distances twice. For this optimisation `εs` needs to be of increasing order.
-"""
-function correlationsum(X, εs::AbstractVector; q = 2, norm = Euclidean(), w = 0)
+function correlationsum_2(X, εs::AbstractVector, norm = Euclidean(), w = 0)
     @assert issorted(εs) "Sorted εs required for optimized version."
-	q <= 1 && @warn "This function is currently not specialized for q <= 1" *
-			" and may show unexpected behaviour for these values."
-    Cs, N, Nε = zeros(length(εs)), length(X), length(εs)
-    if q == 2
-        for (i, x) in enumerate(X)
-            for j in i+1+w:N
-                dist = evaluate(norm, X[j], x)
-                for k in Nε:-1:1
-                    if dist < εs[k]
-                        Cs[k] += 1
-                    else
-                        break
-                    end
-                end
-            end
+    d = distancematrix(X, norm)
+    Cs = zeros(length(εs))
+    N = length(X)
+    factor = 2/((N-w)*(N-1-w))
+    for k in length(εs)÷2:-1:1
+        ε = εs[k]
+        for i in 1:N
+            @inbounds Cs[k] += count(d[j, i] < ε for j in i+1+w:N)
         end
-        return Cs .* 2 / ((N-w)*(N-w-1))
-    else
-        for i in 1+w:N-w
-            x = X[i]
-            C_current = zeros(Nε)
-            # Compute distances from 1 to the start of the w-intervall around i.
-            for j in 1:i-w-1
-                dist = evaluate(norm, x, X[j])
-                for k in Nε:-1:1
-                    if dist < εs[k]
-                        C_current[k] += 1
-                    else
-                        break
-                    end
-                end
-            end
-            # Compute distances from the end of w-intervall around i till the end.
-            for j in i+w+1:N
-                dist = evaluate(norm, x, X[j])
-                for k in Nε:-1:1
-                    if dist < εs[k]
-                        C_current[k] += 1
-                    else
-                        break
-                    end
-                end
-            end
-            Cs .+= C_current.^(q-1)
-        end
-        return Cs ./ ((N-2w)*(N-2w-1)^(q-1))
+        Cs[k] == 0 && break
     end
+    for k in (length(εs)÷2 + 1):length(εs)
+        ε = εs[k]
+        for i in 1:N
+            @inbounds Cs[k] += count(d[j, i] < ε for j in i+1+w:N)
+        end
+        if Cs[k] ≈ 1/factor
+            Cs[k:end] .= 1/factor
+            break
+        end
+    end
+    return Cs .* factor
 end
 
+function correlationsum_q(X, εs::AbstractVector, q, norm = Euclidean(), w = 0)
+    @assert issorted(εs) "Sorted εs required for optimized version."
+    q <= 1 && @warn "This function is currently not specialized for q <= 1" *
+    " and may show unexpected behaviour for these values."
+    Cs, N, Nε = zeros(length(εs)), length(X), length(εs)
+    for i in 1+w:N-w
+        x = X[i]
+        C_current = zeros(Nε)
+        # Compute distances from 1 to the start of the w-intervall around i.
+        for j in 1:i-w-1
+            dist = evaluate(norm, x, X[j])
+            for k in Nε:-1:1
+                if dist < εs[k]
+                    C_current[k] += 1
+                else
+                    break
+                end
+            end
+        end
+        # Compute distances from the end of w-intervall around i till the end.
+        for j in i+w+1:N
+            dist = evaluate(norm, x, X[j])
+            for k in Nε:-1:1
+                if dist < εs[k]
+                    C_current[k] += 1
+                else
+                    break
+                end
+            end
+        end
+        Cs .+= C_current.^(q-1)
+    end
+    return Cs ./ ((N-2w)*(N-2w-1)^(q-1))
+end
 
 function distancematrix(X, norm = Euclidean())
     N = length(X)

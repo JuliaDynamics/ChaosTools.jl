@@ -56,7 +56,7 @@ function correlationsum(X, ε; q = 2, norm = Euclidean(), w = 0)
 end
 
 function correlationsum_2(X, ε::Real, norm = Euclidean(), w = 0)
-    N, C = length(X), 0.
+    N, C = length(X), zero(eltype(X))
     for (i, x) in enumerate(X)
         # assumes that the first Nx elements are X itself
         for j in i+1+w:N
@@ -69,10 +69,10 @@ end
 function correlationsum_q(X, ε::Real, q, norm = Euclidean(), w = 0)
     q <= 1 && @warn "This function is currently not specialized for q <= 1" *
     " and may show unexpected behaviour for these values."
-    N, C = length(X), 0.
+    N, C = length(X), zero(eltype(X))
     for i in 1+w:N-w
         x = X[i]
-        C_current = 0.
+        C_current = zero(eltype(X))
         # computes all distances from 0 up to i-w
         for j in 1:i-w-1
             C_current += evaluate(norm, x, X[j]) < ε
@@ -90,7 +90,7 @@ end
 function correlationsum_2(X, εs::AbstractVector, norm = Euclidean(), w = 0)
     @assert issorted(εs) "Sorted εs required for optimized version."
     d = distancematrix(X, norm)
-    Cs = zeros(length(εs))
+    Cs = zeros(eltype(X), length(εs))
     N = length(X)
     factor = 2/((N-w)*(N-1-w))
     for k in length(εs)÷2:-1:1
@@ -117,10 +117,11 @@ function correlationsum_q(X, εs::AbstractVector, q, norm = Euclidean(), w = 0)
     @assert issorted(εs) "Sorted εs required for optimized version."
     q <= 1 && @warn "This function is currently not specialized for q <= 1" *
     " and may show unexpected behaviour for these values."
-    Cs, N, Nε = zeros(length(εs)), length(X), length(εs)
+    Nε, T, N = length(εs), eltype(X), length(X)
+    Cs = zeros(T, Nε)
     for i in 1+w:N-w
         x = X[i]
-        C_current = zeros(Nε)
+        C_current = zeros(T, Nε)
         # Compute distances from 1 to the start of the w-intervall around i.
         for j in 1:i-w-1
             dist = evaluate(norm, x, X[j])

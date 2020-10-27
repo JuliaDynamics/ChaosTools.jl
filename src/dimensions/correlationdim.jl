@@ -70,6 +70,7 @@ function correlationsum_q(X, ε::Real, q, norm = Euclidean(), w = 0)
     q <= 1 && @warn "This function is currently not specialized for q <= 1" *
     " and may show unexpected behaviour for these values."
     N, C = length(X), zero(eltype(X))
+    normalisation = (N-2w)*(N-2w-one(eltype(X)))^(q-1)
     for i in 1+w:N-w
         x = X[i]
         C_current = zero(eltype(X))
@@ -83,7 +84,7 @@ function correlationsum_q(X, ε::Real, q, norm = Euclidean(), w = 0)
         end
         C += C_current^(q - 1)
     end
-    return C / ((N-2w)*(N-2w-1)^(q-1))
+    return C / normalisation
 end
 
 
@@ -119,6 +120,7 @@ function correlationsum_q(X, εs::AbstractVector, q, norm = Euclidean(), w = 0)
     " and may show unexpected behaviour for these values."
     Nε, T, N = length(εs), eltype(X), length(X)
     Cs = zeros(T, Nε)
+    normalisation = (N-2w)*(N-2w-one(T))^(q-1)
     for i in 1+w:N-w
         x = X[i]
         C_current = zeros(T, Nε)
@@ -146,7 +148,7 @@ function correlationsum_q(X, εs::AbstractVector, q, norm = Euclidean(), w = 0)
         end
         Cs .+= C_current.^(q-1)
     end
-    return Cs ./ ((N-2w)*(N-2w-1)^(q-1))
+    return Cs ./ normalisation
 end
 
 function distancematrix(X, norm = Euclidean())

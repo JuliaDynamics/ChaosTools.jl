@@ -228,7 +228,7 @@ Molteno[^Molteno1993], `genentropy` for the calculation of approximation of the 
 """
 function molteno_dim(α, data::Dataset, k0 = 10; base = Base.MathConstants.e)
 	integers, ϵ0 = float_to_int(data)
-    boxes = molteno_boxing(integers, k0)
+    boxes = _molteno_boxing(integers, k0)
     dd = genentropy.(α, boxes, base)
     return linear_region(-log.(ϵ0 ./ 2.0 .^ (1:length(dd))), dd)[2]
 end
@@ -262,6 +262,10 @@ Calculate the number of points per box in data, see [`molteno_dim`](@ref).
 *rework docstring. This function does not return "number of points"*
 """
 function molteno_boxing(data, k0 = 10)
+	integers, ϵ0 = float_to_int(data)
+	boxes = _molteno_boxing(integers, k0)
+end
+function _molteno_boxing(data, k0 = 10)
 	N = length(data[])
     box_probs = Vector{Float64}[]
     iteration = 1

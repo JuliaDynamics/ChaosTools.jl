@@ -17,7 +17,6 @@ include("period_return/transit_time_tests.jl")
 
 include("dimensions/dims.jl")
 include("dimensions/correlationdim.jl")
-include("dimensions/correlation_dimension_takens.jl")
 include("nlts_tests.jl")
 
 ti = time() - ti

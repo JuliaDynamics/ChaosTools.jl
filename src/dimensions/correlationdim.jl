@@ -35,10 +35,10 @@ C_2(\\epsilon) = \\frac{2}{(N-w)(N-w-1)}\\sum_{i=1}^{N}\\sum_{j=1+w+i}^{N} I(||X
 ```
 for `q=2` and
 ```math
-C_q(\\epsilon) = \\frac{1}{(N-w)(N-w-1)^{(q-1)}} \\sum_{i=1}^N\\left[\\sum_{|i-j| > w} I(||X_i - X_j|| < \\epsilon)\\right]^{q-1}
+C_q(\\epsilon) = \\frac{1}{(N-2w)(N-2w-1)^{(q-1)}} \\sum_{i=1}^N\\left[\\sum_{|i-j| > w} I(||X_i - X_j|| < \\epsilon)\\right]^{q-1}
 ```
 for `q≠2`, where ``N`` is its length and ``I`` gives 1 if the argument is `true`. `w` is the Theiler window, a correction to the correlation sum that skips points
-that are temporally close with each other, with the aim of removing spurious correlations. If `ε` is a vector its values have to be ordered. 
+that are temporally close with each other, with the aim of removing spurious correlations. If `ε` is a vector its values have to be ordered.
 See the book "Nonlinear Time Series Analysis"[^Kantz2003], Ch. 6, for a discussion
 around `w` and choosing best values and Ch. 11.3 for the definition of the q-order correlationsum.
 

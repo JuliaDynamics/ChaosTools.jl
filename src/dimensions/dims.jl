@@ -221,10 +221,10 @@ Calculates the generalized dimension using `float_to_int` for projection of `dat
 [^Molteno]: Molteno, T. C. A., [Fast O(N) box-counting algorithm for estimating dimensions. Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/10.1103/PhysRevE.48.R3263)
 """
 function molteno_dim(α, data::AbstractDataset, k0 = 10)
-	integers, ϵ_0 = float_to_int(data)
+	integers, ϵ0 = float_to_int(data)
     boxes = molteno_boxing(Ref(integers), k0)
     dd = genentropy.(α, boxes, base = Base.MathConstants.e)
-    return linear_region(-log.([ϵ_0/2^i for i in 1:length(dd)]), dd)[2]
+    return linear_region(-log.(ϵ0 ./ 2.0 .^ (1:length(dd))), dd)[2]
 end
 
 """
@@ -235,9 +235,9 @@ function float_to_int(data::AbstractDataset{D,T}) where {D, T}
 	N = length(data)
     mins, maxs = minmaxima(data)
     sizes = maxs .- mins
-    ε_0 = maximum(sizes)
+    ϵ0 = maximum(sizes)
     # Let f:[min,max] -> [0+eps(T),1-eps(T)]*typemax(UInt64), then f(x) = m*x + b
-    m = (1-2eps(T)) ./ ε_0 .* typemax(UInt64)
+    m = (1-2eps(T)) ./ ϵ0 .* typemax(UInt64)
     b = eps(T) * typemax(UInt64) .- mins .* m
 
     res = Vector{SVector{D,UInt64}}()
@@ -246,7 +246,7 @@ function float_to_int(data::AbstractDataset{D,T}) where {D, T}
         int_val = floor.(UInt64, m .* x .+ b)
         push!(res, int_val)
     end
-    res, ε_0
+    res, ϵ0
 end
 
 """

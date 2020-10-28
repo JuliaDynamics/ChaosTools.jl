@@ -60,14 +60,14 @@ end
 
 
 """
-    genentropy(α, ε::Real, dataset::AbstractDataset; base = e)
+    genentropy(α, ε::Real, dataset::AbstractDataset; base = Base.MathConstants.e)
 Compute the `α` order generalized (Rényi) entropy[^Rényi1960] of a dataset,
 by first partitioning it into boxes of length `ε` using [`non0hist`](@ref).
 
-    genentropy(α, εs::AbstractVector, dataset::AbstractDataset; base = e)
+    genentropy(α, εs::AbstractVector, dataset::AbstractDataset; base = Base.MathConstants.e)
 Same as `[genentropy(α, ε, dataset) for ε in εs]`.
 
-    genentropy(α, p::AbstractArray; base = e)
+    genentropy(α, p::AbstractArray; base = Base.MathConstants.e)
 Compute the entropy of an array of probabilities `p`, assuming that `p` is
 sum-normalized.
 
@@ -99,7 +99,7 @@ genentropy(α, ε, Dataset(matrix); base = base)
 genentropy(α::Real, ε::AbstractVector, X::AbstractDataset; base = Base.MathConstants.e) =
 [genentropy(α, e, X; base = base) for e in ε]
 
-function genentropy(α::Real, p::AbstractArray{T}; base = e) where {T<:Real}
+function genentropy(α::Real, p::AbstractArray{T}; base = Base.MathConstants.e) where {T<:Real}
     α < 0 && throw(ArgumentError("Order of generalized entropy must be ≥ 0."))
     if α ≈ 0
         return log(base, length(p)) #Hartley entropy, max-entropy
@@ -115,7 +115,7 @@ end
 
 
 """
-    permentropy(x::AbstractVector, order [, interval=1]; base = e)
+    permentropy(x::AbstractVector, order [, interval=1]; base = Base.MathConstants.e)
 
 Compute the permutation entropy[^Brandt2002] of given `order`
 from the `x` timeseries.

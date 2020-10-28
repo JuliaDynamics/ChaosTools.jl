@@ -34,7 +34,7 @@ end
 
 function testchaos01(φ::Vector, c::Real, N0 = Int(length(φ)÷10))
     E = mean(φ)
-    @assert N0 ≤ N/10
+    @assert N0 ≤ length(φ)/10
     pc, qc = trigonometric_decomposition(φ, c)
     Dc = mmsd(E, pc, qc, N0, c)
     Kc = cor(Dc, 1:N0)

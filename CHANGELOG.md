@@ -1,5 +1,6 @@
 # 1.19
 * `correlationsum` now features the keyword `q` to calculate the q-order correlationsum.
+* Add fractal dimension estimation method by Molteno et al `molteno_dim`.
 
 # 1.18
 * `poincaresos` function now also works with input `Dataset` (and does linear interpolation between points sandwiching the dataset)

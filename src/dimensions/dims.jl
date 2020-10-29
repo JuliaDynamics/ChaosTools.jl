@@ -221,7 +221,18 @@ Calculate the generalized dimension using the algorithm for box division defined
 by Molteno[^Molteno1993].
 
 ## Description
-Divide the data into boxes with each new box having half the side length of the former box using [`molteno_boxing`](@ref). Break if the number of points over the number of filled boxes falls below `k0`. Then the generalized dimension can be calculated by using [`genentropy`](@ref) to calculate the sum over the logarithm also considering possible approximations and fitting this to the logarithm of one over the boxsize using [`linear_region`](@ref).
+Divide the data into boxes with each new box having half the side length of the
+former box using [`molteno_boxing`](@ref). Break if the number of points over
+the number of filled boxes falls below `k0`. Then the generalized dimension can
+be calculated by using [`genentropy`](@ref) to calculate the sum over the
+logarithm also considering possible approximations and fitting this to the
+logarithm of one over the boxsize using [`linear_region`](@ref).
+
+This algorithm is only suited for low dimensional data since it divides each
+box into `2^D` new boxes if `D` is the dimension. This leads to low numbers of
+box divisions before the threshold is passed and the divison stops. This leads
+to a low number of data points to fit the dimension to and thereby a poor
+estimate.
 
 [^Molteno1993]: Molteno, T. C. A., [Fast O(N) box-counting algorithm for
 estimating dimensions. Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/
@@ -238,7 +249,8 @@ end
 Distribute the `data` into boxes whose size is halved in each step. Stop if the
 average number of points per filled box falls below the threshold `k0`.
 
-Returns `boxes` an array of point distributions for different box sizes and the corresponding box sizes `ϵ0`.
+Returns `boxes` an array of point distributions for different box sizes and the
+corresponding box sizes `ϵ0`.
 
 ## Description
 Project the `data` onto the whole interval of numbers that is covered by
@@ -252,7 +264,9 @@ bit of the value is one or zero. For more than one dimension the values of the
 comparison are multiplied with `2^j` if `j` iterates through `0:dim-1` and
 added up afterwards.
 
-The process of dividing the data into new boxes stops when the number of points over the number of filled boxes falls below `k0`. The box sizes `ϵs` are calculated and returned together with the `boxes`.
+The process of dividing the data into new boxes stops when the number of points
+over the number of filled boxes falls below `k0`. The box sizes `ϵs` are
+calculated and returned together with the `boxes`.
 """
 function molteno_boxing(data, k0 = 10)
     integers, ϵ0 = float_to_int(data)
@@ -264,7 +278,8 @@ end
 """
     float_to_int(data::Dataset{D,T}) where {D, T}
 Calculate maximum and minimum value of `data` to then project the values onto
-``[0 + \\epsilon, 1 + \\epsilon] \\cdot M`` where ``\\epsilon`` is the precision of the used Type and ``M`` is the maximum value of the UInt64 type.
+``[0 + \\epsilon, 1 + \\epsilon] \\cdot M`` where ``\\epsilon`` is the
+precision of the used Type and ``M`` is the maximum value of the UInt64 type.
 """
 function float_to_int(data::Dataset{D,T}) where {D, T}
     N = length(data)

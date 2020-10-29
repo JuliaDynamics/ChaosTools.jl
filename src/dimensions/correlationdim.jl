@@ -212,10 +212,29 @@ function boxed_correlationdim(data, r0, εs, q = 2)
 end
 
 """
-    correlation_boxing(data, r0)
-Distributes the `data` points into boxes of size `r0`. Returns box positions and the contents of each box as two separate vectors. Implemented according to the paper by Theiler[^Theiler1987] improving the algorithm by Grassberger and Procaccia[^Grassberger1983].
+    boxed_correlationsum(boxes, contents, data, ε, q = 2)
+Distribute `data` into boxes of size `r0`. The `q`-order correlationsum is then calculated for each of the boxes and summed up afterwards.
 
-See also: [`estimate_r0_theiler`](@ref), [`estimate_r0_buenoorovio`](@ref), [`grassberger`](@ref).
+See also: [`boxed_correlationdim`](@ref)
+"""
+function boxed_correlationsum(data, r0, εs; q = 2)
+    boxes, contents = correlation_boxes(data, r0)
+    if q == 2
+        boxed_correlationsum_2(boxes, contents, data, ε)
+    else
+        boxed_correlationsum_q(boxes, contents, data, ε, q)
+    end
+end
+
+"""
+    correlation_boxing(data, r0)
+Distributes the `data` points into boxes of size `r0`. Returns box positions
+and the contents of each box as two separate vectors. Implemented according to
+the paper by Theiler[^Theiler1987] improving the algorithm by Grassberger and
+Procaccia[^Grassberger1983].
+
+See also: [`estimate_r0_theiler`](@ref), [`estimate_r0_buenoorovio`](@ref),
+[`grassberger`](@ref).
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 
@@ -246,44 +265,68 @@ function correlation_boxing(data, r0)
 end
 
 """
-    boxed_correlationsum(boxes, contents, data, ε, q = 2)
-For a vector of `boxes` and the indices of their `contents` inside of `data`, this function finds the q-order correlationsum for a radius or radii `ε`.
-
-See also: [`boxed_correlationdim`](@ref)
+    boxed_correlationsum_q(boxes, contents, data, ε, q)
+For a vector of `boxes` and the indices of their `contents` inside of `data`,
+calculate the `q`-order correlationsum of a radius or radii `ε`.
 """
-function boxed_correlationsum(boxes, contents, data, ε, q = 2)
+function boxed_correlationsum_q(boxes, contents, data, ε, q)
     q <= 1 && @warn "This function is currently not specialized for q <= 1" *
     " and may show unexpected behaviour for these values."
     Cs = zeros(Float64, length(ε))
     N = length(data)
     for index in 1:length(boxes)
-        indices = find_neighbourboxes(index, boxes, contents, q)
+        indices = find_neighbourboxes_q(index, boxes, contents, q)
         X = data[contents[index]]
         Y = data[indices]
-        Cs .+= correlationsum_boxes(q, X, Y, ε)
+        Cs .+= correlationsum_boxes_q(X, Y, ε, q)
     end
     Cs ./ (N * (N - 1) ^ (q-1))
 end
 
 """
-    find_neighbourboxes(index, boxes, contents, q) → indices
-For an `index` into `boxes` all neighbouring boxes are searched. If the found box is indeed a neighbour, the `contents` of that box are added to `indices`. If for the q-order correlation to be calculated `q = 2`, only those boxes are searched whose index is greater or equal to the original, since the boxes are expected to be ordered and each distance shall only be calculated once.
+    boxed_correlationsum_2(boxes, contents, data, ε)
+For a vector of `boxes` and the indices of their `contents` inside of `data`,
+calculate the classic correlationsum of a radius or multiple radii `ε`.
 """
-function find_neighbourboxes(index, boxes, contents, q)
+function boxed_correlationsum_2(boxes, contents, data, ε)
+    Cs = zeros(Float64, length(ε))
+    N = length(data)
+    for index in 1:length(boxes)
+        indices = find_neighbourboxes_2(index, boxes, contents)
+        X = data[contents[index]]
+        Y = data[indices]
+        Cs .+= correlationsum_boxes_2(X, Y, ε)
+    end
+    Cs .* (2 / (N * (N - 1)))
+end
+
+"""
+    find_neighbourboxes_2(index, boxes, contents) → indices
+For an `index` into `boxes` all neighbouring boxes beginning from the current one are searched. If the found box is indeed a neighbour, the `contents` of that box are added to `indices`.
+"""
+function find_neighbourboxes_2(index, boxes, contents)
     indices = Int[]
     box = boxes[index]
-    if q == 2
-        N_box = length(boxes)
-        for index2 in index:N_box
-            if evaluate(Chebyshev(), box, boxes[index2]) < 2
-                indices = vcat(indices, contents[index2])
-            end
+    N_box = length(boxes)
+    for index2 in index:N_box
+        if evaluate(Chebyshev(), box, boxes[index2]) < 2
+            indices = vcat(indices, contents[index2])
         end
-    else
-        for (index2, box2) in enumerate(boxes)
-            if evaluate(Chebyshev(), box, box2) < 2
-                indices = vcat(indices, contents[index2])
-            end
+    end
+    indices
+end
+
+"""
+    find_neighbourboxes_q(index, boxes, contents, q) → indices
+For an `index` into `boxes` all neighbouring boxes are searched. If the found
+box is indeed a neighbour, the `contents` of that box are added to `indices`.
+"""
+function find_neighbourboxes_q(index, boxes, contents, q)
+    indices = Int[]
+    box = boxes[index]
+    for (index2, box2) in enumerate(boxes)
+        if evaluate(Chebyshev(), box, box2) < 2
+            indices = vcat(indices, contents[index2])
         end
     end
     indices
@@ -295,38 +338,47 @@ Calculates the `q`-order correlation sum for values `X` inside a box, considerin
 
 See also: [`correlationsum`](@ref)
 """
-function correlationsum_boxes(q::Real, X, Y, εs; norm = Euclidean())
+function correlationsum_boxes_q(X, Y, εs, q::Real; norm = Euclidean())
     @assert issorted(εs) "Sorted εs required for optimized version."
     Cs, Ny, Nε = zeros(length(εs)), length(Y), length(εs)
-    if q == 2
-        for (i, x) in enumerate(X)
-            for j in i+1:Ny
-                dist = evaluate(norm, Y[j], x)
-                for k in Nε:-1:1
-                    if dist < εs[k]
-                        Cs[k] += 1
-                    else
-                        break
-                    end
+    for (i, x) in enumerate(X)
+        # accounts for i = j
+        C_current = -1 .* ones(Nε)
+        for j in 1:Ny
+            dist = evaluate(norm, x, Y[j])
+            for k in Nε:-1:1
+                if dist < εs[k]
+                    C_current[k] += 1
+                else
+                    break
                 end
             end
         end
-        Cs .*= 2
-    else
-        for (i, x) in enumerate(X)
-            # accounts for i = j
-            C_current = -1 .* ones(Nε)
-            for j in 1:Ny
-                dist = evaluate(norm, x, Y[j])
-                for k in Nε:-1:1
-                    if dist < εs[k]
-                        C_current[k] += 1
-                    else
-                        break
-                    end
+        Cs .+= C_current .^ (q-1)
+    end
+    return Cs
+end
+
+
+"""
+    correlationsum_boxes_2(X, Y, εs; norm = Euclidean())
+Calculates the classic correlation sum for values `X` inside a box, considering `Y` consisting of all values in that box and the ones in neighbouring boxes for all distances `ε ∈ εs` calculated by `norm`.
+
+See also: [`correlationsum`](@ref)
+"""
+function correlationsum_boxes_2(X, Y, εs; norm = Euclidean())
+    @assert issorted(εs) "Sorted εs required for optimized version."
+    Cs, Ny, Nε = zeros(length(εs)), length(Y), length(εs)
+    for (i, x) in enumerate(X)
+        for j in i+1:Ny
+            dist = evaluate(norm, Y[j], x)
+            for k in Nε:-1:1
+                if dist < εs[k]
+                    Cs[k] += 1
+                else
+                    break
                 end
             end
-            Cs .+= C_current .^ (q-1)
         end
     end
     return Cs

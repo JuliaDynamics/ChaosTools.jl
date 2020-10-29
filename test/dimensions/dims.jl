@@ -42,6 +42,30 @@ println("\nTesting generalized entropy (genentropy) & linear scaling...")
     end
 end
 
+println("\nTesting generalized entropy using Molteno's boxing method...")
+@testset "Molteno's boxing method" begin
+    @testset "Henon Map" begin
+        ds = Systems.henon()
+        ts = trajectory(ds, 200000)
+        boxes, ϵs = molteno_boxing(ts)
+        for q in [0,2,1, 2.56]
+            dd = genentropy.(q, boxes)
+            linr, dim = linear_region(-log.(ϵs), dd)
+            test_value(dim, 1.1, 1.3)
+        end
+    end
+    @testset "Lorenz System" begin
+        ds = Systems.lorenz()
+        ts = trajectory(ds, 5000)
+        boxes, ϵs = molteno_boxing(ts)
+        for q in [0,2,1, 2.56]
+            dd = genentropy.(q, boxes)
+            linr, dim = linear_region(-log.(ϵs), dd)
+            test_value(dim, 1.85, 2.2)
+        end
+    end
+end
+
 println("\nTesting dimension calls (all names)...")
 @testset "Dimension calls" begin
     ds = Systems.henon()

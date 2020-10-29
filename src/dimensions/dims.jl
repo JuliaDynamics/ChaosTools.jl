@@ -196,9 +196,9 @@ The following aliases are provided:
   * α = 0 : `boxcounting_dim`, `capacity_dim`
   * α = 1 : `information_dim`
 """
-function generalized_dim(α, data::AbstractDataset, sizes = estimate_boxsizes(data))
-    dd = genentropy.(α, sizes, Ref(data))
-    return linear_region(-log.(sizes), dd)[2]
+function generalized_dim(α, data::AbstractDataset, sizes = estimate_boxsizes(data); base = Base.MathConstants.e)
+    dd = genentropy.(α, sizes, Ref(data), base = base)
+    return linear_region(-log.(base, sizes), dd)[2]
 end
 generalized_dim(α, matrix::AbstractMatrix, args...) =
 generalized_dim(α, convert(AbstractDataset, matrix), args...)

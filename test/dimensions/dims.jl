@@ -48,6 +48,7 @@ println("\nTesting dimension calls (all names)...")
     ts = trajectory(ds, 20000)
     # Test call with dataset
     test_value(generalized_dim(1.32, ts), 1.1, 1.3)
+    test_value(generalized_dim(1.32, ts, base = 2), 1.1, 1.3)
     test_value(capacity_dim(ts), 1.1, 1.3)
     test_value(information_dim(ts), 1.1, 1.3)
 end

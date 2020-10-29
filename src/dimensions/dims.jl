@@ -234,9 +234,7 @@ box divisions before the threshold is passed and the divison stops. This leads
 to a low number of data points to fit the dimension to and thereby a poor
 estimate.
 
-[^Molteno1993]: Molteno, T. C. A., [Fast O(N) box-counting algorithm for
-estimating dimensions. Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/
-10.1103/PhysRevE.48.R3263)
+[^Molteno1993]: Molteno, T. C. A., [Fast O(N) box-counting algorithm for estimating dimensions. Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/10.1103/PhysRevE.48.R3263)
 """
 function molteno_dim(α, data, k0 = 10; base = Base.MathConstants.e)
     boxes, ϵs = molteno_boxing(data, k0)
@@ -268,7 +266,7 @@ The process of dividing the data into new boxes stops when the number of points
 over the number of filled boxes falls below `k0`. The box sizes `ϵs` are
 calculated and returned together with the `boxes`.
 """
-function molteno_boxing(data, k0 = 10)
+function molteno_boxing(data::Dataset, k0 = 10)
     integers, ϵ0 = float_to_int(data)
     boxes = _molteno_boxing(integers, k0)
     ϵs = ϵ0 ./ 2 .^ (1:length(boxes))

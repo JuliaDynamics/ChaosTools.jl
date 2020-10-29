@@ -38,7 +38,7 @@ Typically `R` is the result of delay coordinates of a single timeseries.
 If the dataset/reconstruction
 exhibits exponential divergence of nearby states, then it should clearly hold
 ```math
-E(k) \\approx \\lambda\\Delta t k + E(0)
+E(k) \\approx \\lambda\\cdot k \\cdot \\Delta t + E(0)
 ```
 for a *well defined region* in the `k` axis, where ``\\lambda`` is
 the approximated

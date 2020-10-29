@@ -23,7 +23,7 @@ If you want to access the various `Kc` you should call the method
 of the two-dimensional process, is `N0 = length(φ)/10`.
 
 Notice that for data sampled from continous dynamical systems, some
-care must be taken regarding the values of `cs`, see [1].
+care must be taken regarding the values of `cs`, see[^Gottwald2016].
 
 [^Gottwald2016]: Gottwald & Melbourne, “The 0-1 test for chaos: A review” [Lect. Notes Phys., vol. 915, pp. 221–247, 2016.](www.doi.org/10.1007/978-3-662-48410-4_7)
 """
@@ -33,8 +33,8 @@ function testchaos01(φ::Vector, cs = 3π/5*rand(10) .+ π/4, N0 = Int(length(φ
 end
 
 function testchaos01(φ::Vector, c::Real, N0 = Int(length(φ)÷10))
-    N, E = length(φ), mean(φ)
-    @assert N0 ≤ N/10
+    E = mean(φ)
+    @assert N0 ≤ length(φ)/10
     pc, qc = trigonometric_decomposition(φ, c)
     Dc = mmsd(E, pc, qc, N0, c)
     Kc = cor(Dc, 1:N0)
@@ -54,9 +54,9 @@ function trigonometric_decomposition(φ, c)
 end
 
 "modified mean square displacement"
-function mmsd(mf, pc::Vector{T}, qc, N0, c) where T
+function mmsd(E, pc::Vector{T}, qc, N0, c) where T
     N, Dc = length(pc), zeros(T, N0)
-    f = mf^2/(1-cos(c)) # constant factor for Dc
+    f = E^2/(1-cos(c)) # constant factor for Dc
     for n in 1:N0
         Mc = sum((pc[n+j] - pc[j])^2 + (qc[n+j] - qc[j])^2 for j in 1:N-n)/(N-n)
         Dc[n] = Mc - f*(1 - cos(n*c))

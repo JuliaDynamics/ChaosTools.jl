@@ -5,7 +5,7 @@ import LombScargle
 export estimate_period
 
 """
-    estimate_period(v, method, t=0:length(v)-1;, method_specific_kwargs...)
+    estimate_period(v::Vector, method, t=0:length(v)-1; kwargs...)
 Estimate the period of the signal `v`, with accompanying time vector `t`,
 using the given `method`.
 

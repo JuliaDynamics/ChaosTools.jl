@@ -13,8 +13,10 @@ include("chaosdetection/expansionentropy_tests.jl")
 
 include("period_return/periodicity_tests.jl")
 include("period_return/period_tests.jl")
+include("period_return/transit_time_tests.jl")
 
-include("dimensions/entropy_dimension.jl")
+include("dimensions/dims.jl")
+include("dimensions/correlationdim.jl")
 include("nlts_tests.jl")
 
 ti = time() - ti

@@ -37,10 +37,19 @@ for `q=2` and
 ```math
 C_q(\\epsilon) = \\frac{1}{(N-2w)(N-2w-1)^{(q-1)}} \\sum_{i=1}^N\\left[\\sum_{|i-j| > w} I(||X_i - X_j|| < \\epsilon)\\right]^{q-1}
 ```
-for `q≠2`, where ``N`` is its length and ``I`` gives 1 if the argument is `true`. `w` is the Theiler window, a correction to the correlation sum that skips points
-that are temporally close with each other, with the aim of removing spurious correlations. If `ε` is a vector its values have to be ordered.
-See the book "Nonlinear Time Series Analysis"[^Kantz2003], Ch. 6, for a discussion
-around `w` and choosing best values and Ch. 11.3 for the definition of the q-order correlationsum.
+for `q≠2`, where ``N`` is its length and ``I`` gives 1 if the argument is
+`true`. `w` is the Theiler window, a correction to the correlation sum that
+skips points that are temporally close with each other, with the aim of
+removing spurious correlations. If `ε` is a vector its values have to be
+ordered. See the book "Nonlinear Time Series Analysis"[^Kantz2003], Ch. 6, for
+a discussion around `w` and choosing best values and Ch. 11.3 for the
+definition of the q-order correlationsum.
+
+If `q = 2` and `ε` is a vector the size of the data has to be reasonably low to
+prevent computing distances twice. Otherwise please use
+```julia
+[correlationsum(..., ε) for ε in εs]
+```
 
 See [`grassberger`](@ref) for more.
 See also [`takens_best_estimate`](@ref).

@@ -46,8 +46,8 @@ ordered. See the book "Nonlinear Time Series Analysis"[^Kantz2003], Ch. 6, for
 a discussion around `w` and choosing best values and Ch. 11.3 for the
 definition of the q-order correlationsum.
 
-If `q = 2` and `ε` is a vector the size of the data has to be reasonably low to
-prevent computing distances twice. Otherwise please use
+If `q = 2` and `ε` is a vector, the `correlationsum` allocates a matrix of size
+`N^2`. If this is larger than your available memory please use
 ```julia
 [correlationsum(..., ε) for ε in εs]
 ```

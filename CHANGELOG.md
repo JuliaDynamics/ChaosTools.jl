@@ -1,3 +1,8 @@
+# 1.20
+* New functions `boxed_correlationsum` and `boxed_correlationdim` that distribute the data points into boxes and calculate the `correlationsum` thereafter resulting in a huge speed increase. `boxed_correlationdim` acts like `grassberger` without an algorithm to estimate `ϵs` beforehand.
+* Added `estimate_r0_buenoorovio` to estimate the box size for `boxed_correlationdim`.
+* New functions `molteno_dim` and `molteno_boxing` distribute the data into boxes and count the data points per box. `molteno_dim` also calculates the generalized dimension from these numbers. 
+
 # 1.19
 * `correlationsum` now features the keyword `q` to calculate the q-order correlationsum.
 * Add fractal dimension estimation method by Molteno et al `molteno_dim`.

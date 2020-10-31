@@ -41,22 +41,28 @@ println("\nTesting correlation dimension with boxing beforehand...")
 @testset "Theilers correlation boxing algorithm" begin
     @testset "Henon Map" begin
         ds = Systems.henon()
-        ts = trajectory(ds, 50000)
+        ts = trajectory(ds, 10000)
         r0 = estimate_r0_buenoorovio(ts)
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
         @test boxed_correlationsum(ts, es, r0) == correlationsum(ts, es)
         @test boxed_correlationsum(ts, es) == correlationsum(ts, es)
         @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlationsum(ts, es, q = 2.3)
+        ts = trajectory(ds, 50000)
+        r0 = estimate_r0_buenoorovio(ts)
+        es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
         test_value(boxed_correlationdim(ts, es, r0), 1.15, 1.35)
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
-        ts = trajectory(ds, 5000; dt = 0.1)
+        ts = trajectory(ds, 1000; dt = 0.1)
         r0 = estimate_r0_buenoorovio(ts)
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
         @test boxed_correlationsum(ts, es, r0) == correlationsum(ts, es)
         @test boxed_correlationsum(ts, es) == correlationsum(ts, es)
         @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlatnsum(ts, es, q = 2.3)
+        ts = trajectory(ds, 5000; dt = 0.1)
+        r0 = estimate_r0_buenoorovio(ts)
+        es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
         test_value(boxed_correlationdim(ts, es, r0), 1.9, 2.2)
     end
 end

@@ -37,9 +37,32 @@ println("\nTesting correlation dimension...")
     end
 end
 
+println("\nTesting correlation dimension with boxing beforehand...")
+@testset "Theilers correlation boxing algorithm" begin
+    @testset "Henon Map" begin
+        ds = Systems.henon()
+        ts = trajectory(ds, 50000)
+        r0 = estimate_r0_buenoorovio(ts)
+        es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
+        @test boxed_correlationsum(ts, r0, es) == correlationsum(ts, es)
+        @test boxed_correlationsum(ts, r0, es; q = 2.3) ≈ correlationsum(ts, es, q = 2.3)
+        test_value(boxed_correlationdim(ts, r0, es), 1.15, 1.35)
+    end
+    @testset "Lorenz System" begin
+        ds = Systems.lorenz()
+        ts = trajectory(ds, 5000; dt = 0.1)
+        r0 = estimate_r0_buenoorovio(ts)
+        es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
+        @test boxed_correlationsum(ts, r0, es) == correlationsum(ts, es)
+        @test boxed_correlationsum(ts, r0, es; q = 2.3) ≈ correlationsum(ts, es, q = 2.3)
+        test_value(boxed_correlationdim(ts, r0, es), 1.9, 2.2)
+    end
+end
+
+
 println("\nTesting Takens' best estimate")
 @testset "Takens best" begin
-    @testset "Henon map" begin
+    @testset "Henon Map" begin
         ds = Systems.henon()
         ts = trajectory(ds, 5000)
         x = ts[:, 1]

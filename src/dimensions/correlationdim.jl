@@ -202,15 +202,16 @@ end
 # Correlationsum, but we distributed data to boxes beforehand
 ################################################################################
 """
-    boxed_correlationdim(data, r0, εs; q = 2)
+    boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2)
 Estimates the q-order correlation dimension[^Kantz2003] out of a dataset `data`
 for radii `εs` by splitting the data into boxes of size `r0` beforehand. The
 method of splitting the data into boxes was mostly copied by the method of
 Theiler[^Theiler1987].
 
 This method splits the data into boxes, calculates the q-order correlation sum
-C_q(ε) and fits a line through the longest linear looking region of the curve
-`(log(εs), log(C_q(εs)))`. The gradient of this line is the dimension.
+C_q(ε) for every `ε ∈ εs` and fits a line through the longest linear looking
+region of the curve `(log(εs), log(C_q(εs)))`. The gradient of this line is the
+dimension.
 
 The function is explicitly optimized for `q = 2`.
 
@@ -222,18 +223,20 @@ See also: [`bueno_orovio_correlationdim`](@ref),
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 """
-function boxed_correlationdim(data, r0, εs; q = 2)
-    dd = boxed_correlationsum(data, r0, εs, q = q)
+function boxed_correlationdim(data, εs, r0 = maximum(ε); q = 2)
+    dd = boxed_correlationsum(data, εs, r0, q = q)
     linear_region(log.(εs), log.(dd), tol = 0.1)[2]
 end
 
 """
-    boxed_correlationsum(boxes, contents, data, ε, q = 2)
-Distribute `data` into boxes of size `r0`. The `q`-order correlationsum is then calculated for each of the boxes and summed up afterwards.
+    boxed_correlationsumdata, εs, r0 = maximum(ε); q = 2)
+Distribute `data` into boxes of size `r0`. The `q`-order correlationsum
+`C_q(ε)` is then calculated for every `ε ∈ εs` and each of the boxes to then be
+summed up afterwards.
 
 See also: [`boxed_correlationdim`](@ref)
 """
-function boxed_correlationsum(data, r0, εs; q = 2)
+function boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2)
     boxes, contents = correlation_boxing(data, r0)
     if q == 2
         boxed_correlationsum_2(boxes, contents, data, εs)
@@ -281,18 +284,18 @@ function correlation_boxing(data, r0)
 end
 
 """
-    boxed_correlationsum_2(boxes, contents, data, ε)
+    boxed_correlationsum_2(boxes, contents, data, εs)
 For a vector of `boxes` and the indices of their `contents` inside of `data`,
-calculate the classic correlationsum of a radius or multiple radii `ε`.
+calculate the classic correlationsum of a radius or multiple radii `εs`.
 """
-function boxed_correlationsum_2(boxes, contents, data, ε)
-    Cs = zeros(Float64, length(ε))
+function boxed_correlationsum_2(boxes, contents, data, εs)
+    Cs = zeros(Float64, length(εs))
     N = length(data)
     for index in 1:length(boxes)
         indices = find_neighbourboxes_2(index, boxes, contents)
         X = data[contents[index]]
         Y = data[indices]
-        Cs .+= inner_correlationsum_2(X, Y, ε)
+        Cs .+= inner_correlationsum_2(X, Y, εs)
     end
     Cs .* (2 / (N * (N - 1)))
 end
@@ -338,20 +341,20 @@ function inner_correlationsum_2(X, Y, εs; norm = Euclidean())
 end
 
 """
-    boxed_correlationsum_q(boxes, contents, data, ε, q)
+    boxed_correlationsum_q(boxes, contents, data, εs, q)
 For a vector of `boxes` and the indices of their `contents` inside of `data`,
-calculate the `q`-order correlationsum of a radius or radii `ε`.
+calculate the `q`-order correlationsum of a radius or radii `εs`.
 """
-function boxed_correlationsum_q(boxes, contents, data, ε, q)
+function boxed_correlationsum_q(boxes, contents, data, εs, q)
     q <= 1 && @warn "This function is currently not specialized for q <= 1" *
     " and may show unexpected behaviour for these values."
-    Cs = zeros(Float64, length(ε))
+    Cs = zeros(Float64, length(εs))
     N = length(data)
     for index in 1:length(boxes)
         indices = find_neighbourboxes_q(index, boxes, contents, q)
         X = data[contents[index]]
         Y = data[indices]
-        Cs .+= inner_correlationsum_q(X, Y, ε, q)
+        Cs .+= inner_correlationsum_q(X, Y, εs, q)
     end
     Cs ./ (N * (N - 1) ^ (q-1))
 end

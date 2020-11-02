@@ -23,6 +23,7 @@ println("\nTesting correlation dimension...")
         cs2 = correlationsum(ts, es; q = 2.0001)
         dim2 = linear_region(log.(es), log.(cs2))[2]
         test_value(dim2, 1.1, 1.3)
+        test_value(grassberger(ts), 1.1, 1.3)
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
@@ -34,6 +35,7 @@ println("\nTesting correlation dimension...")
         cs2 = correlationsum(ts, es; q = 2.001, w = 5)
         dim2 = linear_region(log.(es), log.(cs2))[2]
         test_value(dim2, 1.85, 2.2)
+        test_value(grassberger(ts), 1.85, 2.2)
     end
 end
 
@@ -44,28 +46,33 @@ println("\nTesting correlation dimension with boxing beforehand...")
         ts = trajectory(ds, 10000)
         r0 = estimate_r0_buenoorovio(ts)
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
-        @test boxed_correlationsum(ts, es, r0) == correlationsum(ts, es)
-        @test boxed_correlationsum(ts, es) == correlationsum(ts, es)
+        C = correlationsum(ts, es)
+        @test boxed_correlationsum(ts, es, r0) == C
+        @test boxed_correlationsum(ts, es) == C
         @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlationsum(ts, es, q = 2.3)
         ts = trajectory(ds, 50000)
         r0 = estimate_r0_buenoorovio(ts)
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
         test_value(boxed_correlationdim(ts, es, r0), 1.15, 1.35)
+        test_value(boxed_correlationdim(ts), 1.15, 1.35)
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
         ts = trajectory(ds, 1000; dt = 0.1)
         r0 = estimate_r0_buenoorovio(ts)
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
-        @test boxed_correlationsum(ts, es, r0) == correlationsum(ts, es)
-        @test boxed_correlationsum(ts, es) == correlationsum(ts, es)
+        C = correlationsum(ts, es)
+        @test boxed_correlationsum(ts, es, r0) == C
+        @test boxed_correlationsum(ts, es) == C
         @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlationsum(ts, es, q = 2.3)
         ts = trajectory(ds, 5000; dt = 0.1)
         r0 = estimate_r0_buenoorovio(ts)
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
         test_value(boxed_correlationdim(ts, es, r0), 1.9, 2.2)
+        test_value(boxed_correlationdim(ts), 1.9, 2.2)
     end
 end
+
 
 
 println("\nTesting Takens' best estimate")

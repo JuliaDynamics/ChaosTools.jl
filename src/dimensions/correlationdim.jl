@@ -203,9 +203,9 @@ end
 ################################################################################
 function boxed_correlationdim(data; kwargs...)
     r0 = estimate_r0_buenoorovio(data)
-    ε0 = min_pairwise_distance(data)
+    ε0 = min_pairwise_distance(data)[2]
     εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
-    boxed_correlationdim(data; kwargs...)
+    boxed_correlationdim(data, εs, r0; kwargs...)
 end
 
 """

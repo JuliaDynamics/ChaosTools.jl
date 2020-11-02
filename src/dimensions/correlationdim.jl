@@ -432,8 +432,8 @@ function estimate_r0_theiler(data)
 end
 
 """
-    estimate_r0_buenoorovio(data)
-Estimates a reasonable size for boxing the data proposed by Bueno and Orovio[^Bueno2007] before calculating the correlation dimension as presented by Theiler[^Theiler1983].
+    estimate_r0_buenoorovio(X)
+Estimates a reasonable size for boxing the time series `X` proposed by Bueno and Orovio[^Bueno2007] before calculating the correlation dimension as presented by Theiler[^Theiler1983].
 To do so the dimension `ν` is estimated by running the algorithm by Grassberger and Procaccia[^Grassberger1983] with `√N` points where `N` is the number of total data points.
 An effective size `ℓ` of the attractor is calculated by boxing a small subset of size `N/10` into boxes of sidelength `r_ℓ` and counting the number of filled boxes `η_ℓ`.
 ```math
@@ -455,35 +455,35 @@ r_0 = \\ell / \\eta_\\textrm{opt}^{1/\\nu}.
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
-function estimate_r0_buenoorovio(data)
-    r0 = zero(eltype(data))
-    mini, maxi = minmaxima(data)
-    N = length(data)
-    m = DelayEmbeddings.dimension(data)
+function estimate_r0_buenoorovio(X)
+    mini, maxi = minmaxima(X)
+    N = length(X)
+    m = DelayEmbeddings.dimension(X)
     R = maximum(maxi .- mini)
     # The possibility of a bad pick exists, if so, the calculation is repeated.
-    ν = zero(eltype(data))
+    ν = zero(eltype(X))
+    # Sample N/10 datapoints out of data for rough estimate of effective size.
+    sample1 = X[unique(rand(1:N, N÷10))] |> Dataset
+    r_ℓ = R / 10
+    η_ℓ = length(correlation_boxing(sample1, r_ℓ)[1])
+    r0 = zero(eltype(X))
     while true
         # Sample √N datapoints for rough dimension estimate
-        data_sample1 = data[unique(rand(1:N, ceil(Int, sqrt(N))))] |> Dataset
+        sample2 = X[unique(rand(1:N, ceil(Int, sqrt(N))))] |> Dataset
         # Define logarithmic series of radii.
-        lower = log10(min_pairwise_distance(data_sample1)[2])
+        lower = log10(min_pairwise_distance(X)[2])
         εs = 10 .^ range(lower, stop = log10(R), length = 16)
         # Estimate ν from a sample using the Grassberger Procaccia algorithm.
-        cm = correlationsum(data_sample1, εs)
+        cm = correlationsum(sample2, εs)
         ν = linear_region(log.(εs), log.(cm), tol = 0.5)[2]
-        !iszero(ν) && break
+        # Estimate the effictive size of the chaotic attractor.
+        ℓ = r_ℓ * η_ℓ^(1/ν)
+        # Calculate the optimal number of filled boxes according to Bueno-Orovio
+        η_opt = N^(2/3) * ((3^ν - 1/2) / (3^m - 1))^(1/2)
+        # The optimal box size is the effictive size divided by the box number # to the power of the inverse dimension.
+        r0 = ℓ / η_opt^(1/ν)
+        !isnan(r0) && break
     end
-    # Sample N/10 datapoints out of data for rough estimate of effective size.
-    data_sample2 = data[unique(rand(1:N, N÷10))] |> Dataset
-    r_ℓ = R / 10
-    η_ℓ = length(correlation_boxing(data_sample2, r_ℓ)[1])
-    # Estimate the effictive size of the chaotic attractor.
-    ℓ = r_ℓ * η_ℓ^(1/ν)
-    # Calculate the optimal number of filled boxes according to Bueno-Orovio
-    η_opt = N^(2/3) * ((3^ν - 1/2) / (3^m - 1))^(1/2)
-    # The optimal box size is the effictive size divided by the box number # to the power of the inverse dimension.
-    r0 = ℓ / η_opt^(1/ν)
 end
 
 

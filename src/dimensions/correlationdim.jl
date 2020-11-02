@@ -201,12 +201,20 @@ end
 ################################################################################
 # Correlationsum, but we distributed data to boxes beforehand
 ################################################################################
+function boxed_correlationdim(data; kwargs...)
+    r0 = estimate_r0_buenoorovio(data)
+    ε0 = min_pairwise_distance(data)
+    εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
+    boxed_correlationdim(data; kwargs...)
+end
+
 """
     boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2)
+    boxed_correlationdim(data)
 Estimates the q-order correlation dimension[^Kantz2003] out of a dataset `data`
 for radii `εs` by splitting the data into boxes of size `r0` beforehand. The
 method of splitting the data into boxes was mostly copied by the method of
-Theiler[^Theiler1987].
+Theiler[^Theiler1987]. If only a dataset is given the radii `εs` and boxsize `r0` are chosen by calculating [`estimate_r0_buenoorovio`](@ref).
 
 This method splits the data into boxes, calculates the q-order correlation sum
 C_q(ε) for every `ε ∈ εs` and fits a line through the longest linear looking
@@ -215,8 +223,7 @@ dimension.
 
 The function is explicitly optimized for `q = 2`.
 
-See also: [`bueno_orovio_correlationdim`](@ref),
-[`theiler_correlationdim`](@ref), [`correlation_boxing`](@ref),
+See also: [`correlation_boxing`](@ref),
 [`boxed_correlationsum`](@ref) and [`q_order_correlationsum`] (@ref)
 
 [^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)

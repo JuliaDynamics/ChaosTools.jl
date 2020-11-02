@@ -491,6 +491,7 @@ function estimate_r0_buenoorovio(X)
         r0 = ℓ / η_opt^(1/ν)
         !isnan(r0) && break
     end
+    return r0
 end
 
 

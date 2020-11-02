@@ -27,7 +27,7 @@ println("\nTesting correlation dimension...")
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
-        ts = trajectory(ds, 2000; dt = 0.1)
+        ts = trajectory(ds, 1000; dt = 0.1)
         es = 10 .^ range(-3, stop = 1, length = 8)
         cs1 = correlationsum(ts, es)
         dim1 = linear_region(log.(es), log.(cs1))[2]
@@ -46,7 +46,7 @@ println("\nTesting correlation dimension with boxing beforehand...")
         ts = trajectory(ds, 10000)
         r0 = estimate_r0_buenoorovio(ts)
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
-        C = correlationsum(ts, es)
+        C = [correlationsum(ts, e) for e in es]
         @test boxed_correlationsum(ts, es, r0) == C
         @test boxed_correlationsum(ts, es) == C
         @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlationsum(ts, es, q = 2.3)
@@ -61,7 +61,7 @@ println("\nTesting correlation dimension with boxing beforehand...")
         ts = trajectory(ds, 1000; dt = 0.1)
         r0 = estimate_r0_buenoorovio(ts)
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
-        C = correlationsum(ts, es)
+        C = [correlationsum(ts, e) for e in es]
         @test boxed_correlationsum(ts, es, r0) == C
         @test boxed_correlationsum(ts, es) == C
         @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlationsum(ts, es, q = 2.3)

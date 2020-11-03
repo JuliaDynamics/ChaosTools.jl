@@ -55,6 +55,7 @@ println("\nTesting correlation dimension with boxing beforehand...")
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
         test_value(boxed_correlationdim(ts, es, r0), 1.15, 1.35)
         test_value(boxed_correlationdim(ts), 1.15, 1.35)
+        test_value(boxed_correlationdim(ts; m = 1), 1.15, 1.35)
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
@@ -70,6 +71,7 @@ println("\nTesting correlation dimension with boxing beforehand...")
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
         test_value(boxed_correlationdim(ts, es, r0), 1.9, 2.2)
         test_value(boxed_correlationdim(ts), 1.9, 2.2)
+        test_value(boxed_correlationdim(ts; m = 2), 1.9, 2.2)
     end
 end
 

@@ -201,19 +201,19 @@ end
 ################################################################################
 # Correlationsum, but we distributed data to boxes beforehand
 ################################################################################
-function boxed_correlationdim(data; m = DelayEmbeddings.dimension(data), q = 2)
-    r0 = estimate_r0_buenoorovio(data, m)
+function boxed_correlationdim(data; M = size(data, 2), q = 2)
+    r0 = estimate_r0_buenoorovio(data, M)
     ε0 = min_pairwise_distance(data)[2]
     εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
-    boxed_correlationdim(data, εs, r0; m = m, q = q)
+    boxed_correlationdim(data, εs, r0; M = M, q = q)
 end
 
 """
-    boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2, m = DelayEmbeddings.dimension(data))
-    boxed_correlationdim(data; m = DelayEmbeddings.dimension(data), kwargs...)
+    boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2))
+    boxed_correlationdim(data; q = 2, m = size(data, 2))
 Estimates the box assisted q-order correlation dimension[^Kantz2003] out of a
 dataset `data` for radii `εs` by splitting the data into boxes of size `r0`
-beforehand. If `m` is unequal to the dimension of the data, only the first `m`
+beforehand. If `M` is unequal to the dimension of the data, only the first `m`
 dimensions are considered. The method of splitting the data into boxes was
 implemented according to Theiler[^Theiler1987]. If only a dataset is given the
 radii `εs` and boxsize `r0` are chosen by calculating
@@ -233,24 +233,26 @@ See also: [`correlation_boxing`](@ref),
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 """
-function boxed_correlationdim(data, εs, r0 = maximum(ε); q = 2, m = DelayEmbeddings.dimension(data))
-    @assert m ≤ DelayEmbeddings.dimension(data) "Prism dimension has to be " * "lower or equal than data dimension."
-    dd = boxed_correlationsum(data, εs, r0; q = q, m = m)
+function boxed_correlationdim(data, εs, r0 = maximum(ε); q = 2, M = size(data, 2))
+    @assert M ≤ size(data,2) "Prism dimension has to be lower or equal than " *
+    "data dimension."
+    dd = boxed_correlationsum(data, εs, r0; q = q, M = M)
     linear_region(log.(εs), log.(dd), tol = 0.1)[2]
 end
 
 """
-    boxed_correlationsumdata, εs, r0 = maximum(ε); q = 2 , m = DelayEmbeddings.dimension(data))
+    boxed_correlationsumdata, εs, r0 = maximum(ε); q = 2 , M = size(data, 2))
 Distribute `data` into boxes of size `r0`. The `q`-order correlationsum
 `C_q(ε)` is then calculated for every `ε ∈ εs` and each of the boxes to then be
-summed up afterwards. If `m` is unequal to the dimension of the data, only the
+summed up afterwards. If `M` is unequal to the dimension of the data, only the
 first `m` dimensions are considered for the box distribution.
 
 See also: [`boxed_correlationdim`](@ref)
 """
-function boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2, m = DelayEmbeddings.dimension(data))
-    @assert m ≤ DelayEmbeddings.dimension(data) "Prism dimension has to be " * "lower or equal than data dimension."
-    boxes, contents = correlation_boxing(data, r0, m)
+function boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2))
+    @assert M ≤ size(data, 2) "Prism dimension has to be lower or equal than " *
+    "data dimension."
+    boxes, contents = correlation_boxing(data, r0, M)
     if q == 2
         boxed_correlationsum_2(boxes, contents, data, εs)
     else
@@ -259,12 +261,12 @@ function boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2, m = DelayEmbe
 end
 
 """
-    correlation_boxing(data, r0, m = DelayEmbeddings.dimension(data))
+    correlation_boxing(data, r0, M = size(data, 2))
 Distributes the `data` points into boxes of size `r0`. Returns box positions
 and the contents of each box as two separate vectors. Implemented according to
 the paper by Theiler[^Theiler1987] improving the algorithm by Grassberger and
-Procaccia[^Grassberger1983]. If `m` is smaller than the dimension of the data,
-only the first `m` dimensions are considered for the distribution into boxes.
+Procaccia[^Grassberger1983]. If `M` is smaller than the dimension of the data,
+only the first `M` dimensions are considered for the distribution into boxes.
 
 See also: [`estimate_r0_theiler`](@ref), [`estimate_r0_buenoorovio`](@ref),
 [`grassberger`](@ref).
@@ -273,12 +275,13 @@ See also: [`estimate_r0_theiler`](@ref), [`estimate_r0_buenoorovio`](@ref),
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
-function correlation_boxing(data, r0, m = DelayEmbeddings.dimension(data))
-    @assert m ≤ DelayEmbeddings.dimension(data) "Prism dimension has to be " * "lower or equal than data dimension."
-    mini = minima(data)[1:m]
+function correlation_boxing(data, r0, M = size(data, 2))
+    @assert M ≤ size(data, 2) "Prism dimension has to be lower or equal than" *
+    "data dimension."
+    mini = minima(data)[1:M]
 
     # Map each datapoint to its bin edge and sort the resulting list:
-    bins = map(point -> floor.(Int, (point[1:m] - mini)/r0), data)
+    bins = map(point -> floor.(Int, (point[1:M] - mini)/r0), data)
     permutations = sortperm(bins, alg=QuickSort)
 
     boxes = unique(bins[permutations])
@@ -447,11 +450,11 @@ function estimate_r0_theiler(data)
 end
 
 """
-    estimate_r0_buenoorovio(X, m = DelayEmbeddings.dimension(X))
+    estimate_r0_buenoorovio(X, M = size(X, 2))
 Estimates a reasonable size for boxing the time series `X` proposed by
 Bueno-Orovio and Pérez-García[^Bueno2007] before calculating the correlation
 dimension as presented by Theiler[^Theiler1983]. If instead of boxes, prisms
-are chosen everything stays the same but `m` is the dimension of the prism.
+are chosen everything stays the same but `M` is the dimension of the prism.
 To do so the dimension `ν` is estimated by running the algorithm by Grassberger
 and Procaccia[^Grassberger1983] with `√N` points where `N` is the number of
 total data points.
@@ -463,9 +466,9 @@ boxes `η_ℓ`.
 ```
 The optimal number of filled boxes `η_opt` is calculated by minimising the number of calculations.
 ```math
-\\eta_\\textrm{opt} = N^{2/3}\\cdot \\frac{3^\\nu - 1}{3^m - 1}^{1/2}.
+\\eta_\\textrm{opt} = N^{2/3}\\cdot \\frac{3^\\nu - 1}{3^M - 1}^{1/2}.
 ```
-`m` is the dimension of the data or the number of edges on the prism that don't
+`M` is the dimension of the data or the number of edges on the prism that don't
 span the whole dataset.
 
 Then the optimal boxsize ``r_0`` computes as
@@ -479,7 +482,7 @@ r_0 = \\ell / \\eta_\\textrm{opt}^{1/\\nu}.
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
-function estimate_r0_buenoorovio(X, m = DelayEmbeddings.dimension(X))
+function estimate_r0_buenoorovio(X, M = size(X, 2))
     mini, maxi = minmaxima(X)
     N = length(X)
     R = maximum(maxi .- mini)
@@ -502,7 +505,7 @@ function estimate_r0_buenoorovio(X, m = DelayEmbeddings.dimension(X))
         # Estimate the effictive size of the chaotic attractor.
         ℓ = r_ℓ * η_ℓ^(1/ν)
         # Calculate the optimal number of filled boxes according to Bueno-Orovio
-        η_opt = N^(2/3) * ((3^ν - 1/2) / (3^m - 1))^(1/2)
+        η_opt = N^(2/3) * ((3^ν - 1/2) / (3^M - 1))^(1/2)
         # The optimal box size is the effictive size divided by the box number # to the power of the inverse dimension.
         r0 = ℓ / η_opt^(1/ν)
         !isnan(r0) && break

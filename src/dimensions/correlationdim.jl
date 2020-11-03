@@ -210,7 +210,7 @@ end
 
 """
     boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2))
-    boxed_correlationdim(data; q = 2, m = size(data, 2))
+    boxed_correlationdim(data; q = 2, M = size(data, 2))
 Estimates the box assisted q-order correlation dimension[^Kantz2003] out of a
 dataset `data` for radii `εs` by splitting the data into boxes of size `r0`
 beforehand. If `M` is unequal to the dimension of the data, only the first `m`

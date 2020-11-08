@@ -44,7 +44,7 @@ function logspace_histogram(x::AbstractVector, λ = exp(-w0(x)), ϵ₀ = λ^2 * 
     for v in x
         i = searchsortedfirst(bins, v)
         i == L + 1 && continue
-        bins[i] += 1
+        counts[i] += 1
     end
     return reverse!(bins), reverse!(counts)
 end

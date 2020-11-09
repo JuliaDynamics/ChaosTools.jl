@@ -285,9 +285,10 @@ function float_to_int(data::Dataset{D,T}) where {D, T}
     mins, maxs = minmaxima(data)
     sizes = maxs .- mins
     ε0 = maximum(sizes)
+    I = T(typemax(UInt64))
     # Let f:[min,max] -> [0+eps(T),1-eps(T)]*typemax(UInt64), then f(x) = m*x + b
-    m = (1-2eps(T)) ./ ε0 .* typemax(UInt64)
-    b = eps(T) * typemax(UInt64) .- mins .* m
+    m = (1 - 2eps(T)) * (I - 2eps(I)) / ε0
+    b = eps(I) .- mins .* m
 
     res = Vector{SVector{D,UInt64}}()
     sizehint!(res, N)

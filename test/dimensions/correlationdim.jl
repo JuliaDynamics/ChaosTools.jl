@@ -23,10 +23,11 @@ println("\nTesting correlation dimension...")
         cs2 = correlationsum(ts, es; q = 2.0001)
         dim2 = linear_region(log.(es), log.(cs2))[2]
         test_value(dim2, 1.1, 1.3)
+        test_value(grassberger(ts), 1.1, 1.3)
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
-        ts = trajectory(ds, 2000; dt = 0.1)
+        ts = trajectory(ds, 1000; dt = 0.1)
         es = 10 .^ range(-3, stop = 1, length = 8)
         cs1 = correlationsum(ts, es)
         dim1 = linear_region(log.(es), log.(cs1))[2]
@@ -34,12 +35,51 @@ println("\nTesting correlation dimension...")
         cs2 = correlationsum(ts, es; q = 2.001, w = 5)
         dim2 = linear_region(log.(es), log.(cs2))[2]
         test_value(dim2, 1.85, 2.2)
+        test_value(grassberger(ts), 1.85, 2.2)
     end
 end
 
+println("\nTesting correlation dimension with boxing beforehand...")
+@testset "Theilers correlation boxing algorithm" begin
+    @testset "Henon Map" begin
+        ds = Systems.henon()
+        ts = trajectory(ds, 10000)
+        r0 = estimate_r0_buenoorovio(ts)
+        es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
+        C = [correlationsum(ts, e) for e in es]
+        @test boxed_correlationsum(ts, es, r0) ≈ C
+        @test boxed_correlationsum(ts, es) ≈ C
+        @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlationsum(ts, es, q = 2.3)
+        ts = trajectory(ds, 50000)
+        r0 = estimate_r0_buenoorovio(ts)
+        es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
+        test_value(boxed_correlationdim(ts, es, r0), 1.15, 1.35)
+        test_value(boxed_correlationdim(ts), 1.15, 1.35)
+        test_value(boxed_correlationdim(ts; M = 1), 1.15, 1.35)
+    end
+    @testset "Lorenz System" begin
+        ds = Systems.lorenz()
+        ts = trajectory(ds, 1000; dt = 0.1)
+        r0 = estimate_r0_buenoorovio(ts)
+        es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
+        C = [correlationsum(ts, e) for e in es]
+        @test boxed_correlationsum(ts, es, r0) ≈ C
+        @test boxed_correlationsum(ts, es) ≈ C
+        @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlationsum(ts, es, q = 2.3)
+        ts = trajectory(ds, 5000; dt = 0.1)
+        r0 = estimate_r0_buenoorovio(ts)
+        es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
+        test_value(boxed_correlationdim(ts, es, r0), 1.9, 2.2)
+        test_value(boxed_correlationdim(ts), 1.9, 2.2)
+        test_value(boxed_correlationdim(ts; M = 2), 1.9, 2.2)
+    end
+end
+
+
+
 println("\nTesting Takens' best estimate")
 @testset "Takens best" begin
-    @testset "Henon map" begin
+    @testset "Henon Map" begin
         ds = Systems.henon()
         ts = trajectory(ds, 5000)
         x = ts[:, 1]

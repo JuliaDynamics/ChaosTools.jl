@@ -48,6 +48,9 @@ function permentropy(
         interval::Integer = 1;
         base=Base.MathConstants.e) where {T}
 
+    @warn "permentropy will change to a massively faster version at the next release, and "*
+          "will NOT have the `interval` keyword anymore."
+
     orderi > 255 && throw(ArgumentError("order = $orderi is too large, "*
               "must be smaller than $(Int(typemax(UInt8)))."))
     order = UInt8(orderi)
@@ -71,4 +74,9 @@ function permentropy(
 
     p = nonzero ./ sum(nonzero)
     return -sum(p .* log.(base, p))
+end
+
+
+function permentropy2()
+    Entropies.genentropy(x, SymbolicPermutation(), τ = 1, m = 4)
 end

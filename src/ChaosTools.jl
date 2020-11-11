@@ -19,6 +19,7 @@ include("dimensions/entropies.jl")
 include("dimensions/dims.jl")
 include("dimensions/correlationdim.jl")
 include("dimensions/molteno.jl")
+include("dimensions/known_dynamic_rule.jl")
 
 include("nlts.jl")
 

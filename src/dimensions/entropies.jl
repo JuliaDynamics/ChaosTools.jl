@@ -8,7 +8,7 @@ export non0hist, binhist, genentropy, permentropy, probabilities
 using Combinatorics: permutations
 
 
-function Entropies.non0hist(ε::Real, data::Dataset)
+function non0hist(ε::Real, data::Dataset)
     @warn "signature `non0hist(ε::Real, data::Dataset)` is deprecated, use "*
           "`probabilities(data::Dataset, ε::Real)` instead."
     probabilities(data, ε)

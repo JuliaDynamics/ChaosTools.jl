@@ -198,19 +198,23 @@ The following aliases are provided:
   * α = 1 : `information_dim`
 """
 function generalized_dim(α, data::AbstractDataset, sizes = estimate_boxsizes(data); base = Base.MathConstants.e)
-    dd = genentropy.(α, sizes, Ref(data), base = base)
+    @warn "signature `generalized_dim(α::Real, data::Dataset, sizes)` is deprecated, use "*
+          "`generalized_dim(data::Dataset, sizes; α::Real = 1.0)` instead."
+    generalized_dim(data, sizes; α, base)
+end
+
+function generalized_dim(data::AbstractDataset, sizes; α = 1.0, base = Base.MathConstants.e)
+    dd = [genentropy(data, ε; α, base) for ε ∈ sizes]
     return linear_region(-log.(base, sizes), dd)[2]
 end
-generalized_dim(α, matrix::AbstractMatrix, args...) =
-generalized_dim(α, convert(AbstractDataset, matrix), args...)
 
 # Aliases
-"capacity_dim(args...) = generalized_dim(0, args...)"
-capacity_dim(args...) = generalized_dim(0, args...)
-boxcounting_dim = capacity_dim
+"capacity_dim(args...) = generalized_dim(args...; α = 0)"
+capacity_dim(args...) = generalized_dim(args...; α = 0)
+const boxcounting_dim = capacity_dim
 
-"information_dim(args...) = generalized_dim(1, args...)"
-information_dim(args...) = generalized_dim(1, args...)
+"information_dim(args...) = generalized_dim(args...; α = 1)"
+information_dim(args...) = generalized_dim(args...; α = 1)
 
 ################################################################################
 # Molteno histogram based dimension by boxing values

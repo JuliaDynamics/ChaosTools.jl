@@ -11,11 +11,16 @@ So far this attempt has failed.
 =#
 
 function interpoint_distances(X, norm = Euclidean())
-    N, ds = length(X), eltype(X)[]
+    ds = eltype(X)[]
+    # changed N to be <10000, because otherwise you get an OutOfMemoryError()
+    # because for long time series, N(N-1)/2 will get really large.
+    N = minimum([length(X), 10000])
+    # choosing N random points from X.
+    set = X[rand(1:length(X),N)]
     sizehint!(ds, Int(N*(N-1)/2))
     @inbounds for i in 1:N
         @inbounds for j in i+1:N
-            push!(ds, evaluate(norm, X[i], X[j]))
+            push!(ds, evaluate(norm, set[i], set[j]))
         end
     end
     return ds
@@ -46,6 +51,9 @@ function logspace_histogram(x::AbstractVector, λ = exp(-w0(x)), ϵ₀ = λ^2 * 
         i == L + 1 && continue
         counts[i] += 1
     end
+    # push!(bins, 1e30)
+    # N = sum(counts)
+    # push!(counts, length(x)-N)
     return reverse!(bins), reverse!(counts)
 end
 # TODO: test the algorithm with including the bin [∞, ε0)
@@ -59,13 +67,48 @@ w0(x) = log(maximum(x)/minimum(x))/√length(x)
 # Notice that pᵢ is just the function of the ϵᵢ , the bin edges.
 
 # To estimate the dimension we have to do an optimization solve of a problem...? wtf!
+using JuMP
+using Ipopt
 
-p(a, bins) = @. (bins^a[1]) * (a[2] + a[3]*bins + a[4]*bins^2)
 function judd_estimator(bins, count)
-    f = (a) -> -sum( bins .* log.(p(a, bins)) )
-    optimize(f, ones(4))
-end
+    # initiate model with nonlinear optimizer
+    model = Model(Ipopt.Optimizer)
 
-# The problem now is OF COURSE, that this optimization problem is ill defined.
-# a polynomial can OF COURSE get negative values, and OF COURSE the logarithm
-# of a negative number is not real. How do these papers get published my god...
+    # initiate variables. If I don't restrict them to be larger than zero, nothing works
+    @variable(model,d >= 1e-9)
+    @variable(model,a0  >= 1e-9)
+    @variable(model,a1  >= 1e-9)
+    @variable(model,a2  >= 1e-9)
+
+    # Function to minimize = minus log-likelihood function
+    # JuMP doesn't like pre-defined functions, so you have to write the function in here explicitly
+    @NLobjective(model,Min, -sum(count[i] * log( bins[i]^d * (a0 + a1*bins[i] + a2*bins[i]^2)) for i in 1:length(bins)))
+
+    # constraints. If I go for equality in the second one (sum(pᵢ == 1)), nothing converges. Since we're not actually considering the last bin, this should be fine I guess.
+    @NLconstraint(model, con[i = 1:length(bins)], bins[i]^d*( a0 + a1*bins[i] + a2*bins[i]^2) >= 1e-5)
+    @NLconstraint(model, .9 <= sum( bins[i]^d *( a0 + a1*bins[i] + a2*bins[i]^2) for i in 1:length(bins)) <= 1.1)
+
+    # Alternative definition of the objective and constraints according to the
+    # 1994 paper (in the 1992 one he just argues that you can approximate the
+    # difference by the larger bin). This doesn't actually make anything better
+    # and only increases computation time.
+    # For this to work, we would also have to pass ϵ₀ as an argument.
+    # @NLobjective(model,Min, -sum(counts[i] * log( (bins[i]/ϵ₀)^d * (a0 + a1*bins[i]/ϵ₀ + a2*(bins[i]/ϵ₀)^2) - (bins[i+1]/ϵ₀)^d * (a0 + a1*bins[i+1]/ϵ₀ + a2*(bins[i+1]/ϵ₀)^2)) for i in 2:length(bins)-1))
+    #
+    # @NLconstraint(model, con[i = 2:length(bins)-1],(bins[i]/ϵ₀)^d * (a0 + a1*bins[i]/ϵ₀ + a2*(bins[i]/ϵ₀)^2) - (bins[i+1]/ϵ₀)^d * (a0 + a1*bins[i+1]/ϵ₀ + a2*(bins[i+1]/ϵ₀)^2) >= 1e-9)
+
+    optimize!(model)
+
+    # optimal value of variable. This is currently... not very realistic.
+    # Also, it "works" more or less for Henon (fast convergence, unrealistic result),
+    # while it only converges incredibly slowly or not at all for Lorenz. (Probably
+    # due to the larger amount of bins, etc.)
+    value(d)
+
+    # I honestly think this should be optimized with some kind of SGD, maybe even
+    # with (Nosterov) momentum, but then again that wouldn't really solve the problem
+    # that the optimizer doesn't know what to optimize (polynomial vs exponential).
+    # Also, I didn't find a (currently maintained) SGD package for Julia, and given
+    # the above mentioned problems I don't think it would make sense to write one
+    # myself just for this problem.
+end

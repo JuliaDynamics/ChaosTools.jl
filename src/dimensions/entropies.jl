@@ -30,7 +30,7 @@ end
 
 
 """
-    permentropy(x::AbstractVector, order [, interval=1]; base = Base.MathConstants.e)
+    permentropy_old(x::AbstractVector, order [, interval=1]; base = Base.MathConstants.e)
 
 Compute the permutation entropy[^Brandt2002] of given `order`
 from the `x` timeseries.
@@ -43,7 +43,7 @@ Optionally use `base` for the logarithms.
 
 [^Bandt2002]: C. Bandt, & B. Pompe, [Phys. Rev. Lett. **88** (17), pp 174102 (2002)](http://doi.org/10.1103/PhysRevLett.88.174102)
 """
-function permentropy(
+function permentropy_old(
         time_series::AbstractArray{T, 1}, orderi::Integer,
         interval::Integer = 1;
         base=Base.MathConstants.e) where {T}
@@ -76,7 +76,19 @@ function permentropy(
     return -sum(p .* log.(base, p))
 end
 
+"""
+    permentropy(x, m = 3; τ = 1, base = Base.MathConstants.e)
 
-function permentropy2()
-    Entropies.genentropy(x, SymbolicPermutation(), τ = 1, m = 4)
+Compute the permutation entropy[^Brandt2002] of given order `m`
+from the `x` timeseries.
+
+This method is equivalent with
+```julia
+genentropy(x, SymbolicPermutation(; m, τ); base)
+```
+
+[^Bandt2002]: C. Bandt, & B. Pompe, [Phys. Rev. Lett. **88** (17), pp 174102 (2002)](http://doi.org/10.1103/PhysRevLett.88.174102)
+"""
+function permentropy(x, m = 3; τ = 1, base = Base.MathConstants.e)
+    Entropies.genentropy(x, SymbolicPermutation(; τ = 1, m = 3))
 end

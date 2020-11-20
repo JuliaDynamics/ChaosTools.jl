@@ -1,9 +1,11 @@
 # 1.19
+* A lot of functions have been deprecated in favor of the new syntax that uses Entropies.jl: `non0hist, binhist, genentropy`.
+* Permutation entropy has been re-written from scratch to use the Entropies.jl version. This drops the (completely unnecessary) argument `interval`, however the old method is available as `ChaosTools.permentropy_old`. It will be removed completely in version 2.0.
 * `correlationsum` now features the keyword `q` to calculate the q-order correlationsum.
 * Add fractal dimension estimation method by Molteno et al `molteno_dim`.
 
 # 1.18
-* `poincaresos` function now also works with input `Dataset` (and does linear interpolation between points sandwiching the dataset)
+* `poincaresos` function now also works with input `Dataset` (and does linear interpolation between points sandwiching the hyperplane)
 
 # 1.17
 * `transit_time_statistics` deprecated in favor of `exit_entry_times`.

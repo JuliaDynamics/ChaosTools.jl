@@ -9,11 +9,14 @@ Judd, K. (1994). Estimating dimension from small samples. Physica D: Nonlinear P
 
 So far this attempt has failed.
 =#
+using Distances
 
 function interpoint_distances(X, norm = Euclidean())
     ds = eltype(X)[]
-    # changed N to be <10000, because otherwise you get an OutOfMemoryError()
+    # changed N to be <10000, because otherwise I get an OutOfMemoryError()
     # because for long time series, N(N-1)/2 will get really large.
+    # Problem arising from that: bins are not filled properly with default binning
+    # for long time series/ systems with "large" maximum distances (Lorenz)
     N = minimum([length(X), 10000])
     # choosing N random points from X.
     set = X[rand(1:length(X),N)]
@@ -23,7 +26,7 @@ function interpoint_distances(X, norm = Euclidean())
             push!(ds, evaluate(norm, set[i], set[j]))
         end
     end
-    return ds
+    return filter(x-> x!= 0.0,ds)
 end
 
 """
@@ -51,9 +54,6 @@ function logspace_histogram(x::AbstractVector, λ = exp(-w0(x)), ϵ₀ = λ^2 * 
         i == L + 1 && continue
         counts[i] += 1
     end
-    # push!(bins, 1e30)
-    # N = sum(counts)
-    # push!(counts, length(x)-N)
     return reverse!(bins), reverse!(counts)
 end
 # TODO: test the algorithm with including the bin [∞, ε0)
@@ -69,13 +69,19 @@ w0(x) = log(maximum(x)/minimum(x))/√length(x)
 # To estimate the dimension we have to do an optimization solve of a problem...? wtf!
 using JuMP
 using Ipopt
+# %% TODO: Add option to choose degree of polynomial (seems not really feasible
+# for the estimation with JuMP, check if there's another way)
+# I found a Paper (doi.org/10.1063/1.166489) where it is stated that
+# "degree 1 is usually sufficient".
+# Personally, I find this idea of choosing the degree sort of "by feeling" a little
+# weird (and, tbh, unscientific).
 
-function judd_estimator(bins, count)
+function judd_estimator(bins, count; guess = 1e-9)
     # initiate model with nonlinear optimizer
     model = Model(Ipopt.Optimizer)
 
     # initiate variables. If I don't restrict them to be larger than zero, nothing works
-    @variable(model,d >= 1e-9)
+    @variable(model,d >= guess)
     @variable(model,a0  >= 1e-9)
     @variable(model,a1  >= 1e-9)
     @variable(model,a2  >= 1e-9)
@@ -84,9 +90,13 @@ function judd_estimator(bins, count)
     # JuMP doesn't like pre-defined functions, so you have to write the function in here explicitly
     @NLobjective(model,Min, -sum(count[i] * log( bins[i]^d * (a0 + a1*bins[i] + a2*bins[i]^2)) for i in 1:length(bins)))
 
-    # constraints. If I go for equality in the second one (sum(pᵢ == 1)), nothing converges. Since we're not actually considering the last bin, this should be fine I guess.
-    @NLconstraint(model, con[i = 1:length(bins)], bins[i]^d*( a0 + a1*bins[i] + a2*bins[i]^2) >= 1e-5)
-    @NLconstraint(model, .9 <= sum( bins[i]^d *( a0 + a1*bins[i] + a2*bins[i]^2) for i in 1:length(bins)) <= 1.1)
+    # constraints. If I go for equality in the second one (sum(pᵢ == 1)), nothing
+    # converges. Since we're not actually considering the last bin, this should be
+    # fine I guess.
+    # Also, the constraints don't allow for >/ <, so that's why I'm using >= ep 
+    ep = eps(Float64)
+    @NLconstraint(model, con[i = 1:length(bins)], bins[i]^d*( a0 + a1*bins[i] + a2*bins[i]^2) >= ep)
+    @NLconstraint(model, sum( bins[i]^d *( a0 + a1*bins[i] + a2*bins[i]^2) for i in 1:length(bins)) <= 1.)
 
     # Alternative definition of the objective and constraints according to the
     # 1994 paper (in the 1992 one he just argues that you can approximate the
@@ -100,15 +110,11 @@ function judd_estimator(bins, count)
     optimize!(model)
 
     # optimal value of variable. This is currently... not very realistic.
-    # Also, it "works" more or less for Henon (fast convergence, unrealistic result),
-    # while it only converges incredibly slowly or not at all for Lorenz. (Probably
-    # due to the larger amount of bins, etc.)
+    # Also, it "works" more or less for Henon, towel etc. (fast convergence, unrealistic result),
+    # while it only converges incredibly slowly or not at all for Lorenz with
+    # default binning (because bins are not filled properly, at least not with the
+    # amount of points that my poor little 8GB RAM machine can process).
+    # It "works" (= converges) for Lorenz by setting λ manually to a smaller value
     value(d)
 
-    # I honestly think this should be optimized with some kind of SGD, maybe even
-    # with (Nosterov) momentum, but then again that wouldn't really solve the problem
-    # that the optimizer doesn't know what to optimize (polynomial vs exponential).
-    # Also, I didn't find a (currently maintained) SGD package for Julia, and given
-    # the above mentioned problems I don't think it would make sense to write one
-    # myself just for this problem.
 end

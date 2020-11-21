@@ -2,6 +2,7 @@ using ChaosTools
 using Test
 using StatsBase
 using Statistics
+using Entropies
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
@@ -10,14 +11,11 @@ println("\nTesting generalized entropy (genentropy) & linear scaling...")
     @testset "Henon Map" begin
         ds = Systems.henon()
         ts = trajectory(ds, 200000)
-        mat = Matrix(ts)
-        # Test call with dataset
-        genentropy(1, 0.001, ts)
         es = 10 .^ range(-0, stop = -3, length = 7)
         dd = zero(es)
         for q in [0,2,1, 2.56]
             for (i, ee) in enumerate(es)
-                dd[i] = genentropy(mat, ee; α = q)
+                dd[i] = genentropy(ts, ee; α = q)
             end
             linr, dim = linear_region(-log.(es), dd)
             test_value(dim, 1.1, 1.3)
@@ -48,8 +46,9 @@ println("\nTesting generalized entropy using Molteno's boxing method...")
         ds = Systems.henon()
         ts = trajectory(ds, 200000)
         boxes, ϵs = molteno_boxing(ts)
+        boxes = Probabilities.(boxes)
         for q in [0,2,1, 2.56]
-            dd = genentropy.(q, boxes)
+            dd = genentropy.(boxes; α = q)
             linr, dim = linear_region(-log.(ϵs), dd)
             test_value(dim, 1.1, 1.3)
         end
@@ -58,8 +57,9 @@ println("\nTesting generalized entropy using Molteno's boxing method...")
         ds = Systems.lorenz()
         ts = trajectory(ds, 5000)
         boxes, ϵs = molteno_boxing(ts)
+        boxes = Probabilities.(boxes)
         for q in [0,2,1, 2.56]
-            dd = genentropy.(q, boxes)
+            dd = genentropy.(boxes; α = q)
             linr, dim = linear_region(-log.(ϵs), dd)
             test_value(dim, 1.85, 2.2)
         end
@@ -70,6 +70,6 @@ println("\nTesting dimension calls (all names)...")
 @testset "Dimension calls" begin
     ds = Systems.henon()
     ts = trajectory(ds, 50000)
-    test_value(generalized_dim(ts; α = 1.32), 1.1, 1.3)
-    test_value(generalized_dim(ts, base = 2, α = 1.32), 1.1, 1.3)
+    test_value(generalized_dim(ts; α = 1.32), 1.0, 1.3)
+    test_value(generalized_dim(ts; base = 2, α = 1.32), 1.0, 1.3)
 end

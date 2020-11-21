@@ -1,121 +1,36 @@
+#=
+The code that used to be on this document has been moved to Entropies.jl
+and improved in its entirety. This page now only holds deprecations.
+=#
+using Entropies
+export non0hist, binhist, genentropy, permentropy, probabilities
+
 using Combinatorics: permutations
 
-export non0hist, binhist, genentropy, permentropy
 
-"""
-    non0hist(ε, dataset::AbstractDataset) → p
-Partition a dataset into tabulated intervals (boxes) of
-size `ε` and return the sum-normalized histogram in an unordered 1D form,
-discarding all zero elements and bin edge information.
-
-## Performances Notes
-This method has a linearithmic time complexity (`n log(n)` for `n = length(data)`)
-and a linear space complexity (`l` for `l = dimension(data)`).
-This allows computation of histograms of high-dimensional
-datasets and with small box sizes `ε` without memory overflow and with maximum performance.
-
-Use [`binhist`](@ref) to retain bin edge information.
-"""
-non0hist(args...) = _non0hist(args...)[1]
-
-function _non0hist(ε::Real, data::AbstractDataset{D, T}) where {D, T<:Real}
-    mini = minima(data)
-    L = length(data)
-    hist = Vector{Float64}()
-    # Reserve enough space for histogram:
-    sizehint!(hist, L)
-
-    # Map each datapoint to its bin edge and sort the resulting list:
-    bins = map(point -> floor.(Int, (point - mini)/ε), data)
-    sort!(bins, alg=QuickSort)
-
-    # Fill the histogram by counting consecutive equal bins:
-    prev_bin, count = bins[1], 0
-    for bin in bins
-        if bin == prev_bin
-            count += 1
-        else
-            push!(hist, count/L)
-            prev_bin = bin
-            count = 1
-        end
-    end
-    push!(hist, count/L)
-
-    # Shrink histogram capacity to fit its size:
-    sizehint!(hist, length(hist))
-    return hist, bins, mini
+function non0hist(ε::Real, data::Dataset)
+    @warn "signature `non0hist(ε::Real, data::Dataset)` is deprecated, use "*
+          "`probabilities(data::Dataset, ε::Real)` instead."
+    probabilities(data, ε)
 end
 
-"""
-    binhist(ε, data) → p, bins
-Do the same as [`non0hist`](@ref) but also return the bin edge information.
-"""
-function binhist(ε, data)
-    hist, bins, mini = _non0hist(ε, data)
-    unique!(bins)
-    b = [β .* ε .+ mini for β in bins]
-    return hist, b
+function Entropies.binhist(ε::Real, data::Dataset)
+    @warn "signature `binhist(ε::Real, data::Dataset)` is deprecated, use "*
+          "`binhist(data::Dataset, ε::Real)` instead."
+    binhist(data, ε)
 end
 
-
-"""
-    genentropy(α, ε::Real, dataset::AbstractDataset; base = Base.MathConstants.e)
-Compute the `α` order generalized (Rényi) entropy[^Rényi1960] of a dataset,
-by first partitioning it into boxes of length `ε` using [`non0hist`](@ref).
-
-    genentropy(α, εs::AbstractVector, dataset::AbstractDataset; base = Base.MathConstants.e)
-Same as `[genentropy(α, ε, dataset) for ε in εs]`.
-
-    genentropy(α, p::AbstractArray; base = Base.MathConstants.e)
-Compute the entropy of an array of probabilities `p`, assuming that `p` is
-sum-normalized.
-
-Optionally use `base` for the logarithms.
-
-## Description
-Let ``p`` be an array of probabilities (summing to 1). Then the Rényi entropy is
-```math
-H_\\alpha(p) = \\frac{1}{1-\\alpha} \\log \\left(\\sum_i p[i]^\\alpha\\right)
-```
-and generalizes other known entropies,
-like e.g. the information entropy
-(``\\alpha = 1``, see [^Shannon1948]), the maximum entropy (``\\alpha=0``,
-also known as Hartley entropy), or the correlation entropy
-(``\\alpha = 2``, also known as collision entropy).
-
-[^Rényi1960]: A. Rényi, *Proceedings of the fourth Berkeley Symposium on Mathematics, Statistics and Probability*, pp 547 (1960)
-
-[^Shannon1948]: C. E. Shannon, Bell Systems Technical Journal **27**, pp 379 (1948)
-"""
-function genentropy(α::Real, ε::Real, data::AbstractDataset;
+function Entropies.genentropy(α::Real, ε::Real, data::AbstractDataset;
     base=Base.MathConstants.e)
-    ε ≤ 0 && throw(ArgumentError("Box-size for entropy calculation must be > 0."))
-    p = non0hist(ε, data)
-    return genentropy(α, p; base = base)
-end
-genentropy(α::Real, ε::Real, matrix; base = Base.MathConstants.e) =
-genentropy(α, ε, Dataset(matrix); base = base)
-genentropy(α::Real, ε::AbstractVector, X::AbstractDataset; base = Base.MathConstants.e) =
-[genentropy(α, e, X; base = base) for e in ε]
-
-function genentropy(α::Real, p::AbstractArray{T}; base = Base.MathConstants.e) where {T<:Real}
-    α < 0 && throw(ArgumentError("Order of generalized entropy must be ≥ 0."))
-    if α ≈ 0
-        return log(base, length(p)) #Hartley entropy, max-entropy
-    elseif α ≈ 1
-        return -sum( x*log(base, x) for x in p ) #Shannon entropy
-    elseif isinf(α)
-        return -log(base, maximum(p)) #Min entropy
-    else
-        return (1/(1-α))*log(base, sum(x^α for x in p) ) #Renyi α entropy
-    end
+    @warn "signature `genentropy(α::Real, ε::Real, data::Dataset)` is deprecated, use "*
+          "`genentropy(data::Dataset, ε::Real; α::Real = 1.0)` instead."
+    genentropy(data, ε; α, base)
 end
 
 
 
 """
-    permentropy(x::AbstractVector, order [, interval=1]; base = Base.MathConstants.e)
+    permentropy_old(x::AbstractVector, order [, interval=1]; base = Base.MathConstants.e)
 
 Compute the permutation entropy[^Brandt2002] of given `order`
 from the `x` timeseries.
@@ -128,10 +43,13 @@ Optionally use `base` for the logarithms.
 
 [^Bandt2002]: C. Bandt, & B. Pompe, [Phys. Rev. Lett. **88** (17), pp 174102 (2002)](http://doi.org/10.1103/PhysRevLett.88.174102)
 """
-function permentropy(
+function permentropy_old(
         time_series::AbstractArray{T, 1}, orderi::Integer,
         interval::Integer = 1;
         base=Base.MathConstants.e) where {T}
+
+    @warn "permentropy will change to a massively faster version at the next release, and "*
+          "will NOT have the `interval` keyword anymore."
 
     orderi > 255 && throw(ArgumentError("order = $orderi is too large, "*
               "must be smaller than $(Int(typemax(UInt8)))."))
@@ -156,4 +74,21 @@ function permentropy(
 
     p = nonzero ./ sum(nonzero)
     return -sum(p .* log.(base, p))
+end
+
+"""
+    permentropy(x, m = 3; τ = 1, base = Base.MathConstants.e)
+
+Compute the permutation entropy[^Brandt2002] of given order `m`
+from the `x` timeseries.
+
+This method is equivalent with
+```julia
+genentropy(x, SymbolicPermutation(; m, τ); base)
+```
+
+[^Bandt2002]: C. Bandt, & B. Pompe, [Phys. Rev. Lett. **88** (17), pp 174102 (2002)](http://doi.org/10.1103/PhysRevLett.88.174102)
+"""
+function permentropy(x, m = 3; τ = 1, base = Base.MathConstants.e)
+    Entropies.genentropy(x, SymbolicPermutation(; τ = 1, m = 3))
 end

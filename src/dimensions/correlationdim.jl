@@ -5,24 +5,19 @@ using Distances, Roots
 export kernelprob, correlationsum, grassberger
 
 """
-    kernelprob(X, ε, norm = Euclidean()) → p
+    kernelprob(X, ε, norm = Euclidean()) → p::Probabilities
 Associate each point in `X` (`Dataset` or timesries) with a probability `p` using the
 "kernel estimation" (also called "nearest neighbor kernel estimation" and other names):
 ```math
 p_j = \\frac{1}{N}\\sum_{i=1}^N I(||X_i - X_j|| < \\epsilon)
 ```
 where ``N`` is its length and ``I`` gives 1 if the argument is `true`.
-Because ``p`` is further normalized, it can be used as
-an alternative for the [`genentropy`](@ref) function (using the second method).
+
+See also [`genentropy`](@ref) and [`correlationsum`](@ref).
+`kernelprob` is equivalent with `probabilities(X, NaiveKernel(ϵ, TreeDistance(norm)))`.
 """
 function kernelprob(X, ε, norm = Euclidean())
-    N = length(X)
-    p = zeros(eltype(X), N)
-    @inbounds for i in 1:N
-        p[i] = count(evaluate(norm, X[i], X[j]) < ε for j in 1:N)
-    end
-    p ./= sum(p)
-    return p
+    probabilities(X, NaiveKernel(ϵ, TreeDistance(norm)))
 end
 
 

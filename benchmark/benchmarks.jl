@@ -1,4 +1,4 @@
-include("lyapunovs.jl")
+include("lyapunovspectrum.jl")
 
 
 # Use this to run: (do it in REPL)

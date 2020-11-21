@@ -12,7 +12,7 @@ println("\nTesting GALI...")
     @testset "Chaotic - towel map" begin
         ds = Systems.towel()
         model(x,p)= @. exp(-p[1]*x)
-        ls = lyapunovs(ds, 10000)
+        ls = lyapunovspectrum(ds, 10000)
         threshold = 1e-16
         @testset "k=$k" for k in [2,3]
             ex = sum(ls[1] - ls[j] for j in 2:k)
@@ -71,17 +71,17 @@ end
         ds = Systems.henonheiles()
         diffeq = Dict(:abstol=>1e-9, :reltol=>1e-9, :solver => Tsit5())
         @testset "regular" begin
-            for k in [2,3,4]
+            for k in [2,4]
                 g, t = gali(ds, tt, k; diff_eq_kwargs = diffeq, u0 = sp)
                 @test t[end] ≥ tt
             end
-            for k in [2,3,4]
+            for k in [2,4]
                 g, t = gali(ds, tt, k; diff_eq_kwargs = diffeq, u0 = qp)
                 @test t[end] ≥ tt
             end
         end
         @testset "chaotic" begin
-            for k in [2,3,4]
+            for k in [2,4]
                 g, t = gali(ds, tt, k; diff_eq_kwargs = diffeq, u0 = ch)
                 @test t[end] < tt
                 @test g[end] ≤ 1e-12
@@ -105,17 +105,17 @@ end
         ds = Systems.ContinuousDynamicalSystem(hhoop, sp, nothing)
         diffeq = Dict(:abstol=>1e-9, :reltol=>1e-9, :solver => Tsit5())
         @testset "regular" begin
-            for k in [2,3,4]
+            for k in [2,4]
                 g, t = gali(ds, tt, k; diff_eq_kwargs = diffeq, u0 = sp)
                 @test t[end] ≥ tt
             end
-            for k in [2,3,4]
+            for k in [2,4]
                 g, t = gali(ds, tt, k; diff_eq_kwargs = diffeq, u0 = qp)
                 @test t[end] ≥ tt
             end
         end
         @testset "chaotic" begin
-            for k in [2,3,4]
+            for k in [2,4]
                 g, t = gali(ds, tt, k; diff_eq_kwargs = diffeq, u0 = ch)
                 @test t[end] < tt
                 @test g[end] ≤ 1e-12

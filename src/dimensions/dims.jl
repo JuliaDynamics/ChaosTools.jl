@@ -172,9 +172,11 @@ estimate_boxsizes(ts::AbstractMatrix; kwargs...) =
 estimate_boxsizes(convert(Dataset, ts); kwargs...)
 
 """
-    generalized_dim(α, dataset [, sizes]) -> D_α
+    generalized_dim(dataset [, sizes]; α = 1, base = MathConstants.e) -> D_α
 Return the `α` order generalized dimension of the `dataset`, by calculating
 the [`genentropy`](@ref) for each `ε ∈ sizes`.
+
+The case of `α=0` is often called "capacity" or "box-counting" dimension.
 
 ## Description
 The returned dimension is approximated by the
@@ -186,7 +188,7 @@ Calling this function performs a lot of automated steps:
   1. A vector of box sizes is decided by calling `sizes = estimate_boxsizes(dataset)`,
      if `sizes` is not given.
   2. For each element of `sizes` the appropriate entropy is
-     calculated, through `d = genentropy.(α, sizes, dataset)`.
+     calculated, through `d = genentropy.(Ref(dataset), sizes; α, base)`.
      Let `x = -log.(sizes)`.
   3. The curve `d(x)` is decomposed into linear regions,
      using [`linear_regions`](@ref)`(x, d)`.
@@ -196,27 +198,31 @@ Calling this function performs a lot of automated steps:
 
 By doing these steps one by one yourself, you can adjust the keyword arguments
 given to each of these function calls, refining the accuracy of the result.
-
-The following aliases are provided:
-
-  * α = 0 : `boxcounting_dim`, `capacity_dim`
-  * α = 1 : `information_dim`
 """
-function generalized_dim(α, data::AbstractDataset, sizes = estimate_boxsizes(data); base = Base.MathConstants.e)
+function generalized_dim(α::Real, data::AbstractDataset, sizes = estimate_boxsizes(data); base = Base.MathConstants.e)
     @warn "signature `generalized_dim(α::Real, data::Dataset, sizes)` is deprecated, use "*
           "`generalized_dim(data::Dataset, sizes; α::Real = 1.0)` instead."
     generalized_dim(data, sizes; α, base)
 end
 
-function generalized_dim(data::AbstractDataset, sizes; α = 1.0, base = Base.MathConstants.e)
+function generalized_dim(data::AbstractDataset, sizes = estimate_boxsizes(data);
+        α = 1.0, base = Base.MathConstants.e
+    )
     dd = [genentropy(data, ε; α, base) for ε ∈ sizes]
     return linear_region(-log.(base, sizes), dd)[2]
 end
 
-# Aliases
+# Aliases, deprecated.
 "capacity_dim(args...) = generalized_dim(args...; α = 0)"
-capacity_dim(args...) = generalized_dim(args...; α = 0)
+function capacity_dim(args...)
+    @warn "capacity_dim is deprecated."
+    generalized_dim(args...; α = 0)
+end
+
 const boxcounting_dim = capacity_dim
 
 "information_dim(args...) = generalized_dim(args...; α = 1)"
-information_dim(args...) = generalized_dim(args...; α = 1)
+function information_dim(args...)
+    @warn "information_dim is deprecated"
+    generalized_dim(args...; α = 1)
+end

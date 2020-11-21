@@ -12,7 +12,7 @@ The Kaplan-Yorke dimension is simply the point where
 If the sum of the exponents never becomes negative the function
 will return the length of the input vector.
 
-Useful in combination with [`lyapunovs`](@ref).
+Useful in combination with [`lyapunovspectrum`](@ref).
 
 [^Kaplan1970]: J. Kaplan & J. Yorke, *Chaotic behavior of multidimensional difference equations*, Lecture Notes in Mathematics vol. **730**, Springer (1979)
 """

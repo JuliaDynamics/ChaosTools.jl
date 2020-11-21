@@ -12,7 +12,7 @@ println("\nTesting GALI...")
     @testset "Chaotic - towel map" begin
         ds = Systems.towel()
         model(x,p)= @. exp(-p[1]*x)
-        ls = lyapunovs(ds, 10000)
+        ls = lyapunovspectrum(ds, 10000)
         threshold = 1e-16
         @testset "k=$k" for k in [2,3]
             ex = sum(ls[1] - ls[j] for j in 2:k)

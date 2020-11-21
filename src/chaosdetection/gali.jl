@@ -34,7 +34,7 @@ from the initial condition. If it is a chaotic orbit, then
 \\exp\\left[\\sum_{j=1}^k (\\lambda_1 - \\lambda_j)t \\right]
 ```
 with ``\\lambda_j`` being the `j`-th Lyapunov exponent
-(see [`lyapunov`](@ref), [`lyapunovs`](@ref)).
+(see [`lyapunov`](@ref), [`lyapunovspectrum`](@ref)).
 If on the other hand the orbit is regular, corresponding
 to movement in ``d``-dimensional torus with `` 1 \\le d \\le D/2``
 then it holds

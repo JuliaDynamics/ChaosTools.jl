@@ -10,8 +10,8 @@ for ds ∈ [Systems.towel(), Systems.lorenz()]
     @test_nowarn @inferred lyapunov(ds, 1000)
 
     tinteg = tangent_integrator(ds, 3)
-    @test_nowarn @inferred lyapunovs(tinteg, 1000, 1, 100, Val{3}())
-    @test_nowarn @inferred lyapunovs(ds, 1000)
+    @test_nowarn @inferred lyapunovspectrum(tinteg, 1000, 1, 100, Val{3}())
+    @test_nowarn @inferred lyapunovspectrum(ds, 1000)
 
     tinteg = tangent_integrator(ds, 2)
     @test_nowarn @inferred ChaosTools.gali(tinteg, 1000, 1, 1e-12)

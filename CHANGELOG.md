@@ -4,6 +4,7 @@
 * Permutation entropy has been re-written from scratch to use the Entropies.jl version. This drops the (completely unnecessary) argument `interval`, however the old method is available as `ChaosTools.permentropy_old`. It will be removed completely in version 2.0.
 * `correlationsum` now features the keyword `q` to calculate the q-order correlationsum.
 * Add fractal dimension estimation method by Molteno et al `molteno_dim`.
+* `lyapunovs` is deprecated in favor of `lyapunovspectrum`.
 
 # 1.18
 * `poincaresos` function now also works with input `Dataset` (and does linear interpolation between points sandwiching the hyperplane)
@@ -93,11 +94,11 @@ First major release.
 * It is now possible to choose which variables to save in both discrete and continuous orbit diagrams.
 * Added method to compute mutual information, from  A. Kraskov *et al.*, [Phys. Rev. E **69**, pp 066138 (2004)]
 * Added method in finding delay time that uses mutual information. At the moment this method is vastly inferior to all others both in speed and in actual results.
-* `lyapunovs` is 1 to 2 orders of magnitude faster.
+* `lyapunovspectrum` is 1 to 2 orders of magnitude faster.
 
 
 # 0.11
-* Changed `gali` call signature to be the same as `lyapunovs`.
+* Changed `gali` call signature to be the same as `lyapunovspectrum`.
 * Bugfixed 1D lyapunov computation
 * Bugfixed `set_deviations!` for continuous systems
 * Updated for `DynamicalSystemsBase` 0.10 (using `get_state` etc.)

@@ -13,7 +13,9 @@ println("\nTesting Partially predictable chaos...")
     @testset "strongly chaotic" begin
         Random.seed!(12)
         lz = lorenz(ρ=180.70)
-        @time chaos_type, ν, C = predictability(lz; λ_max = 1.22, alg=Vern9(), maxiters=1e9, T_max = 1e3)
+        @time chaos_type, ν, C = predictability(lz;
+            λ_max = 1.22, alg=Vern9(), maxiters=1e9, T_max = 1e3, n_samples = 100,
+        )
         @test chaos_type == :SC
         @test ν < ν_thresh_lower
         @test C < C_thresh_lower
@@ -22,7 +24,9 @@ println("\nTesting Partially predictable chaos...")
     @testset "PPC 1" begin
         Random.seed!(12)
         lz = lorenz(ρ=180.78)
-        @time chaos_type, ν, C = predictability(lz; λ_max = 0.4, alg=Vern9(), maxiters=1e9, n_samples = 200, T_max = 400)
+        @time chaos_type, ν, C = predictability(lz;
+            λ_max = 0.4, alg=Vern9(), maxiters=1e9, n_samples = 100, T_max = 400
+        )
         @test chaos_type == :PPC
         @test ν < ν_thresh_lower
         @test C > C_thresh_upper
@@ -31,7 +35,9 @@ println("\nTesting Partially predictable chaos...")
     @testset "PPC 2" begin
         Random.seed!(12)
         lz = lorenz(ρ=180.95)
-        @time chaos_type, ν, C = predictability(lz; λ_max = 0.1, alg=Vern9(), maxiters=1e9, n_samples = 100, T_max = 400)
+        @time chaos_type, ν, C = predictability(lz;
+            λ_max = 0.1, alg=Vern9(), maxiters=1e9, n_samples = 100, T_max = 400
+        )
         @test chaos_type == :PPC
         @test ν < ν_thresh_lower
         @test C > C_thresh_upper
@@ -40,7 +46,9 @@ println("\nTesting Partially predictable chaos...")
     @testset "laminar" begin
         Random.seed!(12)
         lz = lorenz(ρ=181.10)
-        @time chaos_type, ν, C = predictability(lz; λ_max = 0.01, T_max = 400, alg=Vern9(), n_samples = 100, maxiters=1e9)
+        @time chaos_type, ν, C = predictability(lz;
+            λ_max = 0.01, T_max = 400, alg=Vern9(), n_samples = 100, maxiters=1e9
+        )
         @test chaos_type == :REG
         @test ν > ν_thresh_upper
         @test C > C_thresh_upper
@@ -56,7 +64,7 @@ end
 
         for (i, a) in enumerate((a_reg, a_reg2, a_ppc, a_cha))
             set_parameter!(ds, 1, a)
-            chaos_type, ν, C = predictability(ds; T_max = 400000)
+            chaos_type, ν, C = predictability(ds; T_max = 100000)
             @test chaos_type == res[i]
         end
     end

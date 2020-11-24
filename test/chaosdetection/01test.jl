@@ -1,4 +1,5 @@
 using ChaosTools, Test
+using OrdinaryDiffEq
 
 lo = Systems.logistic(r = 3.5)
 reg = trajectory(lo, 10000; Ttr = 1000)
@@ -7,6 +8,7 @@ cha = trajectory(lo, 10000)
 testchaos01(cha)
 
 println("\nTesting 0-1 chaos test...")
+@testset "testchaos01" begin
 @testset "logistic" begin
     lo = Systems.logistic(r = 3.5)
     reg = trajectory(lo, 10000; Ttr = 1000)
@@ -39,7 +41,6 @@ end
     end
 end
 
-using OrdinaryDiffEq
 
 @testset "henonheiles" begin
     sp = [0, .295456, .407308431, 0] #stable periodic orbit: 1D torus
@@ -65,4 +66,6 @@ using OrdinaryDiffEq
         tr = trajectory(ds, tt, ch; dt = dt, diffeq...)[:, 1]
         @test testchaos01(tr, cs)
     end
+end
+
 end

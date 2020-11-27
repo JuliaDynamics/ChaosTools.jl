@@ -5,14 +5,14 @@ using Distances: Cityblock, Euclidean
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
 println("\nTesting nonlinear timeseries analysis...")
-@testset "Henon reconstruct" begin
+@testset "Henon embed" begin
     ds = Systems.henon()
     data = trajectory(ds, 100000)
     x = data[:, 1] # some "recorded" timeseries
 
     @testset "Dimension" begin
         τ = 1; D = 2
-        R = reconstruct(x, D-1, τ)
+        R = embed(x, D, τ)
         D2 = information_dim(R)
         test_value(D2, 1.1, 1.3)
     end
@@ -23,7 +23,7 @@ println("\nTesting nonlinear timeseries analysis...")
             FixedSizeNeighborhood(0.01)]
             @testset "distance = $di" for di in [Euclidean(), Cityblock()]
                 for D in [2, 4]
-                    R = reconstruct(x, D-1, 1)
+                    R = embed(x, D, 1)
                     E = numericallyapunov(R, ks,
                     refstates = 1:1000, distance=di, ntype=meth)
                     λ = linear_region(ks, E)[2]
@@ -32,20 +32,6 @@ println("\nTesting nonlinear timeseries analysis...")
             end
         end
     end
-end
-@testset "Multidim Multitime R" begin
-    ds = Systems.towel()
-    data = trajectory(ds, 10000)
-
-    taus = [2 3; 4 6; 6 8]
-    data2 = data[:, 1:2]
-    R = reconstruct(data2, 3, taus)
-
-    ks = 1:20
-    E = numericallyapunov(R, ks,
-    refstates = 1:1000, distance=Cityblock(), ntype=FixedMassNeighborhood(1))
-    λ = linear_region(ks, E)[2]
-    test_value(λ, 0.3, 0.6)
 end
 
 @testset "Broomhead-King" begin
@@ -59,7 +45,7 @@ end
 
     Ux, Σx = broomhead_king(x, 40)
     Us, Σs = broomhead_king(s, 40)
-    R = reconstruct(x, 1, 30)
+    R = embed(x, 2, 30)
 
     for j in 10:40
         @test Σx[j] < Σs[j]

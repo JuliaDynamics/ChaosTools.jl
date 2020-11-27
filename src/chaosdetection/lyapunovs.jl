@@ -147,7 +147,7 @@ while constantly rescaling the test one.
 `T`  denotes the total time of evolution (should be `Int` for discrete systems).
 
 ## Keyword Arguments
-
+* `u0 = get_state(ds)` : Initial condition.
 * `Ttr = 0` : Extra "transient" time to evolve the trajectories before
   starting to measure the expontent. Should be `Int` for discrete systems.
 * `d0 = 1e-9` : Initial & rescaling distance between the two neighboring trajectories.
@@ -197,6 +197,7 @@ lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
 [^Benettin1976]: G. Benettin *et al.*, Phys. Rev. A **14**, pp 2338 (1976)
 """
 function lyapunov(ds::DS, T;
+                  u0 = get_state(ds),
                   Ttr = 0,
                   d0=1e-9,
                   upper_threshold = 1e-6,
@@ -211,12 +212,9 @@ function lyapunov(ds::DS, T;
     "d0 must be between thresholds!"))
     D = dimension(ds)
     if typeof(ds) <: DDS
-        pinteg = parallel_integrator(ds,
-            [deepcopy(get_state(ds)), inittest(get_state(ds), d0)])
+        pinteg = parallel_integrator(ds, [deepcopy(u0), inittest(u0, d0)])
     else
-        pinteg = parallel_integrator(ds,
-            [deepcopy(get_state(ds)), inittest(get_state(ds), d0)];
-            diffeq...)
+        pinteg = parallel_integrator(ds, [deepcopy(u0), inittest(u0, d0)]; diffeq...)
     end
     λ::ST = lyapunov(pinteg, T, Ttr, dt, d0, upper_threshold, lower_threshold)
     return λ

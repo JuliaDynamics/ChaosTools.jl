@@ -1,3 +1,5 @@
+# 1.20
+* Keyword `u0` is now valid for `lyapunov`.
 # 1.19
 * A lot of functions have been deprecated in favor of the new syntax that uses Entropies.jl: `non0hist, binhist, genentropy`.
 * `information_dim, capacity_dim, boxcounting_dim` are deprecated.

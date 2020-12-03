@@ -119,19 +119,8 @@ function correlationsum_q(X, εs::AbstractVector, q, norm = Euclidean(), w = 0)
     for i in 1+w:N-w
         x = X[i]
         C_current = zeros(T, Nε)
-        # Compute distances from 1 to the start of the w-intervall around i.
-        for j in 1:i-w-1
-            dist = evaluate(norm, x, X[j])
-            for k in Nε:-1:1
-                if dist < εs[k]
-                    C_current[k] += 1
-                else
-                    break
-                end
-            end
-        end
-        # Compute distances from the end of w-intervall around i till the end.
-        for j in i+w+1:N
+        # Compute distances for j outside the Theiler window
+        for j in Iterators.flatten((1:i-w-1, i+w+1:N))
             dist = evaluate(norm, x, X[j])
             for k in Nε:-1:1
                 if dist < εs[k]

@@ -2,7 +2,7 @@
 # Molteno histogram based dimension by boxing values
 ################################################################################
 """
-    molteno_dim(α, data::Dataset, k0 = 10; base = Base.MathConstants.e)
+    molteno_dim(data::Dataset; k0 = 10, α = 1.0, base = ℯ)
 Calculate the generalized dimension using the algorithm for box division defined
 by Molteno[^Molteno1993].
 
@@ -23,14 +23,14 @@ estimate.
 
 [^Molteno1993]: Molteno, T. C. A., [Fast O(N) box-counting algorithm for estimating dimensions. Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/10.1103/PhysRevE.48.R3263)
 """
-function molteno_dim(α, data, k0 = 10; base = ℯ)
+function molteno_dim(data; k0 = 10, α = 1.0, base = ℯ)
     boxes, εs = molteno_boxing(data, k0)
     dd = genentropy.(boxes; α = α, base = base)
     return linear_region(-log.(base, εs), dd)[2]
 end
 
 """
-    molteno_boxing(data::Dataset, k0 = 10) → (boxes, εs)
+    molteno_boxing(data::Dataset; k0 = 10) → (boxes, εs)
 Distribute the `data` into boxes whose size is halved in each step. Stop if the
 average number of points per filled box falls below the threshold `k0`.
 
@@ -53,9 +53,9 @@ The process of dividing the data into new boxes stops when the number of points
 over the number of filled boxes falls below `k0`. The box sizes `εs` are
 calculated and returned together with the `boxes`.
 """
-function molteno_boxing(data::Dataset, k0 = 10)
+function molteno_boxing(data::Dataset; k0 = 10)
     integers, ε0 = float_to_int(data)
-    boxes = _molteno_boxing(integers, k0)
+    boxes = _molteno_boxing(integers; k0 = k0)
     εs = ε0 ./ 2 .^ (1:length(boxes))
     return boxes, εs
 end
@@ -84,7 +84,7 @@ function float_to_int(data::Dataset{D,T}) where {D,T}
     Dataset(res), ε0
 end
 
-function _molteno_boxing(data::Dataset{D,T}, k0 = 10) where {D,T}
+function _molteno_boxing(data::Dataset{D,T}; k0 = 10) where {D,T}
     N = length(data)
     box_probs = Vector{Float64}[]
     iteration = 1

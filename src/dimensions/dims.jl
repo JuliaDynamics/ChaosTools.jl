@@ -198,12 +198,19 @@ Calling this function performs a lot of automated steps:
 
 By doing these steps one by one yourself, you can adjust the keyword arguments
 given to each of these function calls, refining the accuracy of the result.
+
+The following aliases are provided:
+
+  * α = 0 : `boxcounting_dim`, `capacity_dim`
+  * α = 1 : `information_dim`
 """
 function generalized_dim(α::Real, data::AbstractDataset, sizes = estimate_boxsizes(data); base = Base.MathConstants.e)
     @warn "signature `generalized_dim(α::Real, data::Dataset, sizes)` is deprecated, use "*
           "`generalized_dim(data::Dataset, sizes; α::Real = 1.0)` instead."
     generalized_dim(data, sizes; α, base)
 end
+generalized_dim(α, matrix::AbstractMatrix, args...) =
+generalized_dim(α, convert(AbstractDataset, matrix), args...)
 
 function generalized_dim(data::AbstractDataset, sizes = estimate_boxsizes(data);
         α = 1.0, base = Base.MathConstants.e

@@ -1,5 +1,10 @@
+# 1.21
+* Added `boxed_correlationsum` and `boxed_correlationdim` that distribute the data into boxes before calculating the correlationsum.
+* Added `estimate_r0_buenoorovio` to find the optimal boxsize for the former two functions.
+
 # 1.20
 * Keyword `u0` is now valid for `lyapunov`.
+
 # 1.19
 * A lot of functions have been deprecated in favor of the new syntax that uses Entropies.jl: `non0hist, binhist, genentropy`.
 * `information_dim, capacity_dim, boxcounting_dim` are deprecated.

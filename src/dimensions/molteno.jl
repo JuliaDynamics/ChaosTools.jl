@@ -23,9 +23,9 @@ estimate.
 
 [^Molteno1993]: Molteno, T. C. A., [Fast O(N) box-counting algorithm for estimating dimensions. Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/10.1103/PhysRevE.48.R3263)
 """
-function molteno_dim(α, data, k0 = 10; base = Base.MathConstants.e)
+function molteno_dim(α, data, k0 = 10; base = ℯ)
     boxes, εs = molteno_boxing(data, k0)
-    dd = genentropy.(α, boxes, base = base)
+    dd = genentropy.(boxes; α = α, base = base)
     return linear_region(-log.(base, εs), dd)[2]
 end
 
@@ -34,7 +34,7 @@ end
 Distribute the `data` into boxes whose size is halved in each step. Stop if the
 average number of points per filled box falls below the threshold `k0`.
 
-Returns `boxes`, a vector of propabilities per box for different box sizes and the
+Return `boxes`, a vector of `Propabilities` for different box sizes and the
 corresponding box sizes `εs`.
 
 ## Description
@@ -102,11 +102,11 @@ function _molteno_boxing(data, k0 = 10)
             # appends new partitioned box
             append!(boxes, molteno_subboxes(box, data, iteration))
         end
-        # counts all the probabilities by dividing the elements of the box by N
+        # Calculate probabilities by dividing the number of elements in a box by N.
         push!(box_probs, length.(boxes) ./ N)
         iteration += 1
     end
-    box_probs
+    Probabilities.(box_probs)
 end
 
 """

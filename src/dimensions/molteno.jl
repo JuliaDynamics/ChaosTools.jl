@@ -39,7 +39,7 @@ corresponding box sizes `εs`.
 
 ## Description
 Project the `data` onto the whole interval of numbers that is covered by
-`UInt64`. This projected data is then distributed into boxes whose size
+`UInt64`. This projected data is distributed into boxes whose size
 decreases by factor 2 in each step. For each box that contains more than one
 point `2^D` new boxes are created where `D` is the dimension of the data.
 
@@ -66,12 +66,12 @@ Calculate maximum and minimum value of `data` to then project the values onto
 ``[0 + \\epsilon, 1 + \\epsilon] \\cdot M`` where ``\\epsilon`` is the
 precision of the used Type and ``M`` is the maximum value of the UInt64 type.
 """
-function float_to_int(data::Dataset{D,T}) where {D, T}
+function float_to_int(data::Dataset{D,T}) where {D,T}
     N = length(data)
     mins, maxs = minmaxima(data)
     sizes = maxs .- mins
     ε0 = maximum(sizes)
-    # Let f:[min,max] -> [0+eps(T),1-eps(T)]*typemax(UInt64), then f(x) = m*x + b
+    # Let f:[min,max] -> [0+eps(T),1-eps(T)]*typemax(UInt64), then f(x) = m*x + b.
     m = (1-2eps(T)) ./ ε0 .* typemax(UInt64)
     b = eps(T) * typemax(UInt64) .- mins .* m
 
@@ -84,7 +84,7 @@ function float_to_int(data::Dataset{D,T}) where {D, T}
     Dataset(res), ε0
 end
 
-function _molteno_boxing(data, k0 = 10)
+function _molteno_boxing(data::Dataset{D,T}, k0 = 10) where {D,T}
     N = length(data)
     box_probs = Vector{Float64}[]
     iteration = 1
@@ -92,14 +92,14 @@ function _molteno_boxing(data, k0 = 10)
     while N / length(boxes) > k0
         l = length(boxes)
         for t in 1:l
-            # takes the first box
+            # Take the first box.
             box = popfirst!(boxes)
-            # checks if only one element is contained
+            # Check if only one element is contained.
             if length(box) == 1
                 push!(boxes, box)
                 continue
             end
-            # appends new partitioned box
+            # Append a new partitioned box.
             append!(boxes, molteno_subboxes(box, data, iteration))
         end
         # Calculate probabilities by dividing the number of elements in a box by N.
@@ -111,14 +111,14 @@ end
 
 """
     molteno_subboxes(box, data::AbstractVector{S}, iteration) where {D,S<:SVector{D,UInt64}}
-Divides a `box` containing indices into `data` to `2^D` smaller boxes and sorts
-the points contained in the box into the new boxes. Implemented according to
+Divide a `box` containing indices into `data` to `2^D` smaller boxes and sort
+the points contained in the former box into the new boxes. Implemented according to
 Molteno[^Molteno]. Sorts the elements of the former box into the smaller boxes
 using cheap bit shifting and `&` operations on the value of `data` at each box
 element. `iteration` determines which bit of the array should be shifted to the
 last position.
 """
-function molteno_subboxes(box, data::Dataset{D, UInt64}, iteration) where {D}
+function molteno_subboxes(box, data::Dataset{D,UInt64}, iteration) where {D}
     new_boxes = [UInt64[] for i in 1:2^D]
     index_multipliers = [2^i for i in 0:D-1]
     sorting_number = 64-iteration

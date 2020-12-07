@@ -1,4 +1,4 @@
-function lyapunovs_convergence(integ, N, dt::Real, Ttr::Real = 0.0)
+function lyapunovspectrum_convergence(integ, N, dt::Real, Ttr::Real = 0.0)
 
     T = stateeltype(integ)
     t0 = integ.t

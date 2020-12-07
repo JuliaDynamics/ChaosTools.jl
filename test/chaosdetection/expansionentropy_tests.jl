@@ -57,7 +57,7 @@ end
     lor_isinside(x) = -20 < x[1] < 20 && -30 < x[2] < 30 && 0 < x[3] < 50
     ee = expansionentropy(lor, lor_gen, lor_isinside; batches=100, N=100, steps=40, dt=1.0)
 
-    @test abs(ee - 0.9) < 0.05
+    @test abs(ee - 0.9) < 0.07
 end
 
 @testset "continuous regular (henon)" begin

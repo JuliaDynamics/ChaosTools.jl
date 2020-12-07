@@ -36,12 +36,12 @@ for i in 1:8
             end
         end
 
-        λ = lyapunovs(ds, 2000)
+        λ = lyapunovspectrum(ds, 2000)
         if i < 5
-            λ2 = lyapunovs(ds, 2000; dt = 2.0, Ttr = 10.0,
+            λ2 = lyapunovspectrum(ds, 2000; dt = 2.0, Ttr = 10.0,
             abstol = 1e-9, alg = Tsit5())
         else
-            λ2 = lyapunovs(ds, 1000; dt = 5, Ttr = 20)
+            λ2 = lyapunovspectrum(ds, 1000; dt = 5, Ttr = 20)
         end
 
         @test MLE[sysindx][1] < λ[1] < MLE[sysindx][2]
@@ -102,7 +102,7 @@ end
 
 ds = Systems.towel()
 tinteg = tangent_integrator(ds)
-ls, t = ChaosTools.lyapunovs_convergence(tinteg, 20000, 1, 0)
+ls, t = ChaosTools.lyapunovspectrum_convergence(tinteg, 20000, 1, 0)
 l1 = [x[1] for x in ls]
 @test 0.434 < l1[end] < 0.436
 end

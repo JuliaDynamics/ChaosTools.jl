@@ -1,14 +1,15 @@
 # 1.20
-* New functions `boxed_correlationsum` and `boxed_correlationdim` that distribute the data points into boxes and calculate the `correlationsum` thereafter resulting in a huge speed increase. `boxed_correlationdim` acts like `grassberger` without an algorithm to estimate `ϵs` beforehand.
-* Added `estimate_r0_buenoorovio` to estimate the box size for `boxed_correlationdim`.
-* New functions `molteno_dim` and `molteno_boxing` distribute the data into boxes and count the data points per box. `molteno_dim` also calculates the generalized dimension from these numbers. 
-
+* Keyword `u0` is now valid for `lyapunov`.
 # 1.19
+* A lot of functions have been deprecated in favor of the new syntax that uses Entropies.jl: `non0hist, binhist, genentropy`.
+* `information_dim, capacity_dim, boxcounting_dim` are deprecated.
+* Permutation entropy has been re-written from scratch to use the Entropies.jl version. This drops the (completely unnecessary) argument `interval`, however the old method is available as `ChaosTools.permentropy_old`. It will be removed completely in version 2.0.
 * `correlationsum` now features the keyword `q` to calculate the q-order correlationsum.
 * Add fractal dimension estimation method by Molteno et al `molteno_dim`.
+* `lyapunovs` is deprecated in favor of `lyapunovspectrum`.
 
 # 1.18
-* `poincaresos` function now also works with input `Dataset` (and does linear interpolation between points sandwiching the dataset)
+* `poincaresos` function now also works with input `Dataset` (and does linear interpolation between points sandwiching the hyperplane)
 
 # 1.17
 * `transit_time_statistics` deprecated in favor of `exit_entry_times`.
@@ -95,11 +96,11 @@ First major release.
 * It is now possible to choose which variables to save in both discrete and continuous orbit diagrams.
 * Added method to compute mutual information, from  A. Kraskov *et al.*, [Phys. Rev. E **69**, pp 066138 (2004)]
 * Added method in finding delay time that uses mutual information. At the moment this method is vastly inferior to all others both in speed and in actual results.
-* `lyapunovs` is 1 to 2 orders of magnitude faster.
+* `lyapunovspectrum` is 1 to 2 orders of magnitude faster.
 
 
 # 0.11
-* Changed `gali` call signature to be the same as `lyapunovs`.
+* Changed `gali` call signature to be the same as `lyapunovspectrum`.
 * Bugfixed 1D lyapunov computation
 * Bugfixed `set_deviations!` for continuous systems
 * Updated for `DynamicalSystemsBase` 0.10 (using `get_state` etc.)

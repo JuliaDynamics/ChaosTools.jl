@@ -1,13 +1,14 @@
 using LinearAlgebra, StaticArrays
 using DynamicalSystemsBase: MinimalDiscreteIntegrator
 
-export lyapunovs, lyapunov
+export lyapunovspectrum, lyapunov
+@deprecate lyapunovs lyapunovspectrum
 
 #####################################################################################
 #                               Lyapunov Spectum                                    #
 #####################################################################################
 """
-    lyapunovs(ds::DynamicalSystem, N [, k::Int | Q0]; kwargs...) -> λs
+    lyapunovspectrum(ds::DynamicalSystem, N [, k::Int | Q0]; kwargs...) -> λs
 
 Calculate the spectrum of Lyapunov exponents [^Lyapunov1992] of `ds` by applying
 a QR-decomposition on the parallelepiped matrix `N` times. Return the
@@ -46,13 +47,13 @@ an integrator, and `reinit!` it to new initial conditions.
 See the "advanced documentation" for info on the integrator object.
 The low level method is
 ```julia
-lyapunovs(tinteg, N, dt::Real, Ttr::Real)
+lyapunovspectrum(tinteg, N, dt::Real, Ttr::Real)
 ```
 
 If you want to obtain the convergence timeseries of the Lyapunov spectrum,
 use the method
 ```julia
-ChaosTools.lyapunovs_convergence(tinteg, N, dt, Ttr)
+ChaosTools.lyapunovspectrum_convergence(tinteg, N, dt, Ttr)
 ```
 (not exported).
 
@@ -62,10 +63,10 @@ ChaosTools.lyapunovs_convergence(tinteg, N, dt, Ttr)
 
 [^Benettin1980]: G. Benettin *et al.*, Meccanica **15**, pp 9-20 & 21-30 (1980)
 """
-lyapunovs(ds::DS, N, k::Int = dimension(ds); kwargs...) =
-lyapunovs(ds, N, orthonormal(dimension(ds), k); kwargs...)
+lyapunovspectrum(ds::DS, N, k::Int = dimension(ds); kwargs...) =
+lyapunovspectrum(ds, N, orthonormal(dimension(ds), k); kwargs...)
 
-function lyapunovs(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
+function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
     dt::Real = 1, u0 = get_state(ds), diffeq...) where {IIP, S, D}
 
     T = stateeltype(ds)
@@ -77,11 +78,11 @@ function lyapunovs(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
         integ = tangent_integrator(ds, Q0; u0 = u0, diffeq...)
     end
 
-    λ::Vector{T} = lyapunovs(integ, N, dt, Ttr)
+    λ::Vector{T} = lyapunovspectrum(integ, N, dt, Ttr)
     return λ
 end
 
-function lyapunovs(integ, N, dt::Real, Ttr::Real = 0.0)
+function lyapunovspectrum(integ, N, dt::Real, Ttr::Real = 0.0)
 
     T = stateeltype(integ)
     t0 = integ.t
@@ -108,10 +109,10 @@ function lyapunovs(integ, N, dt::Real, Ttr::Real = 0.0)
     return λ
 end
 
-lyapunovs(ds::DynamicalSystem{IIP, T, 1}, a...; kw...) where {IIP, T} =
+lyapunovspectrum(ds::DynamicalSystem{IIP, T, 1}, a...; kw...) where {IIP, T} =
 error("For 1D systems, only discrete & out-of-place method is implemented.")
 
-function lyapunovs(ds::DDS{false, T, 1}, N; Ttr = 0) where {T}
+function lyapunovspectrum(ds::DDS{false, T, 1}, N; Ttr = 0) where {T}
 
     x = get_state(ds); f = ds.f
     p = ds.p; t0 = ds.t0
@@ -129,7 +130,7 @@ function lyapunovs(ds::DDS{false, T, 1}, N; Ttr = 0) where {T}
     return λ/N
 end
 
-lyapunov(ds::DDS{false, T, 1}, N; Ttr = 0) where {T} = lyapunovs(ds, N; Ttr = Ttr)
+lyapunov(ds::DDS{false, T, 1}, N; Ttr = 0) where {T} = lyapunovspectrum(ds, N; Ttr = Ttr)
 
 #####################################################################################
 #                           Maximum Lyapunov Exponent                               #
@@ -146,7 +147,7 @@ while constantly rescaling the test one.
 `T`  denotes the total time of evolution (should be `Int` for discrete systems).
 
 ## Keyword Arguments
-
+* `u0 = get_state(ds)` : Initial condition.
 * `Ttr = 0` : Extra "transient" time to evolve the trajectories before
   starting to measure the expontent. Should be `Int` for discrete systems.
 * `d0 = 1e-9` : Initial & rescaling distance between the two neighboring trajectories.
@@ -196,6 +197,7 @@ lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
 [^Benettin1976]: G. Benettin *et al.*, Phys. Rev. A **14**, pp 2338 (1976)
 """
 function lyapunov(ds::DS, T;
+                  u0 = get_state(ds),
                   Ttr = 0,
                   d0=1e-9,
                   upper_threshold = 1e-6,
@@ -210,12 +212,9 @@ function lyapunov(ds::DS, T;
     "d0 must be between thresholds!"))
     D = dimension(ds)
     if typeof(ds) <: DDS
-        pinteg = parallel_integrator(ds,
-            [deepcopy(get_state(ds)), inittest(get_state(ds), d0)])
+        pinteg = parallel_integrator(ds, [deepcopy(u0), inittest(u0, d0)])
     else
-        pinteg = parallel_integrator(ds,
-            [deepcopy(get_state(ds)), inittest(get_state(ds), d0)];
-            diffeq...)
+        pinteg = parallel_integrator(ds, [deepcopy(u0), inittest(u0, d0)]; diffeq...)
     end
     λ::ST = lyapunov(pinteg, T, Ttr, dt, d0, upper_threshold, lower_threshold)
     return λ

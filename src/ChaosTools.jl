@@ -19,7 +19,7 @@ include("dimensions/entropies.jl")
 include("dimensions/dims.jl")
 include("dimensions/correlationdim.jl")
 include("dimensions/molteno.jl")
-include("dimensions/known_dynamic_rule.jl")
+include("dimensions/kaplanyorke.jl")
 
 include("nlts.jl")
 
@@ -35,6 +35,8 @@ include("chaosdetection/testchaos01.jl")
 
 # Ugly methods that shouldn't exist:
 include("ugliness.jl")
+
+include("deprecations.jl")
 
 display_update = false
 version = "1.10.0"

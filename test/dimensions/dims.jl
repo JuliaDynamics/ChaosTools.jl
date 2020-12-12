@@ -15,7 +15,7 @@ println("\nTesting generalized entropy (genentropy) & linear scaling...")
         dd = zero(es)
         for q in [0,2,1, 2.56]
             for (i, ee) in enumerate(es)
-                dd[i] = genentropy(ts, ee; α = q)
+                dd[i] = genentropy(ts, ee; q)
             end
             linr, dim = linear_region(-log.(es), dd)
             test_value(dim, 1.1, 1.3)
@@ -28,7 +28,7 @@ println("\nTesting generalized entropy (genentropy) & linear scaling...")
         dd = zero(es)
         for q in [0,1,2]
             for (i, ee) in enumerate(es)
-                dd[i] = genentropy(ts, ee; α=q)
+                dd[i] = genentropy(ts, ee; q)
             end
             linr, dim = linear_region(-log.(es), dd)
             if q == 0
@@ -48,7 +48,7 @@ println("\nTesting generalized entropy using Molteno's boxing method...")
         boxes, ϵs = molteno_boxing(ts)
         boxes = Probabilities.(boxes)
         for q in [0,2,1, 2.56]
-            dd = genentropy.(boxes; α = q)
+            dd = genentropy.(boxes; q)
             linr, dim = linear_region(-log.(ϵs), dd)
             test_value(dim, 1.1, 1.3)
         end
@@ -59,7 +59,7 @@ println("\nTesting generalized entropy using Molteno's boxing method...")
         boxes, ϵs = molteno_boxing(ts)
         boxes = Probabilities.(boxes)
         for q in [0,2,1, 2.56]
-            dd = genentropy.(boxes; α = q)
+            dd = genentropy.(boxes; q)
             linr, dim = linear_region(-log.(ϵs), dd)
             test_value(dim, 1.85, 2.2)
         end
@@ -70,6 +70,6 @@ println("\nTesting dimension calls (all names)...")
 @testset "Dimension calls" begin
     ds = Systems.henon()
     ts = trajectory(ds, 50000)
-    test_value(generalized_dim(ts; α = 1.32), 1.0, 1.3)
-    test_value(generalized_dim(ts; base = 2, α = 1.32), 1.0, 1.3)
+    test_value(generalized_dim(ts; q = 1.32), 1.0, 1.3)
+    test_value(generalized_dim(ts; base = 2, q = 1.32), 1.0, 1.3)
 end

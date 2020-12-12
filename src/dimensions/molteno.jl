@@ -2,7 +2,7 @@
 # Molteno histogram based dimension by boxing values
 ################################################################################
 """
-    molteno_dim(data::Dataset; k0 = 10, α = 1.0, base = ℯ)
+    molteno_dim(data::Dataset; k0 = 10, q = 1.0, base = ℯ)
 Calculate the generalized dimension using the algorithm for box division defined
 by Molteno[^Molteno1993].
 
@@ -14,27 +14,30 @@ be calculated by using [`genentropy`](@ref) to calculate the sum over the
 logarithm also considering possible approximations and fitting this to the
 logarithm of one over the boxsize using [`linear_region`](@ref).
 
-This algorithm is faster than the traditional approach of using [`non0hist`](@ref),
+This algorithm is faster than the traditional approach of using [`probabilities`](@ref),
 but it is only suited for low dimensional data since it divides each
 box into `2^D` new boxes if `D` is the dimension. For large `D` this leads to low numbers of
 box divisions before the threshold is passed and the divison stops and as a result
-to a low number of data points to fit the dimension to and thereby a poor
-estimate.
+to a low number of data points to fit the dimension to and thereby a poor estimate.
 
 [^Molteno1993]: Molteno, T. C. A., [Fast O(N) box-counting algorithm for estimating dimensions. Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/10.1103/PhysRevE.48.R3263)
 """
-function molteno_dim(data; k0 = 10, α = 1.0, base = ℯ)
+function molteno_dim(data; k0 = 10, α = nothing, q=1.0, base = ℯ)
+    if α ≠ nothing
+        @warn "Keyword `α` is deprecated in favor of `q`."
+        q = α
+    end
     boxes, εs = molteno_boxing(data, k0)
-    dd = genentropy.(boxes; α = α, base = base)
+    dd = genentropy.(boxes; q, base)
     return linear_region(-log.(base, εs), dd)[2]
 end
 
 """
-    molteno_boxing(data::Dataset; k0 = 10) → (boxes, εs)
+    molteno_boxing(data::Dataset; k0 = 10) → (probs, εs)
 Distribute the `data` into boxes whose size is halved in each step. Stop if the
 average number of points per filled box falls below the threshold `k0`.
 
-Return `boxes`, a vector of `Propabilities` for different box sizes and the
+Return `probs`, a vector of `Propabilities` for different box sizes and the
 corresponding box sizes `εs`.
 
 ## Description
@@ -43,20 +46,16 @@ Project the `data` onto the whole interval of numbers that is covered by
 decreases by factor 2 in each step. For each box that contains more than one
 point `2^D` new boxes are created where `D` is the dimension of the data.
 
-The new boxes are stored in a vector. The data points are distributed into
-these boxes by bit shifting and an `&`-comparison to check whether the `i`th
-bit of the value is one or zero. For more than one dimension the values of the
-comparison are multiplied with `2^j` if `j` iterates through `0:dim-1` and
-added up afterwards.
-
 The process of dividing the data into new boxes stops when the number of points
 over the number of filled boxes falls below `k0`. The box sizes `εs` are
-calculated and returned together with the `boxes`.
+calculated and returned together with the `probs`.
+
+See[^Molteno1993] for more.
 """
-function molteno_boxing(data::Dataset; k0 = 10)
+function molteno_boxing(data::AbstractDataset; k0 = 10)
     integers, ε0 = float_to_int(data)
     boxes = _molteno_boxing(integers; k0 = k0)
-    εs = ε0 ./ 2 .^ (1:length(boxes))
+    εs = ε0 ./ (2 .^ (1:length(boxes)))
     return boxes, εs
 end
 
@@ -66,7 +65,7 @@ Calculate maximum and minimum value of `data` to then project the values onto
 ``[0 + \\epsilon, 1 + \\epsilon] \\cdot M`` where ``\\epsilon`` is the
 precision of the used Type and ``M`` is the maximum value of the UInt64 type.
 """
-function float_to_int(data::Dataset{D,T}) where {D,T}
+function float_to_int(data::AbstractDataset{D,T}) where {D,T}
     N = length(data)
     mins, maxs = minmaxima(data)
     sizes = maxs .- mins
@@ -110,7 +109,7 @@ function _molteno_boxing(data::Dataset{D,T}; k0 = 10) where {D,T}
 end
 
 """
-    molteno_subboxes(box, data::AbstractVector{S}, iteration) where {D,S<:SVector{D,UInt64}}
+    molteno_subboxes(box, data, iteration)
 Divide a `box` containing indices into `data` to `2^D` smaller boxes and sort
 the points contained in the former box into the new boxes. Implemented according to
 Molteno[^Molteno]. Sorts the elements of the former box into the smaller boxes
@@ -118,7 +117,7 @@ using cheap bit shifting and `&` operations on the value of `data` at each box
 element. `iteration` determines which bit of the array should be shifted to the
 last position.
 """
-function molteno_subboxes(box, data::Dataset{D,UInt64}, iteration) where {D}
+function molteno_subboxes(box, data::AbstractDataset{D,UInt64}, iteration) where {D}
     new_boxes = [UInt64[] for i in 1:2^D]
     index_multipliers = [2^i for i in 0:D-1]
     sorting_number = 64-iteration

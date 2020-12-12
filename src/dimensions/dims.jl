@@ -172,7 +172,7 @@ estimate_boxsizes(ts::AbstractMatrix; kwargs...) =
 estimate_boxsizes(convert(Dataset, ts); kwargs...)
 
 """
-    generalized_dim(dataset [, sizes]; α = 1, base = MathConstants.e) -> D_α
+    generalized_dim(dataset [, sizes]; q = 1, base = MathConstants.e) -> D_α
 Return the `α` order generalized dimension of the `dataset`, by calculating
 the [`genentropy`](@ref) for each `ε ∈ sizes`.
 
@@ -188,12 +188,13 @@ Calling this function performs a lot of automated steps:
   1. A vector of box sizes is decided by calling `sizes = estimate_boxsizes(dataset)`,
      if `sizes` is not given.
   2. For each element of `sizes` the appropriate entropy is
-     calculated, through `d = genentropy.(Ref(dataset), sizes; α, base)`.
+     calculated, through `h = genentropy.(Ref(dataset), sizes; α, base)`.
      Let `x = -log.(sizes)`.
-  3. The curve `d(x)` is decomposed into linear regions,
-     using [`linear_regions`](@ref)`(x, d)`.
+  3. The curve `h(x)` is decomposed into linear regions,
+     using [`linear_regions`](@ref)`(x, h)`.
   4. The biggest linear region is chosen, and a fit for the slope of that
-     region is performed using the function [`linear_region`](@ref).
+     region is performed using the function [`linear_region`](@ref),
+     which does a simple linear regression fit using [`linreg`](@ref).
      This slope is the return value of `generalized_dim`.
 
 By doing these steps one by one yourself, you can adjust the keyword arguments
@@ -204,18 +205,22 @@ The following aliases are provided:
   * α = 0 : `boxcounting_dim`, `capacity_dim`
   * α = 1 : `information_dim`
 """
-function generalized_dim(α::Real, data::AbstractDataset, sizes = estimate_boxsizes(data); base = Base.MathConstants.e)
+function generalized_dim(α::Real, data::AbstractDataset, sizes = estimate_boxsizes(data); base = MathConstants.e)
     @warn "signature `generalized_dim(α::Real, data::Dataset, sizes)` is deprecated, use "*
-          "`generalized_dim(data::Dataset, sizes; α::Real = 1.0)` instead."
+          "`generalized_dim(data::Dataset, sizes; q::Real = 1.0)` instead."
     generalized_dim(data, sizes; α, base)
 end
 generalized_dim(α, matrix::AbstractMatrix, args...) =
 generalized_dim(α, convert(AbstractDataset, matrix), args...)
 
 function generalized_dim(data::AbstractDataset, sizes = estimate_boxsizes(data);
-        α = 1.0, base = Base.MathConstants.e
+        α = nothing, base = Base.MathConstants.e, q = 1.0
     )
-    dd = [genentropy(data, ε; α, base) for ε ∈ sizes]
+    if α ≠ nothing
+        @warn "Keyword `α` is deprecated in favor of `q`."
+        q = α
+    end
+    dd = [genentropy(data, ε; q, base) for ε ∈ sizes]
     return linear_region(-log.(base, sizes), dd)[2]
 end
 
@@ -223,7 +228,7 @@ end
 "capacity_dim(args...) = generalized_dim(args...; α = 0)"
 function capacity_dim(args...)
     @warn "capacity_dim is deprecated."
-    generalized_dim(args...; α = 0)
+    generalized_dim(args...; q = 0)
 end
 
 const boxcounting_dim = capacity_dim
@@ -231,5 +236,5 @@ const boxcounting_dim = capacity_dim
 "information_dim(args...) = generalized_dim(args...; α = 1)"
 function information_dim(args...)
     @warn "information_dim is deprecated"
-    generalized_dim(args...; α = 1)
+    generalized_dim(args...; q = 1)
 end

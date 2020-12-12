@@ -42,40 +42,6 @@ end
 
 slope(x, y) = linreg(x, y)[2]
 
-"""
-    linear_region(x, y; dxi::Int = 1, tol = 0.2) -> ([ind1, ind2], slope)
-Call [`linear_regions`](@ref), identify the largest linear region
-and approximate the slope of the entire region using `linreg`.
-Return the indices where
-the region starts and stops (`x[ind1:ind2]`) as well as the approximated slope.
-"""
-function linear_region(x::AbstractVector, y::AbstractVector;
-    dxi::Int = 1, tol::Real = 0.2)
-
-    # Find biggest linear region:
-    reg_ind = max_linear_region(linear_regions(x,y; dxi=dxi, tol=tol)...)
-    # least squares fit:
-    xfit = view(x, reg_ind[1]:reg_ind[2])
-    yfit = view(y, reg_ind[1]:reg_ind[2])
-    approx_tang = slope(xfit, yfit)
-    return reg_ind, approx_tang
-end
-
-"""
-    max_linear_region(lrs::Vector{Int}, tangents::Vector{Float64})
-Find the biggest linear region and return it.
-"""
-function max_linear_region(lrs::Vector{Int}, tangents::Vector{Float64})
-    dis = 0
-    tagind = 0
-    for i in 1:length(lrs)-1
-        if lrs[i+1] - lrs[i] > dis
-            dis = lrs[i+1] - lrs[i]
-            tagind = i
-        end
-    end
-    return [lrs[tagind], lrs[tagind+1]]
-end
 
 """
     linear_regions(x, y; dxi::Int = 1, tol = 0.2) -> (lrs, tangents)
@@ -100,7 +66,7 @@ function linear_regions(
     )
     return if method == :overlap
         linear_regions_overlap(x, y, dxi, tol)
-    else
+    elseif method == :sequential
         linear_regions_sequential(x, y, dxi, tol)
     end
 end
@@ -136,4 +102,39 @@ function linear_regions_sequential(x, y, dxi, tol)
     end
     push!(lrs, length(x))
     return lrs, tangents
+end
+
+"""
+    max_linear_region(lrs, tangents)
+Find the biggest linear region and return it.
+"""
+function max_linear_region(lrs, tangents)
+    dis = 0
+    tagind = 0
+    for i in 1:length(lrs)-1
+        if lrs[i+1] - lrs[i] > dis
+            dis = lrs[i+1] - lrs[i]
+            tagind = i
+        end
+    end
+    return [lrs[tagind], lrs[tagind+1]]
+end
+
+"""
+    linear_region(x, y; dxi::Int = 1, tol = 0.2) -> ([ind1, ind2], slope)
+Call [`linear_regions`](@ref), identify the largest linear region
+and approximate the slope of the entire region using `linreg`.
+Return the indices where
+the region starts and stops (`x[ind1:ind2]`) as well as the approximated slope.
+"""
+function linear_region(x::AbstractVector, y::AbstractVector;
+    dxi::Int = 1, tol::Real = 0.2)
+
+    # Find biggest linear region:
+    reg_ind = max_linear_region(linear_regions(x,y; dxi=dxi, tol=tol)...)
+    # least squares fit:
+    xfit = view(x, reg_ind[1]:reg_ind[2])
+    yfit = view(y, reg_ind[1]:reg_ind[2])
+    approx_tang = slope(xfit, yfit)
+    return reg_ind, approx_tang
 end

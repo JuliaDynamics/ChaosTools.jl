@@ -94,9 +94,18 @@ Notice that `tangents` is _not_ accurate: it is not recomputed at every step,
 but only when its error exceeds the tolerance `tol`! Use [`linear_region`](@ref)
 to obtain a correct estimate for the slope of the largest linear region.
 """
-function linear_regions(x::AbstractVector, y::AbstractVector;
-    dxi::Int = 1, tol::Real = 0.2)
+function linear_regions(
+        x::AbstractVector, y::AbstractVector;
+        method = :sequential, dxi::Int = method == :overlap ? 3 : 1, tol = 0.2,
+    )
+    return if method == :overlap
+        linear_regions_overlap(x, y, dxi, tol)
+    else
+        linear_regions_sequential(x, y, dxi, tol)
+    end
+end
 
+function linear_regions_sequential(x, y, dxi, tol)
     maxit = length(x) ÷ dxi
 
     tangents = Float64[slope(view(x, 1:max(dxi, 2)), view(y, 1:max(dxi, 2)))]
@@ -107,9 +116,8 @@ function linear_regions(x::AbstractVector, y::AbstractVector;
 
     # Start loop over all partitions of `x` into `dxi` intervals:
     for k in 1:maxit-1
-        # tang = linreg(view(x, k*dxi:(k+1)*dxi), view(y, k*dxi:(k+1)*dxi))[2]
         tang = slope(view(x, k*dxi:(k+1)*dxi), view(y, k*dxi:(k+1)*dxi))
-        if isapprox(tang, prevtang, rtol=tol)
+        if isapprox(tang, prevtang, rtol=tol, atol = 0)
             # Tanget is similar with initial previous one (based on tolerance)
             continue
         else

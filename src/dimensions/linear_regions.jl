@@ -105,22 +105,6 @@ function linear_regions_sequential(x, y, dxi, tol)
 end
 
 """
-    max_linear_region(lrs, tangents)
-Find the biggest linear region and return it.
-"""
-function max_linear_region(lrs, tangents)
-    dis = 0
-    tagind = 0
-    for i in 1:length(lrs)-1
-        if lrs[i+1] - lrs[i] > dis
-            dis = lrs[i+1] - lrs[i]
-            tagind = i
-        end
-    end
-    return [lrs[tagind], lrs[tagind+1]]
-end
-
-"""
     linear_region(x, y; dxi::Int = 1, tol = 0.2) -> ((ind1, ind2), slope)
 Call [`linear_regions`](@ref) and identify and return the largest linear region
 and its slope. The region starts and stops at `x[ind1:ind2]`.

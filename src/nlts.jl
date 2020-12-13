@@ -165,14 +165,15 @@ end
 """
     broomhead_king(s::AbstractVector, d::Int) -> U, S, Vtr
 Return the Broomhead-King coordinates of a timeseries `s`
-by performing `svd` on the so-called trajectory matrix with dimension `d`.
+by performing `svd` on high-dimensional embedding if `s` with dimension `d` with
+minimum delay.
 
 ## Description
 Broomhead and King coordinates is an approach proposed in [^Broomhead1987] that applies the
 Karhunen–Loève theorem to delay coordinates embedding with smallest possible delay.
 
 The function performs singular value decomposition
-on the `d`-dimensional trajectory matrix ``X`` of ``s``,
+on the `d`-dimensional matrix ``X`` of ``s``,
 ```math
 X = \\frac{1}{\\sqrt{N}}\\left(
 \\begin{array}{cccc}

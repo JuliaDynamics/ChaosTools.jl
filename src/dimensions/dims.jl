@@ -2,6 +2,10 @@
 This file contains the definition of the generalized dimension and related concepts
 and also uses linear_regions.jl
 =#
+export boxcounting_dim, capacity_dim, generalized_dim,
+       information_dim, estimate_boxsizes, kaplanyorke_dim
+export molteno_dim, molteno_boxing
+
 #######################################################################################
 # Entropy based dimensions
 #######################################################################################

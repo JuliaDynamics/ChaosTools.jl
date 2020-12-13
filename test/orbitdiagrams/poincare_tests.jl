@@ -41,7 +41,7 @@ println("\nTesting poincare sections...")
         psos = poincaresos(gis, gis_plane(μ), 5000.0, Ttr = 200.0, direction = +1)
         @test length(psos) > 1
         ε = estimate_boxsizes(psos; w = 0, z = -1)
-        @test generalized_dim(2, psos, ε) < 1
+        @test generalized_dim(psos, ε; q = 2) < 1
     end
     @testset "beginning on the plane" begin
 
@@ -102,6 +102,6 @@ end
     psos = poincaresos(tr, [0, 1.0, 0, 0])
     @test all(abs.(psos[:, 2]) .≤ 1e-15)
     psos = poincaresos(tr, [1.0, 1.0, 0, 0])
-    g = generalized_dim(0.0, psos)
+    g = generalized_dim(psos; q = 0)
     @test g ≤ 1
 end

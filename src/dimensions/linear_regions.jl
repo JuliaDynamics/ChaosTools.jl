@@ -4,9 +4,6 @@ defines the `generalized_dim` function.
 =#
 
 export linear_region, linear_regions, estimate_boxsizes, linreg
-export boxcounting_dim, capacity_dim, generalized_dim,
-information_dim, estimate_boxsizes, kaplanyorke_dim
-export molteno_dim, molteno_boxing
 #####################################################################################
 # Functions and methods to deduce linear scaling regions
 #####################################################################################
@@ -46,8 +43,8 @@ slope(x, y) = linreg(x, y)[2]
 """
     linear_regions(x, y; dxi::Int = 1, tol = 0.2) -> (lrs, tangents)
 Identify regions where the curve `y(x)` is linear, by scanning the
-`x`-axis every `dxi` indices (e.g. at `x[1] to x[5], x[5] to x[10], x[10] to x[15]`
-and so on if `dxi=5`).
+`x`-axis every `dxi` indices sequentially
+(e.g. at `x[1] to x[5], x[5] to x[10], x[10] to x[15]` and so on if `dxi=5`).
 
 If the slope (calculated via linear regression) of a region of width `dxi` is
 approximatelly equal to that of the previous region,
@@ -55,10 +52,8 @@ within tolerance `tol`,
 then these two regions belong to the same linear region.
 
 Return the indices of `x` that correspond to linear regions, `lrs`,
-and the approximated `tangents` at each region. `lrs` is a vector of `Int`.
-Notice that `tangents` is _not_ accurate: it is not recomputed at every step,
-but only when its error exceeds the tolerance `tol`! Use [`linear_region`](@ref)
-to obtain a correct estimate for the slope of the largest linear region.
+and the _correct_ `tangents` at each region
+(obtained via a second linear regression at each accumulated region).
 """
 function linear_regions(
         x::AbstractVector, y::AbstractVector;
@@ -101,6 +96,11 @@ function linear_regions_sequential(x, y, dxi, tol)
         prevtang = tang
     end
     push!(lrs, length(x))
+    # create new tangents that do have linear regression weighted
+    tangents = Float64[]
+    for i in 1:length(lrs)-1
+        push!(tangents, linreg(view(x, lrs[i]:lrs[i+1]), view(y ,lrs[i]:lrs[i+1]))[2])
+    end
     return lrs, tangents
 end
 
@@ -121,20 +121,14 @@ function max_linear_region(lrs, tangents)
 end
 
 """
-    linear_region(x, y; dxi::Int = 1, tol = 0.2) -> ([ind1, ind2], slope)
-Call [`linear_regions`](@ref), identify the largest linear region
-and approximate the slope of the entire region using `linreg`.
-Return the indices where
-the region starts and stops (`x[ind1:ind2]`) as well as the approximated slope.
+    linear_region(x, y; dxi::Int = 1, tol = 0.2) -> ((ind1, ind2), slope)
+Call [`linear_regions`](@ref) and identify and return the largest linear region
+and its slope. The region starts and stops at `x[ind1:ind2]`.
 """
 function linear_region(x::AbstractVector, y::AbstractVector;
     dxi::Int = 1, tol::Real = 0.2)
-
+    lrs, tangents = linear_regions(x,y; dxi, tol)
     # Find biggest linear region:
-    reg_ind = max_linear_region(linear_regions(x,y; dxi=dxi, tol=tol)...)
-    # least squares fit:
-    xfit = view(x, reg_ind[1]:reg_ind[2])
-    yfit = view(y, reg_ind[1]:reg_ind[2])
-    approx_tang = slope(xfit, yfit)
-    return reg_ind, approx_tang
+    j = findmax(diff(lrs))[2]
+    return (lrs[j], lrs[j+1]), tangents[j]
 end

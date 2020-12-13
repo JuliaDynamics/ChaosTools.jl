@@ -13,14 +13,14 @@ println("\nTesting nonlinear timeseries analysis...")
     @testset "Dimension" begin
         τ = 1; D = 2
         R = embed(x, D, τ)
-        D2 = information_dim(R)
+        D2 = generalized_dim(R)
         test_value(D2, 1.1, 1.3)
     end
+
     @testset "Numerical Lyapunov" begin
         ks = 1:20
         @testset "meth = $meth" for meth in
-            [FixedMassNeighborhood(1), FixedMassNeighborhood(4),
-            FixedSizeNeighborhood(0.01)]
+            [NeighborNumber(1), NeighborNumber(4), WithinRange(0.01)]
             @testset "distance = $di" for di in [Euclidean(), Cityblock()]
                 for D in [2, 4]
                     R = embed(x, D, 1)
@@ -40,7 +40,7 @@ end
     ds = Systems.gissinger(ones(3)) # standard initial condition
 
     data = trajectory(ds, 1000.0, dt = 0.05)
-    x = data[1:end-1, 1] # "exactly" 20000 points
+    x = data[1:end-1, 1]
     s = x .+ 0.01rand(length(x))
 
     Ux, Σx = broomhead_king(x, 40)
@@ -54,9 +54,9 @@ end
     newcoords = Dataset(Us[:, 1], Us[:, 2])
     newcoordsclean = Dataset(Ux[:, 1], Ux[:, 2])
 
-    Dnew = information_dim(newcoords)
-    DR = information_dim(R)
-    DC = information_dim(newcoordsclean)
+    Dnew = generalized_dim(newcoords)
+    DR = generalized_dim(R)
+    DC = generalized_dim(newcoordsclean)
     @test abs(Dnew - 0.1 - DR) < 0.2 # subtract 0.1 for "added dimensionality"
     @test abs(DC - DR) < 0.2
 end

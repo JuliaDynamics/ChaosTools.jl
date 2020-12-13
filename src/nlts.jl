@@ -1,5 +1,6 @@
-using NearestNeighbors, StaticArrays, LinearAlgebra
+using Neighborhood, StaticArrays, LinearAlgebra
 using Distances: Metric, Cityblock, Euclidean
+export NeighborNumber, WithinRange, Theiler
 
 export broomhead_king
 export numericallyapunov
@@ -13,8 +14,8 @@ export Cityblock, Euclidean
 """
     numericallyapunov(R::Dataset, ks;  refstates, w, distance, ntype)
 Return `E = [E(k) for k ∈ ks]`, where `E(k)` is the average logarithmic distance
-between states of a [`neighborhood`](@ref)
-that are evolved in time for `k` steps (`k` must be integer).
+between states of a neighborhood that are evolved in time for `k` steps
+(`k` must be integer).
 Typically `R` is the result of delay coordinates of a single timeseries.
 
 ## Keyword Arguments
@@ -23,31 +24,24 @@ Typically `R` is the result of delay coordinates of a single timeseries.
   that notes which
   states of the reconstruction should be used as "reference states", which means
   that the algorithm is applied for all state indices contained in `refstates`.
-* `w::Int = 1` : The Theiler window, which determines
-  whether points are separated enough in time to be considered separate trajectories
-  (see[^Skokos2016] and [`neighborhood`](@ref)).
-* `ntype::AbstractNeighborhood = FixedMassNeighborhood(1)` : The method to
-  be used when evaluating the neighborhood of each reference state. See
-  [`AbstractNeighborhood`](@ref) or [`neighborhood`](@ref) for more info.
+* `w::Int = 1` : The [Theiler window](@ref).
+* `ntype = NeighborNumber(1)` : The neighborhood type. Either [`NeighborNumber`](@ref)
+  or [`WithinRange`](@ref). See [Neighborhoods](@ref) for more info.
 * `distance::Metric = Cityblock()` : The distance function used in the
   logarithmic distance of nearby states. The allowed distances are `Cityblock()`
-  and `Euclidean()`. See below for more info.
+  and `Euclidean()`. See below for more info. The metric for finding neighbors is
+  always the Euclidean one.
 
 
 ## Description
-If the dataset/reconstruction
-exhibits exponential divergence of nearby states, then it should clearly hold
+If the dataset exhibits exponential divergence of nearby states, then it should hold
 ```math
 E(k) \\approx \\lambda\\cdot k \\cdot \\Delta t + E(0)
 ```
 for a *well defined region* in the `k` axis, where ``\\lambda`` is
-the approximated
-maximum Lyapunov exponent. ``\\Delta t`` is the time between samples in the
-original timeseries.
-You can use [`linear_region`](@ref) with arguments `(ks .* Δt, E)` to
-identify the slope
-(= ``\\lambda``)
-immediatelly, assuming you
+the approximated maximum Lyapunov exponent. ``\\Delta t`` is the time between samples in the
+original timeseries. You can use [`linear_region`](@ref) with arguments `(ks .* Δt, E)` to
+identify the slope (= ``\\lambda``) immediatelly, assuming you
 have choosen sufficiently good `ks` such that the linear scaling region is bigger
 than the saturated region.
 
@@ -55,34 +49,46 @@ The algorithm used in this function is due to Parlitz[^Skokos2016], which itself
 expands upon Kantz [^Kantz1994]. In sort, for
 each reference state a neighborhood is evaluated. Then, for each point in this
 neighborhood, the logarithmic distance between reference state and neighborhood
-state is
-calculated as the "time" index `k` increases. The average of the above over
+state(s) is calculated as the "time" index `k` increases. The average of the above over
 all neighborhood states over all reference states is the returned result.
 
 If the `Metric` is `Euclidean()` then use the Euclidean distance of the
 full `D`-dimensional points (distance ``d_E`` in ref.[^Skokos2016]).
 If however the `Metric` is `Cityblock()`, calculate
 the absolute distance of *only the first elements* of the `m+k` and `n+k` points
-of the reconstruction `R` (distance ``d_F`` in ref.[^Skokos2016]).
+of `R` (distance ``d_F`` in ref.[^Skokos2016], useful when `R` comes from delay embedding).
 
 [^Skokos2016]: Skokos, C. H. *et al.*, *Chaos Detection and Predictability* - Chapter 1 (section 1.3.2), Lecture Notes in Physics **915**, Springer (2016)
 
 [^Kantz1994]: Kantz, H., Phys. Lett. A **185**, pp 77–87 (1994)
 """
-function numericallyapunov(R::AbstractDataset{D, T}, ks;
-                           refstates = 1:(length(R) - ks[end]),
-                           w = 1,
-                           distance = Cityblock(),
-                           ntype = FixedMassNeighborhood(1)) where {D, T}
-    Ek = numericallyapunov(R, ks, refstates, w, distance, ntype)
+function numericallyapunov(
+        R::AbstractDataset{D, T}, ks;
+        refstates = 1:(length(R) - ks[end]),
+        w = 1,
+        distance = Cityblock(),
+        ntype = NeighborNumber(1),
+    ) where {D, T}
+
+    if ntype isa FixedMassNeighborhood
+        @warn "`FixedMassNeighborhood` is deprecated in favor of `NeighborNumber`."
+        ntype = NeighborNumber(ntype.k)
+    end
+    if ntype isa FixedSizeNeighborhood
+        @warn "`FixedSizeNeighborhood` is deprecated in favor of `WithinRange`."
+        ntype = WithinRange(ntype.k)
+
+    Ek = numericallyapunov(R, ks, refstates, Theiler(w), distance, ntype)
 end
 
-function numericallyapunov(R::AbstractDataset{D, T},
-                           ks::AbstractVector{Int},
-                           ℜ::AbstractVector{Int},
-                           w::Int,
-                           distance::Metric,
-                           ntype::AbstractNeighborhood) where {D, T}
+function numericallyapunov(
+        R::AbstractDataset{D, T},
+        ks::AbstractVector{Int},
+        ℜ::AbstractVector{Int},
+        theiler,
+        distance::Metric,
+        ntype::SearchType
+    ) where {D, T}
 
     # ℜ = \Re<tab> = set of indices that have the points that one finds neighbors.
     # n belongs in ℜ and R[n] is the "reference state".
@@ -91,7 +97,7 @@ function numericallyapunov(R::AbstractDataset{D, T},
     # ℜ = 1:(length(R) - ks[end])
 
     # ⩅(n) = \Cup<tab> = neighborhood of reference state n
-    # which is evaluated for each n and for the given neighborhood ntype
+    # which is evaluated for each n and for the given neighborhood type
 
     timethres = length(R) - ks[end]
     if maximum(ℜ) > timethres
@@ -101,9 +107,8 @@ function numericallyapunov(R::AbstractDataset{D, T},
         throw(ArgumentError(erstr))
     end
     E = zeros(T, length(ks))
-    E_n = copy(E); E_m = copy(E)
-    data = R.data #tree data
-    tree = KDTree(data, Euclidean()) # this creates a copy of `data`
+    E_n, E_m = copy(E), copy(E)
+    tree = KDTree(R, Euclidean())
     skippedm = 0; skippedn = 0
 
     for n in ℜ
@@ -111,14 +116,12 @@ function numericallyapunov(R::AbstractDataset{D, T},
         # for all reference states. Precalculating is faster, but allocates more memory.
         # Since ⋓[n] doesn't depend on `k` one can then interchange the loops:
         # Instead of k being the outermost loop, it becomes the innermost loop!
-        point = data[n]
-        ⋓ = neighborhood(point, tree, ntype, n, w)
+        point = R[n]
+        ⋓ = isearch(tree, point, ntype, theiler(n))
         for m in ⋓
             # If `m` is nearer to the end of the timeseries than k allows
             # is it completely skipped (and length(⋓) reduced).
-            # If m is closer to n than the Theiler window allows, also skip.
-            # The Theiler window defaults to τ
-            if m > timethres || abs(m - n) <= w
+            if m > timethres
                 skippedm += 1
                 continue
             end
@@ -134,11 +137,11 @@ function numericallyapunov(R::AbstractDataset{D, T},
         end
         E .+= E_n ./ (length(⋓) - skippedm)
         skippedm = 0
-        fill!(E_n, zero(T)) #reset distances for n reference state
+        fill!(E_n, zero(T)) #reset distances for n-th reference state
     end
 
     if skippedn >= length(ℜ)
-        ers = "skippedn ≥ length(R)\n"
+        ers = "Skipped number of points ≥ length(R)...\n"
         ers*= "Could happen because all the neighbors fall within the Theiler "
         ers*= "window. Fix: increase neighborhood size."
         error(ers)

@@ -77,7 +77,7 @@ function numericallyapunov(
     if ntype isa FixedSizeNeighborhood
         @warn "`FixedSizeNeighborhood` is deprecated in favor of `WithinRange`."
         ntype = WithinRange(ntype.k)
-
+    end
     Ek = numericallyapunov(R, ks, refstates, Theiler(w), distance, ntype)
 end
 

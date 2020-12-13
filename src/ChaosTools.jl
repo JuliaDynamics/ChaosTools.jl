@@ -16,6 +16,7 @@ include("orbitdiagrams/discrete_diagram.jl")
 include("orbitdiagrams/poincare.jl")
 
 include("dimensions/entropies.jl")
+include("dimensions/linear_regions.jl")
 include("dimensions/dims.jl")
 include("dimensions/correlationdim.jl")
 include("dimensions/molteno.jl")

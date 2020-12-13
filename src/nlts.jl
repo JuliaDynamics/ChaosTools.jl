@@ -1,6 +1,6 @@
 using Neighborhood, StaticArrays, LinearAlgebra
 using Distances: Metric, Cityblock, Euclidean
-export NeighborNumber, WithinRange, Theiler
+export NeighborNumber, WithinRange
 
 export broomhead_king
 export numericallyapunov

@@ -209,9 +209,11 @@ Each entry are the points at each parameter value.
   during computation in order to keep track of running time.
 * `direction, warning, Ttr, rootkw, diffeq...` :
   Propagated into [`poincaresos`](@ref).
-* `u0 = get_state(ds)` : Initial condition. Besides a vector you can also give
-  a vector of vectors such that `length(u0) == length(pvalues)`. Then each parameter
-  has a different initial condition.
+* `u0 = nothing` : Specify an initial state. If `nothing`, the previous state after each
+  parameter is used to seed the new initial condition at the new parameter
+  (with the very first state being the system's state). This makes convergence to the
+  attractor faster, necessitating smaller `Ttr`. Otherwise `u0` can be a standard state,
+  or a vector of states, so that a specific state is used for each parameter.
 
 ## Description
 For each parameter, a PSOS reduces the system from a flow to a map. This then allows
@@ -227,7 +229,7 @@ See also [`poincaresos`](@ref), [`orbitdiagram`](@ref).
 function produce_orbitdiagram(
         ds::CDS{IIP, S, D}, plane, idxs, p_index, pvalues;
         tfinal::Real = 100.0, direction = -1, printparams = false, warning = true,
-        Ttr = 0.0, u0 = get_state(ds), rootkw = (xrtol = 1e-6, atol = 1e-6),
+        Ttr = 0.0, u0 = nothing, rootkw = (xrtol = 1e-6, atol = 1e-6),
         diffeq...
     ) where {IIP, S, D}
 
@@ -245,6 +247,8 @@ function produce_orbitdiagram(
         printparams && println("parameter = $p")
         if typeof(u0) <: Vector{<:AbstractVector}
             st = u0[n]
+        elseif isnothing(u0)
+            st = integ.u
         else
             st = u0
         end

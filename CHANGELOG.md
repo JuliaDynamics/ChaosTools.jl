@@ -1,7 +1,8 @@
 # 1.22
-* Using keyword `α` is deprecated in favor of `q` in all entropy-related discussions (`q` is more common in the literature).
+* `produce_orbitdiagram` now uses the previous state at each new parameter, providing much faster convergence to attractor for smaller `Ttr`. The previous option is still available by passing explicitly `u0 = get_state(ds)`.
 
 # 1.21
+* Using keyword `α` is deprecated in favor of `q` in all entropy-related discussions (`q` is more common in the literature).
 * Added `boxed_correlationsum` and `boxed_correlationdim` that distribute the data into boxes before calculating the correlationsum.
 * Added `estimate_r0_buenoorovio` to find the optimal boxsize for the former two functions.
 

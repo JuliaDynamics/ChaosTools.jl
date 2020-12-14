@@ -146,7 +146,7 @@ function numericallyapunov(
         ers*= "window. Fix: increase neighborhood size."
         error(ers)
     end
-    E ./= length(ℜ) - skippedn
+    E ./= (length(ℜ) - skippedn)
 end
 
 @inline function delay_distance(di::Cityblock, R, m, n, k)

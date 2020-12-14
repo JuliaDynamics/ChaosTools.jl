@@ -1,3 +1,8 @@
+function kernelprob(X, ε, norm)
+    @warn "`kernelprob` with `norm` as positional argument is deprecated. "*
+    "Use `norm` as a keyword argument instead."
+    kernelprob(X, ε; norm)
+end
 
 """
     permentropy_old(x::AbstractVector, order [, interval=1]; base = Base.MathConstants.e)

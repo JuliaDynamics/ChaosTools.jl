@@ -1,6 +1,5 @@
 using ChaosTools
-using Test, LsqFit
-using LsqFit: curve_fit
+using Test
 using OrdinaryDiffEq: Tsit5
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
@@ -17,10 +16,12 @@ println("\nTesting GALI...")
         @testset "k=$k" for k in [2,3]
             ex = sum(ls[1] - ls[j] for j in 2:k)
             g, t = gali(ds, 1000, k; threshold = threshold)
-            fite = curve_fit(model, t, g, [ex]).param[1]
             @test g[end] < threshold
             @test t[end] < 1000
-            @test isapprox(fite, ex, rtol=1)
+            if k == 3
+                fite = -linreg(t, log.(g))[2]
+                @test isapprox(fite, ex, rtol=1)
+            end
         end
     end
 

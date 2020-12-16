@@ -61,7 +61,8 @@ function _fill_orbitdiagram!(output, integ, i, pvalues, p_index, n, Ttr, u0, dt,
     isavector = i isa AbstractVector
     for (j, p) in enumerate(pvalues)
         integ.p[p_index] = p
-        st = if u0 isa Vector{<: typeof(integ.u)}
+        acceptable_state_type = integ.u isa Real ? Real : AbstractVector
+        st = if u0 isa AbstractVector{<: acceptable_state_type}
             u0[j]
         elseif isnothing(u0)
             integ.u

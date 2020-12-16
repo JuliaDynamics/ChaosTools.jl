@@ -17,9 +17,11 @@ Each entry are the points at each parameter value.
 * `n::Int = 100` : Amount of points to save for each initial condition.
 * `dt = 1` : Stepping time. Changing this will give you the orbit diagram of
   the `dt` order map.
-* `u0 = get_state(ds)` : Initial condition. Besides a vector you can also give
-  a vector of vectors such that `length(u0) == length(pvalues)`. Then each parameter
-  has a different initial condition.
+* `u0 = nothing` : Specify an initial state. If `nothing`, the previous state after each
+  parameter is used to seed the new initial condition at the new parameter
+  (with the very first state being the system's state). This makes convergence to the
+  attractor faster, necessitating smaller `Ttr`. Otherwise `u0` can be a standard state,
+  or a vector of states, so that a specific state is used for each parameter.
 * `ulims = (-Inf, Inf)` : only record system states within `ulims`
   (only valid if `i isa Int`).
 
@@ -27,7 +29,7 @@ See also [`poincaresos`](@ref) and [`produce_orbitdiagram`](@ref).
 """
 function orbitdiagram(
         ds::DDS{IIP, S, D}, idxs, p_index, pvalues;
-        n::Int = 100, Ttr::Int = 1000, u0 = get_state(ds), dt = 1, ulims = nothing
+        n::Int = 100, Ttr::Int = 1000, u0 = nothing, dt = 1, ulims = nothing
     ) where {IIP, S, D}
 
     p0 = ds.p[p_index]
@@ -36,7 +38,7 @@ function orbitdiagram(
         error("You have a 1D system and yet you gave `i=$i`. What's up with that!?")
     end
 
-    typeof(u0) <: Vector{<:AbstractVector} && @assert length(u0)==length(pvalues)
+    u0 isa Vector{<:AbstractVector} && @assert length(u0)==length(pvalues)
     i = idxs isa Int ? idxs : SVector{length(idxs), Int}(idxs...)
     !isnothing(ulims) && i isa SVector && error("If `i` is a vector, you can't use `ulims`.")
 
@@ -59,7 +61,14 @@ function _fill_orbitdiagram!(output, integ, i, pvalues, p_index, n, Ttr, u0, dt,
     isavector = i isa AbstractVector
     for (j, p) in enumerate(pvalues)
         integ.p[p_index] = p
-        st = (u0 isa Vector{ <: _innertype(integ.u) }) ? u0[j] : u0
+        acceptable_state_type = integ.u isa Real ? Real : AbstractVector
+        st = if u0 isa AbstractVector{<: acceptable_state_type}
+            u0[j]
+        elseif isnothing(u0)
+            integ.u
+        else
+            u0
+        end
         reinit!(integ, st)
         step!(integ, Ttr)
         if isavector || isnothing(ulims) # if-clause gets compiled away (I hope)

@@ -71,8 +71,6 @@ function correlationsum_2(X, ε::Real, norm = Euclidean(), w = 0)
 end
 
 function correlationsum_q(X, ε::Real, q, norm = Euclidean(), w = 0)
-    q <= 1 && @warn "This function is currently not specialized for q <= 1" *
-    " and may show unexpected behaviour for these values."
     N, C = length(X), zero(eltype(X))
     normalisation = (N-2w)*(N-2w-one(eltype(X)))^(q-1)
     for i in 1+w:N-w
@@ -345,8 +343,6 @@ For a vector of `boxes` and the indices of their `contents` inside of `data`,
 calculate the `q`-order correlationsum of a radius or radii `εs`.
 """
 function boxed_correlationsum_q(boxes, contents, data, εs, q)
-    q <= 1 && @warn "This function is currently not specialized for q <= 1" *
-    " and may show unexpected behaviour for these values."
     Cs = zeros(eltype(data), length(εs))
     N = length(data)
     for index in 1:length(boxes)

@@ -110,7 +110,16 @@ Call [`linear_regions`](@ref) and identify and return the largest linear region
 and its slope. The region starts and stops at `x[ind1:ind2]`.
 """
 function linear_region(x::AbstractVector, y::AbstractVector;
-    dxi::Int = 1, tol::Real = 0.2)
+    dxi::Int = 1, tol::Real = 0.2, ignore_saturation = true)
+
+    if ignore_saturation
+        j = findfirst(i -> y[i] ≠ y[i-1], length(y):-1:2)
+        if !isnothing(j)
+            i = (length(y):-1:2)[j]
+            x, y = x[1:i], y[1:i]
+        end
+    end
+
     lrs, tangents = linear_regions(x,y; dxi, tol)
     # Find biggest linear region:
     j = findmax(diff(lrs))[2]
@@ -138,16 +147,18 @@ larger than the minimum distance, and an order of magnitude smaller than the min
 distance.
 
 ## Keywords
-* `w = 1, z = -1, k = 12` : as explained above.
+* `w = 1, z = -1, k = 20` : as explained above.
 * `base = MathConstants.e` : the base used in the `log` function.
 """
 function estimate_boxsizes(
         A::AbstractDataset;
-        k::Int = 24, z = -1.0, w = 1.0, base = MathConstants.e
+        k::Int = 20, z = -1.0, w = 1.0, base = MathConstants.e
     )
 
     mi, ma = minmaxima(A)
     max_d = LinearAlgebra.norm(ma - mi)
+    max_d = maximum(ma - mi)
+
     min_d, _ = min_pairwise_distance(A)
     lower = log(base, min_d)
     upper = log(base, max_d)

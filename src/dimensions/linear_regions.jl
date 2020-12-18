@@ -16,7 +16,7 @@ using Statistics: covm, varm
 """
     linreg(x, y) -> a, b
 Perform a linear regression to find the best coefficients so that the curve:
-`y = a + b*x` has the least squared error.
+`z = a + b*x` has the least squared error with `y`.
 """
 function linreg(x::AbstractVector, y::AbstractVector)
     # Least squares given

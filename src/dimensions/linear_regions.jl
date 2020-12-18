@@ -125,8 +125,8 @@ end
 Return `k` exponentially spaced values: `base .^ range(lower + w, upper + z; length = k)`,
 that are a good estimate for sizes ε that are used in calculating a [Fractal Dimension](@ref).
 
-Let `d₋` be the minimum and pair-wise distance in `A` and `d₊` the maximum extend of
-`A` along each of the dimensions.
+Let `d₋` be the minimum and pair-wise distance in `A` and `d₊` the length of the diagonal
+of the hypercube that contains `A`.
 Then `lower = log(base, d₋)` and `upper = log(base, d₊)`.
 Because by default `w=1, z=-1`, we're providing sizes that are an order of mangitude
 larger than the minimum distance, and an order of magnitude smaller than the minimum
@@ -134,17 +134,16 @@ distance.
 
 ## Keywords
 * `w = 1, z = -1, k = 12` : as explained above.
-* `metric = Euclidean()` : metric used in distance calculations.
-* `base = 10.0` : the base used in the `log` function.
+* `base = MathConstants.e` : the base used in the `log` function.
 """
 function estimate_boxsizes(
         A::AbstractDataset;
-        k::Int = 24, z = -1.0, w = 1.0, base = 10.0, metric = Euclidean()
+        k::Int = 24, z = -1.0, w = 1.0, base = MathConstants.e
     )
 
     mi, ma = minmaxima(A)
-    max_d = maximum(ma - mi)
-    min_d, _ = min_pairwise_distance(A, metric)
+    max_d = LinearAlgebra.norm(ma - mi)
+    min_d, _ = min_pairwise_distance(A)
     lower = log(base, min_d)
     upper = log(base, max_d)
 

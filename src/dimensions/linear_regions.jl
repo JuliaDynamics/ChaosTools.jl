@@ -144,7 +144,7 @@ function estimate_boxsizes(
 
     mi, ma = minmaxima(A)
     max_d = maximum(ma - mi)
-    min_d, _ = minmax_pairwise_distance(A, metric)
+    min_d, _ = min_pairwise_distance(A, metric)
     lower = log(base, min_d)
     upper = log(base, max_d)
 

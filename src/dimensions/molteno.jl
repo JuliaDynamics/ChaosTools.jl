@@ -53,27 +53,29 @@ calculated and returned together with the `probs`.
 See[^Molteno1993] for more.
 """
 function molteno_boxing(data::AbstractDataset; k0 = 10)
-    integers, ε0 = float_to_int(data)
+    integers, ε0 = real_to_uint64(data)
     boxes = _molteno_boxing(integers; k0 = k0)
     εs = ε0 ./ (2 .^ (1:length(boxes)))
     return boxes, εs
 end
 
 """
-    float_to_int(data::Dataset{D,T}) where {D, T}
+    real_to_uint64(data::Dataset{D,T}) where {D, T}
 Calculate maximum and minimum value of `data` to then project the values onto
-``[0 + \\epsilon, 1 + \\epsilon] \\cdot M`` where ``\\epsilon`` is the
+``[0, M - ε(M)]`` where ``\\epsilon`` is the
 precision of the used Type and ``M`` is the maximum value of the UInt64 type.
 """
-function float_to_int(data::AbstractDataset{D,T}) where {D,T}
+function real_to_uint64(data::AbstractDataset{D,T}) where {D,T<:Real}
     N = length(data)
+    # The maximum value needs to be smaller than the absolute typemax due to
+    # the 12 bits used by the float type for sign and exponent.
+    max_val = typemax(UInt64) - 2(UInt64 |> typemax |> T |> eps)
     mins, maxs = minmaxima(data)
-    sizes = maxs .- mins
-    ε0 = maximum(sizes)
-    # Let f:[min,max] -> [0+eps(T),1-eps(T)]*typemax(UInt64), then f(x) = m*x + b.
-    m = (1-2eps(T)) ./ ε0 .* typemax(UInt64)
-    b = eps(T) * typemax(UInt64) .- mins .* m
-
+    spans = maxs .- mins
+    ε0 = maximum(spans)
+    # Let f:[min,max] -> [0,typemax(UInt64)] linearly, then f(x) = m*x + b.
+    m = max_val ./ ε0
+    b = - mins .* m
     res = Vector{SVector{D,UInt64}}()
     sizehint!(res, N)
     for x in data
@@ -83,7 +85,7 @@ function float_to_int(data::AbstractDataset{D,T}) where {D,T}
     Dataset(res), ε0
 end
 
-function _molteno_boxing(data::Dataset{D,T}; k0 = 10) where {D,T}
+function _molteno_boxing(data::Dataset{D,T}; k0 = 10) where {D,T<:UInt}
     N = length(data)
     box_probs = Vector{Float64}[]
     iteration = 1

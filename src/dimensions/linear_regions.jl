@@ -125,8 +125,8 @@ end
 Return `k` exponentially spaced values: `base .^ range(lower + w, upper + z; length = k)`,
 that are a good estimate for sizes ε that are used in calculating a [Fractal Dimension](@ref).
 
-Let `d₋, d₊` be the minimum and maximum pair-wise distances in `A`, obtained
-from [`minmax_pairwise_distance`](@ref).
+Let `d₋` be the minimum and pair-wise distance in `A` and `d₊` the maximum extend of
+`A` along each of the dimensions.
 Then `lower = log(base, d₋)` and `upper = log(base, d₊)`.
 Because by default `w=1, z=-1`, we're providing sizes that are an order of mangitude
 larger than the minimum distance, and an order of magnitude smaller than the minimum
@@ -139,49 +139,41 @@ distance.
 """
 function estimate_boxsizes(
         A::AbstractDataset;
-        k::Int = 12, z = -1.0, w = 1.0, base = 10.0, metric = Euclidean()
+        k::Int = 24, z = -1.0, w = 1.0, base = 10.0, metric = Euclidean()
     )
 
-    min_d, max_d = minmax_pairwise_distance(A, metric)
-    lower = log(b, min_dist)
-    upper = log(b, max_d)
+    mi, ma = minmaxima(A)
+    max_d = maximum(ma - mi)
+    min_d, _ = minmax_pairwise_distance(A, metric)
+    lower = log(base, min_d)
+    upper = log(base, max_d)
 
     if lower ≥ upper
         error(
         "Boxsize estimation failed: `upper` was found ≥ than `lower`. "*
         "Adjust keywords or provide a bigger dataset.")
     end
-    if lower + w + 2 ≥ upper + z
-        @warn "Boxsizes limits do not differ by 2 orders of magnitude or more. "*
-        "Setting `w -= 0.5; z += 0.5`. Please adjust keywords or provide a bigger dataset."
-        w -= 0.5; z += 0.5
-    end
-
-    return base .^ range(lower+w, upper+z; length = k)
+    return float(base) .^ range(lower+w, upper+z; length = k)
 end
 
 """
-    minmax_pairwise_distance(A::Dataset, metric = Euclidean())
-Return `min_d, max_d, min_pair, max_pair`: the minimum and maximum pairwise distance
-of all points in the dataset, and the corresponding point pairs.
+    min_pairwise_distance(A::Dataset, metric = Euclidean())
+Return `min_d, min_pair`: the minimum pairwise distance
+of all points in the dataset, and the corresponding point pair.
 """
-function minmax_pairwise_distance(A::AbstractDataset, metric = Euclidean())
+function min_pairwise_distance(A::AbstractDataset, metric = Euclidean())
     tree = KDTree(A)
     min_d = eltype(A[1])(Inf)
     max_d = -min_d
     min_pair = max_pair = (0, 0)
     theiler = Theiler(0)
-    for p in 1:length(A)
-        inds, dists = Neighborhood.knn(tree, A[p], 1, theiler; sortds=false)
+    for i in 1:length(A)
+        inds, dists = Neighborhood.knn(tree, A[i], 1, theiler(i); sortds=false)
         ind, dist = inds[1], dists[1]
         if dist < min_d
             min_d = dist
-            min_pair = (p, ind)
-        end
-        if dist > max_d
-            max_d = dist
-            max_pair = (p, id)
+            min_pair = (i, ind)
         end
     end
-    return min_d, max_d, min_pair, max_pair
+    return min_d, min_pair
 end

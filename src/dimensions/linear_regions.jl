@@ -116,3 +116,71 @@ function linear_region(x::AbstractVector, y::AbstractVector;
     j = findmax(diff(lrs))[2]
     return (lrs[j], lrs[j+1]), tangents[j]
 end
+
+#####################################################################################
+# Autotomatic estimation for proper `ε` from a Dataset
+#####################################################################################
+"""
+    estimate_boxsizes(A::Dataset; kwargs...)
+Return `k` exponentially spaced values: `base .^ range(lower + w, upper + z; length = k)`.
+
+`lower` is the magnitude of the
+minimum pair-wise distance between datapoints while `upper` is the magnitude
+of the maximum pair-wise distance between all points in the dataset.
+These are produced from [`minmax_pairwise_distance`](@ref).
+
+"Magnitude" here stands for order of magnitude, i.e. `round(log(base, x))`.
+
+## Keywords
+* `w = 1, z = -1, k = 12` as explained above
+* `metric = Euclidean()` metric used in distance calculations
+* `base = 10.0` the base used in the `log` function.
+"""
+function estimate_boxsizes(
+        data::AbstractDataset;
+        k::Int = 12, z = -1.0, w = 1.0, base = 10.0, metric = Euclidean()
+    )
+
+    min_d, max_d = minmax_pairwise_distance(A, metric)
+    lower = ceil(log(b, min_dist)) # ceil necessary to not use smaller distance.
+    upper = floor(log(b, max_d)) # floor necessary to not over estimate.
+
+    if lower ≥ upper
+        error(
+        "Boxsize estimation failed: `upper` was found ≥ than `lower`. "*
+        "Adjust keywords or provide a bigger dataset.")
+    end
+    if lower + w + 2 ≥ upper + z
+        @warn "Boxsizes limits do not differ by 2 orders of magnitude or more. "*
+        "Setting `w -= 0.5; z += 0.5`. Please adjust keywords or provide a bigger dataset."
+        w -= 0.5; z += 0.5
+    end
+
+    return base .^ range(lower+w, upper+z, length = k)
+end
+
+"""
+    minmax_pairwise_distance(A::Dataset, metric = Euclidean())
+Return `min_d, max_d, min_pair, max_pair`: the minimum and maximum pairwise distance
+of all points in the dataset, and the corresponding point pairs.
+"""
+function minmax_pairwise_distance(A::AbstractDataset, metric = Euclidean())
+    tree = KDTree(A)
+    min_d = eltype(A[1])(Inf)
+    max_d = -min_d
+    min_pair = max_pair = (0, 0)
+    w = Theiler(0)
+    for p in 1:length(A)
+        inds, dists = Neighborhood.knn(tree, A[p], 1, theiler; sortds=false)
+        ind, dist = inds[1], dists[1]
+        if dist < min_d
+            min_d = dist
+            min_pair = (p, ind)
+        end
+        if dist > max_d
+            max_d = dist
+            max_pair = (p, id)
+        end
+    end
+    return min_d, max_d, min_pair, max_pair
+end

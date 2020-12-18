@@ -23,7 +23,7 @@ end
 
 
 """
-    correlationsum(X, ε; w = 0, norm = Euclidean(), q = 2) → C_q(ε)
+    correlationsum(X, ε::Real; w = 0, norm = Euclidean(), q = 2) → C_q(ε)
 Calculate the `q`-order correlation sum of `X` (`Dataset` or timeseries)
 for a given radius `ε` and `norm`, using the formula:
 ```math
@@ -39,9 +39,11 @@ ordered. See the book "Nonlinear Time Series Analysis"[^Kantz2003], Ch. 6, for
 a discussion around `w` and choosing best values and Ch. 11.3 for the
 definition of the q-order correlationsum.
 
-If `q = 2` and `ε` is a vector, the `correlationsum` allocates a matrix of size
-`N×N` to allow for an optimized version.
-If this is larger than your available memory please use
+    correlationsum(X, εs::AbstractVector; w, norm, q) → C_q(ε)
+
+If `εs` is a vector, `C_q` is calculated for each `ε ∈ εs`.
+If also `q=2`, some strong optimizations are done, but this requires the allocation
+a matrix of size `N×N`. If this is larger than your available memory please use instead:
 ```julia
 [correlationsum(..., ε) for ε in εs]
 ```
@@ -62,7 +64,6 @@ end
 function correlationsum_2(X, ε::Real, norm = Euclidean(), w = 0)
     N, C = length(X), zero(eltype(X))
     for (i, x) in enumerate(X)
-        # assumes that the first Nx elements are X itself
         for j in i+1+w:N
             C += evaluate(norm, x, X[j]) < ε
         end
@@ -89,13 +90,14 @@ function correlationsum_q(X, ε::Real, q, norm = Euclidean(), w = 0)
     return C / normalisation
 end
 
-
+# Optimized version
 function correlationsum_2(X, εs::AbstractVector, norm = Euclidean(), w = 0)
     @assert issorted(εs) "Sorted εs required for optimized version."
     d = distancematrix(X, norm)
     Cs = zeros(eltype(X), length(εs))
     N = length(X)
     factor = 2/((N-w)*(N-1-w))
+    # First loop: mid-way ε until lower saturation point (C=0)
     for k in length(εs)÷2:-1:1
         ε = εs[k]
         for i in 1:N
@@ -103,6 +105,7 @@ function correlationsum_2(X, εs::AbstractVector, norm = Euclidean(), w = 0)
         end
         Cs[k] == 0 && break
     end
+    # Second loop: mid-way ε until higher saturation point (C=max)
     for k in (length(εs)÷2 + 1):length(εs)
         ε = εs[k]
         for i in 1:N

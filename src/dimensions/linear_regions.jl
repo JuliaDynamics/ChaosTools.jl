@@ -138,7 +138,7 @@ distance.
 * `base = 10.0` : the base used in the `log` function.
 """
 function estimate_boxsizes(
-        data::AbstractDataset;
+        A::AbstractDataset;
         k::Int = 12, z = -1.0, w = 1.0, base = 10.0, metric = Euclidean()
     )
 

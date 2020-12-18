@@ -170,7 +170,7 @@ function minmax_pairwise_distance(A::AbstractDataset, metric = Euclidean())
     min_d = eltype(A[1])(Inf)
     max_d = -min_d
     min_pair = max_pair = (0, 0)
-    w = Theiler(0)
+    theiler = Theiler(0)
     for p in 1:length(A)
         inds, dists = Neighborhood.knn(tree, A[p], 1, theiler; sortds=false)
         ind, dist = inds[1], dists[1]

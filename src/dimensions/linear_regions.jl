@@ -122,7 +122,8 @@ end
 #####################################################################################
 """
     estimate_boxsizes(A::Dataset; kwargs...)
-Return `k` exponentially spaced values: `base .^ range(lower + w, upper + z; length = k)`.
+Return `k` exponentially spaced values: `base .^ range(lower + w, upper + z; length = k)`,
+that are a good estimate for sizes ε that are used in calculating a [Fractal Dimension](@ref).
 
 `lower` is the magnitude of the
 minimum pair-wise distance between datapoints while `upper` is the magnitude
@@ -132,9 +133,9 @@ These are produced from [`minmax_pairwise_distance`](@ref).
 "Magnitude" here stands for order of magnitude, i.e. `round(log(base, x))`.
 
 ## Keywords
-* `w = 1, z = -1, k = 12` as explained above
-* `metric = Euclidean()` metric used in distance calculations
-* `base = 10.0` the base used in the `log` function.
+* `w = 1, z = -1, k = 12` : as explained above.
+* `metric = Euclidean()` : metric used in distance calculations.
+* `base = 10.0` : the base used in the `log` function.
 """
 function estimate_boxsizes(
         data::AbstractDataset;

@@ -125,12 +125,11 @@ end
 Return `k` exponentially spaced values: `base .^ range(lower + w, upper + z; length = k)`,
 that are a good estimate for sizes ε that are used in calculating a [Fractal Dimension](@ref).
 
-`lower` is the magnitude of the
-minimum pair-wise distance between datapoints while `upper` is the magnitude
-of the maximum pair-wise distance between all points in the dataset.
-These are produced from [`minmax_pairwise_distance`](@ref).
-
-"Magnitude" here stands for order of magnitude, i.e. `round(log(base, x))`.
+Let `d₋, d₊` be the minimum and maximum pair-wise distances in `A`.
+Then `lower = log(base, d₋)` and `upper = log(base, d₊)`.
+Because by default `w=1, z=-1`, we're providing sizes that are an order of mangitude
+larger than the minimum distance, and an order of magnitude smaller than the minimum
+distance.
 
 ## Keywords
 * `w = 1, z = -1, k = 12` : as explained above.
@@ -143,8 +142,8 @@ function estimate_boxsizes(
     )
 
     min_d, max_d = minmax_pairwise_distance(A, metric)
-    lower = ceil(log(b, min_dist)) # ceil necessary to not use smaller distance.
-    upper = floor(log(b, max_d)) # floor necessary to not over estimate.
+    lower = log(b, min_dist)
+    upper = log(b, max_d)
 
     if lower ≥ upper
         error(
@@ -157,7 +156,7 @@ function estimate_boxsizes(
         w -= 0.5; z += 0.5
     end
 
-    return base .^ range(lower+w, upper+z, length = k)
+    return base .^ range(lower+w, upper+z; length = k)
 end
 
 """

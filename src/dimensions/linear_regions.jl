@@ -114,6 +114,11 @@ function linear_region(x::AbstractVector, y::AbstractVector;
     lrs, tangents = linear_regions(x,y; dxi, tol)
     # Find biggest linear region:
     j = findmax(diff(lrs))[2]
+    if lrs[j+1] - lrs[j] ≤ length(x)÷3
+        @warn "Found linear region spans less than a 3rd of the available x-axis "*
+              "and might imply inaccurate slope or insufficient data. "*
+              "Recommended: plot `x` vs `y`."
+    end
     return (lrs[j], lrs[j+1]), tangents[j]
 end
 

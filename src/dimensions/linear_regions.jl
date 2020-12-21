@@ -159,7 +159,7 @@ function estimate_boxsizes(
     max_d = LinearAlgebra.norm(ma - mi)
     max_d = maximum(ma - mi)
 
-    min_d, _ = min_pairwise_distance(A)
+    min_d, _ = minimum_pairwise_distance(A)
     lower = log(base, min_d)
     upper = log(base, max_d)
 
@@ -172,11 +172,11 @@ function estimate_boxsizes(
 end
 
 """
-    min_pairwise_distance(A::Dataset, metric = Euclidean())
+    minimum_pairwise_distance(A::Dataset, metric = Euclidean())
 Return `min_d, min_pair`: the minimum pairwise distance
 of all points in the dataset, and the corresponding point pair.
 """
-function min_pairwise_distance(A::AbstractDataset, metric = Euclidean())
+function minimum_pairwise_distance(A::AbstractDataset, metric = Euclidean())
     tree = KDTree(A)
     min_d = eltype(A[1])(Inf)
     max_d = -min_d

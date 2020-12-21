@@ -185,7 +185,7 @@ end
 ################################################################################
 function boxed_correlationdim(data; M = size(data, 2), q = 2)
     r0 = estimate_r0_buenoorovio(data, M)
-    ε0 = min_pairwise_distance(data)[2]
+    ε0 = minimum_pairwise_distance(data)[1]
     εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
     boxed_correlationdim(data, εs, r0; M = M, q = q)
 end
@@ -420,7 +420,7 @@ function estimate_r0_theiler(data)
     # Sample √N datapoints for a rough estimate of the dimension.
     data_sample = data[unique(rand(1:N, ceil(Int, sqrt(N))))] |> Dataset
     # Define radii for the rough dimension estimate
-    lower = log10(min_pairwise_distance(data_sample)[2])
+    lower = log10(minimum_pairwise_distance(data_sample)[1])
     εs = 10 .^ range(lower, stop = log10(R), length = 12)
     # Actually estimate the dimension.
     cm = correlationsum(data_sample, εs)
@@ -477,7 +477,7 @@ function estimate_r0_buenoorovio(X, M = size(X, 2))
         # Sample √N datapoints for rough dimension estimate
         sample2 = X[unique(rand(1:N, ceil(Int, sqrt(N))))] |> Dataset
         # Define logarithmic series of radii.
-        lower = log10(min_pairwise_distance(X)[2])
+        lower = log10(minimum_pairwise_distance(X)[1])
         εs = 10 .^ range(lower, stop = log10(R), length = 16)
         # Estimate ν from a sample using the Grassberger Procaccia algorithm.
         cm = correlationsum(sample2, εs)

@@ -185,7 +185,7 @@ end
 ################################################################################
 function boxed_correlationdim(data; M = size(data, 2), q = 2)
     r0 = estimate_r0_buenoorovio(data, M)
-    ε0 = min_pairwise_distance(data)[2]
+    ε0 = minimum_pairwise_distance(data)[1]
     εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
     boxed_correlationdim(data, εs, r0; M = M, q = q)
 end
@@ -193,7 +193,7 @@ end
 """
     boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2))
     boxed_correlationdim(data; q = 2, M = size(data, 2))
-Estimates the box assisted q-order correlation dimension[^Kantz2003] out of a
+Estimate the box assisted q-order correlation dimension[^Kantz2003] out of a
 dataset `data` for radii `εs` by splitting the data into boxes of size `r0`
 beforehand. If `M` is unequal to the dimension of the data, only the first `m`
 dimensions are considered. The method of splitting the data into boxes was
@@ -223,7 +223,7 @@ function boxed_correlationdim(data, εs, r0 = maximum(ε); q = 2, M = size(data,
 end
 
 """
-    boxed_correlationsumdata, εs, r0 = maximum(ε); q = 2 , M = size(data, 2))
+    boxed_correlationsum(A::Dataset, εs, r0 = maximum(ε); q = 2 , M = size(data, 2))
 Distribute `data` into boxes of size `r0`. The `q`-order correlationsum
 `C_q(ε)` is then calculated for every `ε ∈ εs` and each of the boxes to then be
 summed up afterwards. If `M` is unequal to the dimension of the data, only the
@@ -258,7 +258,7 @@ See also: [`estimate_r0_theiler`](@ref), [`estimate_r0_buenoorovio`](@ref),
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
 function correlation_boxing(data, r0, M = size(data, 2))
-    @assert M ≤ size(data, 2) "Prism dimension has to be lower or equal than" *
+    @assert M ≤ size(data, 2) "Prism dimension has to be lower or equal than "*
     "data dimension."
     mini = minima(data)[1:M]
 
@@ -375,7 +375,9 @@ end
 
 """
     inner_correlationsum_q(q::Real, X, Y, εs; norm = Euclidean())
-Calculates the `q`-order correlation sum for values `X` inside a box, considering `Y` consisting of all values in that box and the ones in neighbouring boxes for all distances `ε ∈ εs` calculated by `norm`.
+Calculates the `q`-order correlation sum for values `X` inside a box,
+considering `Y` consisting of all values in that box and the ones in neighbouring boxes
+for all distances `ε ∈ εs` calculated by `norm`.
 
 See also: [`correlationsum`](@ref)
 """
@@ -402,8 +404,11 @@ end
 
 """
     estimate_r0_theiler(data)
-Estimates a reasonable size for boxing the data before calculating the correlation dimension proposed by Theiler[^Theiler1987].
-To do so the dimension is estimated by running the algorithm by Grassberger and Procaccia[^Grassberger1983] with `√N` points where `N` is the number of total data points. Then the optimal boxsize ``r_0`` computes as
+Estimates a reasonable size for boxing the data before calculating the correlation
+    dimension proposed by Theiler[^Theiler1987].
+To do so the dimension is estimated by running the algorithm by Grassberger and
+Procaccia[^Grassberger1983] with `√N` points where `N` is the number of total data points.
+Then the optimal boxsize ``r_0`` computes as
 ```math
 r_0 = R (2/N)^{1/\\nu}
 ```
@@ -420,7 +425,7 @@ function estimate_r0_theiler(data)
     # Sample √N datapoints for a rough estimate of the dimension.
     data_sample = data[unique(rand(1:N, ceil(Int, sqrt(N))))] |> Dataset
     # Define radii for the rough dimension estimate
-    lower = log10(min_pairwise_distance(data_sample)[2])
+    lower = log10(minimum_pairwise_distance(data_sample)[1])
     εs = 10 .^ range(lower, stop = log10(R), length = 12)
     # Actually estimate the dimension.
     cm = correlationsum(data_sample, εs)
@@ -444,7 +449,8 @@ boxes `η_ℓ`.
 ```math
 \\ell = r_\\ell \\eta_\\ell ^{1/\\nu}
 ```
-The optimal number of filled boxes `η_opt` is calculated by minimising the number of calculations.
+The optimal number of filled boxes `η_opt` is calculated by minimising the number
+of calculations.
 ```math
 \\eta_\\textrm{opt} = N^{2/3}\\cdot \\frac{3^\\nu - 1}{3^M - 1}^{1/2}.
 ```
@@ -477,7 +483,7 @@ function estimate_r0_buenoorovio(X, M = size(X, 2))
         # Sample √N datapoints for rough dimension estimate
         sample2 = X[unique(rand(1:N, ceil(Int, sqrt(N))))] |> Dataset
         # Define logarithmic series of radii.
-        lower = log10(min_pairwise_distance(X)[2])
+        lower = log10(minimum_pairwise_distance(X)[1])
         εs = 10 .^ range(lower, stop = log10(R), length = 16)
         # Estimate ν from a sample using the Grassberger Procaccia algorithm.
         cm = correlationsum(sample2, εs)
@@ -515,7 +521,8 @@ Here we use the later expression
 ```math
 D_C \\approx - \\frac{1}{\\eta},\\quad \\eta = \\frac{1}{(N-1)^*}\\sum_{[i, j]^*}\\log(||X_i - X_j|| / \\epsilon_\\text{max})
 ```
-where the sum happens for all ``i, j`` so that ``i < j`` and ``||X_i - X_j|| < \\epsilon_\\text{max}``. In the above expression, the bias in the original paper has already been corrected, as suggested in [^Borovkova1999].
+where the sum happens for all ``i, j`` so that ``i < j`` and ``||X_i - X_j|| < \\epsilon_\\text{max}``.
+In the above expression, the bias in the original paper has already been corrected, as suggested in [^Borovkova1999].
 
 The confidence limits are estimated from the log-likelihood function by finding
 the values of `D_C` where the function has fallen by 2 from its maximum, see e.g.

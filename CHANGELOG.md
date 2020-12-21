@@ -1,3 +1,6 @@
+# 1.23
+* Various improvements on the functionality of `estamte_boxsizes` and `linear_region`.
+
 # 1.22
 * Orbit diagrams now use the previous state at each new parameter, providing faster convergence to attractor for smaller `Ttr`. The previous option is still available by passing explicitly `u0 = get_state(ds)`.
 

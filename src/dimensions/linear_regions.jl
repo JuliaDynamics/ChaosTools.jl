@@ -16,7 +16,7 @@ using Statistics: covm, varm
 """
     linreg(x, y) -> a, b
 Perform a linear regression to find the best coefficients so that the curve:
-`y = a + b*x` has the least squared error.
+`z = a + b*x` has the least squared error with `y`.
 """
 function linreg(x::AbstractVector, y::AbstractVector)
     # Least squares given
@@ -41,7 +41,7 @@ slope(x, y) = linreg(x, y)[2]
 
 
 """
-    linear_regions(x, y; dxi::Int = 1, tol = 0.2) -> (lrs, tangents)
+    linear_regions(x, y; dxi::Int = 1, tol = 0.25) -> (lrs, tangents)
 Identify regions where the curve `y(x)` is linear, by scanning the
 `x`-axis every `dxi` indices sequentially
 (e.g. at `x[1] to x[5], x[5] to x[10], x[10] to x[15]` and so on if `dxi=5`).
@@ -57,7 +57,7 @@ and the _correct_ `tangents` at each region
 """
 function linear_regions(
         x::AbstractVector, y::AbstractVector;
-        method = :sequential, dxi::Int = method == :overlap ? 3 : 1, tol = 0.2,
+        method = :sequential, dxi::Int = method == :overlap ? 3 : 1, tol = 0.25,
     )
     return if method == :overlap
         linear_regions_overlap(x, y, dxi, tol)
@@ -105,14 +105,94 @@ function linear_regions_sequential(x, y, dxi, tol)
 end
 
 """
-    linear_region(x, y; dxi::Int = 1, tol = 0.2) -> ((ind1, ind2), slope)
+    linear_region(x, y; kwargs...) -> ((ind1, ind2), slope)
 Call [`linear_regions`](@ref) and identify and return the largest linear region
 and its slope. The region starts and stops at `x[ind1:ind2]`.
+
+The keywords `dxi, tol` are propagated as-is to [`linear_regions`](@ref).
+The keyword `ignore_saturation = true` ignores saturation that (typically) happens
+at the final points of the curve `y(x)`, where the curve flattens out.
 """
 function linear_region(x::AbstractVector, y::AbstractVector;
-    dxi::Int = 1, tol::Real = 0.2)
+    dxi::Int = 1, tol::Real = 0.2, ignore_saturation = true)
+
+    if ignore_saturation
+        j = findfirst(i -> y[i] ≠ y[i-1], length(y):-1:2)
+        if !isnothing(j)
+            i = (length(y):-1:2)[j]
+            x, y = x[1:i], y[1:i]
+        end
+    end
+
     lrs, tangents = linear_regions(x,y; dxi, tol)
     # Find biggest linear region:
     j = findmax(diff(lrs))[2]
+    if lrs[j+1] - lrs[j] ≤ length(x)÷3
+        @warn "Found linear region spans less than a 3rd of the available x-axis "*
+              "and might imply inaccurate slope or insufficient data. "*
+              "Recommended: plot `x` vs `y`."
+    end
     return (lrs[j], lrs[j+1]), tangents[j]
+end
+
+#####################################################################################
+# Autotomatic estimation for proper `ε` from a Dataset
+#####################################################################################
+"""
+    estimate_boxsizes(A::Dataset; kwargs...)
+Return `k` exponentially spaced values: `base .^ range(lower + w, upper + z; length = k)`,
+that are a good estimate for sizes ε that are used in calculating a [Fractal Dimension](@ref).
+
+Let `d₋` be the minimum pair-wise distance in `A` and `d₊` the length of the diagonal
+of the hypercube that contains `A`.
+Then `lower = log(base, d₋)` and `upper = log(base, d₊)`.
+Because by default `w=1, z=-1`, the returned sizes are an order of mangitude
+larger than the minimum distance, and an order of magnitude smaller than the maximum
+distance.
+
+## Keywords
+* `w = 1, z = -1, k = 20` : as explained above.
+* `base = MathConstants.e` : the base used in the `log` function.
+"""
+function estimate_boxsizes(
+        A::AbstractDataset;
+        k::Int = 20, z = -1.0, w = 1.0, base = MathConstants.e
+    )
+
+    mi, ma = minmaxima(A)
+    max_d = LinearAlgebra.norm(ma - mi)
+    max_d = maximum(ma - mi)
+
+    min_d, _ = minimum_pairwise_distance(A)
+    lower = log(base, min_d)
+    upper = log(base, max_d)
+
+    if lower ≥ upper
+        error(
+        "Boxsize estimation failed: `upper` was found ≥ than `lower`. "*
+        "Adjust keywords or provide a bigger dataset.")
+    end
+    return float(base) .^ range(lower+w, upper+z; length = k)
+end
+
+"""
+    minimum_pairwise_distance(A::Dataset, metric = Euclidean())
+Return `min_d, min_pair`: the minimum pairwise distance
+of all points in the dataset, and the corresponding point pair.
+"""
+function minimum_pairwise_distance(A::AbstractDataset, metric = Euclidean())
+    tree = KDTree(A)
+    min_d = eltype(A[1])(Inf)
+    max_d = -min_d
+    min_pair = max_pair = (0, 0)
+    theiler = Theiler(0)
+    for i in 1:length(A)
+        inds, dists = Neighborhood.knn(tree, A[i], 1, theiler(i); sortds=false)
+        ind, dist = inds[1], dists[1]
+        if dist < min_d
+            min_d = dist
+            min_pair = (i, ind)
+        end
+    end
+    return min_d, min_pair
 end

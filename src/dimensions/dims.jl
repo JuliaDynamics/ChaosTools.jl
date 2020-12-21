@@ -10,43 +10,6 @@ export molteno_dim, molteno_boxing
 # Entropy based dimensions
 #######################################################################################
 """
-    estimate_boxsizes(data::AbstractDataset; k::Int = 12, z = -1, w = 1)
-Return `k` exponentially spaced values: `10 .^ range(lower+w, upper+z, length = k)`.
-
-`lower` is the magnitude of the
-minimum pair-wise distance between datapoints while `upper` is the magnitude
-of the maximum difference between
-greatest and smallest number among each timeseries.
-
-"Magnitude" here stands for order of magnitude, i.e. `round(log10(x))`.
-"""
-function estimate_boxsizes(data::AbstractDataset{D, T};
-    k::Int = 12, z = -1.0, w = 1.0) where {D, T<:Number}
-
-    mi, ma = minmaxima(data)
-    upper = round(log10(maximum(ma - mi)))
-
-    mindist = min_pairwise_distance(data)[2]
-    lower = ceil(log10(mindist)) # ceil necessary to not use smaller distance.
-
-    if lower ≥ upper
-        error(
-        "Boxsize estimation failed: `upper` was found ≥ than "*
-        "`lower`. Adjust keywords or provide a bigger dataset.")
-    end
-    if lower + w + 2 ≥ upper + z
-        @warn "Boxsizes limits do not differ by 2 orders of magnitude or more. "*
-        "Setting `w -= 0.5; z += 0.5`. Please adjust keywords or provide a bigger dataset."
-        w -= 0.5; z += 0.5
-    end
-
-    return 10.0 .^ range(lower+w, stop = upper+z, length = k)
-end
-
-estimate_boxsizes(ts::AbstractMatrix; kwargs...) =
-estimate_boxsizes(convert(Dataset, ts); kwargs...)
-
-"""
     generalized_dim(dataset [, sizes]; q = 1, base = MathConstants.e) -> D_α
 Return the `α` order generalized dimension of the `dataset`, by calculating
 the [`genentropy`](@ref) for each `ε ∈ sizes`.

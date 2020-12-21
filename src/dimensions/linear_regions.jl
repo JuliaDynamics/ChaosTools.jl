@@ -41,7 +41,7 @@ slope(x, y) = linreg(x, y)[2]
 
 
 """
-    linear_regions(x, y; dxi::Int = 1, tol = 0.2) -> (lrs, tangents)
+    linear_regions(x, y; dxi::Int = 1, tol = 0.25) -> (lrs, tangents)
 Identify regions where the curve `y(x)` is linear, by scanning the
 `x`-axis every `dxi` indices sequentially
 (e.g. at `x[1] to x[5], x[5] to x[10], x[10] to x[15]` and so on if `dxi=5`).
@@ -57,7 +57,7 @@ and the _correct_ `tangents` at each region
 """
 function linear_regions(
         x::AbstractVector, y::AbstractVector;
-        method = :sequential, dxi::Int = method == :overlap ? 3 : 1, tol = 0.2,
+        method = :sequential, dxi::Int = method == :overlap ? 3 : 1, tol = 0.25,
     )
     return if method == :overlap
         linear_regions_overlap(x, y, dxi, tol)
@@ -105,9 +105,13 @@ function linear_regions_sequential(x, y, dxi, tol)
 end
 
 """
-    linear_region(x, y; dxi::Int = 1, tol = 0.2) -> ((ind1, ind2), slope)
+    linear_region(x, y; kwargs...) -> ((ind1, ind2), slope)
 Call [`linear_regions`](@ref) and identify and return the largest linear region
 and its slope. The region starts and stops at `x[ind1:ind2]`.
+
+The keywords `dxi, tol` are propagated as-is to [`linear_regions`](@ref).
+The keyword `ignore_saturation = true` ignores saturation that (typically) happens
+at the final points of the curve `y(x)`, where the curve flattens out.
 """
 function linear_region(x::AbstractVector, y::AbstractVector;
     dxi::Int = 1, tol::Real = 0.2, ignore_saturation = true)

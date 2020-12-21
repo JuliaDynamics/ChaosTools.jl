@@ -139,11 +139,11 @@ end
 Return `k` exponentially spaced values: `base .^ range(lower + w, upper + z; length = k)`,
 that are a good estimate for sizes ε that are used in calculating a [Fractal Dimension](@ref).
 
-Let `d₋` be the minimum and pair-wise distance in `A` and `d₊` the length of the diagonal
+Let `d₋` be the minimum pair-wise distance in `A` and `d₊` the length of the diagonal
 of the hypercube that contains `A`.
 Then `lower = log(base, d₋)` and `upper = log(base, d₊)`.
-Because by default `w=1, z=-1`, we're providing sizes that are an order of mangitude
-larger than the minimum distance, and an order of magnitude smaller than the minimum
+Because by default `w=1, z=-1`, the returned sizes are an order of mangitude
+larger than the minimum distance, and an order of magnitude smaller than the maximum
 distance.
 
 ## Keywords

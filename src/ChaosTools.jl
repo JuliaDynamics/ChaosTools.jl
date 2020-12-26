@@ -3,8 +3,7 @@ Tools for the exploration of chaos and nonlinear dynamics
 """
 module ChaosTools
 
-using Reexport
-@reexport using DynamicalSystemsBase
+using DynamicalSystemsBase
 
 using DynamicalSystemsBase: DS, DDS, CDS
 using DynamicalSystemsBase: MDI, TDI

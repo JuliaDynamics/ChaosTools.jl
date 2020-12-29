@@ -33,8 +33,7 @@ function orbitdiagram(
     ) where {IIP, S, D}
 
     p0 = ds.p[p_index]
-    if D == 1
-        idxs != 1 &&
+    if D == 1 && idxs != 1 
         error("You have a 1D system and yet you gave `i=$i`. What's up with that!?")
     end
 

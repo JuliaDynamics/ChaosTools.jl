@@ -1,5 +1,5 @@
 using Test
-using DynamicalSystemsBase
+using DynamicalSystemsBase, DelayEmbeddings
 
 ti = time()
 

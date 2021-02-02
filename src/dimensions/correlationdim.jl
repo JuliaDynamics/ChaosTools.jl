@@ -215,7 +215,7 @@ See also: [`correlation_boxing`](@ref),
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 """
-function boxed_correlationdim(data, εs, r0 = maximum(ε); q = 2, M = size(data, 2))
+function boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2))
     @assert M ≤ size(data,2) "Prism dimension has to be lower or equal than " *
     "data dimension."
     dd = boxed_correlationsum(data, εs, r0; q = q, M = M)
@@ -227,7 +227,10 @@ end
 Distribute `data` into boxes of size `r0`. The `q`-order correlationsum
 `C_q(ε)` is then calculated for every `ε ∈ εs` and each of the boxes to then be
 summed up afterwards. If `M` is unequal to the dimension of the data, only the
-first `m` dimensions are considered for the box distribution.
+first `M` dimensions are considered for the box distribution.
+
+`w` is the Theiler window. All points that are within a range of `w` of a
+respective point will not be considered in the calculation of the correlation.
 
 See also: [`boxed_correlationdim`](@ref)
 """
@@ -287,6 +290,7 @@ end
     boxed_correlationsum_2(boxes, contents, data, εs; w = 0)
 For a vector of `boxes` and the indices of their `contents` inside of `data`,
 calculate the classic correlationsum of a radius or multiple radii `εs`.
+`w` is the Theiler window, for explanation see [`boxed_correlationsum`](@ref).
 """
 function boxed_correlationsum_2(boxes, contents, data, εs; w = 0)
     Cs = zeros(eltype(data), length(εs))
@@ -301,7 +305,9 @@ end
 
 """
     find_neighborboxes_2(index, boxes, contents) → indices
-For an `index` into `boxes` all neighbouring boxes beginning from the current one are searched. If the found box is indeed a neighbour, the `contents` of that box are added to `indices`.
+For an `index` into `boxes` all neighbouring boxes beginning from the current
+one are searched. If the found box is indeed a neighbour, the `contents` of
+that box are added to `indices`.
 """
 function find_neighborboxes_2(index, boxes, contents)
     indices = Int[]
@@ -320,6 +326,10 @@ end
 Calculates the classic correlation sum for values `X` inside a box, considering
 `Y` consisting of all values in that box and the ones in neighbouring boxes for
 all distances `ε ∈ εs` calculated by `norm`.
+
+`w` is the Theiler window. Each index to the original array is checked for the
+distance of the compared index. If this absolute value is not higher than `w`
+its element is not used in the calculation of the correlationsum.
 
 See also: [`correlationsum`](@ref)
 """
@@ -351,6 +361,7 @@ end
     boxed_correlationsum_q(boxes, contents, data, εs, q; w = 0)
 For a vector of `boxes` and the indices of their `contents` inside of `data`,
 calculate the `q`-order correlationsum of a radius or radii `εs`.
+`w` is the Theiler window, for explanation see [`boxed_correlationsum`](@ref).
 """
 function boxed_correlationsum_q(boxes, contents, data, εs, q; w = 0)
     q <= 1 && @warn "This function is currently not specialized for q <= 1" *
@@ -419,11 +430,11 @@ end
 
 """
     estimate_r0_theiler(data)
-Estimates a reasonable size for boxing the data before calculating the correlation
-    dimension proposed by Theiler[^Theiler1987].
+Estimates a reasonable size for boxing the data before calculating the
+correlation dimension proposed by Theiler[^Theiler1987].
 To do so the dimension is estimated by running the algorithm by Grassberger and
-Procaccia[^Grassberger1983] with `√N` points where `N` is the number of total data points.
-Then the optimal boxsize ``r_0`` computes as
+Procaccia[^Grassberger1983] with `√N` points where `N` is the number of total
+data points. Then the optimal boxsize ``r_0`` computes as
 ```math
 r_0 = R (2/N)^{1/\\nu}
 ```

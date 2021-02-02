@@ -223,7 +223,7 @@ function boxed_correlationdim(data, εs, r0 = maximum(ε); q = 2, M = size(data,
 end
 
 """
-    boxed_correlationsum(A::Dataset, εs, r0 = maximum(ε); q = 2 , M = size(data, 2))
+    boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2 , M = size(data, 2), w = 0)
 Distribute `data` into boxes of size `r0`. The `q`-order correlationsum
 `C_q(ε)` is then calculated for every `ε ∈ εs` and each of the boxes to then be
 summed up afterwards. If `M` is unequal to the dimension of the data, only the
@@ -231,14 +231,14 @@ first `m` dimensions are considered for the box distribution.
 
 See also: [`boxed_correlationdim`](@ref)
 """
-function boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2))
+function boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2), w = 0)
     @assert M ≤ size(data, 2) "Prism dimension has to be lower or equal than " *
     "data dimension."
     boxes, contents = correlation_boxing(data, r0, M)
     if q == 2
-        boxed_correlationsum_2(boxes, contents, data, εs)
+        boxed_correlationsum_2(boxes, contents, data, εs, w = w)
     else
-        boxed_correlationsum_q(boxes, contents, data, εs, q)
+        boxed_correlationsum_q(boxes, contents, data, εs, q, w = w)
     end
 end
 
@@ -284,20 +284,19 @@ function correlation_boxing(data, r0, M = size(data, 2))
 end
 
 """
-    boxed_correlationsum_2(boxes, contents, data, εs)
+    boxed_correlationsum_2(boxes, contents, data, εs; w = 0)
 For a vector of `boxes` and the indices of their `contents` inside of `data`,
 calculate the classic correlationsum of a radius or multiple radii `εs`.
 """
-function boxed_correlationsum_2(boxes, contents, data, εs)
+function boxed_correlationsum_2(boxes, contents, data, εs; w = 0)
     Cs = zeros(eltype(data), length(εs))
     N = length(data)
     for index in 1:length(boxes)
-        indices = find_neighborboxes_2(index, boxes, contents)
-        X = data[contents[index]]
-        Y = data[indices]
-        Cs .+= inner_correlationsum_2(X, Y, εs)
+        indices_neighbors = find_neighborboxes_2(index, boxes, contents)
+        indices_box = contents[index]
+        Cs .+= inner_correlationsum_2(indices_box, indices_neighbors, data, εs, w = w)
     end
-    Cs .* (2 / (N * (N - 1)))
+    Cs .* (2 / ((N - w) * (N - w - 1)))
 end
 
 """
@@ -317,44 +316,53 @@ function find_neighborboxes_2(index, boxes, contents)
 end
 
 """
-    inner_correlationsum_2(X, Y, εs; norm = Euclidean())
-Calculates the classic correlation sum for values `X` inside a box, considering `Y` consisting of all values in that box and the ones in neighbouring boxes for all distances `ε ∈ εs` calculated by `norm`.
+    inner_correlationsum_2(indices_X, indices_Y, data, εs; norm = Euclidean(), w = 0)
+Calculates the classic correlation sum for values `X` inside a box, considering
+`Y` consisting of all values in that box and the ones in neighbouring boxes for
+all distances `ε ∈ εs` calculated by `norm`.
 
 See also: [`correlationsum`](@ref)
 """
-function inner_correlationsum_2(X, Y, εs; norm = Euclidean())
+function inner_correlationsum_2(indices_X, indices_Y, data, εs; norm = Euclidean(), w = 0)
     @assert issorted(εs) "Sorted εs required for optimized version."
-    Cs, Ny, Nε = zeros(length(εs)), length(Y), length(εs)
-    for (i, x) in enumerate(X)
+    Cs, Ny, Nε = zeros(length(εs)), length(indices_Y), length(εs)
+    for (i, index_X) in enumerate(indices_X)
+    	x = data[index_X]
         for j in i+1:Ny
-            dist = evaluate(norm, Y[j], x)
-            for k in Nε:-1:1
-                if dist < εs[k]
-                    Cs[k] += 1
-                else
-                    break
-                end
-            end
+            index_Y = indices_Y[j]
+            # Check for Theiler window.
+            if abs(index_Y - index_X) > w
+                # Calculate distance.
+		        dist = evaluate(norm, data[index_Y], x)
+		        for k in Nε:-1:1
+		            if dist < εs[k]
+		                Cs[k] += 1
+		            else
+		                break
+		            end
+		        end
+		    end
         end
     end
     return Cs
 end
 
 """
-    boxed_correlationsum_q(boxes, contents, data, εs, q)
+    boxed_correlationsum_q(boxes, contents, data, εs, q; w = 0)
 For a vector of `boxes` and the indices of their `contents` inside of `data`,
 calculate the `q`-order correlationsum of a radius or radii `εs`.
 """
-function boxed_correlationsum_q(boxes, contents, data, εs, q)
+function boxed_correlationsum_q(boxes, contents, data, εs, q; w = 0)
+    q <= 1 && @warn "This function is currently not specialized for q <= 1" *
+    " and may show unexpected behaviour for these values."
     Cs = zeros(eltype(data), length(εs))
     N = length(data)
     for index in 1:length(boxes)
-        indices = find_neighborboxes_q(index, boxes, contents, q)
-        X = data[contents[index]]
-        Y = data[indices]
-        Cs .+= inner_correlationsum_q(X, Y, εs, q)
+        indices_neighbors = find_neighborboxes_q(index, boxes, contents, q)
+        indices_box = contents[index]
+        Cs .+= inner_correlationsum_q(indices_box, indices_neighbors, data, εs, q, w = w)
     end
-    Cs ./ (N * (N - 1) ^ (q-1))
+    Cs ./ ((N - 2w) * (N - 2w - 1) ^ (q-1))
 end
 
 """
@@ -374,28 +382,35 @@ function find_neighborboxes_q(index, boxes, contents, q)
 end
 
 """
-    inner_correlationsum_q(q::Real, X, Y, εs; norm = Euclidean())
+    inner_correlationsum_q(indices_X, indices_Y, data, εs, q::Real; norm = Euclidean(), w = 0)
 Calculates the `q`-order correlation sum for values `X` inside a box,
-considering `Y` consisting of all values in that box and the ones in neighbouring boxes
-for all distances `ε ∈ εs` calculated by `norm`.
+considering `Y` consisting of all values in that box and the ones in
+neighbouring boxes for all distances `ε ∈ εs` calculated by `norm`.
+
+`w` is the Theiler window. The first and last `w` points of this data set are
+not used by themselves to calculate the correlationsum.
 
 See also: [`correlationsum`](@ref)
 """
-function inner_correlationsum_q(X, Y, εs, q::Real; norm = Euclidean())
+function inner_correlationsum_q(indices_X, indices_Y, data, εs, q::Real; norm = Euclidean(), w = 0)
     @assert issorted(εs) "Sorted εs required for optimized version."
-    Cs, Ny, Nε = zeros(length(εs)), length(Y), length(εs)
-    for (i, x) in enumerate(X)
-        # accounts for i = j
-        C_current = -1 .* ones(Nε)
-        for j in 1:Ny
-            dist = evaluate(norm, x, Y[j])
-            for k in Nε:-1:1
-                if dist < εs[k]
-                    C_current[k] += 1
-                else
-                    break
-                end
-            end
+    Cs = zeros(length(εs))
+    N, Ny, Nε = length(data), length(indices_Y), length(εs)
+    for i in indices_X
+        (i < w + 1 || i > N - w) && continue
+        C_current = zeros(Nε)
+        x = data[i]
+        for j in indices_Y
+        	if abs(i - j) > w
+		        dist = evaluate(norm, x, data[j])
+		        for k in Nε:-1:1
+		            if dist < εs[k]
+		                C_current[k] += 1
+		            else
+		                break
+		            end
+		        end
+		    end
         end
         Cs .+= C_current .^ (q-1)
     end

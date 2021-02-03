@@ -31,13 +31,17 @@ C_2(\\epsilon) = \\frac{2}{(N-w)(N-w-1)}\\sum_{i=1}^{N}\\sum_{j=1+w+i}^{N} B(||X
 ```
 for `q=2` and
 ```math
-C_q(\\epsilon) = \\frac{1}{(N-2w)(N-2w-1)^{(q-1)}} \\sum_{i=1}^N\\left[\\sum_{j:|i-j| > w} B(||X_i - X_j|| < \\epsilon)\\right]^{q-1}
+C_q(\\epsilon) = \\left[\\frac{1}{\\alpha} \\sum_{i=w+1}^{N-w}\\left[\\sum_{j:|i-j| > w} B(||X_i - X_j|| < \\epsilon)\\right]^{q-1}\\right]^{1/(q-1)}
+```
+where
+```math
+\\alpha = (N-2w)(N-2w-1)^{(q-1)}
 ```
 for `q≠2`, where ``N`` is its length and ``B`` gives 1 if the argument is
 `true`. `w` is the [Theiler window](@ref). If `ε` is a vector its values have to be
-ordered. See the book "Nonlinear Time Series Analysis"[^Kantz2003], Ch. 6, for
+ordered. See the article of Grassberger for the general definition [^Grassberger2007] and the book "Nonlinear Time Series Analysis" [^Kantz2003], Ch. 6, for
 a discussion around `w` and choosing best values and Ch. 11.3 for the
-definition of the q-order correlationsum.
+explicit definition of the q-order correlationsum.
 
     correlationsum(X, εs::AbstractVector; w, norm, q) → C_q(ε)
 
@@ -50,6 +54,8 @@ a matrix of size `N×N`. If this is larger than your available memory please use
 
 See [`grassberger`](@ref) for more.
 See also [`takens_best_estimate`](@ref).
+
+[^Grassberger]: Peter Grassberger (2007) [Grassberger-Procaccia algorithm. Scholarpedia, 2(5):3043.](http://dx.doi.org/10.4249/scholarpedia.3043)
 
 [^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)
 """
@@ -87,7 +93,7 @@ function correlationsum_q(X, ε::Real, q, norm = Euclidean(), w = 0)
         end
         C += C_current^(q - 1)
     end
-    return C / normalisation
+    return (C / normalisation) ^ (1 / (q-1))
 end
 
 # Optimized version
@@ -140,7 +146,7 @@ function correlationsum_q(X, εs::AbstractVector, q, norm = Euclidean(), w = 0)
         end
         Cs .+= C_current .^ (q-1)
     end
-    return Cs ./ normalisation
+    return (Cs ./ normalisation) .^ (1/(q-1))
 end
 
 function distancematrix(X, norm = Euclidean())

@@ -331,7 +331,9 @@ end
     inner_correlationsum_2(indices_X, indices_Y, data, εs; norm = Euclidean(), w = 0)
 Calculates the classic correlation sum for values `X` inside a box, considering
 `Y` consisting of all values in that box and the ones in neighbouring boxes for
-all distances `ε ∈ εs` calculated by `norm`.
+all distances `ε ∈ εs` calculated by `norm`. To obtain the position of the
+values in the original time series `data`, they are passed as `indices_X` and
+`indices_Y`.
 
 `w` is the Theiler window. Each index to the original array is checked for the
 distance of the compared index. If this absolute value is not higher than `w`
@@ -379,7 +381,7 @@ function boxed_correlationsum_q(boxes, contents, data, εs, q; w = 0)
         indices_box = contents[index]
         Cs .+= inner_correlationsum_q(indices_box, indices_neighbors, data, εs, q, w = w)
     end
-    Cs ./ ((N - 2w) * (N - 2w - 1) ^ (q-1))
+    (Cs ./ ((N - 2w) * (N - 2w - 1) ^ (q-1))) .^ (1 / (q-1))
 end
 
 """
@@ -402,7 +404,9 @@ end
     inner_correlationsum_q(indices_X, indices_Y, data, εs, q::Real; norm = Euclidean(), w = 0)
 Calculates the `q`-order correlation sum for values `X` inside a box,
 considering `Y` consisting of all values in that box and the ones in
-neighbouring boxes for all distances `ε ∈ εs` calculated by `norm`.
+neighbouring boxes for all distances `ε ∈ εs` calculated by `norm`. To obtain
+the position of the values in the original time series `data`, they are passed
+as `indices_X` and `indices_Y`.
 
 `w` is the Theiler window. The first and last `w` points of this data set are
 not used by themselves to calculate the correlationsum.
@@ -414,11 +418,15 @@ function inner_correlationsum_q(indices_X, indices_Y, data, εs, q::Real; norm =
     Cs = zeros(length(εs))
     N, Ny, Nε = length(data), length(indices_Y), length(εs)
     for i in indices_X
+        # Check that this index is not within Theiler window of the boundary
+        # This step is neccessary for easy normalisation.
         (i < w + 1 || i > N - w) && continue
         C_current = zeros(Nε)
         x = data[i]
         for j in indices_Y
+            # Check that this index is not whithin the Theiler window
         	if abs(i - j) > w
+                # Calculate the distance for the correlationsum
 		        dist = evaluate(norm, x, data[j])
 		        for k in Nε:-1:1
 		            if dist < εs[k]

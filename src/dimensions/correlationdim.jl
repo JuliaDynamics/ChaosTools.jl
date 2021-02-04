@@ -208,7 +208,7 @@ radii `εs` and boxsize `r0` are chosen by calculating
 [`estimate_r0_buenoorovio`](@ref).
 
 This method splits the data into boxes, calculates the q-order correlation sum
-C_q(ε) for every `ε ∈ εs` and fits a line through the longest linear looking
+`C_q(ε)` for every `ε ∈ εs` and fits a line through the longest linear looking
 region of the curve `(log(εs), log(C_q(εs)))`. The gradient of this line is the
 dimension.
 

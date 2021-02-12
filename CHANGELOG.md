@@ -1,3 +1,6 @@
+# 1.24
+* Theiler window is now possible in `boxed_correlationsum`.
+
 # 1.23
 * Various improvements on the functionality of `estamte_boxsizes` and `linear_region`.
 

@@ -245,9 +245,9 @@ function boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2, M = size(data
     "data dimension."
     boxes, contents = correlation_boxing(data, r0, M)
     if q == 2
-        boxed_correlationsum_2(boxes, contents, data, εs, w = w)
+        boxed_correlationsum_2(boxes, contents, data, εs; w)
     else
-        boxed_correlationsum_q(boxes, contents, data, εs, q, w = w)
+        boxed_correlationsum_q(boxes, contents, data, εs, q; w)
     end
 end
 

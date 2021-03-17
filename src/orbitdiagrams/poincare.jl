@@ -1,6 +1,6 @@
 using DynamicalSystemsBase: DEFAULT_DIFFEQ_KWARGS, _get_solver
 using Roots: find_zero, A42
-export poincaresos, produce_orbitdiagram, PlaneCrossing
+export poincaresos, produce_orbitdiagram, PlaneCrossing, poincaremap
 
 const ROOTS_ALG = A42()
 
@@ -165,7 +165,7 @@ end
 
 
 """
-	poincaremap(integ, planecrossing, Tmax, idxs, rootkw)
+	poincaremap(integ, planecrossing,  idxs, rootkw, Tmax)
 Calculate the next iteration of the Poincaré surface of section.
 
 ## Keyword Arguments
@@ -176,7 +176,7 @@ diverges or get stuck to a fixed point.
 * `rootkw = (xrtol = 1e-6, atol = 1e-6)` : A `NamedTuple` of keyword arguments
   passed to `find_zero` from [Roots.jl](https://github.com/JuliaMath/Roots.jl).
 """
-function poincaremap(integ, planecrossing, Tmax = ∞, idxs, rootkw)
+function poincaremap(integ, planecrossing, Tmax = ∞, idxs = 1, rootkw = (xrtol = 1e-6, atol = 1e-6))
     f = (t) -> planecrossing(integ(t))
 	ti = integ.t
 

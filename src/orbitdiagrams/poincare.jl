@@ -176,14 +176,14 @@ diverges or get stuck to a fixed point.
 * `rootkw = (xrtol = 1e-6, atol = 1e-6)` : A `NamedTuple` of keyword arguments
   passed to `find_zero` from [Roots.jl](https://github.com/JuliaMath/Roots.jl).
 """
-function poincaremap(integ, planecrossing, Tmax, j, rootkw)
+function poincaremap(integ, planecrossing, Tmax = ∞, idxs, rootkw)
     f = (t) -> planecrossing(integ(t))
 	ti = integ.t
 
     # Check if initial condition is already on the plane
     side = planecrossing(integ.u)
     if side == 0
-		dat = integ.u[j]
+		dat = integ.u[idxs]
         step!(integ)
         side = planecrossing(integ.u)
 		return dat
@@ -203,13 +203,13 @@ function poincaremap(integ, planecrossing, Tmax, j, rootkw)
 	# Did not found the crossing. Tmax reached.
 	# Maybe a fixed point outside the plane
 	 if (integ.t - ti) > Tmax
-	 	return integ.u[j]
+	 	return integ.u[idxs]
 	 end
 
     # I am now guaranteed to have `t` in negative and `tprev` in positive
     tcross = Roots.find_zero(f, (integ.tprev, integ.t), Roots.A42(); rootkw...)
     ucross = integ(tcross)
-    return ucross[j]
+    return ucross[idxs]
 end
 
 

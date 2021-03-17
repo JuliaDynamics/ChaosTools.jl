@@ -164,6 +164,55 @@ function poincaresos(integ, planecrossing, tfinal, Ttr, j, rootkw)
 end
 
 
+"""
+	poincaremap(integ, planecrossing, Tmax, idxs, rootkw)
+Calculate the next iteration of the Poincaré surface of section.
+
+## Keyword Arguments
+* `idxs = 1:dimension(ds)` : Optionally you can choose which variables to save.
+  Defaults to the entire state.
+* `Tmax = ∞` : Stop the search after Tmax if the orbit do not cross the plane, maybe it
+diverges or get stuck to a fixed point.
+* `rootkw = (xrtol = 1e-6, atol = 1e-6)` : A `NamedTuple` of keyword arguments
+  passed to `find_zero` from [Roots.jl](https://github.com/JuliaMath/Roots.jl).
+"""
+function poincaremap(integ, planecrossing, Tmax, j, rootkw)
+    f = (t) -> planecrossing(integ(t))
+	ti = integ.t
+
+    # Check if initial condition is already on the plane
+    side = planecrossing(integ.u)
+    if side == 0
+		dat = integ.u[j]
+        step!(integ)
+        side = planecrossing(integ.u)
+		return dat
+    end
+
+    while side < 0
+        (integ.t - ti) > Tmax && break
+        step!(integ)
+        side = planecrossing(integ.u)
+    end
+    while side ≥ 0
+        (integ.t - ti) > Tmax && break
+        step!(integ)
+        side = planecrossing(integ.u)
+    end
+
+	# Did not found the crossing. Tmax reached.
+	# Maybe a fixed point outside the plane
+	 if (integ.t - ti) > Tmax
+	 	return integ.u[j]
+	 end
+
+    # I am now guaranteed to have `t` in negative and `tprev` in positive
+    tcross = Roots.find_zero(f, (integ.tprev, integ.t), Roots.A42(); rootkw...)
+    ucross = integ(tcross)
+    return ucross[j]
+end
+
+
 function _check_plane(plane, D)
     P = typeof(plane)
     L = length(plane)

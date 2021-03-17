@@ -76,6 +76,7 @@ println("\nTesting poincare sections...")
         iter_f! = (integ) -> poincaremap(integ, planecrossing, Tmax, idxs, rootkw)
         psos = [iter_f!(integ) for k in 1:500]
         psos = Dataset(psos)
+        xcross = psos[:, 2]
         @test length(xcross) > 1
         for x in xcross
             @test abs(x) < 1e-3

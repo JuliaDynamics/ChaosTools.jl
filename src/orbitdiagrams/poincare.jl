@@ -164,6 +164,25 @@ function poincaresos(integ, planecrossing, tfinal, Ttr, j, rootkw)
 end
 
 
+
+
+function poincaremap(ds::CDS{IIP, S, D}, plane, Tmax = 20.0;
+    direction = -1, warning = true, idxs = 1:D, u0 = get_state(ds),
+    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...) where {IIP, S, D}
+
+	_check_plane(plane, D)
+    integ = integrator(ds, u0; diffeq...)
+
+    i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
+    planecrossing = PlaneCrossing(plane, direction > 0)
+
+	iter_f! = (integ) -> poincaremap(integ, planecrossing, Tmax, i, rootkw)
+
+
+    return iter_f!, integ
+
+end
+
 """
 	poincaremap(integ, planecrossing,  idxs, rootkw, Tmax)
 Calculate the next iteration of the Poincaré surface of section.
@@ -171,7 +190,7 @@ Calculate the next iteration of the Poincaré surface of section.
 ## Keyword Arguments
 * `idxs = 1:dimension(ds)` : Optionally you can choose which variables to save.
   Defaults to the entire state.
-* `Tmax = ∞` : Stop the search after Tmax if the orbit do not cross the plane, maybe it
+* `Tmax = ∞` : Stop the search after Tmax if the orbit does not cross the plane, maybe it
 diverges or get stuck to a fixed point.
 * `rootkw = (xrtol = 1e-6, atol = 1e-6)` : A `NamedTuple` of keyword arguments
   passed to `find_zero` from [Roots.jl](https://github.com/JuliaMath/Roots.jl).
@@ -179,11 +198,11 @@ diverges or get stuck to a fixed point.
 function poincaremap(integ, planecrossing, Tmax = ∞, idxs = 1, rootkw = (xrtol = 1e-6, atol = 1e-6))
     f = (t) -> planecrossing(integ(t))
 	ti = integ.t
-
+	i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
     # Check if initial condition is already on the plane
     side = planecrossing(integ.u)
     if side == 0
-		dat = integ.u[idxs]
+		dat = integ.u[i]
         step!(integ)
         side = planecrossing(integ.u)
 		return dat
@@ -203,13 +222,13 @@ function poincaremap(integ, planecrossing, Tmax = ∞, idxs = 1, rootkw = (xrtol
 	# Did not found the crossing. Tmax reached.
 	# Maybe a fixed point outside the plane
 	 if (integ.t - ti) > Tmax
-	 	return integ.u[idxs]
+	 	return integ.u[i]
 	 end
 
     # I am now guaranteed to have `t` in negative and `tprev` in positive
     tcross = Roots.find_zero(f, (integ.tprev, integ.t), Roots.A42(); rootkw...)
     ucross = integ(tcross)
-    return ucross[idxs]
+    return ucross[i]
 end
 
 

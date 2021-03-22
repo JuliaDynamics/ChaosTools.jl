@@ -196,26 +196,19 @@ initial condition
   of DifferentialEquations.jl. See [`trajectory`](@ref) for examples.
 
 ## Example:
+```julia-repl
+ds = Systems.rikitake([0.,0.,0.], μ = 0.47, α = 1.0)
+f = poincaremap(ds, (3,0.), Tmax=20.)
+# Iterate the map
+u = [f() for k in 1:200]
 
-`ds = Systems.rikitake([0.,0.,0.], μ = 0.47, α = 1.0)`
-
-`f = poincaremap(ds, (3,0.), Tmax=20.)`
-
-`# Iterate the map`
-
-`u = [f() for k in 1:200]`
-
-`# Change the initial conditions`
-
-`u0 = [1.,0.,0.]`
-
-`iteration_1 = f(u0)`
-
-`# Second iteration`
-
-`iteration_2 = f()`
-
-`# And so on...´
+# Change the initial conditions
+u0 = [1.,0.,0.]
+iteration_1 = f(u0)
+# Second iteration
+iteration_2 = f()
+# And so on...
+```
 
 """
 function poincaremap(ds::CDS{IIP, S, D}, plane, Tmax = ∞;

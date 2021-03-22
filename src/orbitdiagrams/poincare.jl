@@ -1,6 +1,6 @@
 using DynamicalSystemsBase: DEFAULT_DIFFEQ_KWARGS, _get_solver
 using Roots: find_zero, A42
-export poincaresos, produce_orbitdiagram, PlaneCrossing, poincaremap
+export poincaresos, produce_orbitdiagram, PlaneCrossing, poincaremap, poincaremap!
 
 const ROOTS_ALG = A42()
 
@@ -166,28 +166,88 @@ end
 
 
 
-function poincaremap(ds::CDS{IIP, S, D}, plane, Tmax = 20.0;
+"""
+	poincaremap(ds::ContinuousDynamicalSystem, plane, Tmax = ∞; kwargs...)
+
+Returns a function iterator that gives the next iteration on the map when called without argument.
+When the function is called with a vector of length dimension(ds), the system is set up at this
+initial condition
+
+* `ds` :  defined dynamical system
+* `plane` A `Tuple{Int, <: Number}`, like `(j, r)` : the plane is defined
+  as when the `j` variable of the system equals the value `r`. It can also be
+  a vector of length `D+1`. The first `D` elements of the
+  vector correspond to ``\\mathbf{a}`` while the last element is ``b``.
+* `Tmax` : maximum time to search for an intersection with the plane before giving up.
+
+## Keyword Arguments
+* `direction = -1` : Only crossings with `sign(direction)` are considered to belong to
+  the surface of section. Positive direction means going from less than ``b``
+  to greater than ``b``.
+* `idxs = 1:dimension(ds)` : Optionally you can choose which variables to save.
+  Defaults to the entire state.
+* `Ttr = 0.0` : Transient time to evolve the system before starting
+  to compute the PSOS.
+* `u0 = get_state(ds)` : Specify an initial state.
+* `warning = true` : Throw a warning if the Poincaré section was empty.
+* `rootkw = (xrtol = 1e-6, atol = 1e-6)` : A `NamedTuple` of keyword arguments
+  passed to `find_zero` from [Roots.jl](https://github.com/JuliaMath/Roots.jl).
+* `diffeq...` : All other extra keyword arguments are propagated into `init`
+  of DifferentialEquations.jl. See [`trajectory`](@ref) for examples.
+
+## Example:
+
+`ds = Systems.rikitake([0.,0.,0.], μ = 0.47, α = 1.0)`
+
+`f = poincaremap(ds, (3,0.), Tmax=20.)`
+
+`# Iterate the map`
+
+`u = [f() for k in 1:200]`
+
+`# Change the initial conditions`
+
+`u0 = [1.,0.,0.]`
+
+`iteration_1 = f(u0)`
+
+`# Second iteration`
+
+`iteration_2 = f()`
+
+`# And so on...´
+
+"""
+function poincaremap(ds::CDS{IIP, S, D}, plane, Tmax = ∞;
     direction = -1, warning = true, idxs = 1:D, u0 = get_state(ds),
     rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...) where {IIP, S, D}
-
 	_check_plane(plane, D)
     integ = integrator(ds, u0; diffeq...)
 
     i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
-    planecrossing = PlaneCrossing(plane, direction > 0)
 
-	iter_f! = (integ) -> poincaremap(integ, planecrossing, Tmax, i, rootkw)
+	planecrossing = PlaneCrossing(plane, direction > 0)
 
+	f! = (u...) -> _tmp_f!(integ, planecrossing, Tmax, i, rootkw,u...)
 
-    return iter_f!, integ
-
+	return f!
 end
 
+function _tmp_f!(integ, planecrossing, Tmax, i, rootkw, u...)
+	if isempty(u)
+		return poincaremap!(integ, planecrossing, Tmax, i, rootkw)
+	else
+        reinit!(integ, u[1])
+		return poincaremap!(integ, planecrossing, Tmax, i, rootkw)
+	end
+end
+
+
 """
-	poincaremap(integ, planecrossing,  idxs, rootkw, Tmax)
+	poincaremap!(integ, planecrossing,  idxs, rootkw, Tmax)
 Calculate the next iteration of the Poincaré surface of section.
 
-## Keyword Arguments
+## Arguments
 * `idxs = 1:dimension(ds)` : Optionally you can choose which variables to save.
   Defaults to the entire state.
 * `Tmax = ∞` : Stop the search after Tmax if the orbit does not cross the plane, maybe it
@@ -195,7 +255,7 @@ diverges or get stuck to a fixed point.
 * `rootkw = (xrtol = 1e-6, atol = 1e-6)` : A `NamedTuple` of keyword arguments
   passed to `find_zero` from [Roots.jl](https://github.com/JuliaMath/Roots.jl).
 """
-function poincaremap(integ, planecrossing, Tmax = ∞, idxs = 1, rootkw = (xrtol = 1e-6, atol = 1e-6))
+function poincaremap!(integ, planecrossing, Tmax = ∞, idxs = 1, rootkw = (xrtol = 1e-6, atol = 1e-6))
     f = (t) -> planecrossing(integ(t))
 	ti = integ.t
 	i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)

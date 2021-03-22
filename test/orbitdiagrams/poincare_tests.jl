@@ -66,17 +66,8 @@ println("\nTesting poincare sections...")
     end
     @testset "Henon Heiles iterated Poincaré map" begin
         ds = Systems.henonheiles([0, .483000, .278980390, 0] )
-        # integ  =  integrator(ds, reltol=1e-8)
-        # plane = (2, 0.)
-        # direction = +1
-        # planecrossing = PlaneCrossing(plane, direction > 0)
-        # rootkw = (xrtol = 1e-8, atol = 1e-8)
-        # idxs=SVector{2, Int}([1,2]...)
-        # Tmax = 20
-        iter_f!,integ = poincaremap(ds, (2, 0), 20., direction=+1, idxs=[1,2])
-
-        #iter_f! = (integ) -> poincaremap(integ, planecrossing, Tmax, idxs, rootkw)
-        psos = [iter_f!(integ) for k in 1:500]
+        f = poincaremap(ds, (2, 0), 20., direction=+1, idxs=[1,2])
+        psos = [f() for k in 1:500]
         psos = Dataset(psos)
         xcross = psos[:, 2]
         @test length(xcross) > 1

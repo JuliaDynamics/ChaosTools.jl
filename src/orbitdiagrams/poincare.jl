@@ -111,10 +111,18 @@ function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
     _check_plane(plane, D)
     integ = integrator(ds, u0; diffeq...)
 
-    i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
+    i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
     planecrossing = PlaneCrossing(plane, direction > 0)
 
-    data = poincaresos(integ, planecrossing, tfinal, Ttr, i, rootkw)
+	# Skip transient
+	Ttr != 0 && step!(integ, Ttr)
+
+    data = _initialize_output(integ.u, i)
+
+	while integ.t < tfinal
+	     push!(data, poincaremap!(integ, planecrossing, tfinal , i, rootkw))
+	end
+
     warning && length(data) == 0 && @warn PSOS_ERROR
 
     return Dataset(data)
@@ -128,41 +136,6 @@ end
 
 const PSOS_ERROR =
 "the Poincaré surface of section did not have any points!"
-
-function poincaresos(integ, planecrossing, tfinal, Ttr, j, rootkw)
-    f = (t) -> planecrossing(integ(t))
-    data = _initialize_output(integ.u, j)
-    Ttr != 0 && step!(integ, Ttr)
-
-    # Check if initial condition is already on the plane
-    side = planecrossing(integ.u)
-    if side == 0
-        push!(data, integ.u[j])
-        step!(integ)
-        side = planecrossing(integ.u)
-    end
-
-    while integ.t < tfinal + Ttr
-        while side < 0
-            integ.t > tfinal + Ttr && break
-            step!(integ)
-            side = planecrossing(integ.u)
-        end
-        while side ≥ 0
-            integ.t > tfinal + Ttr && break
-            step!(integ)
-            side = planecrossing(integ.u)
-        end
-        integ.t > tfinal + Ttr && break
-
-        # I am now guaranteed to have `t` in negative and `tprev` in positive
-        tcross = Roots.find_zero(f, (integ.tprev, integ.t), ROOTS_ALG; rootkw...)
-        ucross = integ(tcross)
-        push!(data, ucross[j])
-    end
-    return data
-end
-
 
 
 
@@ -217,7 +190,7 @@ function poincaremap(ds::CDS{IIP, S, D}, plane, Tmax = ∞;
 	_check_plane(plane, D)
     integ = integrator(ds, u0; diffeq...)
 
-    i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
+    i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
 
 	planecrossing = PlaneCrossing(plane, direction > 0)
 
@@ -238,9 +211,11 @@ end
 
 """
 	poincaremap!(integ, planecrossing,  idxs, rootkw, Tmax)
-Calculate the next iteration of the Poincaré surface of section.
+Low level function that returns the next iteration of the Poincaré surface of section.
 
 ## Arguments
+* `integ` : integrator object [`integrator`](@ref)
+* `planecrossing` : struct of type PlaneCrossing
 * `idxs = 1:dimension(ds)` : Optionally you can choose which variables to save.
   Defaults to the entire state.
 * `Tmax = ∞` : Stop the search after Tmax if the orbit does not cross the plane, maybe it
@@ -251,7 +226,7 @@ diverges or get stuck to a fixed point.
 function poincaremap!(integ, planecrossing, Tmax = ∞, idxs = 1, rootkw = (xrtol = 1e-6, atol = 1e-6))
     f = (t) -> planecrossing(integ(t))
 	ti = integ.t
-	i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
+	i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
     # Check if initial condition is already on the plane
     side = planecrossing(integ.u)
     if side == 0
@@ -374,7 +349,13 @@ function produce_orbitdiagram(
             st = u0
         end
         reinit!(integ, st)
-        push!(output, poincaresos(integ, planecrossing, tfinal, Ttr, i, rootkw))
+		Ttr != 0 && step!(integ, Ttr)
+	    data = _initialize_output(integ.u, i)
+		while integ.t < tfinal
+		     push!(data, poincaremap!(integ, planecrossing, tfinal , i, rootkw))
+		end
+        #push!(output, poincaresos(integ, planecrossing, tfinal, Ttr, i, rootkw))
+		push!(output, data)
         warning && length(output[end]) == 0 && @warn "For parameter $p $PSOS_ERROR"
     end
     # Reset the parameter of the system:
@@ -397,7 +378,7 @@ Argument `plane` and keywords `direction, warning, idxs` are the same as above.
 """
 function poincaresos(A::Dataset, plane; direction = -1, warning = true, idxs = 1:size(A, 2))
     _check_plane(plane, size(A, 2))
-    i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
+    i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
     planecrossing = PlaneCrossing(plane, direction > 0)
     data = poincaresos(A, planecrossing, i)
     warning && length(data) == 0 && @warn PSOS_ERROR

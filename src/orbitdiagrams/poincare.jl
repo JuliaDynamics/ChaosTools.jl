@@ -194,10 +194,29 @@ function poincaremap(ds::CDS{IIP, S, D}, plane, Tmax = ∞;
 
 	planecrossing = PlaneCrossing(plane, direction > 0)
 
-	f! = (u...) -> _tmp_f!(integ, planecrossing, Tmax, i, rootkw,u...)
+	#f! = (u...) -> _tmp_f!(integ, planecrossing, Tmax, i, rootkw,u...)
+	f! = PoincareMap(integ, planecrossing, Tmax, i, rootkw)
 
 	return f!
 end
+
+
+struct PoincareMap
+	integ
+	planecrossing
+	Tmax
+	i
+	rootkw
+end
+function (pmap::PoincareMap)()
+
+	return poincaremap!(pmap.integ, pmap.planecrossing, pmap.Tmax, pmap.i, pmap.rootkw)
+end
+function (pmap::PoincareMap)(u0)
+	reinit!(pmap.integ, u0)
+	return poincaremap!(pmap.integ, pmap.planecrossing, pmap.Tmax, pmap.i, pmap.rootkw)
+end
+
 
 function _tmp_f!(integ, planecrossing, Tmax, i, rootkw, u...)
 	if isempty(u)
@@ -354,7 +373,6 @@ function produce_orbitdiagram(
 		while integ.t < tfinal
 		     push!(data, poincaremap!(integ, planecrossing, tfinal , i, rootkw))
 		end
-        #push!(output, poincaresos(integ, planecrossing, tfinal, Ttr, i, rootkw))
 		push!(output, data)
         warning && length(output[end]) == 0 && @warn "For parameter $p $PSOS_ERROR"
     end

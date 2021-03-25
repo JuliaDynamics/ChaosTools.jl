@@ -184,7 +184,7 @@ iteration_2 = f()
 ```
 
 """
-function poincaremap(ds::CDS{IIP, S, D}, plane, Tmax = ∞;
+function poincaremap(ds::CDS{IIP, S, D}, plane, Tmax = 9e9;
     direction = -1, warning = true, idxs = 1:D, u0 = get_state(ds),
     rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...) where {IIP, S, D}
 	_check_plane(plane, D)
@@ -194,7 +194,6 @@ function poincaremap(ds::CDS{IIP, S, D}, plane, Tmax = ∞;
 
 	planecrossing = PlaneCrossing(plane, direction > 0)
 
-	#f! = (u...) -> _tmp_f!(integ, planecrossing, Tmax, i, rootkw,u...)
 	f! = PoincareMap(integ, planecrossing, Tmax, i, rootkw)
 
 	return f!
@@ -202,29 +201,19 @@ end
 
 
 struct PoincareMap
-	integ
-	planecrossing
-	Tmax
-	i
-	rootkw
+	integ::AbstractODEIntegrator
+	planecrossing::PlaneCrossing
+	Tmax::AbstractFloat
+	i::AbstractVector
+	rootkw::NamedTuple
 end
-function (pmap::PoincareMap)()
 
+function (pmap::PoincareMap)()
 	return poincaremap!(pmap.integ, pmap.planecrossing, pmap.Tmax, pmap.i, pmap.rootkw)
 end
 function (pmap::PoincareMap)(u0)
 	reinit!(pmap.integ, u0)
 	return poincaremap!(pmap.integ, pmap.planecrossing, pmap.Tmax, pmap.i, pmap.rootkw)
-end
-
-
-function _tmp_f!(integ, planecrossing, Tmax, i, rootkw, u...)
-	if isempty(u)
-		return poincaremap!(integ, planecrossing, Tmax, i, rootkw)
-	else
-        reinit!(integ, u[1])
-		return poincaremap!(integ, planecrossing, Tmax, i, rootkw)
-	end
 end
 
 
@@ -242,14 +231,14 @@ diverges or get stuck to a fixed point.
 * `rootkw = (xrtol = 1e-6, atol = 1e-6)` : A `NamedTuple` of keyword arguments
   passed to `find_zero` from [Roots.jl](https://github.com/JuliaMath/Roots.jl).
 """
-function poincaremap!(integ, planecrossing, Tmax = ∞, idxs = 1, rootkw = (xrtol = 1e-6, atol = 1e-6))
+function poincaremap!(integ, planecrossing, Tmax = 9e9, idxs = 1, rootkw = (xrtol = 1e-6, atol = 1e-6))
     f = (t) -> planecrossing(integ(t))
 	ti = integ.t
-	i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
+
     # Check if initial condition is already on the plane
     side = planecrossing(integ.u)
     if side == 0
-		dat = integ.u[i]
+		dat = integ.u[idxs]
         step!(integ)
         side = planecrossing(integ.u)
 		return dat
@@ -269,13 +258,13 @@ function poincaremap!(integ, planecrossing, Tmax = ∞, idxs = 1, rootkw = (xrto
 	# Did not found the crossing. Tmax reached.
 	# Maybe a fixed point outside the plane
 	 if (integ.t - ti) > Tmax
-	 	return integ.u[i]
+	 	return integ.u[idxs]
 	 end
 
     # I am now guaranteed to have `t` in negative and `tprev` in positive
     tcross = Roots.find_zero(f, (integ.tprev, integ.t), Roots.A42(); rootkw...)
     ucross = integ(tcross)
-    return ucross[i]
+    return ucross[idxs]
 end
 
 

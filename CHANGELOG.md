@@ -1,3 +1,6 @@
+# 1.25
+* `mean_return_times` has been improved for continuous systems and now also allows `diffeq...` keyword propagation. The keyword `m` is also deprecated in favor of `dmin`.
+
 # 1.24
 * Theiler window is now possible in `boxed_correlationsum`.
 

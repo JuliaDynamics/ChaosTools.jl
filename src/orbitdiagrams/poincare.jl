@@ -146,12 +146,12 @@ function poincaremap!(integ, f, planecrossing, Tmax, idxs, rootkw)
     end
 
     while side < 0
-        (integ.t - ti) > Tmax && break
+        integ.t > Tmax && break
         step!(integ)
         side = planecrossing(integ.u)
     end
     while side ≥ 0
-        (integ.t - ti) > Tmax && break
+        integ.t > Tmax && break
         step!(integ)
         side = planecrossing(integ.u)
     end
@@ -235,7 +235,7 @@ function poincaremap(
 	return PoincareMap(integ, f, planecrossing, Tmax, i, rootkw)
 end
 
-struct PoincareMap{I, F, P, U, A, R}
+struct PoincareMap{I, F, P, A, R}
 	integ::I
 	f::F
  	planecrossing::P
@@ -250,6 +250,13 @@ end
 function DynamicalSystemsBase.reinit!(pmap::PoincareMap, u0)
 	reinit!(pmap.integ, u0)
 	return
+end
+
+function Base.show(io::IO, pmap::PoincareMap)
+    println(io, "Iterator of the Poincaré map")
+    println(io,  rpad(" rule f: ", 14),     DynamicalSystemsBase.eomstring(pmap.integ.f.f))
+    println(io,  rpad(" hyperplane: ", 14),     pmap.planecrossing.plane)
+    print(io,  rpad(" selection: ", 14),     pmap.i)
 end
 
 

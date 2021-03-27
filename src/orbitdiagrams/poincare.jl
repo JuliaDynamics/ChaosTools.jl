@@ -200,12 +200,12 @@ function poincaremap(ds::CDS{IIP, S, D}, plane, Tmax = 9e9;
 end
 
 
-struct PoincareMap
-	integ::AbstractODEIntegrator
-	planecrossing::PlaneCrossing
-	Tmax::AbstractFloat
-	i::AbstractVector
-	rootkw::NamedTuple
+struct PoincareMap{I, P, A, R}
+	integ::I
+ 	planecrossing::P
+	Tmax::Float64
+	i::A
+	rootkw::R
 end
 
 function (pmap::PoincareMap)()

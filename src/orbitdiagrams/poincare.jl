@@ -1,6 +1,6 @@
 using DynamicalSystemsBase: DEFAULT_DIFFEQ_KWARGS, _get_solver
 using Roots: find_zero, A42
-export poincaresos, produce_orbitdiagram, PlaneCrossing, poincaremap, poincaremap!
+export poincaresos, produce_orbitdiagram, PlaneCrossing, poincaremap
 
 const ROOTS_ALG = A42()
 
@@ -49,10 +49,11 @@ end
 #####################################################################################
 """
     poincaresos(ds::ContinuousDynamicalSystem, plane, tfinal = 1000.0; kwargs...)
-Calculate the Poincaré surface of section (also called Poincaré map)[^Tabor1989]
+Calculate the Poincaré surface of section[^Tabor1989]
 of the given system with the given `plane`.
 The system is evolved for total time of `tfinal`.
 Return a [`Dataset`](@ref) of the points that are on the surface of section.
+See also [`poincaremap`](@ref) for the map version.
 
 If the state of the system is ``\\mathbf{u} = (u_1, \\ldots, u_D)`` then the
 equation defining a hyperplane is
@@ -87,45 +88,37 @@ See also [`produce_orbitdiagram`](@ref).
 * `diffeq...` : All other extra keyword arguments are propagated into `init`
   of DifferentialEquations.jl. See [`trajectory`](@ref) for examples.
 
-## Performance Notes
-This function uses a standard [`integrator`](@ref). For loops over initial conditions
-and/or parameters you should use the low level method that accepts an integrator and
-`reinit!` to new initial conditions. See the "advanced documentation" for more.
-
-The low level call signature is:
-```julia
-poincaresos(integ, planecrossing, tfinal, Ttr, idxs, rootkw)
-```
-where
-```julia
-planecrossing = PlaneCrossing(plane, direction > 0)
-```
-and `idxs` must be `Int` or `SVector{Int}`.
-
 [^Tabor1989]: M. Tabor, *Chaos and Integrability in Nonlinear Dynamics: An Introduction*, §4.1, in pp. 118-126, New York: Wiley (1989)
 """
-function poincaresos(ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
-    direction = -1, Ttr::Real = 0.0, warning = true, idxs = 1:D, u0 = get_state(ds),
-    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...) where {IIP, S, D}
+function poincaresos(
+		ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
+	    direction = -1, Ttr::Real = 0.0, warning = true, idxs = 1:D, u0 = get_state(ds),
+	    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...
+	) where {IIP, S, D}
 
     _check_plane(plane, D)
     integ = integrator(ds, u0; diffeq...)
-
     i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
     planecrossing = PlaneCrossing(plane, direction > 0)
-
-	# Skip transient
 	Ttr != 0 && step!(integ, Ttr)
+	f = (t) -> planecrossing(integ(t))
 
-    data = _initialize_output(integ.u, i)
-
-	while integ.t < tfinal
-	     push!(data, poincaremap!(integ, planecrossing, tfinal , i, rootkw))
-	end
-
+	data = _poincaresos(integ, f, planecrossing, tfinal+Ttr, i, rootkw)
     warning && length(data) == 0 && @warn PSOS_ERROR
-
     return Dataset(data)
+end
+
+# The separation into two functions here exists only to introduce a function barrier
+# for the low level method, to ensure optimization on argments of `poincaremap!`.
+function _poincaresos(integ, f, planecrossing, tfinal, i, rootkw)
+	data = _initialize_output(integ.u, i)
+	while integ.t < tfinal
+		# find then next intersection with plane, or return `nothing` if
+		# there is no intersection or exceeded Tmax.
+		out = poincaremap!(integ, f, planecrossing, tfinal, i, rootkw)
+		!isnothing(out) && push!(data, out)
+	end
+	return data
 end
 
 _initialize_output(u::S, i::Int) where {S} = eltype(S)[]
@@ -134,105 +127,14 @@ function _initialize_output(u, i)
     error("The variable index when producing the PSOS must be Int or SVector{Int}")
 end
 
-const PSOS_ERROR =
-"the Poincaré surface of section did not have any points!"
-
-
-
-"""
-	poincaremap(ds::ContinuousDynamicalSystem, plane, Tmax = ∞; kwargs...)
-
-Returns a function iterator that gives the next iteration on the map when called without argument.
-When the function is called with a vector of length dimension(ds), the system is set up at this
-initial condition
-
-* `ds` :  defined dynamical system
-* `plane` A `Tuple{Int, <: Number}`, like `(j, r)` : the plane is defined
-  as when the `j` variable of the system equals the value `r`. It can also be
-  a vector of length `D+1`. The first `D` elements of the
-  vector correspond to ``\\mathbf{a}`` while the last element is ``b``.
-* `Tmax` : maximum time to search for an intersection with the plane before giving up.
-
-## Keyword Arguments
-* `direction = -1` : Only crossings with `sign(direction)` are considered to belong to
-  the surface of section. Positive direction means going from less than ``b``
-  to greater than ``b``.
-* `idxs = 1:dimension(ds)` : Optionally you can choose which variables to save.
-  Defaults to the entire state.
-* `Ttr = 0.0` : Transient time to evolve the system before starting
-  to compute the PSOS.
-* `u0 = get_state(ds)` : Specify an initial state.
-* `warning = true` : Throw a warning if the Poincaré section was empty.
-* `rootkw = (xrtol = 1e-6, atol = 1e-6)` : A `NamedTuple` of keyword arguments
-  passed to `find_zero` from [Roots.jl](https://github.com/JuliaMath/Roots.jl).
-* `diffeq...` : All other extra keyword arguments are propagated into `init`
-  of DifferentialEquations.jl. See [`trajectory`](@ref) for examples.
-
-## Example:
-```julia-repl
-ds = Systems.rikitake([0.,0.,0.], μ = 0.47, α = 1.0)
-f = poincaremap(ds, (3,0.), Tmax=20.)
-# Iterate the map
-u = [f() for k in 1:200]
-
-# Change the initial conditions
-u0 = [1.,0.,0.]
-iteration_1 = f(u0)
-# Second iteration
-iteration_2 = f()
-# And so on...
-```
-
-"""
-function poincaremap(ds::CDS{IIP, S, D}, plane, Tmax = 9e9;
-    direction = -1, warning = true, idxs = 1:D, u0 = get_state(ds),
-    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...) where {IIP, S, D}
-	_check_plane(plane, D)
-    integ = integrator(ds, u0; diffeq...)
-
-    i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
-
-	planecrossing = PlaneCrossing(plane, direction > 0)
-
-	f! = PoincareMap(integ, planecrossing, Tmax, i, rootkw)
-
-	return f!
-end
-
-
-struct PoincareMap{I, P, A, R}
-	integ::I
- 	planecrossing::P
-	Tmax::Float64
-	i::A
-	rootkw::R
-end
-
-function (pmap::PoincareMap)()
-	return poincaremap!(pmap.integ, pmap.planecrossing, pmap.Tmax, pmap.i, pmap.rootkw)
-end
-function (pmap::PoincareMap)(u0)
-	reinit!(pmap.integ, u0)
-	return poincaremap!(pmap.integ, pmap.planecrossing, pmap.Tmax, pmap.i, pmap.rootkw)
-end
-
+const PSOS_ERROR = "the Poincaré surface of section did not have any points!"
 
 """
 	poincaremap!(integ, planecrossing,  idxs, rootkw, Tmax)
-Low level function that returns the next iteration of the Poincaré surface of section.
-
-## Arguments
-* `integ` : integrator object [`integrator`](@ref)
-* `planecrossing` : struct of type PlaneCrossing
-* `idxs = 1:dimension(ds)` : Optionally you can choose which variables to save.
-  Defaults to the entire state.
-* `Tmax = ∞` : Stop the search after Tmax if the orbit does not cross the plane, maybe it
-diverges or get stuck to a fixed point.
-* `rootkw = (xrtol = 1e-6, atol = 1e-6)` : A `NamedTuple` of keyword arguments
-  passed to `find_zero` from [Roots.jl](https://github.com/JuliaMath/Roots.jl).
+Low level function that actual performs the algorithm of finding the next crossing
+of the Poincaré surface of section.
 """
-function poincaremap!(integ, planecrossing, Tmax = 9e9, idxs = 1, rootkw = (xrtol = 1e-6, atol = 1e-6))
-    f = (t) -> planecrossing(integ(t))
+function poincaremap!(integ, f, planecrossing, Tmax, idxs, rootkw)
 	ti = integ.t
 
     # Check if initial condition is already on the plane
@@ -240,7 +142,6 @@ function poincaremap!(integ, planecrossing, Tmax = 9e9, idxs = 1, rootkw = (xrto
     if side == 0
 		dat = integ.u[idxs]
         step!(integ)
-        side = planecrossing(integ.u)
 		return dat
     end
 
@@ -254,12 +155,7 @@ function poincaremap!(integ, planecrossing, Tmax = 9e9, idxs = 1, rootkw = (xrto
         step!(integ)
         side = planecrossing(integ.u)
     end
-
-	# Did not found the crossing. Tmax reached.
-	# Maybe a fixed point outside the plane
-	 if (integ.t - ti) > Tmax
-	 	return integ.u[idxs]
-	 end
+ 	integ.t > Tmax && return nothing
 
     # I am now guaranteed to have `t` in negative and `tprev` in positive
     tcross = Roots.find_zero(f, (integ.tprev, integ.t), Roots.A42(); rootkw...)
@@ -293,12 +189,80 @@ function _check_plane(plane, D)
 end
 
 #####################################################################################
+#                               Poincare Map                                        #
+#####################################################################################
+"""
+	poincaremap(ds::ContinuousDynamicalSystem, plane, Tmax=1e6; kwargs...) → pmap
+
+Return a map (integrator) that produces iterations over the Poincaré map of the `ds`.
+This map is defined as the sequence of points on the Poincaré surface of section.
+See [`poincaresos`](@ref) for details on `plane` and all other `kwargs`.
+
+You can progress the map one step on the section by calling `step!(pmap)`,
+which also returns the next state crossing the hyperplane.
+You can also set the integrator to start from a new
+state `u`, which doesn't have to be on the hyperplane, by using `reinit!(pmap, u)`
+and then calling `step!` as normally.
+
+**Notice**: The argument `Tmax` exists so that the integrator can terminate instead
+of being evolved for infinite time, to avoid cases where iteration would continue
+forever for ill-defined hyperplanes or for convergence to fixed points.
+Once the system has been evolved for more than `Tmax`, `step!(pmap)` will always
+return `nothing`.
+
+## Example:
+```julia
+ds = Systems.rikitake([0.,0.,0.], μ = 0.47, α = 1.0)
+pmap = poincaremap(ds, (3,0.), Tmax=20.)
+next_state_on_psos = step!(pmap)
+# Change initial condition
+reinit!(pmap, [1.0, 0, 0])
+next_state_on_psos = step!(pmap)
+```
+"""
+function poincaremap(
+		ds::CDS{IIP, S, D}, plane, Tmax = 1e6;
+	    direction = -1, idxs = 1:D, u0 = get_state(ds),
+	    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...
+	) where {IIP, S, D}
+
+	_check_plane(plane, D)
+    integ = integrator(ds, u0; diffeq...)
+    i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
+
+	planecrossing = PlaneCrossing(plane, direction > 0)
+	f = (t) -> planecrossing(integ(t))
+	return PoincareMap(integ, f, planecrossing, Tmax, i, rootkw)
+end
+
+struct PoincareMap{I, F, P, U, A, R}
+	integ::I
+	f::F
+ 	planecrossing::P
+	Tmax::Float64
+	i::A
+	rootkw::R
+end
+
+function DynamicalSystemsBase.step!(pmap::PoincareMap)
+	return poincaremap!(pmap.integ, pmap.f, pmap.planecrossing, pmap.Tmax, pmap.i, pmap.rootkw)
+end
+function DynamicalSystemsBase.reinit!(pmap::PoincareMap, u0)
+	reinit!(pmap.integ, u0)
+	return
+end
+
+
+#####################################################################################
 #                            Produce Orbit Diagram                                  #
 #####################################################################################
 """
-    produce_orbitdiagram(ds::ContinuousDynamicalSystem, plane, i::Int,
-                         p_index, pvalues; kwargs...)
-Produce an orbit diagram (also called bifurcation diagram)
+```julia
+produce_orbitdiagram(
+	ds::ContinuousDynamicalSystem, plane, i::Int, p_index, pvalues; kwargs...
+)
+```
+Produce an orbit diagram (sometimes wrongly called bifurcation diagram)
 for the `i` variable(s) of the given continuous
 system by computing Poincaré surfaces of section using `plane`
 for the given parameter values (see [`poincaresos`](@ref)).
@@ -345,6 +309,7 @@ function produce_orbitdiagram(
     planecrossing = PlaneCrossing(plane, direction > 0)
     p0 = ds.p[p_index]
     output = Vector{typeof(ds.u0[i])}[]
+	f = (t) -> planecrossing(integ(t))
 
     for (n, p) in enumerate(pvalues)
         integ.p[p_index] = p
@@ -358,10 +323,7 @@ function produce_orbitdiagram(
         end
         reinit!(integ, st)
 		Ttr != 0 && step!(integ, Ttr)
-	    data = _initialize_output(integ.u, i)
-		while integ.t < tfinal
-		     push!(data, poincaremap!(integ, planecrossing, tfinal , i, rootkw))
-		end
+		data = _poincaresos(integ, f, planecrossing, tfinal+Ttr, i, rootkw)
 		push!(output, data)
         warning && length(output[end]) == 0 && @warn "For parameter $p $PSOS_ERROR"
     end

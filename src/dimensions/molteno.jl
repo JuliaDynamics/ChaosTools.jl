@@ -27,7 +27,7 @@ function molteno_dim(data; k0 = 10, α = nothing, q=1.0, base = ℯ)
         @warn "Keyword `α` is deprecated in favor of `q`."
         q = α
     end
-    boxes, εs = molteno_boxing(data, k0)
+    boxes, εs = molteno_boxing(data; k0)
     dd = genentropy.(boxes; q, base)
     return linear_region(-log.(base, εs), dd)[2]
 end

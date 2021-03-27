@@ -75,7 +75,7 @@ println("\nTesting poincare sections...")
         # Test that we can re-init
         reinit!(pmap, ds.u0)
         next2 = step!(pmap)
-        @test !isnothing(next2))
+        @test !isnothing(next2)
         @test abs(next2[2]) < 1e-6
         @test next[1] ≈ next2[1] atol = 1e-3
     end

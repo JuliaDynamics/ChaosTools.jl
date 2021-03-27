@@ -7,7 +7,7 @@ export exit_entry_times, transit_return, mean_return_times
 @deprecate transit_time_statistics entry_exit_times
 
 """
-    exit_entry_times(dds, u₀, εs, T) → exits, entries
+    exit_entry_times(ds, u₀, εs, T; diffeq...) → exits, entries
 Collect exit and entry times for a ball/box centered at `u₀` with radii `εs` (see below),
 in the state space of the given discrete dynamical system (function not yet available
 for continuous systems).
@@ -48,8 +48,8 @@ function exit_entry_times end
 
 """
     mean_return_times(ds::DynamicalSystem, u₀, εs, T; kwargs...) → τ, c
-Return the mean return times to subsets of the state space of `ds` defined by `u₀, εs`
-as well as the amount of returns `c` for each subset.
+Return the mean return times `τ`, as well as the amount of returns `c`, for
+subsets of the state space of `ds` defined by `u₀, εs`.
 The `ds` is evolved for a maximum of `T` time.
 This function behaves similarly to [`exit_entry_times`](@ref) and thus see that one for
 the meaning of `u₀` and `εs`.
@@ -63,10 +63,13 @@ Continuous systems allow for the following keywords:
 
 - `i=10` How many points to interpolate the trajectory in-between steps to find
   candidate crossing regions.
-- `m=10.0` A multiplier. If the trajectory is at least `m*ε` distance away from `u0`,
+- `dmin` If the trajectory is at least `dmin` distance away from `u0`,
   the algorithm that checks for crossings of the `ε`-set is not initiated.
-
-For continuous systems `T, i, m` can be vectors with same size as `εs`, to help increase
+  By default obtains the a value 4 times as large as the radius of the maximum ε-set.
+- `diffeq...` All extra keywords are propagated to solvers of DifferentialEquations.jl,
+  see [`trajectory`](@ref). It is strongly recommended to use high accuracy keywords here,
+  e.g. `alg = Vern9(), reltol = 1e-12, abstol = 1e-12, maxiters = typemax(Int)`.
+For continuous systems `T, i, dmin` can be vectors with same size as `εs`, to help increase
 accuracy of small `ε`.
 """
 function mean_return_times end
@@ -248,7 +251,6 @@ using DynamicalSystemsBase.DiffEqBase: ContinuousCallback, CallbackSet
 function exit_entry_times(ds::ContinuousDynamicalSystem, u0, εs, T;
         diffeq...
     )
-    # alg = Tsit5()
 
     error("Continuous system version is not yet ready.")
 
@@ -279,40 +281,56 @@ function exit_entry_times(ds::ContinuousDynamicalSystem, u0, εs, T;
     )
 
     prob = ODEProblem(ds, (eT(0), eT(T)); u0 = u0)
-    sol = solve(prob, alg;
+    sol = solve(prob;
         callback=cb, save_everystep = false, dense = false,
-        save_start=false, save_end = false, diffeq...
+        save_start=false, save_end = false,
+        CDS_KWARGS..., diffeq...
     )
     return exits, entries
 end
 
-function mean_return_times(ds::ContinuousDynamicalSystem, u0, εs, T; i=10,m=10.0,diffeq...)
+function _default_dmin(εs)
+    if εs[1] isa Real
+        m = 4*maximum(εs)
+    else
+        m = 8*maximum(maximum(e) for e in εs)
+    end
+    return m
+end
+
+function mean_return_times(ds::ContinuousDynamicalSystem, u0, εs, T;
+        i=10, dmin=_default_dmin(εs), diffeq...
+    )
+    # This warning would be useful if the callback methods worked
     # if !haskey(diffeq, :alg) || diffeq[:alg] == DynamicalSystemsBase.DEFAULT_SOLVER
     #     error(
     #     "Please use a solver that supports callbacks using `OrdinaryDiffEq`. "*
     #     "For example `using OrdinaryDiffEq: Tsit5; mean_return_times(...; alg = Tsit5())`."
     #     )
     # end
+    if haskey(diffeq, :m)
+        @warn "Keyword `m` is removed in favor of `dmin`."
+    end
 
     eT = eltype(ds.t0)
     check_εs_sorting(εs, length(u0))
     c = zeros(Int, length(εs)); τ = zeros(eT, length(εs))
+    integ = integrator(ds, u0; CDS_KWARGS..., diffeq...)
     for j ∈ 1:length(εs)
+        reinit!(integ)
         t = T isa AbstractVector ? T[j] : T
-        μ = m isa AbstractVector ? m[j] : m
+        μ = dmin isa AbstractVector ? dmin[j] : dmin
         ι = i isa AbstractVector ? i[j] : i
-        τ[j], c[j] = mean_return_times_single(ds, u0, εs[j], t; i=ι, m=μ, diffeq...)
+        τ[j], c[j] = mean_return_times_single(integ, u0, εs[j], t; i=ι, dmin=μ)
     end
     return τ, c
 end
 
-
 function mean_return_times_single(
-        ds::ContinuousDynamicalSystem, u0, ε, T;
-        i=10, m = 10.0, rootkw = (xrtol = 1e-12, atol = 1e-12), diffeq...
+        integ, u0, ε, T;
+        i, dmin, rootkw = (xrtol = 1e-12, atol = 1e-12)
     )
 
-    integ = integrator(ds, u0; diffeq...)
     exit = integ.t
     τ, c = zero(exit), 0
     isoutside = false
@@ -323,7 +341,7 @@ function mean_return_times_single(
         # Check distance of uprev (because interpolation can happen only between
         # tprev and t) and if it is "too far away", then don't bother checking crossings.
         d = distance(integ.uprev, u0, ε)
-        d > m*maximum(ε) && continue
+        d > dmin && continue
 
         r = range(integ.tprev, integ.t; length = i)
         dp = εdistance(integ.uprev, u0, ε) # `≡ crossing(r[1])`, crossing of previous step
@@ -351,9 +369,10 @@ function mean_return_times_single(
     return τ/c, c
 end
 
-
-# This method is not only very much inaccurate, but I've learned that calling a callback
-# affects the trajectory solution EVEN IF NO MODIFICATION IS DONE TO the `integ` object.
+# There seem to be fundamental problems with this method. It runs very slow,
+# and does not seem to terminate........
+# Furthermore, I have a suspision that calling a callback
+# affects the trajectory solution EVEN IF NO MODIFICATION IS DONE to the `integ` object.
 # I confirmed this by simply evolving the trajectory and looking at the plotting code
 # at the `transit_time_tests.jl` file.
 function mean_return_times_single_callbacks(
@@ -367,8 +386,8 @@ function mean_return_times_single_callbacks(
 
     crossing(u, t, integ) = ChaosTools.εdistance(u, u0, ε)
     function positive_affect!(integ)
-        println("Positive affect (crossing out) at time $(integ.t) and state:")
-        println(integ.u)
+        # println("Positive affect (crossing out) at time $(integ.t) and state:")
+        # println(integ.u)
         if isoutside[]
             return
         else
@@ -379,8 +398,8 @@ function mean_return_times_single_callbacks(
         end
     end
     function negative_affect!(integ)
-        println("Negative affect (crossing in) at time $(integ.t) and state:")
-        println(integ.u)
+        # println("Negative affect (crossing in) at time $(integ.t) and state:")
+        # println(integ.u)
         # we have crossed the ε-set, but let's check whether we were already inside
         if isoutside[]
             isoutside[] = false

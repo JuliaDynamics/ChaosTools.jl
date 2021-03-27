@@ -315,7 +315,7 @@ function mean_return_times(ds::ContinuousDynamicalSystem, u0, εs, T;
     eT = eltype(ds.t0)
     check_εs_sorting(εs, length(u0))
     c = zeros(Int, length(εs)); τ = zeros(eT, length(εs))
-    integ = integrator(ds, u0; CDS_KWARGS..., diffeq...)
+    integ = integrator(ds, u0; diffeq...)
     for j ∈ 1:length(εs)
         reinit!(integ)
         t = T isa AbstractVector ? T[j] : T

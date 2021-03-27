@@ -64,6 +64,21 @@ println("\nTesting poincare sections...")
         @test length(psos) > 0
         @test size(psos)[2] == 2
     end
+    @testset "Henon Heiles iterated Poincaré map" begin
+        ds = Systems.henonheiles([0, 0.483000, 0.278980390, 0] )
+        pmap = poincaremap(ds, (2, 0.0), 20.0; direction=+1, idxs=[1,2])
+        next = step!(pmap)
+        @test abs(next[2]) < 1e-6
+        # Test that iteration terminates fast
+        for i in 1:50; step!(pmap); end
+        @test isnothing(step!(pmap))
+        # Test that we can re-init
+        reinit!(pmap, ds.u0)
+        next2 = step!(pmap)
+        @test !isnothing(next2)
+        @test abs(next2[2]) < 1e-6
+        @test next[1] ≈ next2[1] atol = 1e-3
+    end
 end
 
 @testset "Produce OD" begin

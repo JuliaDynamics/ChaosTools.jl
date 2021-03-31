@@ -5,8 +5,15 @@ using LinearAlgebra
 Compute the gradient of 2-dimensional array using second order accurate central differences in the interior points and either first order accurate one-sides (forward or backwards) differences at the boundaries. The returned gradient hence has the same shape as the input array. 
 
 ## Keyword Arguments
-- `matrix::Array{float64}` : The input matrix with size=(2,2)
+- `matrix::Array{float64}` : The input matrix with two dimensions
 - `axis::Number` : Axis to compute the gradient over (1 or 2) 
+
+## Example: 
+
+```julia
+random_array = rand(2,22;8,8);
+matrix_fdm_gradient(random_array,1)
+```
 
 
 """
@@ -24,6 +31,29 @@ function matrix_fdm_gradient(matrix,axis::Number)
     return gradient
 end
 
+"""
+    DyCA(data::Array,eig_thresold::float64)
+Computes the Dynamical Component analysis matrix used for Dimensionality reduction. Here, we solve the main eigenvalue equation: 
+$$C_1 C_0^{-1} C_1^\top u = \lambda C_2 u$$
+where $C_0$ is the correlation matrix of the signal with itself, $C_1$ the correlation matrix of the signal with its derivative, and $C_2$ the correlation matrix of the derivative of the data with itself. The eigenvectors $u$ to eigenvalues approximately $1$ and their $C_1^{-1} C_2 u$ counterpart form the space where to project onto. 
+
+## Keyword Arguments
+- `data::Array{float64}` : The input matrix with dimensions (2,2)
+- `eig_thresold::float64` : the eigenvalue thresold for DyCA
+
+
+## Example: 
+
+```julia
+random_array = rand(2,22;100,100);
+eigen_thresold = 0.8 ;
+DyCA(random_array,eigen_thresold)
+```
+
+Source : https://arxiv.org/abs/1807.10629 
+
+
+"""
 function DyCA(data,eig_thresold=0.98)
 
     derivative_data = matrix_fdm_gradient(data,1) ;

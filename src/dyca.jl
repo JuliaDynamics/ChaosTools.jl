@@ -1,5 +1,15 @@
 using LinearAlgebra
 
+"""
+    matrix_fdm_gradient(matrix::Array,axis::Number)
+Compute the gradient of 2-dimensional array using second order accurate central differences in the interior points and either first order accurate one-sides (forward or backwards) differences at the boundaries. The returned gradient hence has the same shape as the input array. 
+
+## Keyword Arguments
+- `matrix::Array{float64}` : The input matrix with size=(2,2)
+- `axis::Number` : Axis to compute the gradient over (1 or 2) 
+
+
+"""
 function matrix_fdm_gradient(matrix,axis::Number)
     gradient = Array{Float64}(undef, size(matrix));
     if axis == 1

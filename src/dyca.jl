@@ -16,7 +16,7 @@ end
 
 function DyCA(data,eig_thresold=0.98)
 
-    derivative_data = matrix_fdm_gradient(data,2) ;
+    derivative_data = matrix_fdm_gradient(data,1) ;
     time_length = size(data,1) ;#for time averaging
     
      #construct the correlation matrices

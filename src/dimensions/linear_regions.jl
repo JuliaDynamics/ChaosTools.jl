@@ -139,12 +139,14 @@ end
 # Autotomatic estimation for proper `ε` from a Dataset
 #####################################################################################
 """
-    estimate_boxsizes(A::Dataset; kwargs...)
-Return `k` exponentially spaced values: `base .^ range(lower + w, upper + z; length = k)`,
+    estimate_boxsizes(A::Dataset; kwargs...) → εs
+Return `k` exponentially spaced values: `εs = base .^ range(lower + w, upper + z; length = k)`,
 that are a good estimate for sizes ε that are used in calculating a [Fractal Dimension](@ref).
+It is strongly recommended to [`regularize`](@ref) input dataset `A` before using this
+function.
 
-Let `d₋` be the minimum pair-wise distance in `A` and `d₊` the length of the diagonal
-of the hypercube that contains `A`.
+Let `d₋` be the minimum pair-wise distance in `A` and `d₊` the maximum distance along
+each of the dimensions of `A`.
 Then `lower = log(base, d₋)` and `upper = log(base, d₊)`.
 Because by default `w=1, z=-1`, the returned sizes are an order of mangitude
 larger than the minimum distance, and an order of magnitude smaller than the maximum
@@ -156,11 +158,10 @@ distance.
 """
 function estimate_boxsizes(
         A::AbstractDataset;
-        k::Int = 20, z = -1.0, w = 1.0, base = MathConstants.e
+        k::Int = 20, z = -1, w = 1, base = MathConstants.e
     )
 
     mi, ma = minmaxima(A)
-    max_d = LinearAlgebra.norm(ma - mi)
     max_d = maximum(ma - mi)
 
     min_d, _ = minimum_pairwise_distance(A)
@@ -168,11 +169,19 @@ function estimate_boxsizes(
     upper = log(base, max_d)
 
     if lower ≥ upper
-        error(
-        "Boxsize estimation failed: `upper` was found ≥ than `lower`. "*
-        "Adjust keywords or provide a bigger dataset.")
+        error("`lower ≥ upper`. There must be something fundamentally wrong with dataset.")
+    elseif lower+w ≥ upper+z
+        @warn(
+        "Automatic boxsize determination was inappropriate: `lower+w` was found ≥ than "*
+        "`upper+z`. Returning `base .^ range(lower, upper; length = k)`. "*
+        "Please adjust keywords or provide a bigger dataset.")
+
+        εs = float(base) .^ range(lower, upper; length = k)
+    else
+        εs = float(base) .^ range(lower+w, upper+z; length = k)
     end
-    return float(base) .^ range(lower+w, upper+z; length = k)
+    @assert issorted(εs)
+    return εs
 end
 
 """

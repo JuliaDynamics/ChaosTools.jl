@@ -163,8 +163,14 @@ function estimate_boxsizes(
 
     mi, ma = minmaxima(A)
     max_d = maximum(ma - mi)
-
     min_d, _ = minimum_pairwise_distance(A)
+    if min_d == 0
+        @warn(
+        "Minimum distance in the dataset is zero! Probably because of having data "*
+        "with low resolution, or duplicate data points. Setting to `d₊/base^4` for now.")
+        min_d = max_d/(base^4)
+    end
+
     lower = log(base, min_d)
     upper = log(base, max_d)
 
@@ -175,12 +181,10 @@ function estimate_boxsizes(
         "Automatic boxsize determination was inappropriate: `lower+w` was found ≥ than "*
         "`upper+z`. Returning `base .^ range(lower, upper; length = k)`. "*
         "Please adjust keywords or provide a bigger dataset.")
-
         εs = float(base) .^ range(lower, upper; length = k)
     else
         εs = float(base) .^ range(lower+w, upper+z; length = k)
     end
-    @assert issorted(εs)
     return εs
 end
 

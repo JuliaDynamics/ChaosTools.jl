@@ -33,7 +33,7 @@ end
 
 """
     DyCA(data::Array,eig_thresold::float64)
-Computes the Dynamical Component analysis matrix used for Dimensionality reduction. Here, we solve the main eigenvalue equation: 
+Computes the Dynamical Component analysis matrix used for dimensionality reduction. Here, we solve the main eigenvalue equation: 
 $$C_1 C_0^{-1} C_1^\top u = \lambda C_2 u$$
 where $C_0$ is the correlation matrix of the signal with itself, $C_1$ the correlation matrix of the signal with its derivative, and $C_2$ the correlation matrix of the derivative of the data with itself. The eigenvectors $u$ to eigenvalues approximately $1$ and their $C_1^{-1} C_2 u$ counterpart form the space where to project onto. 
 

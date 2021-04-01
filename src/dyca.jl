@@ -37,7 +37,7 @@ function matrix_fdm_gradient(matrix,axis::Int=1)
 end
 
 """
-    DyCA(data::Array,eig_thresold::float64)
+    dyca(data::Array,eig_thresold::float64)
 Computes the Dynamical Component analysis matrix [^Uhl2018] used for dimensionality reduction. Here, we solve the main eigenvalue equation: 
 ```math
 C_1 C_0^{-1} C_1^{\\top} \\bar{u} = \\lambda C_2 \\bar{u}

@@ -9,7 +9,7 @@ We find the standard second order approximation by using:
 ```
 
 
-## Keyword Arguments
+## Arguments
 - `matrix::Array{float64}` : The input matrix with two dimensions
 - `axis::Number` : Axis to compute the gradient over (1 or 2) 
 
@@ -22,7 +22,7 @@ matrix_fdm_gradient(random_array,1)
 
 
 """
-function matrix_fdm_gradient(matrix,axis::Number)
+function matrix_fdm_gradient(matrix,axis::Int=1)
     gradient = Array{Float64}(undef, size(matrix));
     if axis == 1
         gradient[:,1] = (matrix[:,2] .- matrix[:,1]) ;
@@ -38,15 +38,15 @@ end
 
 """
     DyCA(data::Array,eig_thresold::float64)
-Computes the Dynamical Component analysis matrix used for dimensionality reduction. Here, we solve the main eigenvalue equation: 
+Computes the Dynamical Component analysis matrix [^Uhl2018] used for dimensionality reduction. Here, we solve the main eigenvalue equation: 
 ```math
 C_1 C_0^{-1} C_1^{\\top} \\bar{u} = \\lambda C_2 \\bar{u}
 
 ```
 where ``C_0`` is the correlation matrix of the signal with itself, ``C_1`` the correlation matrix of the signal with its derivative, and ``C_2`` the correlation matrix of the derivative of the data with itself. The eigenvectors ``\\bar{u}`` to eigenvalues approximately 1 and their ``C_1^{-1} C_2 u`` counterpart form the space where to project onto. 
 
-## Keyword Arguments
-- `data::Array{float64}` : The input matrix with dimensions (2,2)
+## Arguments
+- `data::Array{float64}` : The input matrix with size= (2,2)
 - `eig_thresold::float64` : the eigenvalue thresold for DyCA
 
 
@@ -58,7 +58,7 @@ eigen_thresold = 0.8 ;
 DyCA(random_array,eigen_thresold)
 ```
 
-Source : https://arxiv.org/abs/1807.10629 
+[^Uhl2018]: B Seifert, K Korn, S Hartmann, C Uhl, *Dynamical Component Analysis (DYCA): Dimensionality Reduction for High-Dimensional Deterministic Time-Series*, 10.1109/mlsp.2018.8517024, 2018 IEEE 28th International Workshop on Machine Learning for Signal Processing (MLSP)
 
 
 """

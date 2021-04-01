@@ -3,6 +3,11 @@ using LinearAlgebra
 """
     matrix_fdm_gradient(matrix::Array,axis::Number)
 Compute the gradient of 2-dimensional array using second order accurate central differences in the interior points and either first order accurate one-sides (forward or backwards) differences at the boundaries. The returned gradient hence has the same shape as the input array. 
+We find the standard second order approximation by using: 
+```math
+\\hat{f}_i^{(1)} = \\frac{f(x_{i+1}-f(x_{i-1})}{2h} + O(h^2)
+```
+
 
 ## Keyword Arguments
 - `matrix::Array{float64}` : The input matrix with two dimensions
@@ -34,8 +39,11 @@ end
 """
     DyCA(data::Array,eig_thresold::float64)
 Computes the Dynamical Component analysis matrix used for dimensionality reduction. Here, we solve the main eigenvalue equation: 
-$$C_1 C_0^{-1} C_1^\top u = \lambda C_2 u$$
-where $C_0$ is the correlation matrix of the signal with itself, $C_1$ the correlation matrix of the signal with its derivative, and $C_2$ the correlation matrix of the derivative of the data with itself. The eigenvectors $u$ to eigenvalues approximately $1$ and their $C_1^{-1} C_2 u$ counterpart form the space where to project onto. 
+```math
+C_1 C_0^{-1} C_1^{\\top} \\bar{u} = \\lambda C_2 \\bar{u}
+
+```
+where ``C_0`` is the correlation matrix of the signal with itself, ``C_1`` the correlation matrix of the signal with its derivative, and ``C_2`` the correlation matrix of the derivative of the data with itself. The eigenvectors ``\\bar{u}`` to eigenvalues approximately 1 and their ``C_1^{-1} C_2 u`` counterpart form the space where to project onto. 
 
 ## Keyword Arguments
 - `data::Array{float64}` : The input matrix with dimensions (2,2)

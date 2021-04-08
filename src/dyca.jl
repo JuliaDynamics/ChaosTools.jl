@@ -22,16 +22,11 @@ matrix_fdm_gradient(random_array,1)
 
 
 """
-function matrix_fdm_gradient(matrix,axis::Int=1)
+function matrix_gradient(matrix)
     gradient = Array{Float64}(undef, size(matrix));
-    if axis == 1
-        gradient[:,1] = (matrix[:,2] .- matrix[:,1]) ;
-        gradient[:,end] = (matrix[:,end] .- matrix[:,end-1]);
-        gradient[:,2:end-1] = (matrix[:,3:end] - matrix[:,1:end-2]) .*0.5 ;
-    elseif axis == 2
-        gradient[1,:] = (matrix[2,:] .- matrix[1,:]) ;
-        gradient[end,:] = (matrix[end,:] .- matrix[end-1,:]);
-        gradient[2:end-1,:] = (matrix[3:end,:] .- matrix[1:end-2,:]) .*0.5 ;
+    gradient[:,1] = (matrix[:,2] .- matrix[:,1]) ;
+    gradient[:,end] = (matrix[:,end] .- matrix[:,end-1]);
+    gradient[:,2:end-1] = (matrix[:,3:end] - matrix[:,1:end-2]) .*0.5 ;
     end
     return gradient
 end
@@ -64,7 +59,7 @@ DyCA(random_array,eigen_thresold)
 """
 function DyCA(data,eig_thresold=0.98)
 
-    derivative_data = matrix_fdm_gradient(data,1) ;
+    derivative_data = matrix_gradient(data) ;
     time_length = size(data,1) ;#for time averaging
     
      #construct the correlation matrices

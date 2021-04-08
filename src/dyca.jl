@@ -68,8 +68,9 @@ function DyCA(data,eig_thresold=0.98)
     C2 = (transpose(derivative_data) * derivative_data )/ time_length ;
     
      #solve the generalized eigenproblem
-    eigenvalues, eigenvectors = eigen(((C1*inv(C0))*transpose(C1))*C2) ;
-    eigenvectors = eigenvectors[:,vec(eigenvalues .> eig_thresold) .& vec(eigenvalues .< 1.0)] ;
+    eigenvalues = eigvals(((C1*inv(C0))*transpose(C1))*C2) ;
+    eigenvectors = eigvecs(((C1*inv(C0))*transpose(C1))*C2);
+    eigenvectors = eigenvectors[:,vec(eig_thresold .< eigenvalues .<= 1.0)] ;
     if size(eigenvectors,2) > 0
         C3 = inv(C1) * C2 ;
         proj_mat = hcat(eigenvectors,mapslices(x -> C3*x,eigenvectors,dims=[1]))

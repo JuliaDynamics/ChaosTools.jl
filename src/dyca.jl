@@ -18,7 +18,7 @@ the tranpose of the input matrix must be given.
 
 [^Quarteroni2007]: Quarteroni A., Sacco R., Saleri F. (2007) Numerical Mathematics (Texts in Applied Mathematics). New York: Springer.
 """
-function matrix_gradient(matrix::Matrix{Float64})
+function matrix_gradient(matrix::Matrix)
     gradient = copy(matrix);
     gradient[1,:] = (matrix[2,:] .- matrix[1,:]) ;
     gradient[end,:] = (matrix[end,:] .- matrix[end-1,:]);
@@ -27,7 +27,7 @@ function matrix_gradient(matrix::Matrix{Float64})
 end
 
 """
-    dyca(data, eig_thresold::Float64) -> eigenvalues, proj_mat, projected_data
+    dyca(data, eig_thresold) -> eigenvalues, proj_mat, projected_data
 Compute the Dynamical Component analysis (DyCA) of the given `data` [^Uhl2018]
 used for dimensionality reduction.
 

@@ -37,7 +37,7 @@ function matrix_gradient(matrix::Matrix{Float64})
 end
 
 """
-    dyca(data::Matrix{Float64},eig_thresold::Float64)
+    dyca(data::Matrix{Float64},eig_thresold::Float64) -> eigenvalues, proj_mat, projected_data
 Compute the Dynamical Component analysis (DyCA) matrix [^Uhl2018] used for dimensionality reduction by solving the generalised eigenvalue equation.
 
 

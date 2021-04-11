@@ -27,7 +27,6 @@ matrix_gradient(random_array)
 ```
 
 [^Quarteroni2007]: Quarteroni A., Sacco R., Saleri F. (2007) Numerical Mathematics (Texts in Applied Mathematics). New York: Springer.
-
 """
 function matrix_gradient(matrix::Matrix{Float64})
     gradient = copy(matrix);
@@ -38,56 +37,44 @@ function matrix_gradient(matrix::Matrix{Float64})
 end
 
 """
-    dyca(data::Matrix{Float64},eig_thresold::Float64) -> eigenvalues, proj_mat, projected_data
-Compute the Dynamical Component analysis (DyCA) matrix [^Uhl2018] used for dimensionality reduction by solving the generalised eigenvalue equation.
+    dyca(data, eig_thresold::Float64) -> eigenvalues, proj_mat, projected_data
+Compute the Dynamical Component analysis (DyCA) of the given `data` [^Uhl2018]
+used for dimensionality reduction.
 
-
-## Arguments
-- `data::Matrix{float64}` : The input matrix with size= (2,2)
-- `eig_thresold::float64` : The eigenvalue thresold for DyCA
-
-## Returns
-- Eigenvalues of the Generalised eigenvalue problem
-- The Projection matrix
-- Data of the reduced dimension obtained by the projection matrix
+Return the eigenvalues, projection matrix, and reduced-dimension data
+(which are just `data*proj_mat`).
 
 ## Description
-Here, we solve the generalised eigenvalue equation:
+Here we solve the generalised eigenvalue equation:
 ```math
 C_1 C_0^{-1} C_1^{\\top} \\bar{u} = \\lambda C_2 \\bar{u}
-
 ```
-where ``C_0`` is the correlation matrix of the signal with itself, ``C_1`` the correlation matrix of the signal with its derivative, and ``C_2`` the correlation matrix of the derivative of the data with itself. The eigenvectors ``\\bar{u}`` to eigenvalues approximately 1 and their ``C_1^{-1} C_2 u`` counterpart form the space where to project onto.
-
-## Example:
-
-```julia
-random_array = rand(2,22;100,100);
-eigen_thresold = 0.90 ;
-eigenvalues, proj_matrix, proj_data = dyca(random_array,eigen_thresold)
-```
+where ``C_0`` is the correlation matrix of the signal with itself, ``C_1`` the
+correlation matrix of the signal with its derivative, and ``C_2`` the correlation matrix
+of the derivative of the data with itself. The eigenvectors ``\\bar{u}`` to eigenvalues
+approximately 1 and their ``C_1^{-1} C_2 u`` counterpart form the space where to project
+onto.
 
 [^Uhl2018]: B Seifert, K Korn, S Hartmann, C Uhl, *Dynamical Component Analysis (DYCA): Dimensionality Reduction for High-Dimensional Deterministic Time-Series*, 10.1109/mlsp.2018.8517024, 2018 IEEE 28th International Workshop on Machine Learning for Signal Processing (MLSP)
-
-
 """
-function dyca(data,eig_thresold::Float64)
+dyca(A::Dataset, e) = dyca(Matrix(A), e)
+function dyca(data, eig_thresold::AbstractFloat)
 
     derivative_data = matrix_gradient(data) ; #get the derivative of the data
     time_length = size(data,1) ;#for time averaging
 
     #construct the correlation matrices
-    C0 = Array{Float64, 2}(undef, size(data,2), size(data,2));
-    C1,C2,C3 = copy(C0),copy(C0),copy(C0);
-    mul!(C0,transpose(data), data/ time_length);
-    mul!(C1,transpose(derivative_data), data/ time_length) ;
-    mul!(C2,transpose(derivative_data), derivative_data/ time_length) ;
+    C0 = Array{Float64, 2}(undef, size(data,2), size(data,2))
+    C1, C2, C3 = copy(C0), copy(C0), copy(C0)
+    mul!(C0, transpose(data), data/ time_length)
+    mul!(C1, transpose(derivative_data), data/ time_length)
+    mul!(C2, transpose(derivative_data), derivative_data/ time_length)
 
     #solve the generalized eigenproblem
-    eigenvalues,eigenvectors = eigen(C1*inv(C0)*transpose(C1),C2) ;
-    eigenvectors = eigenvectors[:,vec(eig_thresold .< broadcast(abs,eigenvalues) .<= 1.0)] ;
+    eigenvalues, eigenvectors = eigen(C1*inv(C0)*transpose(C1),C2) ;
+    eigenvectors = eigenvectors[:, vec(eig_thresold .< broadcast(abs,eigenvalues) .<= 1.0)]
     if size(eigenvectors,2) > 0
-        mul!(C3, inv(C1), C2) ;
+        mul!(C3, inv(C1), C2)
         proj_mat = hcat(eigenvectors,mapslices(x -> C3*x,eigenvectors,dims=[1]))
     else
         throw(DomainError("No generalized eigenvalue fulfills threshold!"))

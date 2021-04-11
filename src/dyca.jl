@@ -38,7 +38,7 @@ end
 
 """
     dyca(data::Matrix{Float64},eig_thresold::Float64) -> eigenvalues, proj_mat, projected_data
-Compute the Dynamical Component analysis (DyCA) matrix [^Uhl2018] used for dimensionality reduction by solving the generalised eigenvalue equation.
+ Compute the Dynamical Component analysis (DyCA) matrix [^Uhl2018] used for dimensionality reduction by solving the generalised eigenvalue equation.
 
 
 ## Arguments
@@ -51,12 +51,13 @@ Compute the Dynamical Component analysis (DyCA) matrix [^Uhl2018] used for dimen
 - Data of the reduced dimension obtained by the projection matrix
 
 ## Description 
-Here, we solve the generalised eigenvalue equation: 
+Dynamical Component Analysis (DyCA),is a dimensionallity redcution technique leading to a classification of the underlying dynamics of high-domensional, multivariate signals and for a certain type of dynamics - to a signal subspace representing the dynamics of the data. Unlike methods like Principal Component analysis (PCA) that rely on some sort of stochastic model assumption, DyCA relies on a special deterministic model assumption and is a suitable tool for the reduction of chaotic time-series. Here, we solve the generalised eigenvalue equation: 
+
 ```math
 C_1 C_0^{-1} C_1^{\\top} \\bar{u} = \\lambda C_2 \\bar{u}
 
 ```
-where ``C_0`` is the correlation matrix of the signal with itself, ``C_1`` the correlation matrix of the signal with its derivative, and ``C_2`` the correlation matrix of the derivative of the data with itself. The eigenvectors ``\\bar{u}`` to eigenvalues approximately 1 and their ``C_1^{-1} C_2 u`` counterpart form the space where to project onto. 
+where ``C_0`` is the correlation matrix of the signal with itself, ``C_1`` the correlation matrix of the signal with its derivative, and ``C_2`` the correlation matrix of the derivative of the data with itself. The eigenvectors ``\\bar{u}`` with eigenvalues approximately 1 and their ``C_1^{-1} C_2 u`` counterpart, form the space where the data is projected onto. 
 
 ## Example: 
 

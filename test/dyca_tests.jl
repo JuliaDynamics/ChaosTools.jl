@@ -1,7 +1,7 @@
 using ChaosTools
 using Test
 
-@testset "DyCA Tests"
+@testset "DyCA Tests" begin
     println("Running dyca() tests...")
 
     @testset "Eigenvalues of Roessler system" begin

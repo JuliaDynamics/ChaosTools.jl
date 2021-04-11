@@ -1,7 +1,7 @@
 using LinearAlgebra
 
 """
-    matrix_gradient(matrix::Matrix{Number})
+    matrix_gradient(matrix::Matrix{Float64})
 Compute the gradient of 2-dimensional array using second order accurate central differences in the interior points and either first order accurate one-sides (forward or backwards) differences at the boundaries. The returned gradient hence has the same shape as the input array. Here, we compute the gradient along axis=1 (row-wise). To compute gradient along axis=2 (column-wise), the input must be the tranpose of the matrix. 
 We find the standard second order approximation by using: 
 ```math
@@ -22,7 +22,7 @@ matrix_fdm_gradient(random_array,1)
 [^Quarteroni2007]: Quarteroni A., Sacco R., Saleri F. (2007) Numerical Mathematics (Texts in Applied Mathematics). New York: Springer.
 
 """
-function matrix_gradient(matrix::Matrix{Number})
+function matrix_gradient(matrix::Matrix{Float64})
     gradient = copy(matrix);
     gradient[1,:] = (matrix[2,:] .- matrix[1,:]) ;
     gradient[end,:] = (matrix[end,:] .- matrix[end-1,:]);
@@ -32,7 +32,7 @@ end
 
 """
     dyca(data::Array,eig_thresold::float64)
-Computes the Dynamical Component analysis matrix [^Uhl2018] used for dimensionality reduction. Here, we solve the main eigenvalue equation: 
+Computes the Dynamical Component analysis matrix [^Uhl2018] used for dimensionality reduction. Here, we solve the generalised eigenvalue equation: 
 ```math
 C_1 C_0^{-1} C_1^{\\top} \\bar{u} = \\lambda C_2 \\bar{u}
 
@@ -43,6 +43,10 @@ where ``C_0`` is the correlation matrix of the signal with itself, ``C_1`` the c
 - `data::Array{float64}` : The input matrix with size= (2,2)
 - `eig_thresold::float64` : the eigenvalue thresold for DyCA
 
+## Returns
+- Eigenvalues of the Generalised eigenvalue problem
+- Projection matrix
+- Data embeded by the projection matrix
 
 ## Example: 
 
@@ -70,7 +74,7 @@ function dyca(data,eig_thresold::Float64)
     
     #solve the generalized eigenproblem
     eigenvalues,eigenvectors = eigen(C1*inv(C0)*transpose(C1),C2) ;
-    eigenvectors = eigenvectors[:,vec(eig_thresold .< real(eigenvalues) .<= 1.0)] ;
+    eigenvectors = eigenvectors[:,vec(eig_thresold .< broadcast(abs,eigenvalues) .<= 1.0)] ;
     if size(eigenvectors,2) > 0
         mul!(C3, inv(C1), C2) ;
         proj_mat = hcat(eigenvectors,mapslices(x -> C3*x,eigenvectors,dims=[1]))
@@ -78,5 +82,5 @@ function dyca(data,eig_thresold::Float64)
         throw(DomainError("No generalized eigenvalue fulfills threshold!"))
     end
     
-     return proj_mat, data * proj_mat   
+     return eigenvalues, proj_mat, data * proj_mat
 end

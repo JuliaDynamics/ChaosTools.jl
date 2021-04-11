@@ -25,10 +25,10 @@ end
             Embedded_system = Matrix(embed(cols[i], 25, 1));
             eigenvals,_ = dyca(Embedded_system,thresold)
             # eigenvalues satisfy `dyca` condtiion and have imaginary part = 0.0
-            psum = eigenvals[vec(0.999 .< abs.(eigenvals) .< 1.0) .& vec(imag(eigenvals) .== 0)]
+            wanted_eigenvalues = eigenvals[vec(0.999 .< abs.(eigenvals) .< 1.0) .& vec(imag(eigenvals) .== 0)]
             # due to floating point errors more than 2 eigenvalues might satisy the above condition
             # might be better to use `length(psum) in [1,2,3]`
-            @test length(psum)  in 0:4
+            @test length(wanted_eigenvalues) in 0:4
         end
     end
 end

@@ -23,6 +23,7 @@ include("dimensions/molteno.jl")
 include("dimensions/kaplanyorke.jl")
 
 include("nlts.jl")
+include("dyca.jl")
 
 include("period_return/periodic_points.jl")
 include("period_return/period.jl")

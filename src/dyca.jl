@@ -1,3 +1,4 @@
+export dyca
 using LinearAlgebra
 
 """
@@ -6,19 +7,19 @@ Compute the gradient of a 2-dimensional array along axis=1
 
 
 ## Arguments
-- `matrix::Matrix{Float64}` : The input matrix with two dimensions, with real entries. 
+- `matrix::Matrix{Float64}` : The input matrix with two dimensions, with real entries.
 
-## Returns 
+## Returns
 - `gradient::Matrix{Float64}` : The gradient of the input matrix found along axis=1
 
 ## Description
-Compute the gradient using second order accurate central differences in the interior points and first order accurate one-sides differences at the boundaries. We find the standard second order approximation by using: 
+Compute the gradient using second order accurate central differences in the interior points and first order accurate one-sides differences at the boundaries. We find the standard second order approximation by using:
 ```math
 \\hat{f}_i^{(1)} = \\frac{f(x_{i+1}-f(x_{i-1})}{2h} + O(h^2)
 ```
-The returned gradient matrix hence has the same shape as the input array. Here we compute the gradient along axis=1 (row-wise), so to compute gradient along axis=2 (column-wise), the tranpose of the input matrix must be given.  
+The returned gradient matrix hence has the same shape as the input array. Here we compute the gradient along axis=1 (row-wise), so to compute gradient along axis=2 (column-wise), the tranpose of the input matrix must be given.
 
-## Example: 
+## Example:
 
 ```julia
 random_array = rand(2,22;8,8);
@@ -50,15 +51,15 @@ Compute the Dynamical Component analysis (DyCA) matrix [^Uhl2018] used for dimen
 - The Projection matrix
 - Data of the reduced dimension obtained by the projection matrix
 
-## Description 
-Here, we solve the generalised eigenvalue equation: 
+## Description
+Here, we solve the generalised eigenvalue equation:
 ```math
 C_1 C_0^{-1} C_1^{\\top} \\bar{u} = \\lambda C_2 \\bar{u}
 
 ```
-where ``C_0`` is the correlation matrix of the signal with itself, ``C_1`` the correlation matrix of the signal with its derivative, and ``C_2`` the correlation matrix of the derivative of the data with itself. The eigenvectors ``\\bar{u}`` to eigenvalues approximately 1 and their ``C_1^{-1} C_2 u`` counterpart form the space where to project onto. 
+where ``C_0`` is the correlation matrix of the signal with itself, ``C_1`` the correlation matrix of the signal with its derivative, and ``C_2`` the correlation matrix of the derivative of the data with itself. The eigenvectors ``\\bar{u}`` to eigenvalues approximately 1 and their ``C_1^{-1} C_2 u`` counterpart form the space where to project onto.
 
-## Example: 
+## Example:
 
 ```julia
 random_array = rand(2,22;100,100);
@@ -74,14 +75,14 @@ function dyca(data,eig_thresold::Float64)
 
     derivative_data = matrix_gradient(data) ; #get the derivative of the data
     time_length = size(data,1) ;#for time averaging
-    
+
     #construct the correlation matrices
     C0 = Array{Float64, 2}(undef, size(data,2), size(data,2));
     C1,C2,C3 = copy(C0),copy(C0),copy(C0);
     mul!(C0,transpose(data), data/ time_length);
     mul!(C1,transpose(derivative_data), data/ time_length) ;
     mul!(C2,transpose(derivative_data), derivative_data/ time_length) ;
-    
+
     #solve the generalized eigenproblem
     eigenvalues,eigenvectors = eigen(C1*inv(C0)*transpose(C1),C2) ;
     eigenvectors = eigenvectors[:,vec(eig_thresold .< broadcast(abs,eigenvalues) .<= 1.0)] ;
@@ -91,6 +92,6 @@ function dyca(data,eig_thresold::Float64)
     else
         throw(DomainError("No generalized eigenvalue fulfills threshold!"))
     end
-    
+
      return eigenvalues, proj_mat, data*proj_mat
 end

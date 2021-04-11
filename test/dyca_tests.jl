@@ -1,5 +1,4 @@
 using ChaosTools
-using DynamicalSystems
 using Test
 
 @testset "Eigenvalues of Embeded Roessler system" begin

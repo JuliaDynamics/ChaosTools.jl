@@ -19,6 +19,7 @@ include("period_return/transit_time_tests.jl")
 include("dimensions/dims.jl")
 include("dimensions/correlationdim.jl")
 include("nlts_tests.jl")
+include("dyca_tests.jl")
 
 ti = time() - ti
 println("\nTest took total time of:")

@@ -2,29 +2,19 @@ export dyca
 using LinearAlgebra
 
 """
-    matrix_gradient(matrix::Matrix{Float64})
-Compute the gradient of a 2-dimensional array along axis=1
-
-
-## Arguments
-- `matrix::Matrix{Float64}` : The input matrix with two dimensions, with real entries.
-
-## Returns
-- `gradient::Matrix{Float64}` : The gradient of the input matrix found along axis=1
+    matrix_gradient(matrix)
+Compute the gradient of a matrix along axis=1.
 
 ## Description
-Compute the gradient using second order accurate central differences in the interior points and first order accurate one-sides differences at the boundaries. We find the standard second order approximation by using:
+Compute the gradient using second order accurate central differences in the interior points
+and first order accurate one-sides differences at the boundaries. We find the standard
+second order approximation by using:
 ```math
 \\hat{f}_i^{(1)} = \\frac{f(x_{i+1}-f(x_{i-1})}{2h} + O(h^2)
 ```
-The returned gradient matrix hence has the same shape as the input array. Here we compute the gradient along axis=1 (row-wise), so to compute gradient along axis=2 (column-wise), the tranpose of the input matrix must be given.
-
-## Example:
-
-```julia
-random_array = rand(2,22;8,8);
-matrix_gradient(random_array)
-```
+The returned gradient matrix hence has the same shape as the input array. Here we compute
+the gradient along axis=1 (row-wise), so to compute gradient along axis=2 (column-wise),
+the tranpose of the input matrix must be given.
 
 [^Quarteroni2007]: Quarteroni A., Sacco R., Saleri F. (2007) Numerical Mathematics (Texts in Applied Mathematics). New York: Springer.
 """

@@ -20,59 +20,39 @@ the tranpose of the input matrix must be given.
 """
 function matrix_gradient(matrix::Matrix)
     gradient = copy(matrix)
-    gradient[1,:] = (matrix[2,:] .- matrix[1,:]) 
+    gradient[1,:] = (matrix[2,:] .- matrix[1,:])
     gradient[end,:] = (matrix[end,:] .- matrix[end-1,:])
-    gradient[2:end-1,:] = (matrix[3:end,:] .- matrix[1:end-2,:]) .*0.5 
+    gradient[2:end-1,:] = (matrix[3:end,:] .- matrix[1:end-2,:]) .*0.5
     return gradient
 end
 
 """
-<<<<<<< HEAD
-    dyca(data::Matrix{Float64},eig_thresold::Float64) -> eigenvalues, proj_mat, projected_data
- Compute the Dynamical Component analysis (DyCA) matrix [^Uhl2018] used for dimensionality reduction by solving the generalised eigenvalue equation.
-
-=======
     dyca(data, eig_thresold) -> eigenvalues, proj_mat, projected_data
 Compute the Dynamical Component analysis (DyCA) of the given `data` [^Uhl2018]
 used for dimensionality reduction.
->>>>>>> fc859697f778cd525041248a10f3ece42e3a793a
 
 Return the eigenvalues, projection matrix, and reduced-dimension data
 (which are just `data*proj_mat`).
 
-<<<<<<< HEAD
-## Returns
-- Eigenvalues of the Generalised eigenvalue problem
-- The Projection matrix
-- Data of the reduced dimension obtained by the projection matrix
-
-## Description 
-Dynamical Component Analysis (DyCA),is a dimensionallity redcution technique leading to a classification of the underlying dynamics of high-domensional, multivariate signals and for a certain type of dynamics - to a signal subspace representing the dynamics of the data. Unlike methods like Principal Component analysis (PCA) that rely on some sort of stochastic model assumption, DyCA relies on a special deterministic model assumption and is a suitable tool for the reduction of chaotic time-series. Here, we solve the generalised eigenvalue equation: 
-
-```math
-C_1 C_0^{-1} C_1^{\\top} \\bar{u} = \\lambda C_2 \\bar{u}
-
-```
-where ``C_0`` is the correlation matrix of the signal with itself, ``C_1`` the correlation matrix of the signal with its derivative, and ``C_2`` the correlation matrix of the derivative of the data with itself. The eigenvectors ``\\bar{u}`` with eigenvalues approximately 1 and their ``C_1^{-1} C_2 u`` counterpart, form the space where the data is projected onto. 
-
-## Example: 
-
-```julia
-random_array = rand(2,22;100,100);
-eigen_thresold = 0.90 ;
-eigenvalues, proj_matrix, proj_data = dyca(random_array,eigen_thresold)
-=======
 ## Description
-Here we solve the generalised eigenvalue equation:
+Dynamical Component Analysis (DyCA) is a dimensionallity redcution technique leading to a
+classification of the underlying dynamics of high-dimensional, multivariate signals and for
+a certain type of dynamics - to a signal subspace representing the dynamics of the data.
+Unlike methods like Principal Component analysis (PCA) that rely on some sort of stochastic
+model assumption, DyCA relies on a special deterministic model assumption and is a suitable
+tool for the reduction of chaotic time-series.
+
+Here, we solve the generalised eigenvalue equation:
+
 ```math
 C_1 C_0^{-1} C_1^{\\top} \\bar{u} = \\lambda C_2 \\bar{u}
->>>>>>> fc859697f778cd525041248a10f3ece42e3a793a
+
 ```
-where ``C_0`` is the correlation matrix of the signal with itself, ``C_1`` the
-correlation matrix of the signal with its derivative, and ``C_2`` the correlation matrix
-of the derivative of the data with itself. The eigenvectors ``\\bar{u}`` to eigenvalues
-approximately 1 and their ``C_1^{-1} C_2 u`` counterpart form the space where to project
-onto.
+where ``C_0`` is the correlation matrix of the signal with itself, ``C_1`` the correlation
+matrix of the signal with its derivative, and ``C_2`` the correlation matrix of the
+derivative of the data with itself. The eigenvectors ``\\bar{u}`` with eigenvalues
+approximately 1 and their ``C_1^{-1} C_2 u`` counterpart, form the space where the data
+is projected onto.
 
 [^Uhl2018]: B Seifert, K Korn, S Hartmann, C Uhl, *Dynamical Component Analysis (DYCA): Dimensionality Reduction for High-Dimensional Deterministic Time-Series*, 10.1109/mlsp.2018.8517024, 2018 IEEE 28th International Workshop on Machine Learning for Signal Processing (MLSP)
 """
@@ -88,7 +68,7 @@ function dyca(data, eig_thresold::AbstractFloat)
     mul!(C0, transpose(data), data/ time_length)
     mul!(C1, transpose(derivative_data), data/ time_length)
     mul!(C2, transpose(derivative_data), derivative_data/ time_length)
-	
+
     #solve the generalized eigenproblem
     eigenvalues, eigenvectors = eigen(C1*inv(C0)*transpose(C1),C2)
     eigenvectors = eigenvectors[:, vec(eig_thresold .< broadcast(abs,eigenvalues) .<= 1.0)]

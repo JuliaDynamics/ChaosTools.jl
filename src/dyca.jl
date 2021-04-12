@@ -19,10 +19,10 @@ the tranpose of the input matrix must be given.
 [^Quarteroni2007]: Quarteroni A., Sacco R., Saleri F. (2007) Numerical Mathematics (Texts in Applied Mathematics). New York: Springer.
 """
 function matrix_gradient(matrix::Matrix)
-    gradient = copy(matrix);
-    gradient[1,:] = (matrix[2,:] .- matrix[1,:]) ;
-    gradient[end,:] = (matrix[end,:] .- matrix[end-1,:]);
-    gradient[2:end-1,:] = (matrix[3:end,:] .- matrix[1:end-2,:]) .*0.5 ;
+    gradient = copy(matrix)
+    gradient[1,:] = (matrix[2,:] .- matrix[1,:]) 
+    gradient[end,:] = (matrix[end,:] .- matrix[end-1,:])
+    gradient[2:end-1,:] = (matrix[3:end,:] .- matrix[1:end-2,:]) .*0.5 
     return gradient
 end
 
@@ -79,8 +79,8 @@ onto.
 dyca(A::Dataset, e) = dyca(Matrix(A), e)
 function dyca(data, eig_thresold::AbstractFloat)
 
-    derivative_data = matrix_gradient(data) ; #get the derivative of the data
-    time_length = size(data,1) ;#for time averaging
+    derivative_data = matrix_gradient(data)  #get the derivative of the data
+    time_length = size(data,1) #for time averaging
 
     #construct the correlation matrices
     C0 = Array{Float64, 2}(undef, size(data,2), size(data,2))
@@ -88,9 +88,9 @@ function dyca(data, eig_thresold::AbstractFloat)
     mul!(C0, transpose(data), data/ time_length)
     mul!(C1, transpose(derivative_data), data/ time_length)
     mul!(C2, transpose(derivative_data), derivative_data/ time_length)
-
+	
     #solve the generalized eigenproblem
-    eigenvalues, eigenvectors = eigen(C1*inv(C0)*transpose(C1),C2) ;
+    eigenvalues, eigenvectors = eigen(C1*inv(C0)*transpose(C1),C2)
     eigenvectors = eigenvectors[:, vec(eig_thresold .< broadcast(abs,eigenvalues) .<= 1.0)]
     if size(eigenvectors,2) > 0
         mul!(C3, inv(C1), C2)
@@ -98,6 +98,5 @@ function dyca(data, eig_thresold::AbstractFloat)
     else
         throw(DomainError("No generalized eigenvalue fulfills threshold!"))
     end
-
      return eigenvalues, proj_mat, data*proj_mat
 end

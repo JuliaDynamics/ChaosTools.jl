@@ -9,7 +9,7 @@ considered for the calculation, default is the whole data set.
 
 Implements
 ```math
-D_q \\overline{\\log r^{(j)}} = Ψ(j) - \\log N
+D_q \\overline{\\log r^{(j)}} \\sim Ψ(j) - \\log N
 ```
 where `` Ψ(j) = \\frac{\\text{d} \\log Γ(j)}{\\text{d} j}
 ``, `rs` = ``\\overline{\\log r^{(j)}}`` and `ϵs` = ``Ψ(j) - \\log N``.

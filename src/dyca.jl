@@ -39,13 +39,16 @@ Dynamical Component Analysis (DyCA) is a method to detect projection vectors to 
 the dimensionality of multi-variate, high-dimensional deterministic datasets. Unlike
 methods like PCA or ICA that make a stochasticity assumption, DyCA relys on a determinacy
 assumption on the time-series and is based on the solution of a generalized eigenvalue
-problem. The obtained eigenvectors are then used to project the high-dimensioanl dataset
-onto a lower dimension. The obtained eigenvalues measure the quality of the assumption of
-linear determinism for the investigated data. Furthermore, the number of the generalized
-eigenvalues with a value of approximately 1.0 are a measure of the number of
-linear equations contained in the dataset.
+problem. After choosing an appropriate eigenvalue threshold and solving the eigenvalue
+problem, the obtained eigenvectors are used to project the high-dimensional dataset onto
+a lower dimension. The obtained eigenvalues measure the quality of the assumption of linear
+determinism for the investigated data. Furthermore, the number of the generalized eigenvalues
+with a value of approximately 1.0 are a measure of the number of linear equations contained
+in the dataset. This property is useful in detecting regions with highly deterministic parts
+in the time-series and also as a preprocessing step for reservoir computing of high-dimensional
+spatio-temporal data. 
 
-The generalised eigenvalue equation we solve is:
+The generalised eigenvalue problem we solve is:
 
 ```math
 C_1 C_0^{-1} C_1^{\\top} \\bar{u} = \\lambda C_2 \\bar{u}

@@ -224,7 +224,7 @@ See also: [`correlation_boxing`](@ref),
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 """
-function boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2), w = w)
+function boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2), w = 0)
     @assert M ≤ size(data,2) "Prism dimension has to be lower or equal than " *
     "data dimension."
     dd = boxed_correlationsum(data, εs, r0; q = q, M = M, w = w)

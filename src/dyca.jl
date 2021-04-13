@@ -37,7 +37,7 @@ Return the eigenvalues, projection matrix, and reduced-dimension data
 ## Description
 Dynamical Component Analysis (DyCA) is a method to detect projection vectors to reduce
 the dimensionality of multi-variate, high-dimensional deterministic datasets. Unlike
-methods like PCA or ICA that make a stochasticity assumption, DyCA relys on a determinacy
+methods like PCA or ICA that make a stochasticity assumption, DyCA relies on a determinacy
 assumption on the time-series and is based on the solution of a generalized eigenvalue
 problem. After choosing an appropriate eigenvalue threshold and solving the eigenvalue
 problem, the obtained eigenvectors are used to project the high-dimensional dataset onto

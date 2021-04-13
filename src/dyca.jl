@@ -35,21 +35,24 @@ Return the eigenvalues, projection matrix, and reduced-dimension data
 (which are just `data*proj_mat`).
 
 ## Description
-Dynamical Component Analysis (DyCA) is a dimensionallity redcution technique leading to a
-classification of the underlying dynamics of high-dimensional, multivariate signals and for
-a certain type of dynamics - to a signal subspace representing the dynamics of the data.
-Unlike methods like Principal Component analysis (PCA) that rely on some sort of stochastic
-model assumption, DyCA relies on a special deterministic model assumption and is a suitable
-tool for the reduction of chaotic time-series.
+Dynamical Component Analysis (DyCA) is a method to detect projection vectors to reduce
+the dimensionality of multi-variate, high-dimensional deterministic datasets. Unlike
+methods like PCA or ICA that make a stochasticity assumption, DyCA relys on a determinacy
+assumption on the time-series and is based on the solution of a generalized eigenvalue
+problem. The obtained eigenvectors are then used to project the high-dimensioanl dataset
+onto a lower dimension. The obtained eigenvalues measure the quality of the assumption of
+linear determinism for the investigated data. Furthermore, the number of the generalized
+eigenvalues with a value of approximately 1.0 are a measure of the number of
+linear equations contained in the dataset.
 
-Here, we solve the generalised eigenvalue equation:
+The generalised eigenvalue equation we solve is:
 
 ```math
 C_1 C_0^{-1} C_1^{\\top} \\bar{u} = \\lambda C_2 \\bar{u}
 
 ```
-where ``C_0`` is the correlation matrix of the signal with itself, ``C_1`` the correlation
-matrix of the signal with its derivative, and ``C_2`` the correlation matrix of the
+where ``C_0`` is the correlation matrix of the data with itself, ``C_1`` the correlation
+matrix of the data with its derivative, and ``C_2`` the correlation matrix of the
 derivative of the data with itself. The eigenvectors ``\\bar{u}`` with eigenvalues
 approximately 1 and their ``C_1^{-1} C_2 u`` counterpart, form the space where the data
 is projected onto.
@@ -71,7 +74,7 @@ function dyca(data, eig_thresold::AbstractFloat)
 
     #solve the generalized eigenproblem
     eigenvalues, eigenvectors = eigen(C1*inv(C0)*transpose(C1),C2)
-    eigenvectors = eigenvectors[:, vec(eig_thresold .< broadcast(abs,eigenvalues) .<= 1.0)]
+    eigenvectors = eigenvectors[:, vec(eig_thresold .< abs.(eigenvalues) .<= 1.0)]
     if size(eigenvectors,2) > 0
         mul!(C3, inv(C1), C2)
         proj_mat = hcat(eigenvectors,mapslices(x -> C3*x,eigenvectors,dims=[1]))

@@ -189,16 +189,16 @@ end
 ################################################################################
 # Correlationsum, but we distributed data to boxes beforehand
 ################################################################################
-function boxed_correlationdim(data; M = size(data, 2), q = 2)
+function boxed_correlationdim(data; M = size(data, 2), q = 2, w = 0)
     r0 = estimate_r0_buenoorovio(data, M)
     ε0 = minimum_pairwise_distance(data)[1]
     εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
-    boxed_correlationdim(data, εs, r0; M = M, q = q)
+    boxed_correlationdim(data, εs, r0; M = M, q = q, w = w)
 end
 
 """
-    boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2))
-    boxed_correlationdim(data; q = 2, M = size(data, 2))
+    boxed_correlationdim(data, εs, r0 = maximum(εs); M = size(data, 2), q = 2, w = 0)
+    boxed_correlationdim(data; M = size(data, 2), q = 2, w = 0)
 Estimate the box assisted q-order correlation dimension[^Kantz2003] out of a
 dataset `data` for radii `εs` by splitting the data into boxes of size `r0`
 beforehand. If `M` is unequal to the dimension of the data, only the first `m`
@@ -206,6 +206,9 @@ dimensions are considered. The method of splitting the data into boxes was
 implemented according to Theiler[^Theiler1987]. If only a dataset is given the
 radii `εs` and boxsize `r0` are chosen by calculating
 [`estimate_r0_buenoorovio`](@ref).
+
+`w` is the Theiler window. All points that are within a range of `w` of a
+respective point will not be considered in the calculation of the correlation.
 
 This method splits the data into boxes, calculates the q-order correlation sum
 `C_q(ε)` for every `ε ∈ εs` and fits a line through the longest linear looking
@@ -221,10 +224,10 @@ See also: [`correlation_boxing`](@ref),
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 """
-function boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2))
+function boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2), w = w)
     @assert M ≤ size(data,2) "Prism dimension has to be lower or equal than " *
     "data dimension."
-    dd = boxed_correlationsum(data, εs, r0; q = q, M = M)
+    dd = boxed_correlationsum(data, εs, r0; q = q, M = M, w = w)
     linear_region(log.(εs), log.(dd), tol = 0.1)[2]
 end
 

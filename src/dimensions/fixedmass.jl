@@ -1,7 +1,9 @@
-using SpecialFunctions
+export correlationsum_fixedmass
+
+using SpecialFunctions, Random
 
 """
-    fixed_mass_algorithm(data, max_j; metric = Euclidean(), M = length(data)) → rs, ϵs
+    correlationsum_fixedmass(data, max_j; metric = Euclidean(), M = length(data)) → rs, ϵs
 A fixed mass algorithm for the calculation of the fractal dimension according
 to [^Grassberger 1988] with `max_j` the maximum number of neighbours that
 should be considered for the calculation, `M` defines the number of points
@@ -18,8 +20,7 @@ where `` Ψ(j) = \\frac{\\text{d} \\log Γ(j)}{\\text{d} j}
 
 [^Grassberger 1988]: Peter Grassberger (1988) [Finite sample Corrections to Entropy and Dimension Estimates, Physics Letters A 128(6-7)](https://doi.org/10.1016/0375-9601(88)90193-4)
 """
-function fixed_mass_algorithm(data, max_j; metric = Euclidean(), M = length(data))
-    # Define the length of the data set.
+function correlationsum_fixedmass(data, max_j; metric = Euclidean(), M = length(data), w = 0)
     N = length(data)
     # Transform the data into a tree.
     tree = KDTree(data, metric)

@@ -23,29 +23,23 @@ where `` Ψ(j) = \\frac{\\text{d} \\log Γ(j)}{\\text{d} j}
 function correlationsum_fixedmass(data, max_j; metric = Euclidean(), M = length(data), w = 0)
     N = length(data)
     # Transform the data into a tree.
-    tree = KDTree(data, metric)
+    tree = searchstructure(KDTree, data, metric)
     # Calculate all nearest neighbours up to max_j.
     _, distances =
-        knn(
+        bulksearch(
             tree,
-            # If M is given, only M random points of the set are considered.
-            M == N ?
-                [point for point in data] :
-                [data[index] for index in randperm(N)[1:M]],
-            max_j,
-            true,
+            N == M ? data.data : data[view(randperm(N), 1:M)],
+            NeighborNumber(max_j),
+            Theiler(w),
         )
     # The epsilons define the left side of the equation
-    ϵs = [digamma(j) - log(N) for j in 2:max_j]
+    ys = [digamma(j) - log(N) for j in 1:max_j]
     # Holds the mean value of the logarithms of the distances.
-    rs = zeros(max_j-1)
-    for j in 2:max_j
-        memory = 0.0
-        for radii in distances
-            memory += log(radii[j])
+    rs = zeros(max_j)
+    for dists in distances
+        for j in 1:max_j
+            rs[j] += log(dists[j])
         end
-        # After adding up all logarithms of the distances divide them by their number.
-        rs[j-1] = memory / M
     end
-    return rs, ϵs
+    return rs ./ M, ys
 end

@@ -80,6 +80,30 @@ println("\nTesting correlation dimension with boxing beforehand...")
 end
 
 
+println("\nTesting the fixed mass correlation sum...")
+@testset "Fixed mass correlation sum by Grassberger" begin
+    @testset "Henon Map" begin
+        ds = Systems.henon()
+        ts = trajectory(ds, 10000)
+        rs, ys = correlationsum_fixedmass(ts, 30)
+        test_value(linear_region(rs, ys)[2], 1.1, 1.3)
+        rs, ys = correlationsum_fixedmass(ts, 30; M = 2000)
+        test_value(linear_region(rs, ys)[2], 1.1, 1.3)
+        rs, ys = correlationsum_fixedmass(ts, 30; w = 5)
+        test_value(linear_region(rs, ys)[2], 1.1, 1.3)
+    end
+    @testset "Lorenz System" begin
+        ds = Systems.lorenz()
+        ts = trajectory(ds, 1000; dt = 0.1)
+        rs, ys = correlationsum_fixedmass(ts, 30)
+        test_value(linear_region(rs, ys)[2], 1.9, 2.2)
+        rs, ys = correlationsum_fixedmass(ts, 30; M = 2000)
+        test_value(linear_region(rs, ys)[2], 1.9, 2.2)
+        rs, ys = correlationsum_fixedmass(ts, 30; w = 5)
+        test_value(linear_region(rs, ys)[2], 1.9, 2.2)
+    end
+end
+
 
 println("\nTesting Takens' best estimate")
 @testset "Takens best" begin

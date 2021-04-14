@@ -54,7 +54,7 @@ See[^Molteno1993] for more.
 """
 function molteno_boxing(data::AbstractDataset; k0 = 10)
     integers, ε0 = real_to_uint64(data)
-    boxes = _molteno_boxing(integers; k0 = k0)
+    boxes = _molteno_boxing(integers; k0)
     εs = ε0 ./ (2 .^ (1:length(boxes)))
     return boxes, εs
 end

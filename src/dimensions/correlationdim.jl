@@ -193,7 +193,7 @@ function boxed_correlationdim(data; M = size(data, 2), q = 2, w = 0)
     r0 = estimate_r0_buenoorovio(data, M)
     ε0 = minimum_pairwise_distance(data)[1]
     εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
-    boxed_correlationdim(data, εs, r0; M = M, q = q, w = w)
+    boxed_correlationdim(data, εs, r0; M, q, w)
 end
 
 """
@@ -227,7 +227,7 @@ See also: [`correlation_boxing`](@ref),
 function boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2), w = 0)
     @assert M ≤ size(data,2) "Prism dimension has to be lower or equal than " *
     "data dimension."
-    dd = boxed_correlationsum(data, εs, r0; q = q, M = M, w = w)
+    dd = boxed_correlationsum(data, εs, r0; q, M, w)
     linear_region(log.(εs), log.(dd), tol = 0.1)[2]
 end
 
@@ -307,7 +307,7 @@ function boxed_correlationsum_2(boxes, contents, data, εs; w = 0)
     for index in 1:length(boxes)
         indices_neighbors = find_neighborboxes_2(index, boxes, contents)
         indices_box = contents[index]
-        Cs .+= inner_correlationsum_2(indices_box, indices_neighbors, data, εs, w = w)
+        Cs .+= inner_correlationsum_2(indices_box, indices_neighbors, data, εs; w)
     end
     Cs .* (2 / ((N - w) * (N - w - 1)))
 end
@@ -382,7 +382,7 @@ function boxed_correlationsum_q(boxes, contents, data, εs, q; w = 0)
     for index in 1:length(boxes)
         indices_neighbors = find_neighborboxes_q(index, boxes, contents, q)
         indices_box = contents[index]
-        Cs .+= inner_correlationsum_q(indices_box, indices_neighbors, data, εs, q, w = w)
+        Cs .+= inner_correlationsum_q(indices_box, indices_neighbors, data, εs, q; w)
     end
     (Cs ./ ((N - 2w) * (N - 2w - 1) ^ (q-1))) .^ (1 / (q-1))
 end

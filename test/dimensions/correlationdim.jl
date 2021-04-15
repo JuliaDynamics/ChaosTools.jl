@@ -96,11 +96,11 @@ println("\nTesting the fixed mass correlation sum...")
         ds = Systems.lorenz()
         ts = trajectory(ds, 1000; dt = 0.1)
         rs, ys = correlationsum_fixedmass(ts, 30)
-        test_value(linear_region(rs, ys)[2], 1.9, 2.2)
+        test_value(linear_region(rs, ys)[2], 1.7, 2.2)
         rs, ys = correlationsum_fixedmass(ts, 30; M = 2000)
-        test_value(linear_region(rs, ys)[2], 1.9, 2.2)
+        test_value(linear_region(rs, ys)[2], 1.7, 2.2)
         rs, ys = correlationsum_fixedmass(ts, 30; w = 5)
-        test_value(linear_region(rs, ys)[2], 1.9, 2.2)
+        test_value(linear_region(rs, ys)[2], 1.7, 2.2)
     end
 end
 

@@ -19,6 +19,7 @@ include("dimensions/entropies.jl")
 include("dimensions/linear_regions.jl")
 include("dimensions/dims.jl")
 include("dimensions/correlationdim.jl")
+include("dimensions/fixedmass.jl")
 include("dimensions/molteno.jl")
 include("dimensions/kaplanyorke.jl")
 

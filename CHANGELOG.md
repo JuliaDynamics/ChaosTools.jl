@@ -1,3 +1,6 @@
+# 1.27
+* new function `correlationsum_fixedmass` implements a fixed mass algorithm for the correlationsum given by Grassberger in 1988.
+
 # 1.26
 * new function `dyca()` to perform Dynamical Component Analysis
 

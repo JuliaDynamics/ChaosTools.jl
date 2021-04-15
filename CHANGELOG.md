@@ -1,3 +1,6 @@
+# 1.26
+* new function `correlationsum_fixedmass` implements a fixed mass algorithm for the correlationsum given by Grassberger in 1988.
+
 # 1.25
 * new function `poincaremap` for iterating over the Poincare map step by step.
 * `mean_return_times` has been improved for continuous systems and now also allows `diffeq...` keyword propagation. The keyword `m` is also deprecated in favor of `dmin`.

@@ -12,6 +12,8 @@ using DynamicalSystemsBase: stateeltype
 using DynamicalSystemsBase.DiffEqBase: AbstractODEIntegrator, u_modified!, DEIntegrator
 DEI = DEIntegrator
 
+include("basins/compute_ba.jl")
+
 include("orbitdiagrams/discrete_diagram.jl")
 include("orbitdiagrams/poincare.jl")
 

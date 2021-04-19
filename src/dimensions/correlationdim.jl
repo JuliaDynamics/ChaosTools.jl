@@ -243,7 +243,10 @@ respective point will not be considered in the calculation of the correlation.
 
 See also: [`boxed_correlationdim`](@ref)
 """
-function boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2), w = 0)
+function boxed_correlationsum(
+        data, εs, r0 = maximum(εs);
+        q = 2, M = _autoprismdim(data), w = 0
+    )
     @assert M ≤ size(data, 2) "Prism dimension has to be lower or equal than " *
     "data dimension."
     boxes, contents = correlation_boxing(data, r0, M)
@@ -252,6 +255,13 @@ function boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2, M = size(data
     else
         boxed_correlationsum_q(boxes, contents, data, εs, q; w)
     end
+end
+
+function _autoprismdim(data)
+    D = dimension(data)
+    L = length(data)
+    # The best choice given by Theiler is $P = 0.5\log_2N$ and should be used when $D$ exceeds $0.75\log_2N$.
+    return size(data, 2)
 end
 
 """

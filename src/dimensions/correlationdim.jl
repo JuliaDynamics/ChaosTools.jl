@@ -384,7 +384,7 @@ function boxed_correlationsum_q(boxes, contents, data, εs, q; w = 0)
         indices_box = contents[index]
         Cs .+= inner_correlationsum_q(indices_box, indices_neighbors, data, εs, q; w)
     end
-    (Cs ./ ((N - 2w) * (N - 2w - 1) ^ (q-1))) .^ (1 / (q-1))
+    clamp.((Cs ./ ((N - 2w) * (N - 2w - 1) ^ (q-1))), 0, Inf) .^ (1 / (q-1))
 end
 
 """

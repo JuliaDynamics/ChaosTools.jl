@@ -1,5 +1,4 @@
-export draw_basin, basin_poincare_map, basin_stroboscopic_map, basin_discrete_map
-export basin_general_ds
+export draw_basin!, basin_map, basin_general_ds
 
 
 mutable struct basin_info{I,F,V}
@@ -52,19 +51,28 @@ of the initial condition.
 ## Example:
 
 ```jl
-using DynamicalSystems, Basins
+using DynamicalSystems, ChaosTools
 ds = Systems.rikitake(μ = 0.47, α = 1.0)
-xg=range(-6.,6.,length=200); yg=range(-6.,6.,length=200)
+xg=range(-6.,6.,length=150); yg=range(-6.,6.,length=150)
 pmap = poincaremap(ds, (3, 0.), Tmax=1e6; idxs = 1:2, rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
-bsn = basin_poincare_map(xg, yg, pmap)
+bsn = basin_map(xg, yg, pmap)
 ```
 
 """
 function basin_map(xg, yg, pmap::PoincareMap; Ncheck = 2)
-    reinit_f! =  (integ,y) -> reinit!(integ, y)
-    get_u = (pmap) -> pmap.integ.u[i]
+    reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
+    get_u = (pmap) -> pmap.integ.u[pmap.i]
     basin = draw_basin!(xg, yg, pmap, step!, reinit_f!, get_u, Ncheck)
 end
+
+
+function _init_map(pmap::PoincareMap, y, idxs)
+    u = zeros(1,length(pmap.integ.u))
+    u[idxs] = y
+    # all other coordinates are zero
+    reinit!(pmap, u)
+end
+
 
 function basin_map(xg, yg, integ; T=0., Ncheck = 2)
     if T>0
@@ -73,7 +81,7 @@ function basin_map(xg, yg, integ; T=0., Ncheck = 2)
         iter_f! = (integ) -> step!(integ)
     end
     reinit_f! =  (integ,y) -> reinit!(integ, y)
-    get_u = (integ) -> integ.u[i]
+    get_u = (integ) -> integ.u
 
     return draw_basin!(xg, yg, integ, iter_f!, reinit_f!, get_u, Ncheck)
 end
@@ -102,19 +110,25 @@ of the initial condition.
 using DynamicalSystems, ChaosTools
 ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
 integ = integrator(ds, u0=[0,0,0,0], reltol=1e-9)
-xg=range(-4,4,length=350)
-yg=range(-4,4,length=350)
+xg=range(-4,4,length=150)
+yg=range(-4,4,length=150)
 @time bsn = basin_general_ds(xg, yg, integ; dt=1., idxs=1:2)
 """
 function basin_general_ds(xg, yg, integ; dt=1., idxs=1:2, Ncheck = 10)
     i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
     iter_f! = (integ) -> step!(integ, dt, true)
-    reinit_f! =  (integ,y) -> _init(integ, y, i)
+    reinit_f! =  (integ,y) -> _init_ds(integ, y, i)
     get_u = (integ) -> integ.u[i]
     return draw_basin!(xg, yg, integ, iter_f!, reinit_f!,get_u, Ncheck)
 end
 
 
+function _init_ds(integ, y, idxs)
+    u = zeros(length(integ.u))
+    u[idxs] = y
+    # all other coordinates are zero
+    reinit!(integ, u)
+end
 
 
 ## Procedure described in  H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations, Springer, New York, 2012
@@ -224,7 +238,7 @@ end
 
 
 """
-    draw_basin(xg, yg, integ, iter_f!::Function, reinit_f!::Function)
+    draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function)
 Compute an estimate of the basin of attraction on a two-dimensional plane. This is a low level function,
 for higher level functions see: `basin_poincare_map`, `basin_discrete_map`, `basin_stroboscopic_map`
 

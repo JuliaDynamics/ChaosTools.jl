@@ -25,7 +25,12 @@ end
 """
     correlationsum(X, ε::Real; w = 0, norm = Euclidean(), q = 2) → C_q(ε)
 Calculate the `q`-order correlation sum of `X` (`Dataset` or timeseries)
-for a given radius `ε` and `norm`, using the formula:
+for a given radius `ε` and `norm`.
+
+The function [`boxed_correlationsum`](@ref) is faster and should be preferred over this one.
+
+## Description
+The correlation sum is done using the formula:
 ```math
 C_2(\\epsilon) = \\frac{2}{(N-w)(N-w-1)}\\sum_{i=1}^{N}\\sum_{j=1+w+i}^{N} B(||X_i - X_j|| < \\epsilon)
 ```

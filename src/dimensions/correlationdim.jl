@@ -339,7 +339,7 @@ function find_neighborboxes_2(index, boxes, contents)
     N_box = length(boxes)
     for index2 in index:N_box
         if evaluate(Chebyshev(), box, boxes[index2]) < 2
-            indices = vcat(indices, contents[index2])
+            append!(indices, contents[index2])
         end
     end
     indices
@@ -412,7 +412,7 @@ function find_neighborboxes_q(index, boxes, contents, q)
     box = boxes[index]
     for (index2, box2) in enumerate(boxes)
         if evaluate(Chebyshev(), box, box2) < 2
-            indices = vcat(indices, contents[index2])
+            append!(indices, contents[index2])
         end
     end
     indices

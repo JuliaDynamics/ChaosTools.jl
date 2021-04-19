@@ -21,20 +21,33 @@ mutable struct basin_info{I,F,V}
     attractors :: V
 end
 
+function Base.show(io::IO, bsn::basin_info)
+    println(io, "Basin of attraction structure")
+    println(io,  rpad(" size : ", 14),    size(bsn.basin))
+    println(io,  rpad(" Number of attractors found: ", 14),   Int((bsn.current_color-2)/2)  )
+end
+
 
 """
-    basin_poincare_map(xg, yg, integ; kwargs...)
-Compute an estimate of the basin of attraction on a two-dimensional plane using a Poincaré map.
+    basin_map(xg, yg, integ; kwargs...)
+Compute an estimate of the basin of attraction on a two-dimensional plane using a map of the plane onto itself.
+The dynamical system should be a discrete two dimensional system such as:
+    * Discrete 2D map.
+    * 2D poincaré map.
+    * A 2D stroboscopic map.
 
 [H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations, Springer, New York, 1997]
 
 ## Arguments
 * `xg`, `yg` : 1-dim range vector that defines the grid of the initial conditions to test.
-* `pmap` : A Poincaré map as defined in [ChaosTools.jl](https://github.com/JuliaDynamics/ChaosTools.jl)
+* `integ` : A  integrator handle of the dynamical system. For a Poincaré map, the handle is a `pmap`
+as defined in [`poincaremap`](@ref)
 
 ## Keyword Arguments
+* `T` : Period of the stroboscopic map.
 * `Ncheck` : A parameter that sets the number of consecutives hits of an attractor before deciding the basin
 of the initial condition.
+
 
 ## Example:
 
@@ -47,27 +60,31 @@ bsn = basin_poincare_map(xg, yg, pmap)
 ```
 
 """
-function basin_poincare_map(xg, yg, pmap, idxs = 1:2; Ncheck = 2)
-    i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
-    # Carefully set the initial conditions on the defined plane and
-    reinit_f! = (integ,y) -> _initf(integ, y, i)
+function basin_map(xg, yg, pmap::PoincareMap; Ncheck = 2)
+    reinit_f! =  (integ,y) -> reinit!(integ, y)
     get_u = (pmap) -> pmap.integ.u[i]
     basin = draw_basin!(xg, yg, pmap, step!, reinit_f!, get_u, Ncheck)
+end
 
+function basin_map(xg, yg, integ; T=0., Ncheck = 2)
+    if T>0
+        iter_f! = (integ) -> step!(integ, T, true)
+    else
+        iter_f! = (integ) -> step!(integ)
+    end
+    reinit_f! =  (integ,y) -> reinit!(integ, y)
+    get_u = (integ) -> integ.u[i]
+
+    return draw_basin!(xg, yg, integ, iter_f!, reinit_f!, get_u, Ncheck)
 end
 
 
-function _initf(pmap, y, idxs)
-    u = zeros(1,length(pmap.integ.u))
-    u[idxs] = y
-    # all other coordinates are zero
-    reinit!(pmap, u)
-end
+
 
 
 
 """
-    basin_stroboscopic_map(xg, yg, integ; T=1., idxs=1:2)
+    basin_general(xg, yg, integ; T=1., idxs=1:2)
 Compute an estimate of the basin of attraction on a two-dimensional plane using a stroboscopic map.
 
 ## Arguments
@@ -75,56 +92,27 @@ Compute an estimate of the basin of attraction on a two-dimensional plane using 
 * `integ` : integrator handle of the dynamical system.
 
 ## Keyword Arguments
-* `T` : Period of the stroboscopic map
+* `dt` : Time step of the integrator. It recommended to use values above 1.
 * `idxs = 1:D` : Optionally you can choose which variables to save. Defaults to the entire state.
-"""
-function basin_stroboscopic_map(xg, yg, integ; T=1., idxs=1:2, Ncheck = 2)
+* `Ncheck` : A parameter that sets the number of consecutives hits of an attractor before deciding the basin
+of the initial condition.
 
+## Example:
+```jl
+using DynamicalSystems, ChaosTools
+ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
+integ = integrator(ds, u0=[0,0,0,0], reltol=1e-9)
+xg=range(-4,4,length=350)
+yg=range(-4,4,length=350)
+@time bsn = basin_general_ds(xg, yg, integ; dt=1., idxs=1:2)
+"""
+function basin_general_ds(xg, yg, integ; dt=1., idxs=1:2, Ncheck = 10)
     i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
-    iter_f! = (integ) -> step!(integ, T, true)
+    iter_f! = (integ) -> step!(integ, dt, true)
     reinit_f! =  (integ,y) -> _init(integ, y, i)
     get_u = (integ) -> integ.u[i]
     return draw_basin!(xg, yg, integ, iter_f!, reinit_f!,get_u, Ncheck)
-
 end
-
-function basin_general_ds(xg, yg, integ; dt=1., idxs=1:2, Ncheck = 10)
-
-    return basin_stroboscopic_map(xg, yg, integ; T=dt, idxs=idxs, Ncheck = Ncheck)
-
-end
-
-
-function _init(integ, y, idxs)
-    u = zeros(length(integ.u))
-    u[idxs] = y
-    # all other coordinates are zero
-    reinit!(integ, u)
-end
-
-"""
-    basin_discrete_map(xg, yg, integ; idxs=1:2)
-Compute an estimate of the basin of attraction on a two-dimensional plane using a discrete map.
-
-## Arguments
-* `xg`, `yg` : 1-dim range vector that defines the grid of the initial conditions to test.
-* `integ` : integrator of the discrete system
-
-## Keyword Arguments
-* `idxs = 1:D` : Optionally you can choose which variables to save. Defaults to the entire state.
-"""
-function basin_discrete_map(xg, yg, integ; idxs=1:2)
-
-    i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
-
-    iter_f! = (integ) -> step!(integ)
-    reinit_f! =  (integ,y) -> _init(integ, y, i)
-    get_u = (integ) -> integ.u[i]
-
-    return draw_basin!(xg, yg, integ, iter_f!, reinit_f!, get_u, 2)
-end
-
-
 
 
 
@@ -133,7 +121,7 @@ end
 # The idea is to color the grid with the current color. When an attractor box is hit (even color), the initial condition is colored
 # with the color of its basin (odd color). If the trajectory hits another basin 10 times in row the IC is colored with the same
 # color as this basin.
-function procedure!(bsn_nfo::basin_info, n, m, u, Ncheck)
+function procedure!(bsn_nfo::basin_info, n, m, u, Ncheck::Int)
     max_check = 60
     next_c = bsn_nfo.basin[n,m]
     bsn_nfo.step += 1

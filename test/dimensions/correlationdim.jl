@@ -2,10 +2,11 @@ using ChaosTools
 using Test
 using StatsBase
 using Statistics
+using ChaosTools.DynamicalSystemsBase
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
-println("\nTesting correlation dimension...")
+println("\nTesting correlation sum...")
 @testset "Correlation dim" begin
     @testset "Henon Map" begin
         ds = Systems.henon()
@@ -39,7 +40,7 @@ println("\nTesting correlation dimension...")
     end
 end
 
-println("\nTesting correlation dimension with boxing beforehand...")
+println("\nTesting correlation sum with boxing beforehand...")
 @testset "Theilers correlation boxing algorithm" begin
     @testset "Henon Map" begin
         ds = Systems.henon()

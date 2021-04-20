@@ -135,7 +135,7 @@ end
 # The idea is to color the grid with the current color. When an attractor box is hit (even color), the initial condition is colored
 # with the color of its basin (odd color). If the trajectory hits another basin 10 times in row the IC is colored with the same
 # color as this basin.
-function procedure!(bsn_nfo::basin_info, n, m, u, Ncheck::Int)
+function procedure!(bsn_nfo::basin_info, n::Int, m::Int, u, Ncheck::Int)
     max_check = 60
     next_c = bsn_nfo.basin[n,m]
     bsn_nfo.step += 1
@@ -179,8 +179,9 @@ function procedure!(bsn_nfo::basin_info, n, m, u, Ncheck::Int)
         # Maybe chaotic attractor, perodic or long recursion.
         # Color this box as part of an attractor
         bsn_nfo.basin[n,m] = bsn_nfo.current_color
+        # reinit consecutive match to ensure that we have an attractor
         bsn_nfo.consecutive_match = max_check
-        #println("1 y > max_check")
+        push!(bsn_nfo.attractors, [bsn_nfo.current_color/2, u...]) # store attractor
         return 0
     elseif next_c == bsn_nfo.current_color + 1
         # hit a previously visited box with the current color, possible attractor?
@@ -188,11 +189,8 @@ function procedure!(bsn_nfo::basin_info, n, m, u, Ncheck::Int)
             bsn_nfo.consecutive_match += 1
             return 0
         else
-            #println("got attractor")
-            #ind = findall(bsn_nfo.basin .== bsn_nfo.current_color+1)
-            #[ bsn_nfo.basin[k[1],k[2]] = 1 for k in ind]
             bsn_nfo.basin[n,m] = bsn_nfo.current_color
-            push!(bsn_nfo.attractors, [bsn_nfo.current_color/2, u]) # store attractor
+            push!(bsn_nfo.attractors, [bsn_nfo.current_color/2, u...]) # store attractor
             # We continue iterating until we hit again the same attractor. In which case we stop.
             return 0;
         end
@@ -225,10 +223,14 @@ function procedure!(bsn_nfo::basin_info, n, m, u, Ncheck::Int)
         # We have checked the presence of an attractor: tidy up everything and get a new box.
         ind = findall(bsn_nfo.basin .== bsn_nfo.current_color+1)
         [ bsn_nfo.basin[k[1],k[2]] = 1 for k in ind]
+
         bsn_nfo.basin[n,m] = bsn_nfo.current_color
+        push!(bsn_nfo.attractors, [bsn_nfo.current_color/2, u...]) # store attractor
+
+        # pick the next color for coloring the basin.
         bsn_nfo.current_color = bsn_nfo.next_avail_color
         bsn_nfo.next_avail_color += 2
-        #println("even and > max check ", next_c)
+
         reset_bsn_nfo!(bsn_nfo)
         return next_c+1;
     else

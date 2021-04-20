@@ -52,12 +52,6 @@ println("\nTesting correlation dimension with boxing beforehand...")
         @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlationsum(ts, es, q = 2.3)
         @test boxed_correlationsum(ts, es, r0; w = 10) ≈ correlationsum(ts, es; w = 10)
         @test boxed_correlationsum(ts, es, r0; q = 2.3, w = 10) ≈ correlationsum(ts, es; q = 2.3, w = 10)
-        ts = trajectory(ds, 50000)
-        r0 = estimate_r0_buenoorovio(ts)
-        es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
-        test_value(boxed_correlationdim(ts, es, r0), 1.15, 1.35)
-        test_value(boxed_correlationdim(ts), 1.15, 1.35)
-        test_value(boxed_correlationdim(ts; M = 1), 1.15, 1.35)
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
@@ -70,12 +64,6 @@ println("\nTesting correlation dimension with boxing beforehand...")
         @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlationsum(ts, es; q = 2.3)
         @test boxed_correlationsum(ts, es, r0; w = 10) ≈ correlationsum(ts, es; w = 10)
         @test boxed_correlationsum(ts, es, r0; q = 2.3, w = 10) ≈ correlationsum(ts, es; q = 2.3, w = 10)
-        ts = trajectory(ds, 5000; dt = 0.1)
-        r0 = estimate_r0_buenoorovio(ts)
-        es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
-        test_value(boxed_correlationdim(ts, es, r0), 1.9, 2.2)
-        test_value(boxed_correlationdim(ts), 1.9, 2.2)
-        test_value(boxed_correlationdim(ts; M = 2), 1.9, 2.2)
     end
 end
 

@@ -2,8 +2,8 @@
 # Original correlation sum
 #######################################################################################
 using Distances, Roots
-export kernelprob, correlationsum, grassberger, boxed_correlationdim, boxed_correlationsum,
-estimate_r0_buenoorovio
+export kernelprob, correlationsum, grassberger, boxed_correlationsum,
+estimate_r0_buenoorovio, data_boxing
 
 """
     kernelprob(X, ε; norm = Euclidean()) → p::Probabilities
@@ -194,67 +194,49 @@ end
 ################################################################################
 # Correlationsum, but we distributed data to boxes beforehand
 ################################################################################
-function boxed_correlationdim(data; M = size(data, 2), q = 2, w = 0)
-    r0 = estimate_r0_buenoorovio(data, M)
-    ε0 = minimum_pairwise_distance(data)[1]
-    εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
-    boxed_correlationdim(data, εs, r0; M, q, w)
-end
-
 """
-    boxed_correlationdim(data, εs, r0 = maximum(εs); M = size(data, 2), q = 2, w = 0)
-    boxed_correlationdim(data; M = size(data, 2), q = 2, w = 0)
-Estimate the box assisted q-order correlation dimension[^Kantz2003] out of a
+    boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2 , M = size(data, 2), w = 0)
+    boxed_correlationsum(data; q = 2 , M = size(data, 2), w = 0)
+
+Estimate the box assisted q-order correlation sum[^Kantz2003] out of a
 dataset `data` for radii `εs` by splitting the data into boxes of size `r0`
-beforehand. If `M` is unequal to the dimension of the data, only the first `m`
-dimensions are considered. The method of splitting the data into boxes was
+beforehand.
+
+## Description
+`C_q(ε)` is calculated for every `ε ∈ εs` and each of the boxes to then be
+summed up afterwards. If `M` is unequal to the dimension of the data, only the
+first `M` dimensions are considered for the box distribution (this is called the
+prism-assisted version).
+The method of splitting the data into boxes was
 implemented according to Theiler[^Theiler1987]. If only a dataset is given the
 radii `εs` and boxsize `r0` are chosen by calculating
 [`estimate_r0_buenoorovio`](@ref).
 
-`w` is the Theiler window. All points that are within a range of `w` of a
-respective point will not be considered in the calculation of the correlation.
+`w` is the [Theiler window](@ref).
 
-This method splits the data into boxes, calculates the q-order correlation sum
-`C_q(ε)` for every `ε ∈ εs` and fits a line through the longest linear looking
-region of the curve `(log(εs), log(C_q(εs)))`. The gradient of this line is the
-dimension.
+The function is explicitly optimized for `q = 2` and becomes quite slow for `q ≠ 2`.
 
-The function is explicitly optimized for `q = 2`.
-
-See also: [`correlation_boxing`](@ref),
-[`boxed_correlationsum`](@ref) and [`q_order_correlationsum`] (@ref)
+See [`correlationsum`](@ref) for the definition of `C_q`
+and also [`data_boxing`](@ref).
 
 [^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 """
-function boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2), w = 0)
-    @assert M ≤ size(data,2) "Prism dimension has to be lower or equal than " *
-    "data dimension."
-    dd = boxed_correlationsum(data, εs, r0; q, M, w)
-    linear_region(log.(εs), log.(dd), tol = 0.1)[2]
+function boxed_correlationsum(data; kwargs...)
+    r0 = estimate_r0_buenoorovio(data, M)
+    ε0 = minimum_pairwise_distance(data)[1]
+    εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
+    boxed_correlationsum(data, εs, r0; kwargs...)
 end
 
-"""
-    boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2 , M = size(data, 2), w = 0)
-Distribute `data` into boxes of size `r0`. The `q`-order correlationsum
-`C_q(ε)` is then calculated for every `ε ∈ εs` and each of the boxes to then be
-summed up afterwards. If `M` is unequal to the dimension of the data, only the
-first `M` dimensions are considered for the box distribution.
-
-`w` is the Theiler window. All points that are within a range of `w` of a
-respective point will not be considered in the calculation of the correlation.
-
-See also: [`boxed_correlationdim`](@ref)
-"""
 function boxed_correlationsum(
         data, εs, r0 = maximum(εs);
         q = 2, M = _autoprismdim(data), w = 0
     )
     @assert M ≤ size(data, 2) "Prism dimension has to be lower or equal than " *
     "data dimension."
-    boxes, contents = correlation_boxing(data, r0, M)
+    boxes, contents = data_boxing(data, r0, M)
     if q == 2
         boxed_correlationsum_2(boxes, contents, data, εs; w)
     else
@@ -270,21 +252,20 @@ function _autoprismdim(data)
 end
 
 """
-    correlation_boxing(data, r0, M = size(data, 2))
-Distributes the `data` points into boxes of size `r0`. Returns box positions
+    data_boxing(data, r0, M = size(data, 2))
+Distribute the `data` points into boxes of size `r0`. Return box positions
 and the contents of each box as two separate vectors. Implemented according to
 the paper by Theiler[^Theiler1987] improving the algorithm by Grassberger and
 Procaccia[^Grassberger1983]. If `M` is smaller than the dimension of the data,
 only the first `M` dimensions are considered for the distribution into boxes.
 
-See also: [`estimate_r0_theiler`](@ref), [`estimate_r0_buenoorovio`](@ref),
-[`grassberger`](@ref).
+See also: [`boxed_correlationsum`](@ref).
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
-function correlation_boxing(data, r0, M = size(data, 2))
+function data_boxing(data, r0, M = size(data, 2))
     @assert M ≤ size(data, 2) "Prism dimension has to be lower or equal than "*
     "data dimension."
     mini = minima(data)[1:M]
@@ -535,7 +516,7 @@ function estimate_r0_buenoorovio(X, M = size(X, 2))
     # Sample N/10 datapoints out of data for rough estimate of effective size.
     sample1 = X[unique(rand(1:N, N÷10))] |> Dataset
     r_ℓ = R / 10
-    η_ℓ = length(correlation_boxing(sample1, r_ℓ)[1])
+    η_ℓ = length(data_boxing(sample1, r_ℓ)[1])
     r0 = zero(eltype(X))
     while true
         # Sample √N datapoints for rough dimension estimate

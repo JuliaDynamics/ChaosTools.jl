@@ -1,7 +1,7 @@
 export draw_basin!, basin_map, basin_general_ds
 
 
-mutable struct basin_info{I,F,V}
+mutable struct BasinInfo{I,F,V}
     basin :: I
     xg :: F
     yg :: F
@@ -20,7 +20,7 @@ mutable struct basin_info{I,F,V}
     attractors :: V
 end
 
-function Base.show(io::IO, bsn::basin_info)
+function Base.show(io::IO, bsn::BasinInfo)
     println(io, "Basin of attraction structure")
     println(io,  rpad(" size : ", 14),    size(bsn.basin))
     println(io,  rpad(" Number of attractors found: ", 14),   Int((bsn.current_color-2)/2)  )
@@ -34,6 +34,7 @@ The dynamical system should be a discrete two dimensional system such as:
     * Discrete 2D map.
     * 2D poincaré map.
     * A 2D stroboscopic map.
+    * A dynamical system with a projection on the plane
 
 [H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations, Springer, New York, 1997]
 
@@ -112,7 +113,7 @@ ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
 integ = integrator(ds, u0=[0,0,0,0], reltol=1e-9)
 xg=range(-4,4,length=150)
 yg=range(-4,4,length=150)
-@time bsn = basin_general_ds(xg, yg, integ; dt=1., idxs=1:2)
+bsn = basin_general_ds(xg, yg, integ; dt=1., idxs=1:2)
 """
 function basin_general_ds(xg, yg, integ; dt=1., idxs=1:2, Ncheck = 10)
     i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
@@ -135,8 +136,7 @@ end
 # The idea is to color the grid with the current color. When an attractor box is hit (even color), the initial condition is colored
 # with the color of its basin (odd color). If the trajectory hits another basin 10 times in row the IC is colored with the same
 # color as this basin.
-function procedure!(bsn_nfo::basin_info, n::Int, m::Int, u, Ncheck::Int)
-    max_check = 60
+function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_check = 60)
     next_c = bsn_nfo.basin[n,m]
     bsn_nfo.step += 1
 
@@ -152,7 +152,7 @@ function procedure!(bsn_nfo::basin_info, n::Int, m::Int, u, Ncheck::Int)
             return 0;
         end
 
-        if bsn_nfo.prevConsecutives >= Ncheck
+        if bsn_nfo.prevConsecutives ≥ Ncheck
             # Wait if we hit the attractor a Ncheck times in a row just to check if it is not a nearby trajectory
             #println("found IC")
             c3 = next_c+1
@@ -160,10 +160,11 @@ function procedure!(bsn_nfo::basin_info, n::Int, m::Int, u, Ncheck::Int)
             if Ncheck == 2
                 # For maps we can color the previous steps as well. Every point of the trajectory lead
                 # to the attractor
-                [ bsn_nfo.basin[k[1],k[2]] = c3  for k in ind]
+                for k in ind; bsn_nfo.basin[k] = c3; end
             else
                 # For higher dimensions we erase the past iterations.
-                [ bsn_nfo.basin[k[1],k[2]] = 1  for k in ind] # erase visited boxes
+                # erase visited boxes
+                for k in ind; bsn_nfo.basin[k] = 1; end
             end
             reset_bsn_nfo!(bsn_nfo)
             return c3
@@ -210,7 +211,8 @@ function procedure!(bsn_nfo::basin_info, n::Int, m::Int, u, Ncheck::Int)
 
         if bsn_nfo.consecutive_other_basins > 60 || bsn_nfo.prevConsecutives > 10
             ind = findall(bsn_nfo.basin .== bsn_nfo.current_color+1)
-            [bsn_nfo.basin[k[1],k[2]] = next_c for k in ind]
+            for k in ind; bsn_nfo.basin[k] = next_c; end
+
             reset_bsn_nfo!(bsn_nfo)
             return next_c
         end
@@ -222,7 +224,7 @@ function procedure!(bsn_nfo::basin_info, n::Int, m::Int, u, Ncheck::Int)
     elseif iseven(next_c) && bsn_nfo.consecutive_match >= max_check*2
         # We have checked the presence of an attractor: tidy up everything and get a new box.
         ind = findall(bsn_nfo.basin .== bsn_nfo.current_color+1)
-        [ bsn_nfo.basin[k[1],k[2]] = 1 for k in ind]
+        for k in ind; bsn_nfo.basin[k] = 1; end
 
         bsn_nfo.basin[n,m] = bsn_nfo.current_color
         push!(bsn_nfo.attractors, [bsn_nfo.current_color/2, u...]) # store attractor
@@ -242,7 +244,7 @@ end
 """
     draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function)
 Compute an estimate of the basin of attraction on a two-dimensional plane. This is a low level function,
-for higher level functions see: `basin_poincare_map`, `basin_discrete_map`, `basin_stroboscopic_map`
+for higher level functions see: `basin_map`, `basin_general_ds`
 
 ## Arguments
 * `xg`, `yg` : 1-dim range vector that defines the grid of the initial conditions to test.
@@ -255,7 +257,7 @@ function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_
 
     complete = 0;
 
-    bsn_nfo = basin_info(ones(Int16, length(xg), length(yg)), xg, yg, iter_f!, reinit_f!, get_u, 2,4,0,0,0,1,1,0,0,[])
+    bsn_nfo = BasinInfo(ones(Int16, length(xg), length(yg)), xg, yg, iter_f!, reinit_f!, get_u, 2,4,0,0,0,1,1,0,0,[])
 
     reset_bsn_nfo!(bsn_nfo)
 
@@ -284,7 +286,7 @@ end
 
 
 
-function get_color_point!(bsn_nfo::basin_info, integ, u0; Ncheck=2)
+function get_color_point!(bsn_nfo::BasinInfo, integ, u0; Ncheck=2)
     # This routine identifies the attractor using the previously defined basin.
     # reinitialize integrator
     bsn_nfo.reinit_f!(integ, u0)
@@ -319,7 +321,7 @@ end
 
 
 
-function get_box(u, bsn_nfo::basin_info)
+function get_box(u, bsn_nfo::BasinInfo)
     xg = bsn_nfo.xg; yg = bsn_nfo.yg; # aliases
     xstep = (xg[2]-xg[1])
     ystep = (yg[2]-yg[1])
@@ -339,7 +341,7 @@ function get_box(u, bsn_nfo::basin_info)
 end
 
 
-function check_outside_the_screen!(bsn_nfo::basin_info, new_u, old_u, inlimbo)
+function check_outside_the_screen!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
 
     if norm(new_u-old_u) < 1e-5
         #println("Got stuck somewhere, Maybe an attractor outside the screen: ", new_u)
@@ -360,7 +362,7 @@ function check_outside_the_screen!(bsn_nfo::basin_info, new_u, old_u, inlimbo)
 end
 
 
-function reset_bsn_nfo!(bsn_nfo::basin_info)
+function reset_bsn_nfo!(bsn_nfo::BasinInfo)
     #@show bsn_nfo.step
     bsn_nfo.consecutive_match = 0
     bsn_nfo.consecutive_other_basins = 0

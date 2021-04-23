@@ -3,7 +3,7 @@ using DynamicalSystemsBase
 using Test
 using OrdinaryDiffEq
 
-@testset "All tests" begin
+@testset "Basins tests" begin
 
 @testset "Test basin stroboscopic map" begin
     ω=1.; F = 0.2

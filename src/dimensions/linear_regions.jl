@@ -182,6 +182,11 @@ function estimate_boxsizes(
         "`upper+z`. Returning `base .^ range(lower, upper; length = k)`. "*
         "Please adjust keywords or provide a bigger dataset.")
         εs = float(base) .^ range(lower, upper; length = k)
+    elseif abs(upper+z - (lower+w)) < 2
+        @warn(
+        "Boxsize limits do not differ by at least 2 orders of magnitude. "*
+        "Setting `w-=1` and `z+=1`, please adjust keywords `w, z` otherwise.")
+        εs = float(base) .^ range(lower+w-1, upper+z+1; length = k)
     else
         εs = float(base) .^ range(lower+w, upper+z; length = k)
     end

@@ -12,6 +12,8 @@ using OrdinaryDiffEq
     xg = range(-2.2,2.2,length=100)
     yg = range(-2.2,2.2,length=100)
     bsn = basin_map(xg, yg, integ_df; T=2*pi/ω)
+    # pcolormesh(xg, yg, bsn.basin')
+    
     @test length(unique(bsn.basin))/2 == 2
     @test count(bsn.basin .== 3) == 5376
     @test count(bsn.basin .== 5) == 4622
@@ -25,6 +27,7 @@ end
     yg=range(-6.,6.,length=100)
     pmap = poincaremap(ds, (3, 0.), Tmax=1e6; idxs = 1:2, rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
     bsn = basin_map(xg, yg, pmap)
+    # pcolormesh(xg, yg, bsn.basin')
 
     @test length(unique(bsn.basin))/2 == 3
     @test count(bsn.basin .== 3) == 4639
@@ -38,6 +41,7 @@ end
     xg = range(-2.,2.,length=100)
     yg = range(-2.,2.,length=100)
     bsn_nfo = basin_map(xg, yg, integ_df)
+    # pcolormesh(xg, yg, bsn_nfo.basin')
 
     @test count(bsn_nfo.basin .== 3) == 4127
     @test count(bsn_nfo.basin .== -1) == 5730
@@ -49,6 +53,7 @@ end
     xg=range(-2,2,length=100)
     yg=range(-2,2,length=100)
     bsn = basin_general_ds(xg, yg, integ; dt=1., idxs=1:2)
+    # pcolormesh(xg, yg, bsn.basin')
 
     @test count(bsn.basin .== 3) == 3331
     @test count(bsn.basin .== 5) == 3331

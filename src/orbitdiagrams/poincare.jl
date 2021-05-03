@@ -154,8 +154,11 @@ function poincaremap!(integ, f, planecrossing, Tmax, idxs, rootkw)
         step!(integ)
         side = planecrossing(integ.u)
     end
- 	integ.t > Tmax && return nothing
 
+	if integ.t > Tmax
+		@warn "The Poincaré map is ill defined"
+		return nothing
+	end
     # I am now guaranteed to have `t` in negative and `tprev` in positive
     tcross = Roots.find_zero(f, (integ.tprev, integ.t), Roots.A42(); rootkw...)
     ucross = integ(tcross)

@@ -2,22 +2,22 @@ export draw_basin!, basin_map, basin_general_ds
 
 
 mutable struct BasinInfo{I,F,V}
-    basin :: I
-    xg :: F
-    yg :: F
-    iter_f! :: Function
-    reinit_f! :: Function
-    get_u :: Function
-    current_color :: Int64
-    next_avail_color :: Int64
-    consecutive_match :: Int64
-    consecutive_other_basins :: Int64
-    prevConsecutives :: Int64
-    prev_attr :: Int64
-    prev_bas :: Int64
-    prev_step :: Int64
-    step :: Int64
-    attractors :: V
+    basin::I
+    xg::F
+    yg::F
+    iter_f!::Function
+    reinit_f!::Function
+    get_u::Function
+    current_color::Int64
+    next_avail_color::Int64
+    consecutive_match::Int64
+    consecutive_other_basins::Int64
+    prevConsecutives::Int64
+    prev_attr::Int64
+    prev_bas::Int64
+    prev_step::Int64
+    step::Int64
+    attractors::V
 end
 
 function Base.show(io::IO, bsn::BasinInfo)

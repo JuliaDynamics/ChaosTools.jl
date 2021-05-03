@@ -28,66 +28,54 @@ end
 
 
 """
-    basin_map(xg, yg, integ; kwargs...) -> BasinInfo
-Compute an estimate of the basin of attraction on a two-dimensional plane using a map of the plane onto itself.
+    basin_map(xg, yg, integ; kwargs...) → basins, attractors
+Compute an estimate of the basins of attraction on a two-dimensional plane using a map
+of the plane onto itself according to the method of Nusse & Yorke[^Yorke1997].
 The dynamical system should be a discrete two dimensional system such as:
-    * Discrete 2D map.
-    * 2D poincaré map.
-    * A 2D stroboscopic map.
-    * A dynamical system with a projection on the plane
+* Discrete 2D map.
+* 2D poincaré map.
+* A 2D stroboscopic map.
+For a higher-dimensional dynamical system, use [`basin_general_ds`](@ref).
 
-[H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations, Springer, New York, 1997]
+`integ` is an istance of an integrator, not a `DynamicalSystem`. This includes
+the output of [`poincaremap`](@ref). See documentation online for examples for all cases!
+`xg`, `yg` are 1-dimensional range vector that define the grid of the initial conditions
+to test.
+The output `basins` is a matrix on the grid (`xg, yg`), see below for details.
 
-## Arguments
-* `xg`, `yg` : 1-dim range vector that defines the grid of the initial conditions to test.
-* `integ` : A  integrator handle of the dynamical system. For a Poincaré map, the handle is a `pmap`
-as defined in [`poincaremap`](@ref)
+[^Yorke1997]: H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations, Ch. 7, Springer, New York, 1997
 
 ## Keyword Arguments
-* `T` : Period of the stroboscopic map.
+* `T` : Period of the stroboscopic map, in case `integ` is an integrator of a 2D continuous dynamical system with time forcing.
 * `Ncheck` : A parameter that sets the number of consecutives hits of an attractor before deciding the basin
 of the initial condition.
 
-## Notes about the method
+## Description
 
 This method identifies the attractors and their basins of attraction on the grid without prior knowledge about the
-system. At the end of a successfull computation the function returns a structure BasinInfo with usefull information
-on the basin defined by the grid (`xg`,`yg`). There is an important member named `basin` that contains the estimation
-of the basins and also of the attractors. For its content see the following section `Structure of the basin`.
+system. At the end of a successfull computation the function returns a matrix coding the basins of attraction
+and a vector of all attractors found.
+`basins` has the following organization:
 
-From now on we will refer to the final attractor or an initial condition to its *number*, *odd numbers* are assigned
-to basins and *even numbers* are assigned to attractors. The method starts by picking the first available initial
-condition not yet numbered. The dynamical system is then iterated until one of the following condition happens:
-* The trajectory hits a known attractor already numbered: the initial condition is collored with corresponding odd number.
-* The trajectory diverges or hits an attractor outside the defined grid: the initial condition is set to -1
-* The trajectory hits a known basins 10 times in a row: the initial condition belongs to that basin and is numbered accordingly.
-* The trajectory hits 60 times in a row an unnumbered cell: it is considered an attractor and is labelled with a even number.
+* The atractors points are *even numbers* in the matrix. For example, 2 and 4 refer to distinct attractors.
+* The basins are coded with *odd numbers*, `2n+1` corresponding the attractor `2n`.
+* If the trajectory diverges or converges to an atractor outside the defined grid it is numbered -1
+
+The method starts by picking the first available initial condition not yet numbered.
+The dynamical system is then iterated until one of the following conditions happens:
+1. The trajectory hits a known attractor already numbered: the initial condition is collored with corresponding odd number.
+1. The trajectory diverges or hits an attractor outside the defined grid: the initial condition is set to -1
+1. The trajectory hits a known basins 10 times in a row: the initial condition belongs to that basin and is numbered accordingly.
+1. The trajectory hits 60 times in a row an unnumbered cell: it is considered an attractor and is labelled with a even number.
 
 Regarding performace, this method is at worst as fast as tracking the attractors. In most cases there is a signicative improvement
 in speed.
-
-### Structure of the basin:
-
-The basin of attraction is organized in the followin way:
-* The atractors points are *even numbers* in the matrix. For example, 2 and 4 refer to distinct attractors.
-* The basins are collored with *odd numbers*, `2n+1` corresponding the attractor `2n`.
-* If the trajectory diverges or converge to an atractor outside the defined grid it is numbered -1
-
-## Example:
-
-```jl
-using DynamicalSystems, ChaosTools
-ds = Systems.rikitake(μ = 0.47, α = 1.0)
-xg=range(-6.,6.,length=150); yg=range(-6.,6.,length=150)
-pmap = poincaremap(ds, (3, 0.), Tmax=1e6; idxs = 1:2, rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
-bsn = basin_map(xg, yg, pmap)
-```
-
 """
 function basin_map(xg, yg, pmap::PoincareMap; Ncheck = 3)
     reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
     get_u = (pmap) -> pmap.integ.u[pmap.i]
     basin = draw_basin!(xg, yg, pmap, step!, reinit_f!, get_u, Ncheck)
+    return basin.basin, basin.attractors
 end
 
 
@@ -108,7 +96,8 @@ function basin_map(xg, yg, integ; T=0., Ncheck = 2)
     reinit_f! =  (integ,y) -> reinit!(integ, y)
     get_u = (integ) -> integ.u
 
-    return draw_basin!(xg, yg, integ, iter_f!, reinit_f!, get_u, Ncheck)
+    bsn_nfo = draw_basin!(xg, yg, integ, iter_f!, reinit_f!, get_u, Ncheck)
+    return bsn_nfo.basin, bsn_nfo.attractors
 end
 
 
@@ -148,7 +137,8 @@ function basin_general_ds(xg, yg, integ; dt=1., idxs=1:2, Ncheck = 10)
     iter_f! = (integ) -> step!(integ, dt, true)
     reinit_f! =  (integ,y) -> _init_ds(integ, y, i)
     get_u = (integ) -> integ.u[i]
-    return draw_basin!(xg, yg, integ, iter_f!, reinit_f!,get_u, Ncheck)
+    bsn_nfo = draw_basin!(xg, yg, integ, iter_f!, reinit_f!,get_u, Ncheck)
+    return bsn_nfo.basin, bsn_nfo.attractors
 end
 
 

@@ -1,18 +1,23 @@
-## 1 - Computing the basins of attraction
+# 1 - Computing the basins of attraction
 
 The technique used to compute the basin of attraction is described in ref. [1]. It consists in tracking the trajectory on the plane and coloring the points of according to the attractor it leads to. This technique is very efficient for 2D basins.
 
-The algorithm gives back a matrix with the N attractors numbered with even numbers from 2 to 2N and their basins with odd numbers. An attractor is numbered with an *even number* 2n and its corresponding basin with an *odd number* 2n+1. More details about the structure of `BasinInfo` and the methods in section 1.5.
+The algorithm gives back a matrix with the N attractors numbered with even numbers from 2 to 2N and their basins with odd numbers. An attractor is numbered with an *even number* 2n and its corresponding basin with an *odd number* 2n+1.
 
-### 1.1 - Stroboscopic Maps
+```@docs
+basin_map
+basin_general_ds
+```
+
+## 1.1 - Stroboscopic Maps
 
 First define a dynamical system on the plane, for example with a *stroboscopic* map or Poincaré section. For example we can set up an dynamical system with a stroboscopic map defined:
 
 ```jl
-using Basins, DynamicalSystems, DifferentialEquations
+using DynamicalSystems
 ω=1.; F = 0.2
 ds =Systems.duffing([0.1, 0.25]; ω = ω, f = F, d = 0.15, β = -1)
-integ  = integrator(ds; alg=Tsit5(),  reltol=1e-8, save_everystep=false)
+integ  = integrator(ds; reltol=1e-8)
 ```
 
 Now we define the grid of ICs that we want to analyze and launch the procedure:
@@ -20,30 +25,17 @@ Now we define the grid of ICs that we want to analyze and launch the procedure:
 ```jl
 xg = range(-2.2,2.2,length=200)
 yg = range(-2.2,2.2,length=200)
-bsn=basin_map(xg, yg, integ; T=2π/ω)
+basin, attractors = basin_map(xg, yg, integ; T=2π/ω)
 ```
 
-The keyword arguments are:
-* `T` : the period of the stroboscopic map.
-* `idxs` : the indices of the variable to track on the plane. By default the initial conditions of other variables are set to zero.
-
-The function returns a structure `bsn` with several fields of interests:
-* `bsn.basin` is a matrix that contains the information of the basins of attraction. The attractors are numbered from 1 to N and each element
-correspond to an initial condition on the grid.
-* `bsn.xg` and `bsn.yg` are the grid vectors.
-* `bsn.attractors` is a collection of vectors with the location of the attractors found.
-
-Now we can plot the nice result of the computation:
-
 ```jl
-using Plots
-plot(xg,yg,bsn.basin', seriestype=:heatmap)
-
+using PyPlot
+pcolormesh(xg, yg, basin')
 ```
 
 ![image](https://i.imgur.com/R2veb5tl.png)
 
-### 1.2 - Poincaré Maps
+## 1.2 - Poincaré Maps
 
 Another example with a Poincaré map:
 ```jl
@@ -74,28 +66,28 @@ The arguments are:
 ![image](https://i.imgur.com/xjdC8Hh.png)
 
 
-### 1.3 - Discrete Maps
+## 1.3 - Discrete Maps
 
 The process to compute the basin of a discrete map is very similar:
 
 ```jl
-function newton_map(dz,z, p, n)
-    f(x) = x^p[1]-1
-    df(x)= p[1]*x^(p[1]-1)
+function newton_map(dz, z, p, n)
     z1 = z[1] + im*z[2]
-    dz1 = f(z1)/df(z1)
+    dz1 = f(z1, p[1])/df(z1, p[1])
     z1 = z1 - dz1
     dz[1]=real(z1)
     dz[2]=imag(z1)
     return
 end
+f(x, p) = x^p - 1
+df(x, p)= p*x^(p-1)
 
 # dummy Jacobian function to keep the initializator happy
 function newton_map_J(J,z0, p, n)
    return
 end
 
-ds = DiscreteDynamicalSystem(newton_map,[0.1, 0.2], [3] , newton_map_J)
+ds = DiscreteDynamicalSystem(newton_map,[0.1, 0.2], [3.0], newton_map_J)
 integ  = integrator(ds)
 
 xg=range(-1.5,1.5,length=200)
@@ -106,8 +98,32 @@ bsn=basin_discrete_map(xg, yg, integ)
 
 ![image](https://i.imgur.com/ppHlGPbl.png)
 
+## 1.4 Basins in Higher Dimensions
 
-### 1.4 - Custom differential equations and low level functions.
+When you cannot define a Stroboscopic map or a well defined Poincaré map you can always try the general method for higher dimensions.
+It is slower and may requires some tuning.
+The algorithm looks for attractors on a 2D grid.
+The initial conditions are set on this grid and all others variables are set to zero by default.
+
+### Usage
+
+```jl
+ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
+integ = integrator(ds, u0=[0,0,0,0], reltol=1e-9)
+xg=range(-4,4,length=150)
+yg=range(-4,4,length=150)
+@time bsn = basin_general_ds(xg, yg, integ; dt=1., idxs=1:2)
+```
+
+Keyword parameters are:
+* `dt` : this is the time step. It is recommended to use a value above 1. The result may vary a little
+depending on this time step.
+* `idxs` : Indices of the two variables that define the plane.
+
+
+![image](https://imgur.com/qgBHZ8Ml.png)
+
+## 1.5 - Custom differential equations and low level functions.
 
 Supose we want to define a custom ODE and compute the basin of attraction on a defined
 Poincaré map:
@@ -142,53 +158,3 @@ The following anonymous functions are important:
 initial conditions on the map must be set.
 * get_u : it is a custom function to get the state of the integrator only for the variables
 defined on the plane
-
-### 1.6 Basins in Higher Dimensions
-
-When you cannot define a Stroboscopic map or a well defined Poincaré map you can always try
-the general method for higher dimensions. It is slower and may requires some tuning. The algorithm
-looks for atractors on a 2D grid. The initial conditions are set on this grid and all others variables
-are set to zero by default.
-
-### Usage
-
-```jl
-ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
-integ = integrator(ds, u0=[0,0,0,0], reltol=1e-9)
-xg=range(-4,4,length=150)
-yg=range(-4,4,length=150)
-@time bsn = basin_general_ds(xg, yg, integ; dt=1., idxs=1:2)
-```
-
-Keyword parameters are:
-* `dt` : this is the time step. It is recomended to use a value above 1. The result may vary a little
-depending on this time step.
-* `idxs` : Indices of the variables defined on the plane.
-
-
-![image](https://imgur.com/qgBHZ8Ml.png)
-
-### 1.5 - Notes about the method
-
-This method identifies the attractors and their basins of attraction on the grid without prior knowledge about the
-system. At the end of a successfull computation the function returns a structure BasinInfo with usefull information
-on the basin defined by the grid (`xg`,`yg`). There is an important member named `basin` that contains the estimation
-of the basins and also of the attractors. For its content see the following section `Structure of the basin`.
-
-From now on we will refer to the final attractor or an initial condition to its *number*, *odd numbers* are assigned
-to basins and *even numbers* are assigned to attractors. The method starts by picking the first available initial
-condition not yet numbered. The dynamical system is then iterated until one of the following condition happens:
-* The trajectory hits a known attractor already numbered: the initial condition is collored with corresponding odd number.
-* The trajectory diverges or hits an attractor outside the defined grid: the initial condition is set to -1
-* The trajectory hits a known basins 10 times in a row: the initial condition belongs to that basin and is numbered accordingly.
-* The trajectory hits 60 times in a row an unnumbered cell: it is considered an attractor and is labelled with a even number.
-
-Regarding performace, this method is at worst as fast as tracking the attractors. In most cases there is a signicative improvement
-in speed.
-
-### Structure of the basin:
-
-The basin of attraction is organized in the followin way:
-* The atractors points are *even numbers* in the matrix. For example, 2 and 4 refer to distinct attractors.
-* The basins are collored with *odd numbers*, `2n+1` corresponding the attractor `2n`.
-* If the trajectory diverges or converge to an atractor outside the defined grid it is numbered -1

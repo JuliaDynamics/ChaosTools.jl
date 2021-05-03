@@ -156,7 +156,7 @@ function poincaremap!(integ, f, planecrossing, Tmax, idxs, rootkw)
     end
 
 	if integ.t > Tmax
-		@warn "The Poincaré map is ill defined"
+		@warn "The Poincaré map is ill defined or time evolution exceeded `Tmax`."
 		return nothing
 	end
     # I am now guaranteed to have `t` in negative and `tprev` in positive

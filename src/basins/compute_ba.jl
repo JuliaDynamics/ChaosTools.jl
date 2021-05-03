@@ -28,7 +28,7 @@ end
 
 
 """
-    basin_map(xg, yg, integ; kwargs...)
+    basin_map(xg, yg, integ; kwargs...) -> BasinInfo
 Compute an estimate of the basin of attraction on a two-dimensional plane using a map of the plane onto itself.
 The dynamical system should be a discrete two dimensional system such as:
     * Discrete 2D map.
@@ -48,6 +48,30 @@ as defined in [`poincaremap`](@ref)
 * `Ncheck` : A parameter that sets the number of consecutives hits of an attractor before deciding the basin
 of the initial condition.
 
+## Notes about the method
+
+This method identifies the attractors and their basins of attraction on the grid without prior knowledge about the
+system. At the end of a successfull computation the function returns a structure BasinInfo with usefull information
+on the basin defined by the grid (`xg`,`yg`). There is an important member named `basin` that contains the estimation
+of the basins and also of the attractors. For its content see the following section `Structure of the basin`.
+
+From now on we will refer to the final attractor or an initial condition to its *number*, *odd numbers* are assigned
+to basins and *even numbers* are assigned to attractors. The method starts by picking the first available initial
+condition not yet numbered. The dynamical system is then iterated until one of the following condition happens:
+* The trajectory hits a known attractor already numbered: the initial condition is collored with corresponding odd number.
+* The trajectory diverges or hits an attractor outside the defined grid: the initial condition is set to -1
+* The trajectory hits a known basins 10 times in a row: the initial condition belongs to that basin and is numbered accordingly.
+* The trajectory hits 60 times in a row an unnumbered cell: it is considered an attractor and is labelled with a even number.
+
+Regarding performace, this method is at worst as fast as tracking the attractors. In most cases there is a signicative improvement
+in speed.
+
+### Structure of the basin:
+
+The basin of attraction is organized in the followin way:
+* The atractors points are *even numbers* in the matrix. For example, 2 and 4 refer to distinct attractors.
+* The basins are collored with *odd numbers*, `2n+1` corresponding the attractor `2n`.
+* If the trajectory diverges or converge to an atractor outside the defined grid it is numbered -1
 
 ## Example:
 
@@ -60,7 +84,7 @@ bsn = basin_map(xg, yg, pmap)
 ```
 
 """
-function basin_map(xg, yg, pmap::PoincareMap; Ncheck = 2)
+function basin_map(xg, yg, pmap::PoincareMap; Ncheck = 3)
     reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
     get_u = (pmap) -> pmap.integ.u[pmap.i]
     basin = draw_basin!(xg, yg, pmap, step!, reinit_f!, get_u, Ncheck)
@@ -93,7 +117,7 @@ end
 
 
 """
-    basin_general(xg, yg, integ; T=1., idxs=1:2)
+    basin_general(xg, yg, integ; dt=1., idxs=1:2) -> BasinInfo
 Compute an estimate of the basin of attraction on a two-dimensional plane using a stroboscopic map.
 
 ## Arguments
@@ -105,6 +129,10 @@ Compute an estimate of the basin of attraction on a two-dimensional plane using 
 * `idxs = 1:D` : Optionally you can choose which variables to save. Defaults to the entire state.
 * `Ncheck` : A parameter that sets the number of consecutives hits of an attractor before deciding the basin
 of the initial condition.
+
+## Method and structure of BasinInfo
+
+Please refer to the function `basin_map` for detailed information on the computation and the structure `BasinInfo`
 
 ## Example:
 ```jl

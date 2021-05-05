@@ -1,13 +1,17 @@
 # 1 - Computing the basins of attraction
 
-The technique used to compute the basin of attraction is described in ref. [1]. It consists in tracking the trajectory on the plane and coloring the points of according to the attractor it leads to. This technique is very efficient for 2D basins.
+The technique used to compute the basins of attraction is described in ref. [^Yorke1997]. It consists in tracking the trajectory on the plane and coloring the points of according to the attractor it leads to. This technique is very efficient for basins on the plane.
 
-The algorithm gives back a matrix with the N attractors numbered with even numbers from 2 to 2N and their basins with odd numbers. An attractor is numbered with an *even number* 2n and its corresponding basin with an *odd number* 2n+1.
+The algorithm returns a matrix with the N attractors numbered with even numbers from 2 to 2N and their basins with odd numbers. An attractor is numbered with an *even number* 2n and its corresponding basin with an *odd number* 2n+1.
+
+
+[^Yorke1997]: H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations, Ch. 7, Springer, New York, 1997
 
 ```@docs
-basin_map
-basin_general_ds
+basins_map2D
+basins_general
 ```
+
 
 ## 1.1 - Stroboscopic Maps
 
@@ -25,7 +29,7 @@ Now we define the grid of ICs that we want to analyze and launch the procedure:
 ```jl
 xg = range(-2.2,2.2,length=200)
 yg = range(-2.2,2.2,length=200)
-basin, attractors = basin_map(xg, yg, integ; T=2π/ω)
+basin, attractors = basins_map2D(xg, yg, integ; T=2π/ω)
 ```
 
 ```jl
@@ -54,9 +58,9 @@ xg=range(-6.,6.,length=200)
 yg=range(-6.,6.,length=200)
 pmap = poincaremap(ds, (3, 0.), Tmax=1e6; idxs = 1:2, rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
 
-@time bsn = basin_poincare_map(xg, yg, pmap)
+basin, attractors  = basins_map2D(xg, yg, pmap)
 
-plot(xg,yg,bsn.basin',seriestype=:heatmap)
+pcolormesh(xg, yg, basin')
 ```
 
 The arguments are:
@@ -68,7 +72,7 @@ The arguments are:
 
 ## 1.3 - Discrete Maps
 
-The process to compute the basin of a discrete map is very similar:
+The process to compute the basins of a discrete map is very similar:
 
 ```jl
 function newton_map(dz, z, p, n)
@@ -82,7 +86,7 @@ end
 f(x, p) = x^p - 1
 df(x, p)= p*x^(p-1)
 
-# dummy Jacobian function to keep the initializator happy
+# dummy Jacobian function to keep the initializator quiet
 function newton_map_J(J,z0, p, n)
    return
 end
@@ -93,15 +97,14 @@ integ  = integrator(ds)
 xg=range(-1.5,1.5,length=200)
 yg=range(-1.5,1.5,length=200)
 
-bsn=basin_discrete_map(xg, yg, integ)
+bsn=basins_map2D(xg, yg, integ)
 ```
 
 ![image](https://i.imgur.com/ppHlGPbl.png)
 
 ## 1.4 Basins in Higher Dimensions
 
-When you cannot define a Stroboscopic map or a well defined Poincaré map you can always try the general method for higher dimensions.
-It is slower and may requires some tuning.
+When you cannot define a Stroboscopic map or a well defined Poincaré map you can always try the general method for higher dimensions. It is slower and may requires some tuning.
 The algorithm looks for attractors on a 2D grid.
 The initial conditions are set on this grid and all others variables are set to zero by default.
 
@@ -112,25 +115,28 @@ ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
 integ = integrator(ds, u0=[0,0,0,0], reltol=1e-9)
 xg=range(-4,4,length=150)
 yg=range(-4,4,length=150)
-@time bsn = basin_general_ds(xg, yg, integ; dt=1., idxs=1:2)
+@time bsn = basins_general(xg, yg, integ; dt=1., idxs=1:2)
 ```
 
 Keyword parameters are:
-* `dt` : this is the time step. It is recommended to use a value above 1. The result may vary a little
+* `dt` : this is the time step. It is recommended to use a value above 1. The results may vary a little
 depending on this time step.
 * `idxs` : Indices of the two variables that define the plane.
+* `u = zeros(1,D-2)` : This vector allows to set the initial conditions of the D-2 remaining variables of the dynamical systems.
+* `Ncheck = 10` : A parameter that sets the number of consecutives hits of an attractor before deciding the basin
+of the initial condition.
 
 
 ![image](https://imgur.com/qgBHZ8Ml.png)
 
 ## 1.5 - Custom differential equations and low level functions.
 
-Supose we want to define a custom ODE and compute the basin of attraction on a defined
-Poincaré map:
+Supose we want to define a custom ODE and compute the basins of attraction on a projection on the
+plane:
 
 ```jl
 using DifferentialEquations
-using Basins
+using ChaosTools
 
 @inline @inbounds function duffing(u, p, t)
     d = p[1]; F = p[2]; omega = p[3]
@@ -149,7 +155,7 @@ iter_f! = (integ) -> step!(integ, 2π/ω, true)
 reinit_f! =  (integ,y) ->  reinit!(integ, [y...])
 get_u = (integ) -> integ.u[1:2]
 
-bsn = draw_basin(xg, yg, integ, iter_f!, reinit_f!, get_u)
+bsn = draw_basin!(xg, yg, integ, iter_f!, reinit_f!, get_u)
 ```
 
 The following anonymous functions are important:

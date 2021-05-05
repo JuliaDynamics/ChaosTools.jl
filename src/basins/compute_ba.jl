@@ -1,8 +1,8 @@
 export draw_basin!, basins_map2D, basins_general
 
 
-mutable struct BasinInfo{I,F,D}
-    basin::I
+mutable struct BasinInfo{F,T}
+    basin::Matrix{Int16}
     xg::F
     yg::F
     iter_f!::Function
@@ -17,7 +17,7 @@ mutable struct BasinInfo{I,F,D}
     prev_bas::Int64
     prev_step::Int64
     step::Int64
-    attractors::D
+    attractors::Dict{Int16, Dataset{2, T}}
 end
 
 function Base.show(io::IO, bsn::BasinInfo)
@@ -195,7 +195,6 @@ function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_che
 
         if bsn_nfo.prevConsecutives ≥ Ncheck
             # Wait if we hit the attractor a Ncheck times in a row just to check if it is not a nearby trajectory
-            #println("found IC")
             c3 = next_c+1
             ind = findall(bsn_nfo.basin .== bsn_nfo.current_color+1)
             if Ncheck == 2
@@ -234,7 +233,7 @@ function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_che
             if haskey(bsn_nfo.attractors , bsn_nfo.current_color)
                 push!(bsn_nfo.attractors[bsn_nfo.current_color],  u) # store attractor
             else
-                bsn_nfo.attractors[bsn_nfo.current_color] = Dataset([u[1] u[2]]) # init dic
+                bsn_nfo.attractors[bsn_nfo.current_color] = Dataset([SVector(u[1],u[2])]) # init dic
             end
             # We continue iterating until we hit again the same attractor. In which case we stop.
             return 0;
@@ -301,19 +300,30 @@ function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_
 
     complete = 0;
 
-    bsn_nfo = BasinInfo(ones(Int16, length(xg), length(yg)), xg, yg, iter_f!, reinit_f!, get_u, 2,4,0,0,0,1,1,0,0,Dict{Int16,Dataset{2,Float64}}())
+    bsn_nfo = BasinInfo(ones(Int16, length(xg), length(yg)), xg, yg, iter_f!, reinit_f!, get_u, 2,4,0,0,0,1,1,0,0,Dict{Int16,Dataset{2,eltype(get_u(integ))}}())
 
     reset_bsn_nfo!(bsn_nfo)
 
+    I = CartesianIndices(bsn_nfo.basin)
+    j  = 1
+
     while complete == 0
          # pick the first empty box
-         get_empt_box = findall(bsn_nfo.basin .== 1)
-         if length(get_empt_box) == 0
+         if j == length(bsn_nfo.basin)
              complete = 1
              break
          end
 
-         ni = get_empt_box[1][1]; mi = get_empt_box[1][2]
+         ind = 0
+         for k in j:length(bsn_nfo.basin)
+             if bsn_nfo.basin[I[k]] == 1
+                 j = k
+                 ind=I[j]
+                 break
+             end
+         end
+
+         ni = ind[1]; mi = ind[2];
          x0 = xg[ni]; y0 = yg[mi]
 
          # Tentatively assign a color: odd is for basins, even for attractors.
@@ -390,14 +400,14 @@ function check_outside_the_screen!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
     if norm(new_u-old_u) < 1e-5
         #println("Got stuck somewhere, Maybe an attractor outside the screen: ", new_u)
         ind = findall(bsn_nfo.basin .== bsn_nfo.current_color+1)
-        [ bsn_nfo.basin[k[1],k[2]] = 1  for k in ind]
+        for k in ind; bsn_nfo.basin[k] = 1 ; end
         reset_bsn_nfo!(bsn_nfo)
         # this CI goes to a attractor outside the screen, set to -1 (even color)
         return -1  # get next box
     elseif inlimbo > 60*20
         #println("trajectory diverges: ", new_u)
         ind = findall(bsn_nfo.basin .== bsn_nfo.current_color+1)
-        [ bsn_nfo.basin[k[1],k[2]] = 1  for k in ind]
+        for k in ind; bsn_nfo.basin[k] = 1; end
         reset_bsn_nfo!(bsn_nfo)
         # this CI is problematic or diverges, set to -1 (even color)
         return -1  # get next box
@@ -405,6 +415,15 @@ function check_outside_the_screen!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
     return 0
 end
 
+function find_and_replace!(basin, c_old, c_new)
+
+    @inbounds for k in eachindex(basin)
+        if basin[k] == c_old
+            basin[k] = c_new
+        end
+    end
+
+end
 
 function reset_bsn_nfo!(bsn_nfo::BasinInfo)
     #@show bsn_nfo.step

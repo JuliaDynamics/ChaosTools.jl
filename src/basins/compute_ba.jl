@@ -196,14 +196,14 @@ function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_che
         if bsn_nfo.prevConsecutives ≥ Ncheck
             # Wait if we hit the attractor a Ncheck times in a row just to check if it is not a nearby trajectory
             c3 = next_c+1
-            ind = findall(bsn_nfo.basin .== bsn_nfo.current_color+1)
+            ind = (bsn_nfo.basin .== bsn_nfo.current_color+1)
             if Ncheck == 2
                 # For maps we can color the previous steps as well. Every point of the trajectory lead
                 # to the attractor
-                for k in ind; bsn_nfo.basin[k] = c3; end
+                bsn_nfo.basin[ind] .= c3
             else
                 # For higher dimensions we erase the past iterations and visited boxes
-                for k in ind; bsn_nfo.basin[k] = 1; end
+                bsn_nfo.basin[ind] .= 1
             end
             reset_bsn_nfo!(bsn_nfo)
             return c3
@@ -221,7 +221,11 @@ function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_che
         bsn_nfo.basin[n,m] = bsn_nfo.current_color
         # reinit consecutive match to ensure that we have an attractor
         bsn_nfo.consecutive_match = max_check
-        push!(bsn_nfo.attractors[bsn_nfo.current_color],  u) # store attractor
+        if haskey(bsn_nfo.attractors , bsn_nfo.current_color)
+            push!(bsn_nfo.attractors[bsn_nfo.current_color],  u) # store attractor
+        else
+            bsn_nfo.attractors[bsn_nfo.current_color] = Dataset([SVector(u[1],u[2])])  # init dic
+        end
         return 0
     elseif next_c == bsn_nfo.current_color + 1
         # hit a previously visited box with the current color, possible attractor?
@@ -253,8 +257,8 @@ function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_che
         end
 
         if bsn_nfo.consecutive_other_basins > 60 || bsn_nfo.prevConsecutives > 10
-            ind = findall(bsn_nfo.basin .== bsn_nfo.current_color+1)
-            for k in ind; bsn_nfo.basin[k] = next_c; end
+            ind = (bsn_nfo.basin .== bsn_nfo.current_color+1)
+            bsn_nfo.basin[ind] .= next_c
 
             reset_bsn_nfo!(bsn_nfo)
             return next_c
@@ -266,8 +270,8 @@ function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_che
         return 0
     elseif iseven(next_c) && bsn_nfo.consecutive_match >= max_check*2
         # We have checked the presence of an attractor: tidy up everything and get a new box.
-        ind = findall(bsn_nfo.basin .== bsn_nfo.current_color+1)
-        for k in ind; bsn_nfo.basin[k] = 1; end
+        ind = (bsn_nfo.basin .== bsn_nfo.current_color+1)
+        bsn_nfo.basin[ind] .= 1
 
         bsn_nfo.basin[n,m] = bsn_nfo.current_color
         push!(bsn_nfo.attractors[bsn_nfo.current_color],  u) # store attractor
@@ -309,18 +313,19 @@ function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_
 
     while complete == 0
          # pick the first empty box
-         if j == length(bsn_nfo.basin)
-             complete = 1
-             break
-         end
-
          ind = 0
          for k in j:length(bsn_nfo.basin)
              if bsn_nfo.basin[I[k]] == 1
                  j = k
-                 ind=I[j]
+                 ind=I[k]
                  break
              end
+         end
+
+         if ind == 0
+             # We are done
+             complete = 1
+             break
          end
 
          ni = ind[1]; mi = ind[2];
@@ -330,7 +335,7 @@ function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_
          # First color is one
          bsn_nfo.basin[ni,mi] = bsn_nfo.current_color + 1
 
-         u0=[x0, y0]
+         u0=SVector(x0, y0)
 
          bsn_nfo.basin[ni,mi] = get_color_point!(bsn_nfo, integ, u0; Ncheck=Ncheck)
     end
@@ -399,15 +404,15 @@ function check_outside_the_screen!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
 
     if norm(new_u-old_u) < 1e-5
         #println("Got stuck somewhere, Maybe an attractor outside the screen: ", new_u)
-        ind = findall(bsn_nfo.basin .== bsn_nfo.current_color+1)
-        for k in ind; bsn_nfo.basin[k] = 1 ; end
+        ind = (bsn_nfo.basin .== bsn_nfo.current_color+1)
+        bsn_nfo.basin[ind] .= 1
         reset_bsn_nfo!(bsn_nfo)
         # this CI goes to a attractor outside the screen, set to -1 (even color)
         return -1  # get next box
     elseif inlimbo > 60*20
         #println("trajectory diverges: ", new_u)
-        ind = findall(bsn_nfo.basin .== bsn_nfo.current_color+1)
-        for k in ind; bsn_nfo.basin[k] = 1; end
+        ind = (bsn_nfo.basin .== bsn_nfo.current_color+1)
+        bsn_nfo.basin[ind] .= 1
         reset_bsn_nfo!(bsn_nfo)
         # this CI is problematic or diverges, set to -1 (even color)
         return -1  # get next box

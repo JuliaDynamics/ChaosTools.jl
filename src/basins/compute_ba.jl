@@ -1,6 +1,5 @@
 export draw_basin!, basins_map2D, basins_general
 
-
 mutable struct BasinInfo{F,T}
     basin::Matrix{Int16}
     xg::F
@@ -26,7 +25,6 @@ function Base.show(io::IO, bsn::BasinInfo)
     println(io,  rpad(" Number of attractors found: ", 14),   Int((bsn.current_color-2)/2)  )
 end
 
-
 """
     basins_map2D(xg, yg, integ; kwargs...) → basins, attractors
 Compute an estimate of the basins of attraction on a two-dimensional plane using a map
@@ -39,44 +37,52 @@ For a higher-dimensional dynamical system, use [`basins_general`](@ref).
 
 `integ` is an istance of an integrator, not a `DynamicalSystem`. This includes
 the output of [`poincaremap`](@ref). See documentation online for examples for all cases!
-`xg`, `yg` are 1-dimensional range vector that define the grid of the initial conditions
+`xg`, `yg` are 1-dimensional ranges that define the grid of the initial conditions
 to test.
 The output `basins` is a matrix on the grid (`xg, yg`), see below for details.
-The output `attractors` is a dictionary whose keys correspond to the attractor number and the values
-contains the points of the attractors found on the map. Notice that for some attractors this list may be incomplete.
+The output `attractors` is a dictionary whose keys correspond to the attractor number and
+the values contains the points of the attractors found on the map. Notice that for some
+attractors this list may be incomplete.
 
-[^Yorke1997]: H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations, Ch. 7, Springer, New York, 1997
+[^Yorke1997]: H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations Ch. 7, Springer, New York, 1997
 
 ## Keyword Arguments
-* `T` : Period of the stroboscopic map, in case `integ` is an integrator of a 2D continuous dynamical system with periodic time forcing.
-* `Ncheck` : A parameter that sets the number of consecutives hits of an attractor before deciding the basin
-of the initial condition.
+* `T` : Period of the stroboscopic map, in case `integ` is an integrator of a 2D continuous
+  dynamical system with periodic time forcing.
+* `Ncheck` : A parameter that sets the number of consecutives hits of an attractor before
+  deciding the basin of the initial condition.
 
 ## Description
+This method identifies the attractors and their basins of attraction on the grid without
+prior knowledge about the system. At the end of a successfull computation the function
+returns a matrix coding the basins of attraction and a dictionary with all attractors found.
 
-This method identifies the attractors and their basins of attraction on the grid without prior knowledge about the
-system. At the end of a successfull computation the function returns a matrix coding the basins of attraction
-and a dictionary with all attractors found.
 `basins` has the following organization:
-
-* The atractors points are *even numbers* in the matrix. For example, 2 and 4 refer to distinct attractors.
+* The atractors points are *even numbers* in the matrix. For example, `2` and `4` refer to
+  distinct attractors.
 * The basins are coded with *odd numbers*, `2n+1` corresponding the attractor `2n`.
-* If the trajectory diverges or converges to an attractor outside the defined grid it is numbered -1
+* If the trajectory diverges or converges to an attractor outside the defined grid it is
+  numbered `-1`
 
 `attractors` has the following organization:
-
 * The keys of the dictionary correspond to the number of the attractor (even numbers).
-* The value associated to a key is a [`Dataset`](@ref) with the *guessed* location of the attractor on the plane.
+* The value associated to a key is a [`Dataset`](@ref) with the *guessed* location of the
+  attractor on the plane.
 
-The method starts by picking the first available initial condition not yet numbered.
-The dynamical system is then iterated until one of the following conditions happens:
-1. The trajectory hits a known attractor already numbered: the initial condition is numbered with corresponding odd number.
-1. The trajectory diverges or hits an attractor outside the defined grid: the initial condition is set to -1
-1. The trajectory hits a known basin 10 times in a row: the initial condition belongs to that basin and is numbered accordingly.
-1. The trajectory hits 60 times in a row an unnumbered cell: it is considered an attractor and is labelled with a even number.
+The method starts by picking the first available initial condition on the plane not yet
+numbered. The dynamical system is then iterated until one of the following conditions
+happens:
+1. The trajectory hits a known attractor already numbered: the initial condition is
+   numbered with corresponding odd number.
+1. The trajectory diverges or hits an attractor outside the defined grid: the initial
+   condition is set to -1
+1. The trajectory hits a known basin 10 times in a row: the initial condition belongs to
+   that basin and is numbered accordingly.
+1. The trajectory hits 60 times in a row an unnumbered cell: it is considered an attractor
+   and is labelled with a even number.
 
-Regarding performace, this method is at worst as fast as tracking the attractors. In most cases there is a signicative improvement
-in speed.
+Regarding performace, this method is at worst as fast as tracking the attractors.
+In most cases there is a signicative improvement in speed.
 """
 function basins_map2D(xg, yg, pmap::PoincareMap; Ncheck = 3)
     reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
@@ -85,7 +91,6 @@ function basins_map2D(xg, yg, pmap::PoincareMap; Ncheck = 3)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
-
 function _init_map(pmap::PoincareMap, y, idxs)
     u = zeros(1,length(pmap.integ.u))
     u[idxs] = y
@@ -93,11 +98,10 @@ function _init_map(pmap::PoincareMap, y, idxs)
     reinit!(pmap, u)
 end
 
-
-function basins_map2D(xg, yg, integ; T=0., Ncheck = 2)
-    if T>0
-        iter_f! = (integ) -> step!(integ, T, true)
-    else
+function basins_map2D(xg, yg, integ; T=nothing, Ncheck = 2)
+    if T isa Real
+        iter_f! = (integ) -> step!(integ, abs(T), true)
+    elseif isnothing(T)
         iter_f! = (integ) -> step!(integ)
     end
     reinit_f! =  (integ,y) -> reinit!(integ, y)
@@ -108,42 +112,33 @@ function basins_map2D(xg, yg, integ; T=0., Ncheck = 2)
 end
 
 
-
-
-
-
 """
-    basins_general(xg, yg, integ; kwargs...) -> basin,attractors
-Compute an estimate of the basins of attraction on a two-dimensional plane. The attractors are tracked on a
-2D projection of the system on the plane.
+    basins_general(xg, yg, ds::DynamicalSystem; kwargs...) -> basin, attractors
+Compute an estimate of the basins of attraction of a higher-dimensional dynamical system `ds`
+on a projection of the system dynamics on a two-dimensional plane.
 
-## Arguments
-* `xg`, `yg` : 1-dim range vector that defines the grid of the initial conditions to test.
-* `integ` : integrator handle of the dynamical system.
+Like [`basins_map2D`](@ref), `xg, yg` are ranges defining the grid of initial conditions
+on the plane.
+
+Refer to [`basins_map2D`](@ref) for detailed information on the
+computation and the structure of `basin` and `attractors`.
 
 ## Keyword Arguments
-* `dt = 1.` : Time step of the integrator. It is recommended to use values ≥ 1.
-* `idxs = 1:2` : This vector selects the two variables that will be iterated on the map.
-* `u = zeros(1,D-2)` : This vector allows to set the initial conditions of the D-2 remaining variables of the dynamical systems.
-* `Ncheck = 10` : A parameter that sets the number of consecutives hits of an attractor before deciding the basin
-of the initial condition.
-
-## Method and structure of `basins` and `attractors`
-
-Please refer to the function [`basins_map2D`](@ref) for detailed information on the computation and the structure of `basin`
-and `attractors`
-
-## Example:
-```jl
-using DynamicalSystems, ChaosTools
-ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
-integ = integrator(ds, u0=[0,0,0,0], reltol=1e-9)
-xg=range(-4,4,length=150)
-yg=range(-4,4,length=150)
-bsn = basins_general(xg, yg, integ)
-```
+* `dt = 1`: Time step of the integrator. It is recommended to use values ≥ 1.
+* `idxs = 1:2` : This vector selects the two variables of the system that will define the
+  "plane" the dynamics will be projected into.
+* `u = zeros(1,D-2)` : This vector allows to set the initial conditions of the D-2
+  remaining variables of the dynamical systems.
+* `Ncheck = 10` : A parameter that sets the number of consecutives hits of an attractor
+  before deciding the basin of the initial condition.
+* `diffeq...`: Keyword arguments propagated to [`integrator`](@ref).
 """
-function basins_general(xg, yg, integ; dt=1., idxs=1:2, Ncheck = 10, u=0)
+function basins_general(xg, yg, ds::DynamicalSystem; dt=1, idxs=1:2, Ncheck = 10, u=0, diffeq...)
+    integ = integrator(ds; diffeq...)
+    return basins_general(xg, yg, integ; dt, idxs, Nchek, u)
+end
+
+function basins_general(xg, yg, integ; dt=1, idxs=1:2, Ncheck = 10, u=0)
     i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
     iter_f! = (integ) -> step!(integ, dt, true)
     if u == 0
@@ -180,7 +175,6 @@ end
 function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_check = 60)
     next_c = bsn_nfo.basin[n,m]
     bsn_nfo.step += 1
-
 
     if iseven(next_c) && bsn_nfo.consecutive_match < max_check
         # check wether or not we hit an attractor (even color). Make sure we hit Ncheck consecutive times.
@@ -301,13 +295,9 @@ examples for a Poincaré map of a continuous system.
 * `reinit_f!` : function that sets the initial condition to test on a two dimensional projection of the phase space.
 """
 function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_u::Function, Ncheck)
-
     complete = 0;
-
     bsn_nfo = BasinInfo(ones(Int16, length(xg), length(yg)), xg, yg, iter_f!, reinit_f!, get_u, 2,4,0,0,0,1,1,0,0,Dict{Int16,Dataset{2,eltype(get_u(integ))}}())
-
     reset_bsn_nfo!(bsn_nfo)
-
     I = CartesianIndices(bsn_nfo.basin)
     j  = 1
 
@@ -334,31 +324,23 @@ function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_
          # Tentatively assign a color: odd is for basins, even for attractors.
          # First color is one
          bsn_nfo.basin[ni,mi] = bsn_nfo.current_color + 1
-
-         u0=SVector(x0, y0)
-
+         u0 = SVector(x0, y0)
          bsn_nfo.basin[ni,mi] = get_color_point!(bsn_nfo, integ, u0; Ncheck=Ncheck)
     end
-
     return bsn_nfo
 end
-
-
 
 function get_color_point!(bsn_nfo::BasinInfo, integ, u0; Ncheck=2)
     # This routine identifies the attractor using the previously defined basin.
     # reinitialize integrator
     bsn_nfo.reinit_f!(integ, u0)
     reset_bsn_nfo!(bsn_nfo)
-
-    done = 0;
-    inlimbo = 0
+    done = inlimbo = 0
 
     while done == 0
        old_u = bsn_nfo.get_u(integ)
        bsn_nfo.iter_f!(integ)
        new_u = bsn_nfo.get_u(integ)
-
        n,m = get_box(new_u, bsn_nfo)
 
        if n>=0 # apply procedure only for boxes in the defined space
@@ -373,7 +355,6 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, u0; Ncheck=2)
            done = check_outside_the_screen!(bsn_nfo, new_u, old_u, inlimbo)
        end
     end
-
     return done
 end
 
@@ -384,24 +365,22 @@ function get_box(u, bsn_nfo::BasinInfo)
     xg = bsn_nfo.xg; yg = bsn_nfo.yg; # aliases
     xstep = (xg[2]-xg[1])
     ystep = (yg[2]-yg[1])
-
-    xu=u[1]
-    yu=u[2]
-    n=0; m=0;
+    xu = u[1]
+    yu = u[2]
+    n = m = 0;
     # check boundary
     if xu >= xg[1] && xu <= xg[end] && yu >= yg[1] && yu <= yg[end]
         n = Int(round((xu-xg[1])/xstep))+1
         m = Int(round((yu-yg[1])/ystep))+1 # +1 for 1 based indexing
     else
-        n=-1
-        m=-1
+        n = -1
+        m = -1
     end
-    return n,m
+    return n, m
 end
 
 
 function check_outside_the_screen!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
-
     if norm(new_u-old_u) < 1e-5
         #println("Got stuck somewhere, Maybe an attractor outside the screen: ", new_u)
         ind = (bsn_nfo.basin .== bsn_nfo.current_color+1)
@@ -421,7 +400,6 @@ function check_outside_the_screen!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
 end
 
 function find_and_replace!(basin, c_old, c_new)
-
     @inbounds for k in eachindex(basin)
         if basin[k] == c_old
             basin[k] = c_new

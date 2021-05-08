@@ -1,22 +1,12 @@
-# 1 - Computing the basins of attraction
-
-The technique used to compute the basins of attraction is described in ref. [^Yorke1997]. It consists in tracking the trajectory on the plane and coloring the points of according to the attractor it leads to. This technique is very efficient for basins on the plane.
-
-The algorithm returns a matrix with the N attractors numbered with even numbers from 2 to 2N and their basins with odd numbers. An attractor is numbered with an *even number* 2n and its corresponding basin with an *odd number* 2n+1.
-
-
-[^Yorke1997]: H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations, Ch. 7, Springer, New York, 1997
+# Basins of Attraction
 
 ```@docs
 basins_map2D
 basins_general
 ```
 
-
-## 1.1 - Stroboscopic Maps
-
-First define a dynamical system on the plane, for example with a *stroboscopic* map or Poincaré section. For example we can set up an dynamical system with a stroboscopic map defined:
-
+## Stroboscopic map example
+First define a dynamical system on the plane, for example with a *stroboscopic* map or Poincaré section. For example we can set up an dynamical system with a stroboscopic map using a periodically driven 2D continuous dynamical system, like the Duffing oscillator:
 ```jl
 using DynamicalSystems
 ω=1.; F = 0.2
@@ -39,40 +29,29 @@ pcolormesh(xg, yg, basin')
 
 ![image](https://i.imgur.com/R2veb5tl.png)
 
-## 1.2 - Poincaré Maps
+## Poincaré map example
 
-Another example with a Poincaré map:
+A Poincaré map of a 3D continuous system is a 2D discrete system and can be directly passed into [`basins_map2D`](@ref).
 ```jl
-using Plots
-using DynamicalSystems
-using Basins
-
 ds = Systems.rikitake(μ = 0.47, α = 1.0)
-integ=integrator(ds)
+plane = (3, 0.0)
+pmap = poincaremap(ds, (3, 0.), Tmax=1e6;
+    idxs = 1:2, rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9
+)
 ```
 
-Once the integrator has been set, the Poincaré map can defined on a plane:
-
+Once the Poincaré map has been created, we simply call [`basins_map2D`](@ref)
 ```jl
 xg=range(-6.,6.,length=200)
 yg=range(-6.,6.,length=200)
-pmap = poincaremap(ds, (3, 0.), Tmax=1e6; idxs = 1:2, rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
-
-basin, attractors  = basins_map2D(xg, yg, pmap)
+basin, attractors = basins_map2D(xg, yg, pmap)
 
 pcolormesh(xg, yg, basin')
 ```
 
-The arguments are:
-* `pmap` : A Poincaré map as defined in [ChaosTools.jl](https://github.com/JuliaDynamics/ChaosTools.jl)
-
-
-![image](https://i.imgur.com/xjdC8Hh.png)
-
-
-## 1.3 - Discrete Maps
-
-The process to compute the basins of a discrete map is very similar:
+## Discrete system example
+The process to compute the attraction basins of a discrete 2D dynamical system is trivial,
+as one passes its integrator directly into [`basins_map2D`](@ref)
 
 ```jl
 function newton_map(dz, z, p, n)
@@ -97,18 +76,16 @@ integ  = integrator(ds)
 xg=range(-1.5,1.5,length=200)
 yg=range(-1.5,1.5,length=200)
 
-bsn=basins_map2D(xg, yg, integ)
+basin, attractors  = basins_map2D(xg, yg, integ)
+pcolormesh(xg, yg, basin')
 ```
 
-![image](https://i.imgur.com/ppHlGPbl.png)
-
-## 1.4 Basins in Higher Dimensions
-
-When you cannot define a Stroboscopic map or a well defined Poincaré map you can always try the general method for higher dimensions. It is slower and may requires some tuning.
+## Basins in Higher Dimensions
+When it is not so simple to define a 2D stroboscopic map or Poincaré map, which is the case in continuous dynamical systems of higher dimensionality, you can always try the general method [`basins_general`](@ref). It is slower and may requires some tuning.
 The algorithm looks for attractors on a 2D grid.
 The initial conditions are set on this grid and all others variables are set to zero by default.
 
-### Usage
+### Example
 
 ```jl
 ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)

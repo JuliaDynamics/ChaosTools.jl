@@ -89,22 +89,17 @@ The initial conditions are set on this grid and all others variables are set to 
 
 ```jl
 ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
-integ = integrator(ds, u0=[0,0,0,0], reltol=1e-9)
 xg=range(-4,4,length=150)
 yg=range(-4,4,length=150)
-@time bsn = basins_general(xg, yg, integ; dt=1., idxs=1:2)
+@time basin, attractors = basins_general(xg, yg, ds; idxs = 1:2, reltol = 1e-9)
+attractors
 ```
+Alright, so far so good, we found 3 attractors (the 3 points of the magnetic pendulum).
+Let's visualize this beauty now
 
-Keyword parameters are:
-* `dt` : this is the time step. It is recommended to use a value above 1. The results may vary a little
-depending on this time step.
-* `idxs` : Indices of the two variables that define the plane.
-* `u = zeros(1,D-2)` : This vector allows to set the initial conditions of the D-2 remaining variables of the dynamical systems.
-* `Ncheck = 10` : A parameter that sets the number of consecutives hits of an attractor before deciding the basin
-of the initial condition.
-
-
-![image](https://imgur.com/qgBHZ8Ml.png)
+```jl
+pcolormesh(xg, yg, basin')
+```
 
 ## 1.5 - Custom differential equations and low level functions.
 

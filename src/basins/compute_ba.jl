@@ -124,47 +124,58 @@ Refer to [`basins_map2D`](@ref) for detailed information on the
 computation and the structure of `basin` and `attractors`.
 
 ## Keyword Arguments
-* `dt = 1`: Time step of the integrator. It is recommended to use values ≥ 1.
-* `idxs = 1:2` : This vector selects the two variables of the system that will define the
+* `dt = 1`: Approxiamte time step of the integrator. It is recommended to use values ≥ 1.
+* `idxs = 1:2`: This vector selects the two variables of the system that will define the
   "plane" the dynamics will be projected into.
-* `u = zeros(1,D-2)` : This vector allows to set the initial conditions of the D-2
-  remaining variables of the dynamical systems.
-* `Ncheck = 10` : A parameter that sets the number of consecutives hits of an attractor
+* `complete_state = zeros(D-2)`: This argument allows setting the _remaining_ variables
+  of the dynamical system state on each planar initial condition `x, y`. It can be
+  either a vector of length `D-2`, or a function `f(x, y)` that returns a vector of
+  length `D-2`.
+* `Ncheck = 10`: A parameter that sets the number of consecutives hits of an attractor
   before deciding the basin of the initial condition.
 * `diffeq...`: Keyword arguments propagated to [`integrator`](@ref).
 """
-function basins_general(xg, yg, ds::DynamicalSystem; dt=1, idxs=1:2, Ncheck = 10, u=0, diffeq...)
+function basins_general(xg, yg, ds::DynamicalSystem;
+        dt=1, idxs = SVector(1, 2), Ncheck = 10, complete_state=zeros(dimension(ds)-2), diffeq...
+    )
     integ = integrator(ds; diffeq...)
-    return basins_general(xg, yg, integ; dt, idxs, Nchek, u)
+    idxs = SVector(idxs...)
+    return basins_general(xg, yg, integ; dt, idxs, Ncheck, complete_state)
 end
 
-function basins_general(xg, yg, integ; dt=1, idxs=1:2, Ncheck = 10, u=0)
-    i = typeof(idxs) <: Int ? i : SVector{length(idxs), Int}(idxs...)
-    iter_f! = (integ) -> step!(integ, dt, true)
-    if u == 0
-        reinit_f! =  (integ,y) -> _init_ds(integ, y, i, zeros(length(integ.u)))
-    else
-        D = length(integ.u)
-        idxs_u = setdiff(1:D,idxs)
-        if length(u) !=  D-2
-            @error "Vector u has not the correct length"
-            return nothing,nothing
+function basins_general(xg, yg, integ; complete_state, idxs::SVector, Ncheck, dt)
+    iter_f! = (integ) -> step!(integ, dt) # we don't have to step _exactly_ `dt` here
+    D = length(integ.u)
+    remidxs = setdiff(1:D, idxs)
+    if complete_state isa AbstractVector
+        length(complete_state) ≠ D-2 && error("Vector `complete_state` must have length D-2!")
+        u0 = copy(complete_state)
+        reinit_f! = (integ, y) -> reinit_integ_idxs!(integ, y, idxs, u0, remidxs)
+    elseif complete_state isa Function
+        reinit_f! = (integ, z) -> begin
+            x, y = z
+            u0 = complete_state(x, y)
+            return reinit_integ_idxs!(integ, z, idxs, u0, remidxs)
         end
-        u0 = zeros(1,D)
-        u0[idxs_u] = u
-        reinit_f! =  (integ,y) -> _init_ds(integ, y, i, u0)
+    else
+        error("Incorrect type for `complete_state`")
     end
-    get_u = (integ) -> integ.u[i]
-    bsn_nfo = draw_basin!(xg, yg, integ, iter_f!, reinit_f!,get_u, Ncheck)
+    get_u = (integ) -> integ.u[idxs]
+    bsn_nfo = draw_basin!(xg, yg, integ, iter_f!, reinit_f!, get_u, Ncheck)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
-
-function _init_ds(integ, y, idxs, u0)
-    u = u0;
-    u[idxs] = y
-    # all other coordinates are zero
-    reinit!(integ, u)
+"""
+    reinit_integ_idxs!(integ, y, idxs, u, remidxs)
+`reinit!` given integrator by setting its `idxs` entries of the state as
+`y`, and the `remidxs` ones as `u`.
+"""
+function reinit_integ_idxs!(integ, y, idxs, u, remidxs)
+    D = length(integ.u)
+    s = zeros(D)
+    s[idxs] .= y
+    s[setdiff(1:D, idxs)] .= u
+    reinit!(integ, s)
 end
 
 
@@ -358,9 +369,6 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, u0; Ncheck=2)
     return done
 end
 
-
-
-
 function get_box(u, bsn_nfo::BasinInfo)
     xg = bsn_nfo.xg; yg = bsn_nfo.yg; # aliases
     xstep = (xg[2]-xg[1])
@@ -378,7 +386,6 @@ function get_box(u, bsn_nfo::BasinInfo)
     end
     return n, m
 end
-
 
 function check_outside_the_screen!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
     if norm(new_u-old_u) < 1e-5

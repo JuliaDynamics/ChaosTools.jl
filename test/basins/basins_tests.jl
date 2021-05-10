@@ -49,10 +49,9 @@ end
 
 @testset "Test basin_general" begin
     ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
-    integ = integrator(ds, u0=[0,0,0,0], reltol=1e-9)
     xg=range(-2,2,length=100)
     yg=range(-2,2,length=100)
-    basin,attractors = basins_general(xg, yg, integ; dt=1., idxs=1:2)
+    basin,attractors = basins_general(xg, yg, ds; dt=1., idxs=1:2)
     # pcolormesh(xg, yg, basin')
 
     @test count(basin .== 3) == 3331

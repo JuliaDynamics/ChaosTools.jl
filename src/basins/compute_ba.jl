@@ -406,15 +406,6 @@ function check_outside_the_screen!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
     return 0
 end
 
-function find_and_replace!(basin, c_old, c_new)
-    @inbounds for k in eachindex(basin)
-        if basin[k] == c_old
-            basin[k] = c_new
-        end
-    end
-
-end
-
 function reset_bsn_nfo!(bsn_nfo::BasinInfo)
     #@show bsn_nfo.step
     bsn_nfo.consecutive_match = 0

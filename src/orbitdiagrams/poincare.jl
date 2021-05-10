@@ -1,6 +1,6 @@
 using DynamicalSystemsBase: DEFAULT_DIFFEQ_KWARGS, _get_solver
 using Roots: find_zero, A42
-export poincaresos, produce_orbitdiagram, PlaneCrossing, poincaremap
+export poincaresos, produce_orbitdiagram, PlaneCrossing, poincaremap, PoincareMap
 
 const ROOTS_ALG = A42()
 
@@ -130,12 +130,11 @@ end
 const PSOS_ERROR = "the Poincaré surface of section did not have any points!"
 
 """
-	poincaremap!(integ, planecrossing,  idxs, rootkw, Tmax)
+	poincaremap!(integ, f, planecrossing, Tmax, idxs, rootkw)
 Low level function that actual performs the algorithm of finding the next crossing
 of the Poincaré surface of section.
 """
 function poincaremap!(integ, f, planecrossing, Tmax, idxs, rootkw)
-	ti = integ.t
 
     # Check if initial condition is already on the plane
     side = planecrossing(integ.u)
@@ -155,8 +154,11 @@ function poincaremap!(integ, f, planecrossing, Tmax, idxs, rootkw)
         step!(integ)
         side = planecrossing(integ.u)
     end
- 	integ.t > Tmax && return nothing
 
+	if integ.t > Tmax
+		@warn "The Poincaré map is ill defined or time evolution exceeded `Tmax`."
+		return nothing
+	end
     # I am now guaranteed to have `t` in negative and `tprev` in positive
     tcross = Roots.find_zero(f, (integ.tprev, integ.t), Roots.A42(); rootkw...)
     ucross = integ(tcross)
@@ -213,7 +215,7 @@ return `nothing`.
 ## Example:
 ```julia
 ds = Systems.rikitake([0.,0.,0.], μ = 0.47, α = 1.0)
-pmap = poincaremap(ds, (3,0.), Tmax=20.)
+pmap = poincaremap(ds, (3,0.), Tmax=200.)
 next_state_on_psos = step!(pmap)
 # Change initial condition
 reinit!(pmap, [1.0, 0, 0])

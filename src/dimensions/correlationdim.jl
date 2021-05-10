@@ -2,8 +2,8 @@
 # Original correlation sum
 #######################################################################################
 using Distances, Roots
-export kernelprob, correlationsum, grassberger, boxed_correlationdim, boxed_correlationsum,
-estimate_r0_buenoorovio
+export kernelprob, correlationsum, grassberger, boxed_correlationsum,
+estimate_r0_buenoorovio, data_boxing
 
 """
     kernelprob(X, ε; norm = Euclidean()) → p::Probabilities
@@ -25,7 +25,12 @@ end
 """
     correlationsum(X, ε::Real; w = 0, norm = Euclidean(), q = 2) → C_q(ε)
 Calculate the `q`-order correlation sum of `X` (`Dataset` or timeseries)
-for a given radius `ε` and `norm`, using the formula:
+for a given radius `ε` and `norm`.
+
+The function [`boxed_correlationsum`](@ref) is faster and should be preferred over this one.
+
+## Description
+The correlation sum is done using the formula:
 ```math
 C_2(\\epsilon) = \\frac{2}{(N-w)(N-w-1)}\\sum_{i=1}^{N}\\sum_{j=1+w+i}^{N} B(||X_i - X_j|| < \\epsilon)
 ```
@@ -189,64 +194,49 @@ end
 ################################################################################
 # Correlationsum, but we distributed data to boxes beforehand
 ################################################################################
-function boxed_correlationdim(data; M = size(data, 2), q = 2, w = 0)
-    r0 = estimate_r0_buenoorovio(data, M)
-    ε0 = minimum_pairwise_distance(data)[1]
-    εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
-    boxed_correlationdim(data, εs, r0; M, q, w)
-end
-
 """
-    boxed_correlationdim(data, εs, r0 = maximum(εs); M = size(data, 2), q = 2, w = 0)
-    boxed_correlationdim(data; M = size(data, 2), q = 2, w = 0)
-Estimate the box assisted q-order correlation dimension[^Kantz2003] out of a
+    boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2 , M = size(data, 2), w = 0)
+    boxed_correlationsum(data; q = 2 , M = size(data, 2), w = 0)
+
+Estimate the box assisted q-order correlation sum[^Kantz2003] out of a
 dataset `data` for radii `εs` by splitting the data into boxes of size `r0`
-beforehand. If `M` is unequal to the dimension of the data, only the first `m`
-dimensions are considered. The method of splitting the data into boxes was
+beforehand.
+
+## Description
+`C_q(ε)` is calculated for every `ε ∈ εs` and each of the boxes to then be
+summed up afterwards. If `M` is unequal to the dimension of the data, only the
+first `M` dimensions are considered for the box distribution (this is called the
+prism-assisted version).
+The method of splitting the data into boxes was
 implemented according to Theiler[^Theiler1987]. If only a dataset is given the
 radii `εs` and boxsize `r0` are chosen by calculating
 [`estimate_r0_buenoorovio`](@ref).
 
-`w` is the Theiler window. All points that are within a range of `w` of a
-respective point will not be considered in the calculation of the correlation.
+`w` is the [Theiler window](@ref).
 
-This method splits the data into boxes, calculates the q-order correlation sum
-`C_q(ε)` for every `ε ∈ εs` and fits a line through the longest linear looking
-region of the curve `(log(εs), log(C_q(εs)))`. The gradient of this line is the
-dimension.
+The function is explicitly optimized for `q = 2` and becomes quite slow for `q ≠ 2`.
 
-The function is explicitly optimized for `q = 2`.
-
-See also: [`correlation_boxing`](@ref),
-[`boxed_correlationsum`](@ref) and [`q_order_correlationsum`] (@ref)
+See [`correlationsum`](@ref) for the definition of `C_q`
+and also [`data_boxing`](@ref).
 
 [^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 """
-function boxed_correlationdim(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2), w = 0)
-    @assert M ≤ size(data,2) "Prism dimension has to be lower or equal than " *
-    "data dimension."
-    dd = boxed_correlationsum(data, εs, r0; q, M, w)
-    linear_region(log.(εs), log.(dd), tol = 0.1)[2]
+function boxed_correlationsum(data; kwargs...)
+    r0 = estimate_r0_buenoorovio(data, M)
+    ε0 = minimum_pairwise_distance(data)[1]
+    εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
+    boxed_correlationsum(data, εs, r0; kwargs...)
 end
 
-"""
-    boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2 , M = size(data, 2), w = 0)
-Distribute `data` into boxes of size `r0`. The `q`-order correlationsum
-`C_q(ε)` is then calculated for every `ε ∈ εs` and each of the boxes to then be
-summed up afterwards. If `M` is unequal to the dimension of the data, only the
-first `M` dimensions are considered for the box distribution.
-
-`w` is the Theiler window. All points that are within a range of `w` of a
-respective point will not be considered in the calculation of the correlation.
-
-See also: [`boxed_correlationdim`](@ref)
-"""
-function boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2, M = size(data, 2), w = 0)
+function boxed_correlationsum(
+        data, εs, r0 = maximum(εs);
+        q = 2, M = _autoprismdim(data), w = 0
+    )
     @assert M ≤ size(data, 2) "Prism dimension has to be lower or equal than " *
     "data dimension."
-    boxes, contents = correlation_boxing(data, r0, M)
+    boxes, contents = data_boxing(data, r0, M)
     if q == 2
         boxed_correlationsum_2(boxes, contents, data, εs; w)
     else
@@ -254,22 +244,28 @@ function boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2, M = size(data
     end
 end
 
+function _autoprismdim(data)
+    D = dimension(data)
+    L = length(data)
+    # The best choice given by Theiler is $P = 0.5\log_2N$ and should be used when $D$ exceeds $0.75\log_2N$.
+    return size(data, 2)
+end
+
 """
-    correlation_boxing(data, r0, M = size(data, 2))
-Distributes the `data` points into boxes of size `r0`. Returns box positions
+    data_boxing(data, r0, M = size(data, 2))
+Distribute the `data` points into boxes of size `r0`. Return box positions
 and the contents of each box as two separate vectors. Implemented according to
 the paper by Theiler[^Theiler1987] improving the algorithm by Grassberger and
 Procaccia[^Grassberger1983]. If `M` is smaller than the dimension of the data,
 only the first `M` dimensions are considered for the distribution into boxes.
 
-See also: [`estimate_r0_theiler`](@ref), [`estimate_r0_buenoorovio`](@ref),
-[`grassberger`](@ref).
+See also: [`boxed_correlationsum`](@ref).
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
-function correlation_boxing(data, r0, M = size(data, 2))
+function data_boxing(data, r0, M = size(data, 2))
     @assert M ≤ size(data, 2) "Prism dimension has to be lower or equal than "*
     "data dimension."
     mini = minima(data)[1:M]
@@ -324,7 +320,7 @@ function find_neighborboxes_2(index, boxes, contents)
     N_box = length(boxes)
     for index2 in index:N_box
         if evaluate(Chebyshev(), box, boxes[index2]) < 2
-            indices = vcat(indices, contents[index2])
+            append!(indices, contents[index2])
         end
     end
     indices
@@ -384,7 +380,7 @@ function boxed_correlationsum_q(boxes, contents, data, εs, q; w = 0)
         indices_box = contents[index]
         Cs .+= inner_correlationsum_q(indices_box, indices_neighbors, data, εs, q; w)
     end
-    (Cs ./ ((N - 2w) * (N - 2w - 1) ^ (q-1))) .^ (1 / (q-1))
+    clamp.((Cs ./ ((N - 2w) * (N - 2w - 1) ^ (q-1))), 0, Inf) .^ (1 / (q-1))
 end
 
 """
@@ -397,7 +393,7 @@ function find_neighborboxes_q(index, boxes, contents, q)
     box = boxes[index]
     for (index2, box2) in enumerate(boxes)
         if evaluate(Chebyshev(), box, box2) < 2
-            indices = vcat(indices, contents[index2])
+            append!(indices, contents[index2])
         end
     end
     indices
@@ -520,7 +516,7 @@ function estimate_r0_buenoorovio(X, M = size(X, 2))
     # Sample N/10 datapoints out of data for rough estimate of effective size.
     sample1 = X[unique(rand(1:N, N÷10))] |> Dataset
     r_ℓ = R / 10
-    η_ℓ = length(correlation_boxing(sample1, r_ℓ)[1])
+    η_ℓ = length(data_boxing(sample1, r_ℓ)[1])
     r0 = zero(eltype(X))
     while true
         # Sample √N datapoints for rough dimension estimate
@@ -540,77 +536,4 @@ function estimate_r0_buenoorovio(X, M = size(X, 2))
         !isnan(r0) && break
     end
     return r0
-end
-
-
-
-#######################################################################################
-# Takens' best estimate
-#######################################################################################
-export takens_best_estimate
-
-"""
-    takens_best_estimate(X, εmax, metric = Chebyshev(),εmin = 0) → D_C, D_C_95u, D_C_95l
-Use the so-called "Takens' best estimate" [^Takens1985][^Theiler1988]
-method for estimating the correlation dimension
-`D_C` and the upper (`D_C_95u`) and lower (`D_C_95l`) confidence limit for the given dataset `X`.
-
-The original formula is
-```math
-D_C \\approx \\frac{C(\\epsilon_\\text{max})}{\\int_0^{\\epsilon_\\text{max}}(C(\\epsilon) / \\epsilon) \\, d\\epsilon}
-```
-where ``C`` is the [`correlationsum`](@ref) and ``\\epsilon_\\text{max}`` is an upper cutoff.
-Here we use the later expression
-```math
-D_C \\approx - \\frac{1}{\\eta},\\quad \\eta = \\frac{1}{(N-1)^*}\\sum_{[i, j]^*}\\log(||X_i - X_j|| / \\epsilon_\\text{max})
-```
-where the sum happens for all ``i, j`` so that ``i < j`` and ``||X_i - X_j|| < \\epsilon_\\text{max}``.
-In the above expression, the bias in the original paper has already been corrected, as suggested in [^Borovkova1999].
-
-The confidence limits are estimated from the log-likelihood function by finding
-the values of `D_C` where the function has fallen by 2 from its maximum, see e.g.
-[^Barlow] chapter 5.3
-Because the CLT does not apply (no independent measurements), the limits are not
-neccesarily symmetric.
-
-According to [^Borovkova1999], introducing a lower cutoff `εmin` can make the
-algorithm more stable (no divergence), this option is given but defaults to zero.
-
-If `X` comes from a delay coordinates embedding of a timseries `x`, a recommended value
-for ``\\epsilon_\\text{max}`` is `std(x)/4`.
-
-[^Takens1985]: Takens, On the numerical determination of the dimension of an attractor, in: B.H.W. Braaksma, B.L.J.F. Takens (Eds.), Dynamical Systems and Bifurcations, in: Lecture Notes in Mathematics, Springer, Berlin, 1985, pp. 99–106.
-[^Theiler1988]: Theiler, [Lacunarity in a best estimator of fractal dimension. Physics Letters A, 133(4–5)](https://doi.org/10.1016/0375-9601(88)91016-X)
-[^Borovkova1999]: Borovkova et al., [Consistency of the Takens estimator for the correlation dimension. The Annals of Applied Probability, 9, 05 1999.](https://doi.org/10.1214/aoap/1029962747)
-[^Barlow]: Barlow, R., Statistics - A Guide to the Use of Statistical Methods in the Physical Sciences. Vol 29. John Wiley & Sons, 1993
-"""
-function takens_best_estimate(X, εmax, metric = Chebyshev(); εmin=0)
-    n, η, N = 0, zero(eltype(X)), length(X)
-    @inbounds for i in 1:N
-        for j in i+1:N
-            d = evaluate(metric, X[i], X[j])
-            if εmin < d < εmax
-                n += 1
-                η += log(d/εmax)
-            end
-        end
-    end
-    # bias-corrected version (log-likelihood function shifted on x-axis)
-    α = -(n-1)/η
-    # biased version (maximum of original log-likelihood function)
-    α_b = -n/η
-    # value of maximum of original log-likelihood function
-    mxl = n*log(α_b) + α_b * η
-    # at the 95%-confidence interval, the log-l function has dropped by 2
-    # -> log_l(x) - mxl + 2 = 0
-    # this is a result of the invariance of the MLE, a really nice property
-    # these limits are not going to be perfectly symmetric (CLT does not apply)
-    mn, mx = fzeros(x-> n * log(x) + η * x - mxl +2 , 0,2*α)
-
-    # Since the bias-correction is just a shift of the log-l function on the
-    # x-axis, we can easily shift the confidence limits by the bias α-α_b
-    α95u = α - α_b + mn
-    α95l = α - α_b + mx
-
-    return α, α95u, α95l
 end

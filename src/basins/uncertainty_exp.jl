@@ -1,12 +1,13 @@
 export uncertainty_exponent
 
 """
-    uncertainty_exponent(xg, yg, basins, integ; precision=1e-3) -> α,ε,f_ε
+    uncertainty_exponent(xg, yg, basins, integ; precision=1e-4, max_size=0) -> α,ε,f_ε
 This function estimates the uncertainty exponent of the basins.
 
 The ouput `α` is the estimation of the uncertainty exponent of the basins of attraction. This exponent is related to the final state sensitivity of the trajectories in the phase space. An exponent close to `1` means basins with smooth boundaries whereas an exponent close to `0` represent complety fractalized basins called a riddled basins.
-The output `f_ε` is the ratio of the ball of radius `ε` that contains at least two initial conditions that lead to different attractors. `α` is the slope of the curve `f_ε` against `ε`.
-Notice that the uncertainty exponent and the box counting dimension of the boundary are related. We have `d = 2 - α` where `d` is the box couting or capacity dimension. 
+The output `f_ε` is the ratio of the ball of radius `ε` that contains at least two initial conditions that lead to different attractors. `α` is the slope of the curve `f_ε` against `ε`. If the precision or the resolution is not high enough, the function gives a warning and a visual inspection of this curve is required in order to estimate the slope correctly.
+
+Notice that the uncertainty exponent and the box counting dimension of the boundary are related. We have `d = 2 - α` where `d` is the box couting or capacity dimension.
 
 [^Grebogi1983]: C. Grebogi, S. W. McDonald, E. Ott and J. A. Yorke, Final state sensitivity: An obstruction to predictability, Physics Letters A, 99, 9, 1983
 

@@ -3,6 +3,8 @@ using DynamicalSystemsBase, DelayEmbeddings
 
 ti = time()
 
+include("basins/uncertainty_tests.jl")
+
 include("basins/basins_tests.jl")
 
 include("orbitdiagrams/orbitdiagram_tests.jl")

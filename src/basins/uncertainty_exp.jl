@@ -16,8 +16,8 @@ Notice that the uncertainty exponent and the box counting dimension of the bound
 * `xg`, `yg` : 1-dim range vector that defines the grid of the initial conditions.
 
 ## Keyword arguments
-* `precision` variance of the estimator of the uncertainty function. Values between 1e-7 and 1e-5 brings reasonable results.
-* `max_size` maximum size in pixels of the ball to test.
+* `precision` is the variance of the estimator of the uncertainty function. Values between 1e-7 and 1e-5 brings reasonable results.
+* `max_size` is the maximum size in pixels of the ball to test.
 """
 function uncertainty_exponent(xg,yg,basins; precision=1e-4, max_size=0)
 
@@ -35,8 +35,8 @@ function uncertainty_exponent(xg,yg,basins; precision=1e-4, max_size=0)
 
     r_ε = min_ε:max_ε
     num_step=length(r_ε)
-    N_u = zeros(1,num_step) # number of uncertain box
-    N = zeros(1,num_step) # number of boxes
+    N_u = zeros(Int64,1,num_step) # number of uncertain box
+    N = zeros(Int64,1,num_step) # number of boxes
     ε = zeros(1,num_step) # resolution
 
     for (k,eps) in enumerate(r_ε)

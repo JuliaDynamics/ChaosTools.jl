@@ -32,7 +32,7 @@ using OrdinaryDiffEq
     α,e,f=uncertainty_exponent(θg,xg,bsn; precision=1e-5)
 
     # In the paper the value is roughly 0.2
-    @test (0.18 ≤ α ≤ 0.23)
+    @test (0.18 ≤ α ≤ 0.24)
 
 end
 
@@ -64,7 +64,7 @@ bsn,att=basins_map2D(xg, yg, integ)
 α,e,f=uncertainty_exponent(xg,yg,bsn; precision=1e-5)
 
 # Value (published) from the box-counting dimension is 1.42. α ≃ 0.6
-@test (0.57 ≤ α ≤ 0.63)
+@test (0.55 ≤ α ≤ 0.65)
 
 end
 

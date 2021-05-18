@@ -48,7 +48,7 @@ function uncertainty_exponent(xg,yg,basins; precision=1e-4, max_size=0)
             ky = rand(ceil(Int64,eps+1):floor(Int64,ny-eps))
 
             indy = range(ky-eps,ky+eps,step=1)
-            c = [basins[kx,ky] for ky in indy]
+            c = basins[kx, indy]
 
             if length(unique(c))>1
                 Nu = Nu + 1

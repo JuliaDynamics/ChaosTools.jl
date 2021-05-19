@@ -71,7 +71,7 @@ function uncertainty_exponent(xg, yg, basins::Matrix; precision=1e-4, max_size=0
             # Stopping criterion: variance of the estimator of the mean bellow  precision
             if Nu > 50 && σ² < precision
                 completed = 1
-                @show Nu,Nb,σ²
+                #@show Nu,Nb,σ²
             end
 
         end

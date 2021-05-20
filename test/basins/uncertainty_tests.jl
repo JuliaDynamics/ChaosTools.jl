@@ -7,21 +7,7 @@ using OrdinaryDiffEq
 
 @testset "Test uncertainty orginal paper" begin
 
-    # C. Grebogi, S. W. McDonald, E. Ott, J. A. Yorke, Final state sensitivity: An obstruction to predictability, Physics Letters A, 99, 9, 1983
-    function grebogi_map(u, p, n)
-        J₀=0.3; a=1.32; b=0.9;
-        θ = u[1]; x = u[2]
-        dθ= θ + a*sin(2*θ) - b*sin(4*θ) -x*sin(θ)
-        dθ = mod(dθ,2π) # to avoid problems with attractor at θ=π
-        dx=-J₀*cos(θ)
-        return SVector{2}(dθ,dx)
-    end
-
-    # dummy function to keep the initializator happy
-    function grebogi_map_J(z0, p, n)
-       return
-    end
-    ds = DiscreteDynamicalSystem(grebogi_map,[1., -1.], [] , grebogi_map_J)
+    ds = Systems.grebogi_map(rand(2))
     integ  = integrator(ds)
 
     θg=range(0,2π,length=250)

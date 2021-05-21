@@ -2,36 +2,46 @@ export uncertainty_exponent
 
 """
     uncertainty_exponent(xg, yg, basins::Matrix; precision=1e-4, max_size=0) -> ε,f_ε,α
-This function estimates the uncertainty exponent of the basins a attraction. This exponent is related to the final state sensitivity of the trajectories in the phase space. An exponent close to `1` means basins with smooth boundaries whereas an exponent close to `0` represent complety fractalized basins called a riddled basins.
+This function estimates the uncertainty exponent of the basins a attraction. This exponent
+is related to the final state sensitivity of the trajectories in the phase space.
+An exponent close to `1` means basins with smooth boundaries whereas an exponent close
+to `0` represent complety fractalized basins called a riddled basins.
 
 `xg`, `yg` are 1-dim ranges that defines the grid of the initial conditions.
-`basins` is the matrix containing the information of the basin, see [`basins_map2D`](@ref) to generate this matrix.
+`basins` is the matrix containing the information of the basin, see [`basins_map2D`](@ref)
+to generate this matrix.
 The ouput `α` is the estimation of the uncertainty exponent of the basins of attraction.
-The output `f_ε` is a vector with the fraction (in `log10` scale) of the balls of radius `ε` that contains at least two initial conditions that lead to different attractors.
+The output `f_ε` is a vector with the fraction (in `log10` scale) of the balls of radius `ε`
+that contains at least two initial conditions that lead to different attractors.
 The output `ε` is a vector with the sizes of the ball in `log10` scale
 
-[^Grebogi1983]: C. Grebogi, S. W. McDonald, E. Ott and J. A. Yorke, Final state sensitivity: An obstruction to predictability, Physics Letters A, 99, 9, 1983
+[^Grebogi1983]: C. Grebogi, S. W. McDonald, E. Ott and J. A. Yorke, Final state sensitivity:
+An obstruction to predictability, Physics Letters A, 99, 9, 1983
 
 ## Keyword arguments
-* `precision` is the variance of the estimator of the uncertainty function. Values between 1e-7 and 1e-5 brings reasonable results.
+* `precision` is the variance of the estimator of the uncertainty function. Values between
+1e-7 and 1e-5 brings reasonable results.
 * `max_size` is the maximum size in pixels of the ball to test.
 
 ## Description
 
-A phase space with a fractal boundary may cause a uncertainty on the final state of the dynamical system for a given initial condition. A measure of this final state sensitivity is the uncertainty exponent. The algorithm probe the basin of attraction with balls of size `ε` at random. If there are a least two initial conditions that lead to different attractors, a ball is tagged `uncertain`. `f_ε` is the fraction of `uncertain ball` to the total number of tries in the basin. In analogy to the capacity dimension, there is a scaling law between `f_ε` and `ε`. The number that characterizes this scaling is called the uncertainty exponent `α`.
+A phase space with a fractal boundary may cause a uncertainty on the final state of the
+dynamical system for a given initial condition. A measure of this final state sensitivity
+is the uncertainty exponent. The algorithm probe the basin of attraction with balls
+of size `ε` at random. If there are a least two initial conditions that lead to different
+attractors, a ball is tagged `uncertain`. `f_ε` is the fraction of `uncertain ball` to the
+total number of tries in the basin. In analogy to the capacity dimension, there is a scaling
+law between `f_ε` and `ε`. The number that characterizes this scaling is called the
+uncertainty exponent `α`.
 
-Notice that the uncertainty exponent and the box counting dimension of the boundary are related. We have `d = 2 - α` where `d` is the box couting or capacity dimension.
+Notice that the uncertainty exponent and the box counting dimension of the boundary are
+related. We have `d = 2 - α` where `d` is the box couting or capacity dimension.
 """
 function uncertainty_exponent(xg, yg, basins::Matrix; precision=1e-4, max_size=0)
 
     nx=length(xg)
     ny=length(yg)
     y_grid_res=yg[2]-yg[1]
-
-    # remove attractors from the basins:
-    bsn = deepcopy(basins)
-    ind = iseven.(bsn)
-    bsn[ind] .= bsn[ind] .+ 1
 
     # resolution in pixels
     min_ε = 1;
@@ -56,7 +66,7 @@ function uncertainty_exponent(xg, yg, basins::Matrix; precision=1e-4, max_size=0
             ky = rand(ceil(Int64,eps+1):floor(Int64,ny-eps))
 
             indy = range(ky-eps,ky+eps,step=1)
-            c = bsn[kx, indy]
+            c = basins[kx, indy]
 
             if length(unique(c))>1
                 Nu = Nu + 1

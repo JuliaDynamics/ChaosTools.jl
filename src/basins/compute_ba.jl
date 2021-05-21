@@ -58,14 +58,12 @@ prior knowledge about the system. At the end of a successfull computation the fu
 returns a matrix coding the basins of attraction and a dictionary with all attractors found.
 
 `basins` has the following organization:
-* The atractors points are *even numbers* in the matrix. For example, `2` and `4` refer to
-  distinct attractors.
-* The basins are coded with *odd numbers*, `2n+1` corresponding the attractor `2n`.
+* The basins are coded in sequential order from 1 to the number of attractors `Na` .
 * If the trajectory diverges or converges to an attractor outside the defined grid it is
   numbered `-1`
 
 `attractors` has the following organization:
-* The keys of the dictionary correspond to the number of the attractor (even numbers).
+* The keys of the dictionary correspond to the number of the attractor.
 * The value associated to a key is a [`Dataset`](@ref) with the *guessed* location of the
   attractor on the plane.
 
@@ -226,11 +224,7 @@ function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_che
         bsn_nfo.basin[n,m] = bsn_nfo.current_color
         # reinit consecutive match to ensure that we have an attractor
         bsn_nfo.consecutive_match = max_check
-        if haskey(bsn_nfo.attractors , bsn_nfo.current_color)
-            push!(bsn_nfo.attractors[bsn_nfo.current_color],  u) # store attractor
-        else
-            bsn_nfo.attractors[bsn_nfo.current_color] = Dataset([SVector(u[1],u[2])])  # init dic
-        end
+        store_attractor!(bsn_nfo, u)
         return 0
     elseif next_c == bsn_nfo.current_color + 1
         # hit a previously visited box with the current color, possible attractor?
@@ -239,11 +233,7 @@ function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_che
             return 0
         else
             bsn_nfo.basin[n,m] = bsn_nfo.current_color
-            if haskey(bsn_nfo.attractors , bsn_nfo.current_color)
-                push!(bsn_nfo.attractors[bsn_nfo.current_color],  u) # store attractor
-            else
-                bsn_nfo.attractors[bsn_nfo.current_color] = Dataset([SVector(u[1],u[2])]) # init dic
-            end
+            store_attractor!(bsn_nfo, u)
             # We continue iterating until we hit again the same attractor. In which case we stop.
             return 0;
         end
@@ -264,7 +254,6 @@ function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_che
         if bsn_nfo.consecutive_other_basins > 60 || bsn_nfo.prevConsecutives > 10
             ind = (bsn_nfo.basin .== bsn_nfo.current_color+1)
             bsn_nfo.basin[ind] .= next_c
-
             reset_bsn_nfo!(bsn_nfo)
             return next_c
         end
@@ -279,7 +268,7 @@ function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_che
         bsn_nfo.basin[ind] .= 1
 
         bsn_nfo.basin[n,m] = bsn_nfo.current_color
-        push!(bsn_nfo.attractors[bsn_nfo.current_color],  u) # store attractor
+        store_attractor!(bsn_nfo, u)
 
         # pick the next color for coloring the basin.
         bsn_nfo.current_color = bsn_nfo.next_avail_color
@@ -289,6 +278,16 @@ function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_che
         return next_c+1;
     else
         return 0
+    end
+end
+
+
+function store_attractor!(bsn_nfo::BasinInfo, u)
+    # We divide by to order the attractors from 1 to Na
+    if haskey(bsn_nfo.attractors , bsn_nfo.current_color/2)
+        push!(bsn_nfo.attractors[bsn_nfo.current_color/2],  u) # store attractor
+    else
+        bsn_nfo.attractors[bsn_nfo.current_color/2] = Dataset([SVector(u[1],u[2])])  # init dic
     end
 end
 
@@ -338,6 +337,10 @@ function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_
          u0 = SVector(x0, y0)
          bsn_nfo.basin[ni,mi] = get_color_point!(bsn_nfo, integ, u0; Ncheck=Ncheck)
     end
+    # remove attractors and rescale from 1 to Na
+    ind = iseven.(bsn_nfo.basin)
+    bsn_nfo.basin[ind] .+= 1
+    bsn_nfo.basin = (bsn_nfo.basin .- 1)./2
     return bsn_nfo
 end
 

@@ -11,10 +11,10 @@ include("orbitdiagrams/orbitdiagram_tests.jl")
 include("orbitdiagrams/poincare_tests.jl")
 
 include("chaosdetection/lyapunov_exponents.jl")
-include("chaosdetection/gali_tests.jl")
+#include("chaosdetection/gali_tests.jl")
 include("chaosdetection/partially_predictable_tests.jl")
 include("chaosdetection/01test.jl")
-include("chaosdetection/expansionentropy_tests.jl")
+#include("chaosdetection/expansionentropy_tests.jl")
 
 include("period_return/periodicity_tests.jl")
 include("period_return/period_tests.jl")

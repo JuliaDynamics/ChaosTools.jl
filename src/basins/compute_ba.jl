@@ -284,10 +284,10 @@ end
 
 function store_attractor!(bsn_nfo::BasinInfo, u)
     # We divide by to order the attractors from 1 to Na
-    if haskey(bsn_nfo.attractors , bsn_nfo.current_color/2)
-        push!(bsn_nfo.attractors[bsn_nfo.current_color/2],  u) # store attractor
+    if haskey(bsn_nfo.attractors , bsn_nfo.current_color÷2)
+        push!(bsn_nfo.attractors[bsn_nfo.current_color÷2],  u) # store attractor
     else
-        bsn_nfo.attractors[bsn_nfo.current_color/2] = Dataset([SVector(u[1],u[2])])  # init dic
+        bsn_nfo.attractors[bsn_nfo.current_color÷2] = Dataset([SVector(u[1],u[2])])  # init dic
     end
 end
 
@@ -340,7 +340,7 @@ function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_
     # remove attractors and rescale from 1 to Na
     ind = iseven.(bsn_nfo.basin)
     bsn_nfo.basin[ind] .+= 1
-    bsn_nfo.basin = (bsn_nfo.basin .- 1)./2
+    bsn_nfo.basin = (bsn_nfo.basin .- 1).÷2
     return bsn_nfo
 end
 

@@ -27,16 +27,39 @@ that diverge, these are considered as the last attractor of the system in `P`.
 [^Kaszás2019]: Kaszás, Feudel, & Tél. Tipping phenomena in typical dynamical systems
 subjected to parameter drift. [Scientific Reports, 9(1)](https://doi.org/10.1038/s41598-019-44863-3)
 """
-function tipping_probabilities end
-
 function tipping_probabilities(basins_before, basins_after)
     @assert size(basins_before) == size(basins_after)
+
+    bid, aid = unique.((basins_before, basins_after))
+    P = zeros(length(bid), length(aid))
+    N = length(basins_before)
+    # Make -1 last entry in bid, aid, if it exists
+    put_minus_1_at_end!(bid); put_minus_1_at_end!(aid)
+
+    # Notice: the following loops could be optimized with smarter boolean operations,
+    # however they are so fast that everything should be done within milliseconds even
+    # on a potato
+    for (i, ι) in enumerate(bid)
+        B_i = findall(isequal(ι), basins_before)
+        μ_B_i = length(B_i)/N # μ = measure
+        for (j, ξ) in enumerate(aid)
+            B_j = findall(isequal(ξ), basins_after)
+            μ_overlap = length(B_i ∩ B_j)/N
+            P[i, j] = μ_overlap/μ_B_i
+        end
+    end
+    return P
 end
 
-
+function put_minus_1_at_end!(bid)
+    if -1 ∈ bid
+        sort!(bid)
+        popfirst!(bid)
+        push!(bid, -1)
+    end
+end
 
 # test
-
 ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
 xg=range(-4, 4, length=150)
 yg=range(-4, 4, length=150)
@@ -49,22 +72,4 @@ yg=range(-4, 4, length=150)
 @time basins_after, attractors = basins_general(xg, yg, ds; idxs = 1:2, reltol = 1e-9)
 attractors
 
-bid, aid = unique.((basins_before, basins_after))
-P = zeros(length(bid), length(aid))
-N = length(basins_before)
-
-# Make -1 last entry in bid, aid, if it exists
-
-
-# Notice: the following loops could be optimized with smarter boolean operations,
-# however they are so fast that everything should be done within milliseconds even
-# on a potato
-for (i, ι) in enumerate(bid)
-    B_i = findall(isequal(ι), basins_before)
-    μ_B_i = length(B_i)/N # μ = measure
-    for (j, ξ) in enumerate(aid)
-        B_j = findall(isequal(ξ), basins_after)
-        μ_overlap = length(B_i ∩ B_j)/N
-        P[i, j] = μ_overlap/μ_B_i
-    end
-end
+P = tipping_probabilities(basins_before, basins_after)

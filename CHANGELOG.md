@@ -1,3 +1,8 @@
+# 1.29
+* Performance improvements for basins of attraction
+* New function `uncertainty_exponent`
+* New function `tipping_probabilities`
+
 # 1.28
 * New functions `basins_map2D` and `basins_general` that efficiently compute basins of attraction on a plane!
 

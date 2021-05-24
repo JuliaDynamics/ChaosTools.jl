@@ -53,9 +53,9 @@ attractors this list may be incomplete.
 * `mc_att = 10`: A parameter that sets the maximum checks of consecutives hits of an attractor
   before deciding the basin of the initial condition.
 * `mc_bas = 10` : Maximum check of consecutive visits of the same basin of attraction. This number
-  be increased for higher accuracy.
+  can be increased for higher accuracy.
 * `mc_unmb = 60` : Maximum check of unnumbered cell before considering we have an attractor. This number
-  be increased for higher accuracy.
+  can be increased for higher accuracy.
 
 ## Description
 This method identifies the attractors and their basins of attraction on the grid without

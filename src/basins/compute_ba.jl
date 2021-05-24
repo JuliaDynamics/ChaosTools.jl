@@ -45,6 +45,8 @@ The output `attractors` is a dictionary whose keys correspond to the attractor n
 the values contains the points of the attractors found on the map. Notice that for some
 attractors this list may be incomplete.
 
+See also [`basin_fractions`](@ref), [`tipping_probabilities`](@ref).
+
 [^Yorke1997]: H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations Ch. 7, Springer, New York, 1997
 
 ## Keyword Arguments
@@ -134,12 +136,7 @@ computation and the structure of `basin` and `attractors`.
   of the dynamical system state on each planar initial condition `x, y`. It can be
   either a vector of length `D-2`, or a function `f(x, y)` that returns a vector of
   length `D-2`.
-* `mc_att = 10`: A parameter that sets the maximum checks of consecutives hits of an attractor
-  before deciding the basin of the initial condition.
-* `mc_bas = 10` : Maximum checks of consecutive visits of the same basin of attraction. This number
-  be increased for higher accuracy.
-* `mc_unmb = 60` : Maximum checks of unnumbered cell before considering we have an attractor. This
-  number be increased for higher accuracy.
+* `mc_att, mc_bas, mc_unmb`: As in [`basins_map2D`](@ref).
 * `diffeq...`: Keyword arguments propagated to [`integrator`](@ref).
 """
 function basins_general(xg, yg, ds::DynamicalSystem;

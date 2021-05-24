@@ -16,18 +16,18 @@ from ``A_i`` to ``A_j``, given a parameter change in the system of ``p_- \\to p_
 P(A_i \\to A_j | p_- \\to p_+) =
 \\frac{|\\mathcal{B}_j(p_+) \\cap \\mathcal{B}_i(p_-)|}{|\\mathcal{B}_i(p_-)|}
 ```
-where ``|\cdot|`` is simply the volume of the enclosed set.
+where ``|\\cdot|`` is simply the volume of the enclosed set.
 The value of `` P(A_i \\to A_j | p_- \\to p_+)`` is `P[i, j]`.
 The equation describes something quite simple:
 what is the overlap of the basin of attraction of ``A_i`` at ``p_-`` with that of the
 attractor ``A_j`` at ``p_+``.
 If `basins_before, basins_after` contain values of `-1`, corresponding to trajectories
-that diverge, these are considered as the last attractor of the system in `P`.
+that diverge, this is considered as the last attractor of the system in `P`.
 
-[^Kaszás2019]: Kaszás, Feudel, & Tél. Tipping phenomena in typical dynamical systems
+[^Kaszás2019]: Kaszás, Feudel & Tél. Tipping phenomena in typical dynamical systems
 subjected to parameter drift. [Scientific Reports, 9(1)](https://doi.org/10.1038/s41598-019-44863-3)
 """
-function tipping_probabilities(basins_before, basins_after)
+function tipping_probabilities(basins_before::AbstractArray, basins_after::AbstractArray)
     @assert size(basins_before) == size(basins_after)
 
     bid, aid = unique.((basins_before, basins_after))
@@ -41,10 +41,10 @@ function tipping_probabilities(basins_before, basins_after)
     # on a potato
     for (i, ι) in enumerate(bid)
         B_i = findall(isequal(ι), basins_before)
-        μ_B_i = length(B_i)/N # μ = measure
+        μ_B_i = length(B_i) # μ = measure
         for (j, ξ) in enumerate(aid)
             B_j = findall(isequal(ξ), basins_after)
-            μ_overlap = length(B_i ∩ B_j)/N
+            μ_overlap = length(B_i ∩ B_j)
             P[i, j] = μ_overlap/μ_B_i
         end
     end
@@ -58,18 +58,3 @@ function put_minus_1_at_end!(bid)
         push!(bid, -1)
     end
 end
-
-# test
-ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
-xg=range(-4, 4, length=150)
-yg=range(-4, 4, length=150)
-@time basins_before, attractors = basins_general(xg, yg, ds; idxs = 1:2, reltol = 1e-9)
-attractors
-
-ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=4)
-xg=range(-4, 4, length=150)
-yg=range(-4, 4, length=150)
-@time basins_after, attractors = basins_general(xg, yg, ds; idxs = 1:2, reltol = 1e-9)
-attractors
-
-P = tipping_probabilities(basins_before, basins_after)

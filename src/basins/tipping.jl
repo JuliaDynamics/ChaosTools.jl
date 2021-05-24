@@ -2,7 +2,7 @@ export basin_fractions, tipping_probabilities
 
 """
     basin_fractions(basins::Array) → fs::Dict
-Calculate the fraction of the basin of attraction of each basin encoded in `basins`.
+Calculate the fraction of the basins of attraction encoded in `basins`.
 The elements of `basins` are integers, enumerating the attractor that the entry of `basins`
 converges to. Return a dictionary that maps attractor IDs to their relative fractions.
 

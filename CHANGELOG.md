@@ -1,6 +1,7 @@
 # 1.29
 * Performance improvements for basins of attraction
 * New function `uncertainty_exponent`
+* New function `basin_fractions`
 * New function `tipping_probabilities`
 
 # 1.28

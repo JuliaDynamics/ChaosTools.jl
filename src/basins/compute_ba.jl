@@ -1,22 +1,23 @@
 export draw_basin!, basins_map2D, basins_general
 
-mutable struct BasinInfo{F,T}
+mutable struct BasinInfo{F,T,Q}
     basin::Matrix{Int16}
     xg::F
     yg::F
     iter_f!::Function
     reinit_f!::Function
     get_u::Function
-    current_color::Int64
-    next_avail_color::Int64
-    consecutive_match::Int64
-    consecutive_other_basins::Int64
-    prevConsecutives::Int64
-    prev_attr::Int64
-    prev_bas::Int64
-    prev_step::Int64
-    step::Int64
+    current_color::Int
+    next_avail_color::Int
+    consecutive_match::Int
+    consecutive_other_basins::Int
+    prevConsecutives::Int
+    prev_attr::Int
+    prev_bas::Int
+    prev_step::Int
+    step::Int
     attractors::Dict{Int16, Dataset{2, T}}
+    visited::Q
 end
 
 function Base.show(io::IO, bsn::BasinInfo)
@@ -49,8 +50,12 @@ attractors this list may be incomplete.
 ## Keyword Arguments
 * `T` : Period of the stroboscopic map, in case `integ` is an integrator of a 2D continuous
   dynamical system with periodic time forcing.
-* `Ncheck` : A parameter that sets the number of consecutives hits of an attractor before
-  deciding the basin of the initial condition.
+* `mc_att = 10`: A parameter that sets the maximum checks of consecutives hits of an attractor
+  before deciding the basin of the initial condition.
+* `mc_bas = 10` : Maximum check of consecutive visits of the same basin of attraction. This number
+  can be increased for higher accuracy.
+* `mc_unmb = 60` : Maximum check of unnumbered cell before considering we have an attractor. This number
+  can be increased for higher accuracy.
 
 ## Description
 This method identifies the attractors and their basins of attraction on the grid without
@@ -74,18 +79,18 @@ happens:
    numbered with corresponding odd number.
 1. The trajectory diverges or hits an attractor outside the defined grid: the initial
    condition is set to -1
-1. The trajectory hits a known basin 10 times in a row: the initial condition belongs to
+1. The trajectory hits a known basin `mc_bas` times in a row: the initial condition belongs to
    that basin and is numbered accordingly.
-1. The trajectory hits 60 times in a row an unnumbered cell: it is considered an attractor
+1. The trajectory hits `mc_unmb` times in a row an unnumbered cell: it is considered an attractor
    and is labelled with a even number.
 
 Regarding performace, this method is at worst as fast as tracking the attractors.
 In most cases there is a signicative improvement in speed.
 """
-function basins_map2D(xg, yg, pmap::PoincareMap; Ncheck = 3)
+function basins_map2D(xg, yg, pmap::PoincareMap; mc_att = 3, mc_bas = 10, mc_unmb = 60)
     reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
     get_u = (pmap) -> pmap.integ.u[pmap.i]
-    bsn_nfo = draw_basin!(xg, yg, pmap, step!, reinit_f!, get_u, Ncheck)
+    bsn_nfo = draw_basin!(xg, yg, pmap, step!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
@@ -96,7 +101,7 @@ function _init_map(pmap::PoincareMap, y, idxs)
     reinit!(pmap, u)
 end
 
-function basins_map2D(xg, yg, integ; T=nothing, Ncheck = 2)
+function basins_map2D(xg, yg, integ; T=nothing, mc_att = 2, mc_bas = 10, mc_unmb = 60)
     if T isa Real
         iter_f! = (integ) -> step!(integ, abs(T), true)
     elseif isnothing(T)
@@ -105,7 +110,7 @@ function basins_map2D(xg, yg, integ; T=nothing, Ncheck = 2)
     reinit_f! =  (integ,y) -> reinit!(integ, y)
     get_u = (integ) -> integ.u
 
-    bsn_nfo = draw_basin!(xg, yg, integ, iter_f!, reinit_f!, get_u, Ncheck)
+    bsn_nfo = draw_basin!(xg, yg, integ, iter_f!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
@@ -129,19 +134,23 @@ computation and the structure of `basin` and `attractors`.
   of the dynamical system state on each planar initial condition `x, y`. It can be
   either a vector of length `D-2`, or a function `f(x, y)` that returns a vector of
   length `D-2`.
-* `Ncheck = 10`: A parameter that sets the number of consecutives hits of an attractor
+* `mc_att = 10`: A parameter that sets the maximum checks of consecutives hits of an attractor
   before deciding the basin of the initial condition.
+* `mc_bas = 10` : Maximum checks of consecutive visits of the same basin of attraction. This number
+  be increased for higher accuracy.
+* `mc_unmb = 60` : Maximum checks of unnumbered cell before considering we have an attractor. This
+  number be increased for higher accuracy.
 * `diffeq...`: Keyword arguments propagated to [`integrator`](@ref).
 """
 function basins_general(xg, yg, ds::DynamicalSystem;
-        dt=1, idxs = SVector(1, 2), Ncheck = 10, complete_state=zeros(dimension(ds)-2), diffeq...
+        dt=1, idxs = SVector(1, 2), mc_att = 10, mc_bas = 10, mc_unmb = 60, complete_state=zeros(dimension(ds)-2), diffeq...
     )
     integ = integrator(ds; diffeq...)
     idxs = SVector(idxs...)
-    return basins_general(xg, yg, integ; dt, idxs, Ncheck, complete_state)
+    return basins_general(xg, yg, integ; dt, idxs, mc_att, mc_bas, mc_unmb, complete_state)
 end
 
-function basins_general(xg, yg, integ; complete_state, idxs::SVector, Ncheck, dt)
+function basins_general(xg, yg, integ; complete_state, idxs::SVector, mc_att, mc_bas, mc_unmb, dt)
     iter_f! = (integ) -> step!(integ, dt) # we don't have to step _exactly_ `dt` here
     D = length(integ.u)
     remidxs = setdiff(1:D, idxs)
@@ -159,7 +168,7 @@ function basins_general(xg, yg, integ; complete_state, idxs::SVector, Ncheck, dt
         error("Incorrect type for `complete_state`")
     end
     get_u = (integ) -> integ.u[idxs]
-    bsn_nfo = draw_basin!(xg, yg, integ, iter_f!, reinit_f!, get_u, Ncheck)
+    bsn_nfo = draw_basin!(xg, yg, integ, iter_f!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
@@ -181,101 +190,96 @@ end
 # The idea is to color the grid with the current color. When an attractor box is hit (even color), the initial condition is colored
 # with the color of its basin (odd color). If the trajectory hits another basin 10 times in row the IC is colored with the same
 # color as this basin.
-function procedure!(bsn_nfo::BasinInfo, n::Int, m::Int, u, Ncheck::Int;  max_check = 60)
-    next_c = bsn_nfo.basin[n,m]
+function procedure!(bsn_nfo::BasinInfo, n::CartesianIndex, u, mc_att::Int, mc_bas::Int, mc_unmb::Int)
+    next_c = bsn_nfo.basin[n]
     bsn_nfo.step += 1
 
-    if iseven(next_c) && bsn_nfo.consecutive_match < max_check
-        # check wether or not we hit an attractor (even color). Make sure we hit Ncheck consecutive times.
+    if iseven(next_c) && bsn_nfo.consecutive_match < mc_unmb
+        # check wether or not we hit an attractor (even color). Make sure we hit mc_att consecutive times.
         if bsn_nfo.prev_attr == next_c
-            bsn_nfo.prevConsecutives +=1
+            bsn_nfo.prevConsecutives += 1
         else
             # reset prevConsecutives
             bsn_nfo.prev_attr = next_c
-            bsn_nfo.prevConsecutives =1
+            bsn_nfo.prevConsecutives = 1
             return 0;
         end
 
-        if bsn_nfo.prevConsecutives ≥ Ncheck
-            # Wait if we hit the attractor a Ncheck times in a row just to check if it is not a nearby trajectory
-            c3 = next_c+1
-            ind = (bsn_nfo.basin .== bsn_nfo.current_color+1)
-            if Ncheck == 2
+        if bsn_nfo.prevConsecutives ≥ mc_att
+            # Wait if we hit the attractor a mc_att times in a row just to check if it is not a nearby trajectory
+            c3 = next_c + 1
+            if mc_att == 2
                 # For maps we can color the previous steps as well. Every point of the trajectory lead
                 # to the attractor
-                bsn_nfo.basin[ind] .= c3
+                recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, c3)
             else
                 # For higher dimensions we erase the past iterations and visited boxes
-                bsn_nfo.basin[ind] .= 1
+                recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, 1)
             end
             reset_bsn_nfo!(bsn_nfo)
             return c3
          end
     end
 
-    if next_c == 1 && bsn_nfo.consecutive_match < max_check
+    if next_c == 1 && bsn_nfo.consecutive_match < mc_unmb
         # uncolored box, color it with current odd color
-        bsn_nfo.basin[n,m] = bsn_nfo.current_color + 1
+        bsn_nfo.basin[n] = bsn_nfo.current_color + 1
+        push!(bsn_nfo.visited,n) # keep track of visited cells
         bsn_nfo.consecutive_match = 0
         return 0
-    elseif next_c == 1 && bsn_nfo.consecutive_match >= max_check
+    elseif next_c == 1 && bsn_nfo.consecutive_match >= mc_unmb
         # Maybe chaotic attractor, perodic or long recursion.
         # Color this box as part of an attractor
-        bsn_nfo.basin[n,m] = bsn_nfo.current_color
+        bsn_nfo.basin[n] = bsn_nfo.current_color
         # reinit consecutive match to ensure that we have an attractor
-        bsn_nfo.consecutive_match = max_check
+        bsn_nfo.consecutive_match = mc_unmb
         store_attractor!(bsn_nfo, u)
         return 0
     elseif next_c == bsn_nfo.current_color + 1
         # hit a previously visited box with the current color, possible attractor?
-        if bsn_nfo.consecutive_match < max_check
+        if bsn_nfo.consecutive_match < mc_unmb
             bsn_nfo.consecutive_match += 1
             return 0
         else
-            bsn_nfo.basin[n,m] = bsn_nfo.current_color
+            bsn_nfo.basin[n] = bsn_nfo.current_color
             store_attractor!(bsn_nfo, u)
             # We continue iterating until we hit again the same attractor. In which case we stop.
             return 0;
         end
-    elseif isodd(next_c) && 0 < next_c < bsn_nfo.current_color &&  bsn_nfo.consecutive_match < max_check && Ncheck == 2
+    elseif isodd(next_c) && 0 < next_c < bsn_nfo.current_color &&  bsn_nfo.consecutive_match < mc_unmb && mc_att == 2
         # hit a colored basin point of the wrong basin, happens all the time, we check if it happens
-        #10 times in a row or if it happens N times along the trajectory whether to decide if it is another basin.
+        # mc_bas times in a row or if it happens N times along the trajectory whether to decide if it is another basin.
         bsn_nfo.consecutive_other_basins += 1
 
-        if bsn_nfo.prev_bas == next_c &&  bsn_nfo.prev_step == bsn_nfo.step-1
-            bsn_nfo.prevConsecutives +=1
+        if bsn_nfo.prev_bas == next_c &&  bsn_nfo.prev_step == bsn_nfo.step - 1
+            bsn_nfo.prevConsecutives += 1
             bsn_nfo.prev_step += 1
         else
             bsn_nfo.prev_bas = next_c
             bsn_nfo.prev_step = bsn_nfo.step
-            bsn_nfo.prevConsecutives =1
+            bsn_nfo.prevConsecutives = 1
         end
 
-        if bsn_nfo.consecutive_other_basins > 60 || bsn_nfo.prevConsecutives > 10
-            ind = (bsn_nfo.basin .== bsn_nfo.current_color+1)
-            bsn_nfo.basin[ind] .= next_c
+        if bsn_nfo.consecutive_other_basins > 60 || bsn_nfo.prevConsecutives > mc_bas
+            recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, next_c)
             reset_bsn_nfo!(bsn_nfo)
             return next_c
         end
         return 0
-    elseif iseven(next_c) &&   (max_check <= bsn_nfo.consecutive_match < 2*max_check)
+    elseif iseven(next_c) &&   (mc_unmb <= bsn_nfo.consecutive_match < 2 * mc_unmb)
         # We make sure we hit the attractor 60 consecutive times
-        bsn_nfo.consecutive_match+=1
+        bsn_nfo.consecutive_match += 1
         return 0
-    elseif iseven(next_c) && bsn_nfo.consecutive_match >= max_check*2
+    elseif iseven(next_c) && bsn_nfo.consecutive_match >= mc_unmb * 2
         # We have checked the presence of an attractor: tidy up everything and get a new box.
-        ind = (bsn_nfo.basin .== bsn_nfo.current_color+1)
-        bsn_nfo.basin[ind] .= 1
-
-        bsn_nfo.basin[n,m] = bsn_nfo.current_color
+        recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, 1)
+        bsn_nfo.basin[n] = bsn_nfo.current_color
         store_attractor!(bsn_nfo, u)
-
         # pick the next color for coloring the basin.
         bsn_nfo.current_color = bsn_nfo.next_avail_color
         bsn_nfo.next_avail_color += 2
-
         reset_bsn_nfo!(bsn_nfo)
-        return next_c+1;
+        return next_c + 1;
     else
         return 0
     end
@@ -284,13 +288,21 @@ end
 
 function store_attractor!(bsn_nfo::BasinInfo, u)
     # We divide by to order the attractors from 1 to Na
-    if haskey(bsn_nfo.attractors , bsn_nfo.current_color÷2)
-        push!(bsn_nfo.attractors[bsn_nfo.current_color÷2],  u) # store attractor
+    if haskey(bsn_nfo.attractors , bsn_nfo.current_color ÷ 2)
+        push!(bsn_nfo.attractors[bsn_nfo.current_color ÷ 2],  u) # store attractor
     else
-        bsn_nfo.attractors[bsn_nfo.current_color÷2] = Dataset([SVector(u[1],u[2])])  # init dic
+        bsn_nfo.attractors[bsn_nfo.current_color ÷ 2] = Dataset([SVector(u[1],u[2])])  # init dic
     end
 end
 
+function recolor_visited_cell!(bsn_nfo::BasinInfo, old_c, new_c)
+    while !isempty(bsn_nfo.visited)
+       ind = pop!(bsn_nfo.visited)
+       if bsn_nfo.basin[ind] == old_c
+           bsn_nfo.basin[ind] = new_c
+       end
+    end
+end
 
 """
     draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function)
@@ -304,47 +316,46 @@ for higher level functions see: `basins_map2D`, `basins_general`
 examples for a Poincaré map of a continuous system.
 * `reinit_f!` : function that sets the initial condition to test on a two dimensional projection of the phase space.
 """
-function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_u::Function, Ncheck)
-    complete = 0;
-    bsn_nfo = BasinInfo(ones(Int16, length(xg), length(yg)), xg, yg, iter_f!, reinit_f!, get_u, 2,4,0,0,0,1,1,0,0,Dict{Int16,Dataset{2,eltype(get_u(integ))}}())
+function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_u::Function, mc_att, mc_bas, mc_unmb)
+    complete = false
+    bsn_nfo = BasinInfo(ones(Int16, length(xg), length(yg)), xg, yg,
+                iter_f!, reinit_f!, get_u, 2,4,0,0,0,1,1,0,0,Dict{Int16,Dataset{2,eltype(get_u(integ))}}(), Vector{CartesianIndex}())
     reset_bsn_nfo!(bsn_nfo)
     I = CartesianIndices(bsn_nfo.basin)
     j  = 1
 
-    while complete == 0
+    while !complete
          # pick the first empty box
          ind = 0
          for k in j:length(bsn_nfo.basin)
              if bsn_nfo.basin[I[k]] == 1
                  j = k
-                 ind=I[k]
+                 ind = I[k]
                  break
              end
          end
 
          if ind == 0
              # We are done
-             complete = 1
+             complete = true
              break
          end
 
-         ni = ind[1]; mi = ind[2];
-         x0 = xg[ni]; y0 = yg[mi]
-
+         x0 , y0  = xg[ind[1]] , yg[ind[2]]
          # Tentatively assign a color: odd is for basins, even for attractors.
          # First color is one
-         bsn_nfo.basin[ni,mi] = bsn_nfo.current_color + 1
+         bsn_nfo.basin[ind] = bsn_nfo.current_color + 1
          u0 = SVector(x0, y0)
-         bsn_nfo.basin[ni,mi] = get_color_point!(bsn_nfo, integ, u0; Ncheck=Ncheck)
+         bsn_nfo.basin[ind] = get_color_point!(bsn_nfo, integ, u0, mc_att, mc_bas, mc_unmb)
     end
     # remove attractors and rescale from 1 to Na
     ind = iseven.(bsn_nfo.basin)
     bsn_nfo.basin[ind] .+= 1
-    bsn_nfo.basin = (bsn_nfo.basin .- 1).÷2
+    bsn_nfo.basin = (bsn_nfo.basin .- 1) .÷ 2
     return bsn_nfo
 end
 
-function get_color_point!(bsn_nfo::BasinInfo, integ, u0; Ncheck=2)
+function get_color_point!(bsn_nfo::BasinInfo, integ, u0, mc_att, mc_bas, mc_unmb)
     # This routine identifies the attractor using the previously defined basin.
     # reinitialize integrator
     bsn_nfo.reinit_f!(integ, u0)
@@ -355,14 +366,14 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, u0; Ncheck=2)
        old_u = bsn_nfo.get_u(integ)
        bsn_nfo.iter_f!(integ)
        new_u = bsn_nfo.get_u(integ)
-       n,m = get_box(new_u, bsn_nfo)
+       n = get_box(new_u, bsn_nfo)
 
-       if n>=0 # apply procedure only for boxes in the defined space
-           done = procedure!(bsn_nfo, n, m, new_u, Ncheck)
+       if !isnothing(n) # apply procedure only for boxes in the defined space
+           done = procedure!(bsn_nfo, n, new_u, mc_att, mc_bas, mc_unmb)
            inlimbo = 0
        else
            # We are outside the defined grid
-           inlimbo +=1
+           inlimbo += 1
        end
 
        if inlimbo > 60
@@ -376,32 +387,26 @@ function get_box(u, bsn_nfo::BasinInfo)
     xg = bsn_nfo.xg; yg = bsn_nfo.yg; # aliases
     xstep = (xg[2]-xg[1])
     ystep = (yg[2]-yg[1])
-    xu = u[1]
-    yu = u[2]
-    n = m = 0;
+    xu, yu = u
+    n = m = 0
     # check boundary
     if xu >= xg[1] && xu <= xg[end] && yu >= yg[1] && yu <= yg[end]
-        n = Int(round((xu-xg[1])/xstep))+1
-        m = Int(round((yu-yg[1])/ystep))+1 # +1 for 1 based indexing
+        n = Int(round((xu-xg[1])/xstep)) + 1
+        m = Int(round((yu-yg[1])/ystep)) + 1 # +1 for 1 based indexing
     else
-        n = -1
-        m = -1
+        return nothing
     end
-    return n, m
+    return CartesianIndex(n,m)
 end
 
 function check_outside_the_screen!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
     if norm(new_u-old_u) < 1e-5
-        #println("Got stuck somewhere, Maybe an attractor outside the screen: ", new_u)
-        ind = (bsn_nfo.basin .== bsn_nfo.current_color+1)
-        bsn_nfo.basin[ind] .= 1
+        recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, 1)
         reset_bsn_nfo!(bsn_nfo)
         # this CI goes to a attractor outside the screen, set to -1 (even color)
         return -1  # get next box
     elseif inlimbo > 60*20
-        #println("trajectory diverges: ", new_u)
-        ind = (bsn_nfo.basin .== bsn_nfo.current_color+1)
-        bsn_nfo.basin[ind] .= 1
+        recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, 1)
         reset_bsn_nfo!(bsn_nfo)
         # this CI is problematic or diverges, set to -1 (even color)
         return -1  # get next box

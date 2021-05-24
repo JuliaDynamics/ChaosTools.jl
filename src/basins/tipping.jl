@@ -13,11 +13,11 @@ attraction, and specifically how it changes when a parameter is changed.
 stability paradigm. [Nature Physics, 9(2), 89–92](https://doi.org/10.1038/nphys2516)
 """
 function basin_fractions(basins::AbstractArray)
-    fs = Dict{eltype(basins}, Float64}()
-    ids = unique(basins_before)
+    fs = Dict{eltype(basins), Float64}()
+    ids = unique(basins)
     N = length(basins)
     for ξ in ids
-        B = findall(isequal(ξ), basins)
+        B = count(isequal(ξ), basins)
         fs[ξ] = B/N
     end
     return fs

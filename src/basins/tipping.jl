@@ -9,8 +9,7 @@ converges to. Return a dictionary that maps attractor IDs to their relative frac
 In[^Menck2013] the authors use these fractions to quantify the stability of a basin of
 attraction, and specifically how it changes when a parameter is changed.
 
-[^Menck2013]: Menck, Heitzig, Marwan & Kurths. How basin stability complements the linear
-stability paradigm. [Nature Physics, 9(2), 89–92](https://doi.org/10.1038/nphys2516)
+[^Menck2013]: Menck, Heitzig, Marwan & Kurths. How basin stability complements the linear stability paradigm. [Nature Physics, 9(2), 89–92](https://doi.org/10.1038/nphys2516)
 """
 function basin_fractions(basins::AbstractArray)
     fs = Dict{eltype(basins), Float64}()
@@ -50,8 +49,7 @@ attractor ``A_j`` at ``p_+``.
 If `basins_before, basins_after` contain values of `-1`, corresponding to trajectories
 that diverge, this is considered as the last attractor of the system in `P`.
 
-[^Kaszás2019]: Kaszás, Feudel & Tél. Tipping phenomena in typical dynamical systems
-subjected to parameter drift. [Scientific Reports, 9(1)](https://doi.org/10.1038/s41598-019-44863-3)
+[^Kaszás2019]: Kaszás, Feudel & Tél. Tipping phenomena in typical dynamical systems subjected to parameter drift. [Scientific Reports, 9(1)](https://doi.org/10.1038/s41598-019-44863-3)
 """
 function tipping_probabilities(basins_before::AbstractArray, basins_after::AbstractArray)
     @assert size(basins_before) == size(basins_after)

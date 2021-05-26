@@ -430,13 +430,13 @@ Attempt to match the attractors in basins/attractors `b1, a1` with those at `b2,
 In these functions different attractors get assigned different IDs, however
 which attractor gets which ID is somewhat arbitrary, and computing the basins of the
 same system for slightly different parameters could label the "same" attractors (at
-the different parameters) with different IDs. `match_attractors!` tries to "match" them.
+the different parameters) with different IDs. `match_attractors!` tries to "match" them
+by modifying the attractor IDs in `b1, a1`.
 
 `method` decides the matching process:
 * `method = :overlap` matches attractors whose basins before and after have the most
   overlap (in pixels in `b1, b2`).
 * `method = :distance` matches attractors whose state space distance the smallest.
-  This method requires that the total amount of attractors before and after is the same.
 """
 function match_attractors!(b1, a1, b2, a2, method = :overlap)
     ids1, ids2 = keys(a1), keys(a2)
@@ -445,7 +445,9 @@ function match_attractors!(b1, a1, b2, a2, method = :overlap)
             count(findall(isequal(i), b1) ∩ findall(isequal(j), ids2))
             for i in ids1, for j in ids2
         ]
-        fafa
+    elseif method == :distance
+        distances =
+            [minimum()]
     end
 end
 end

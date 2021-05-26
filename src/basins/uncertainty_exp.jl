@@ -37,8 +37,7 @@ Notice that the uncertainty exponent and the box counting dimension of the bound
 related. We have `Δ₀ = 2 - α` where `Δ₀` is the box counting dimension,
 see [Fractal Dimension](@ref)
 
-[^Grebogi1983]: C. Grebogi, S. W. McDonald, E. Ott and J. A. Yorke, Final state sensitivity:
-An obstruction to predictability, Physics Letters A, 99, 9, 1983
+[^Grebogi1983]: C. Grebogi, S. W. McDonald, E. Ott and J. A. Yorke, Final state sensitivity: An obstruction to predictability, Physics Letters A, 99, 9, 1983
 """
 function uncertainty_exponent(xg, yg, basins::Matrix;
         precision = 1e-5, max_ε = floor(Int, length(xg)/20),

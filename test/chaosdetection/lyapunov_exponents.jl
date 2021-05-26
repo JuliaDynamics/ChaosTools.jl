@@ -4,6 +4,7 @@ using DynamicalSystemsBase: CDS, DDS
 using DynamicalSystemsBase.Systems: hoop, hoop_jac, hiip, hiip_jac
 using DynamicalSystemsBase.Systems: loop, loop_jac, liip, liip_jac
 using OrdinaryDiffEq
+using Statistics
 
 println("\nTesting lyapunov exponents...")
 let
@@ -106,5 +107,17 @@ ls, t = ChaosTools.lyapunovspectrum_convergence(tinteg, 20000, 1, 0)
 l1 = [x[1] for x in ls]
 @test 0.434 < l1[end] < 0.436
 end
+
+@testset "Local growth rates" begin
+    # input arguments
+    ds = Systems.henon()
+    points = trajectory(he, 2000; Ttr = 100)
+    λ = lyapunov(ds, 100000)
+
+    λlocal = local_growth_rates(ds, points; Δt = 20, S = 20, e = 1e-12)
+    @test all(λlocal .< 1.0)
+    @test λ-0.1 ≤ mean(λlocal) ≤ λ+0.1
+end
+
 
 end

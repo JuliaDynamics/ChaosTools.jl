@@ -1,4 +1,4 @@
-export draw_basin!, basins_map2D, basins_general
+export draw_basin!, basins_map2D, basins_general, match_attractors!
 
 mutable struct BasinInfo{F,T,Q}
     basin::Matrix{Int16}
@@ -420,4 +420,32 @@ function reset_bsn_nfo!(bsn_nfo::BasinInfo)
     bsn_nfo.prev_bas = 1
     bsn_nfo.prev_step = 0
     bsn_nfo.step = 0
+end
+
+
+"""
+    match_attractors!(b1, a1, b2, a2 [, method = :overlap])
+Attempt to match the attractors in basins/attractors `b1, a1` with those at `b2, a2`.
+`b, a` are expected as outputs of [`basins_map2D`](@ref) or [`basins_general`](@ref).
+In these functions different attractors get assigned different IDs, however
+which attractor gets which ID is somewhat arbitrary, and computing the basins of the
+same system for slightly different parameters could label the "same" attractors (at
+the different parameters) with different IDs. `match_attractors!` tries to "match" them.
+
+`method` decides the matching process:
+* `method = :overlap` matches attractors whose basins before and after have the most
+  overlap (in pixels in `b1, b2`).
+* `method = :distance` matches attractors whose state space distance the smallest.
+  This method requires that the total amount of attractors before and after is the same.
+"""
+function match_attractors!(b1, a1, b2, a2, method = :overlap)
+    ids1, ids2 = keys(a1), keys(a2)
+    if method == :overlap
+        overlaps = [
+            count(findall(isequal(i), b1) ∩ findall(isequal(j), ids2))
+            for i in ids1, for j in ids2
+        ]
+        fafa
+    end
+end
 end

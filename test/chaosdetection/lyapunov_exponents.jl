@@ -111,10 +111,12 @@ end
 @testset "Local growth rates" begin
     # input arguments
     ds = Systems.henon()
-    points = trajectory(he, 2000; Ttr = 100)
+    points = trajectory(ds, 2000; Ttr = 100)
     λ = lyapunov(ds, 100000)
 
     λlocal = local_growth_rates(ds, points; Δt = 20, S = 20, e = 1e-12)
+
+    @test size(λlocal) == (2001, 20)
     @test all(λlocal .< 1.0)
     @test λ-0.1 ≤ mean(λlocal) ≤ λ+0.1
 end

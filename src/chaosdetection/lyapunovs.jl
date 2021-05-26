@@ -1,7 +1,7 @@
 using LinearAlgebra, StaticArrays
 using DynamicalSystemsBase: MinimalDiscreteIntegrator
 
-export lyapunovspectrum, lyapunov
+export lyapunovspectrum, lyapunov, local_growth_rates
 @deprecate lyapunovs lyapunovspectrum
 
 #####################################################################################
@@ -301,4 +301,59 @@ end
 function rescale!(integ::AbstractODEIntegrator{Alg, IIP, Vector{S}}, a) where {Alg, IIP, S<:SVector}
     integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
     u_modified!(integ, true)
+end
+
+
+
+#####################################################################################
+#                              Local Growth Rates                                   #
+#####################################################################################
+"""
+    local_growth_rates(ds, points::Dataset; S=100, Δt=10, kwargs...) → λlocal
+Compute the exponential local growth rate(s) of perturbations of the dynamical system
+`ds` for initial conditions given in `points`. For each initial condition `u ∈ points`,
+`S` total perturbations are created and evolved for time `Δt`. The (exponential) local growth
+rate is defined simply by `log(g/g0)/Δt` with `g0` the initial pertrubation size
+and `g` the size after `Δt`. Thus, `λlocal` is a matrix of size `(length(points), S)`.
+
+This function is a modification of [`lyapunov`](@ref) that does not do any re-scaling
+and allows probing state dependence of perturbation growth.
+
+## Keywords
+* `perturbation`: If given, it should be a function `perturbation(ds, u, j)` that
+  outputs a pertrubation vector (preferrably `SVector`) given the system, current initial
+  condition `u` and the counter `j ∈ 1:S`. If not given, a random perturbation is
+  generated with norm given by the keyword `e = 1e-6`.
+* `diffeq...`: Keywords propagated to the solvers of DifferentialEquations.jl.
+"""
+function local_growth_rates(ds::DynamicalSystem, points;
+        S = 100, Δt = 10, e = 1e-6,
+        perturbation = (ds, u, j) -> _random_Q0(ds, u, j, e),
+        diffeq...
+    )
+    λlocal = zeros(length(points), S)
+    D = dimension(ds)
+    Q0 = perturbation(ds, points[1], 1)
+    states = [points[1], points[1] .+ Q0]
+    pinteg = parallel_integrator(ds, states; diffeq...)
+
+    for (i, u) in enumerate(points)
+        for j in 1:S
+            Q0 = perturbation(ds, u, j)
+            states[1] = u
+            states[2] = states[1] .+ Q0
+            g0 = norm(Q0)
+            reinit!(pinteg, states)
+            step!(pinteg, Δt, true)
+            g = norm(get_state(pinteg, 2) .- get_state(pinteg, 1))
+            λlocal[i, j] = log(g/g0) / (pinteg.t - pinteg.t0)
+        end
+    end
+    return λlocal
+end
+
+function _random_Q0(ds, u, j, e)
+    D = dimension(ds)
+    Q0 = rand(Random.GLOBAL_RNG, SVector{D, eltype(ds)})
+    Q0 = e * Q0 / norm(Q0)
 end

@@ -60,61 +60,113 @@ end
 @testset "Test matching attractors" begin
 end
 
-ds = Systems.magnetic_pendulum(d=0.2, α=0.2, ω=0.8)
-xg = yg = range(-2,2,length=100)
+# %%
+
+d, α, ω = 0.3, 0.2, 0.5
+γ3 = 0.1
+
+ds = Systems.magnetic_pendulum(; d, α, ω)
+xg = yg = range(-3, 3, length = 100)
 b₋, a₋ = basins_general(xg, yg, ds; dt=1., idxs=1:2)
 
-ds = Systems.magnetic_pendulum(d=0.2, α=0.2, ω=0.8,  γs = [1, 1, 0.5])
+ds = Systems.magnetic_pendulum(; d, α, ω,  γs = [1, 1, γ3])
 b₊, a₊ = basins_general(xg, yg, ds; dt=1., idxs=1:2)
 
-ids₊, ids₋ = sort!(collect(keys(a1))), sort!(collect(keys(a₊)))
 l₊, l₋ = length.((ids₊, ids₋))
 
-if l₊ > l₋
-    error("We can only track if the a₊ < a")
-    # TODO: just swap pluses and minuses.
+if length(a₊) < length(a₋)
+    # Set it up so that modification is always done on `+` attractors
+    a₋, a₊ = a₊, a₋
+    b₋, b₊ = b₊, b₋
 end
+ids₊, ids₋ = sort!(collect(keys(a₊))), sort!(collect(keys(a₋)))
 
-overlaps = broadcast(
-    (i, j) -> length(findall(isequal(i), b₋) ∩ findall(isequal(j), b₊)),
-    ids₊, ids₋'
-)
+# TODO: Change the code: modification should be done on the
+# basins with the LEAST amount of attractors, not most! Because then every
+# single attractor is guaranteed to map to something!
+
+# for testing
+using PyPlot
+LC =  matplotlib.colors.ListedColormap
+fig, axs = subplots(1,2)
+cmap = LC([matplotlib.colors.to_rgb("C$k") for k in 0:length(a₋)-1])
+axs[1].pcolormesh(xg, yg, b₋'; cmap)
+for (k, a) in a₋
+    axs[1].scatter(a[1][1], a[1][2], color = "C$(k-1)", edgecolors = "white")
+end
+cmap = LC([matplotlib.colors.to_rgb("C$k") for k in 0:length(a₊)-1])
+axs[2].pcolormesh(xg, yg, b₊'; cmap)
+for (k, a) in a₊
+    axs[2].scatter(a[1][1], a[1][2], color = "C$(k-1)", edgecolors = "white")
+end
+title("before")
 
 # Compute normalized overlaps of each basin with each other basin
 overlaps = zeros(length(ids₊), length(ids₋))
 for (i, ι) in enumerate(ids₊)
-    Bi = findall(isequal(ι), b₋)
-    for (ξ, j) in enumerate(ids₋)
-        Bj = findall(isequal(ξ), b₊)
+    Bi = findall(isequal(ι), b₊)
+    for (j, ξ) in enumerate(ids₋)
+        Bj = findall(isequal(ξ), b₋)
         overlaps[i, j] = length(Bi ∩ Bj)/length(Bj)
     end
 end
 overlaps
 
-# Map indices of maximum overlap
-replaces = Dict{Int, Int}()
-for (i, ι) in enumerate(ids₊[1:end-1]) # last basin gets whatever index is left
-    _, j = findmax(overlaps[i,:])
-    if j ∈ values(replaces)
-        @warn "Process failed. Found two attractors matching to the same one."
-        # TODO: What to do here? Actually probably better to search through sorted
-        # overlaps[i, :] until finding the best overlap... But probably also better
-        # to sort `overlaps` so that the maximum value is at the first row.
+# # Distances of attractors
+using LinearAlgebra
+closeness = zeros(length(ids₊), length(ids₋))
+for (i, ι) in enumerate(ids₊)
+    aι = a₊[ι]
+    for (j, ξ) in enumerate(ids₋)
+        aξ = a₋[ξ]
+        closeness[i, j] = 1 / minimum(norm(x .- y) for x ∈ aι for y ∈ aξ)
     end
-    replaces[ι] = ids₋[j]
 end
-# assign remaining unmatched attractor
-replaces[ids₊[end]] = setdiff(ids₋, collect(values(replaces)))[1]
+closeness
 
+match_metric = closeness
 
+# Create the mapping of replacements
+replaces = Dict{Int, Int}()
+for (i, ι) in enumerate(ids₊)
+    v = match_metric[i, :]
+    for j in sortperm(v) # go through the match metric in sorted order
+        if ids₋[j] ∈ values(replaces)
+            continue # do not use keys that have been used
+        else
+            replaces[ι] = ids₋[j]
+        end
+    end
+end
+# Fill in the remaining (unreplaced) values)
+unreplaced = setdiff(ids₊, collect(keys(replaces)))
+remaining_ids = setdiff(ids₊, collect(values(replaces)))
+for (k, v) in zip(unreplaced, remaining_ids)
+    replaces[k] = v
+end
+
+# Do the actual replacing
+replace!(b₊, replaces...)
+aorig = copy(a₊)
+for (k, v) ∈ replaces
+    a₊[v] = aorig[k]
+end
+
+fig, axs = subplots(1,2)
+cmap = LC([matplotlib.colors.to_rgb("C$k") for k in 0:length(a₋)-1])
+axs[1].pcolormesh(xg, yg, b₋'; cmap)
+for (k, a) in a₋
+    axs[1].scatter(a[1][1], a[1][2], color = "C$(k-1)", edgecolors = "white")
+end
+cmap = LC([matplotlib.colors.to_rgb("C$k") for k in 0:length(a₊)-1])
+axs[2].pcolormesh(xg, yg, b₊'; cmap)
+for (k, a) in a₊
+    axs[2].scatter(a[1][1], a[1][2], color = "C$(k-1)", edgecolors = "white")
+end
+title("after")
 
 #
-# elseif method == :distance
-#     distances =
-#         [minimum()]
+#
+#
+
 # end
-#
-#
-#
-
-end

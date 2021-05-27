@@ -45,7 +45,7 @@ The output `attractors` is a dictionary whose keys correspond to the attractor n
 the values contains the points of the attractors found on the map. Notice that for some
 attractors this list may be incomplete.
 
-See also [`basin_fractions`](@ref), [`tipping_probabilities`](@ref).
+See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_probabilities`](@ref).
 
 [^Yorke1997]: H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations Ch. 7, Springer, New York, 1997
 
@@ -123,10 +123,7 @@ Compute an estimate of the basins of attraction of a higher-dimensional dynamica
 on a projection of the system dynamics on a two-dimensional plane.
 
 Like [`basins_map2D`](@ref), `xg, yg` are ranges defining the grid of initial conditions
-on the plane.
-
-Refer to [`basins_map2D`](@ref) for detailed information on the
-computation and the structure of `basin` and `attractors`.
+on the plane. Refer to [`basins_map2D`](@ref) for more details.
 
 ## Keyword Arguments
 * `dt = 1`: Approxiamte time step of the integrator. It is recommended to use values ≥ 1.
@@ -426,9 +423,11 @@ end
 """
     match_attractors!(b₋, a₋, b₊, a₊, [, method = :overlap])
 Attempt to match the attractors in basins/attractors `b₊, a₊` with those at `b₋, a₋`.
-`b, a` are expected as outputs of [`basins_map2D`](@ref) or [`basins_general`](@ref) after
-and before some change of parameter for a system.
-In these functions different attractors get assigned different IDs, however
+`b` is an array whose values encode the attractor ID, while `a` is a dictionary mapping
+IDs to `Dataset`s containing the attractors (e.g. output of [`basins_general`](@ref)).
+Typically the +,- mean after and before some change of parameter for a system.
+
+In [`basins_general`](@ref) different attractors get assigned different IDs, however
 which attractor gets which ID is somewhat arbitrary, and computing the basins of the
 same system for slightly different parameters could label the "same" attractors (at
 the different parameters) with different IDs. `match_attractors!` tries to "match" them

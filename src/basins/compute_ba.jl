@@ -441,6 +441,7 @@ The modification of IDs is always done on the `b, a` that have less attractors.
 * `method = :distance` matches attractors whose state space distance the smallest.
 """
 function match_attractors!(b₋, a₋, b₊, a₊, method = :overlap)
+    @assert size(b₋) == size(b₊)
     if length(a₊) > length(a₋)
         # Set it up so that modification is always done on `+` attractors
         a₋, a₊ = a₊, a₋

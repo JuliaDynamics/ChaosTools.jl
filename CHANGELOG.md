@@ -1,3 +1,6 @@
+# 1.30
+* New function `local_growth_rates`
+
 # 1.29
 * Performance improvements for basins of attraction
 * New function `uncertainty_exponent`

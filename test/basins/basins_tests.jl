@@ -63,7 +63,7 @@ end
 # %%
 
 d, α, ω = 0.3, 0.2, 0.5
-γ3 = 0.1
+γ3 = 0.3
 
 ds = Systems.magnetic_pendulum(; d, α, ω)
 xg = yg = range(-3, 3, length = 100)
@@ -72,9 +72,7 @@ b₋, a₋ = basins_general(xg, yg, ds; dt=1., idxs=1:2)
 ds = Systems.magnetic_pendulum(; d, α, ω,  γs = [1, 1, γ3])
 b₊, a₊ = basins_general(xg, yg, ds; dt=1., idxs=1:2)
 
-l₊, l₋ = length.((ids₊, ids₋))
-
-if length(a₊) < length(a₋)
+if length(a₊) > length(a₋)
     # Set it up so that modification is always done on `+` attractors
     a₋, a₊ = a₊, a₋
     b₋, b₊ = b₊, b₋
@@ -138,18 +136,18 @@ for (i, ι) in enumerate(ids₊)
         end
     end
 end
-# Fill in the remaining (unreplaced) values)
-unreplaced = setdiff(ids₊, collect(keys(replaces)))
-remaining_ids = setdiff(ids₊, collect(values(replaces)))
-for (k, v) in zip(unreplaced, remaining_ids)
-    replaces[k] = v
-end
 
 # Do the actual replacing
 replace!(b₊, replaces...)
 aorig = copy(a₊)
 for (k, v) ∈ replaces
     a₊[v] = aorig[k]
+end
+# delete unused keys
+for k ∈ keys(a₊)
+    if k ∉ values(replaces)
+        delete!(a₊, k)
+    end
 end
 
 fig, axs = subplots(1,2)

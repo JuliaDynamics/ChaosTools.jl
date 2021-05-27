@@ -58,113 +58,19 @@ end
 end
 
 @testset "Test matching attractors" begin
-end
-
-# %%
-
-d, α, ω = 0.3, 0.2, 0.5
-γ3 = 0.3
-
-ds = Systems.magnetic_pendulum(; d, α, ω)
-xg = yg = range(-3, 3, length = 100)
-b₋, a₋ = basins_general(xg, yg, ds; dt=1., idxs=1:2)
-
-ds = Systems.magnetic_pendulum(; d, α, ω,  γs = [1, 1, γ3])
-b₊, a₊ = basins_general(xg, yg, ds; dt=1., idxs=1:2)
-
-if length(a₊) > length(a₋)
-    # Set it up so that modification is always done on `+` attractors
-    a₋, a₊ = a₊, a₋
-    b₋, b₊ = b₊, b₋
-end
-ids₊, ids₋ = sort!(collect(keys(a₊))), sort!(collect(keys(a₋)))
-
-# TODO: Change the code: modification should be done on the
-# basins with the LEAST amount of attractors, not most! Because then every
-# single attractor is guaranteed to map to something!
-
-# for testing
-using PyPlot
-LC =  matplotlib.colors.ListedColormap
-fig, axs = subplots(1,2)
-cmap = LC([matplotlib.colors.to_rgb("C$k") for k in 0:length(a₋)-1])
-axs[1].pcolormesh(xg, yg, b₋'; cmap)
-for (k, a) in a₋
-    axs[1].scatter(a[1][1], a[1][2], color = "C$(k-1)", edgecolors = "white")
-end
-cmap = LC([matplotlib.colors.to_rgb("C$k") for k in 0:length(a₊)-1])
-axs[2].pcolormesh(xg, yg, b₊'; cmap)
-for (k, a) in a₊
-    axs[2].scatter(a[1][1], a[1][2], color = "C$(k-1)", edgecolors = "white")
-end
-title("before")
-
-# Compute normalized overlaps of each basin with each other basin
-overlaps = zeros(length(ids₊), length(ids₋))
-for (i, ι) in enumerate(ids₊)
-    Bi = findall(isequal(ι), b₊)
-    for (j, ξ) in enumerate(ids₋)
-        Bj = findall(isequal(ξ), b₋)
-        overlaps[i, j] = length(Bi ∩ Bj)/length(Bj)
-    end
-end
-overlaps
-
-# # Distances of attractors
-using LinearAlgebra
-closeness = zeros(length(ids₊), length(ids₋))
-for (i, ι) in enumerate(ids₊)
-    aι = a₊[ι]
-    for (j, ξ) in enumerate(ids₋)
-        aξ = a₋[ξ]
-        closeness[i, j] = 1 / minimum(norm(x .- y) for x ∈ aι for y ∈ aξ)
-    end
-end
-closeness
-
-match_metric = closeness
-
-# Create the mapping of replacements
-replaces = Dict{Int, Int}()
-for (i, ι) in enumerate(ids₊)
-    v = match_metric[i, :]
-    for j in sortperm(v) # go through the match metric in sorted order
-        if ids₋[j] ∈ values(replaces)
-            continue # do not use keys that have been used
-        else
-            replaces[ι] = ids₋[j]
+    d, α, ω = 0.3, 0.2, 0.5
+    ds = Systems.magnetic_pendulum(; d, α, ω)
+    xg = yg = range(-3, 3, length = 100)
+    b₋, a₋ = basins_general(xg, yg, ds; dt=1., idxs=1:2)
+    @testset "method $method" for method ∈ (:overlap, :distance)
+        @testset "γ3 $γ3" for γ3 ∈ [0.2, 0.1] # still 3 at 0.2, but only 2 at 0.1
+            ds = Systems.magnetic_pendulum(; d, α, ω,  γs = [1, 1, γ3])
+            b₊, a₊ = basins_general(xg, yg, ds; dt=1., idxs=1:2)
+            match_attractors!(b₋, a₋, b₊, a₊, method)
+            for k in keys(a₊)
+                dist = minimum(norm(x .- y) for x ∈ a₊[k] for y ∈ a₋[k])
+                @test dist < 0.2
+            end
         end
     end
 end
-
-# Do the actual replacing
-replace!(b₊, replaces...)
-aorig = copy(a₊)
-for (k, v) ∈ replaces
-    a₊[v] = aorig[k]
-end
-# delete unused keys
-for k ∈ keys(a₊)
-    if k ∉ values(replaces)
-        delete!(a₊, k)
-    end
-end
-
-fig, axs = subplots(1,2)
-cmap = LC([matplotlib.colors.to_rgb("C$k") for k in 0:length(a₋)-1])
-axs[1].pcolormesh(xg, yg, b₋'; cmap)
-for (k, a) in a₋
-    axs[1].scatter(a[1][1], a[1][2], color = "C$(k-1)", edgecolors = "white")
-end
-cmap = LC([matplotlib.colors.to_rgb("C$k") for k in 0:length(a₊)-1])
-axs[2].pcolormesh(xg, yg, b₊'; cmap)
-for (k, a) in a₊
-    axs[2].scatter(a[1][1], a[1][2], color = "C$(k-1)", edgecolors = "white")
-end
-title("after")
-
-#
-#
-#
-
-# end

@@ -477,9 +477,7 @@ function match_attractors!(b₋, a₋, b₊, a₊, method = :overlap)
     end
     # delete unused keys
     for k ∈ keys(a₊)
-        if k ∉ values(replaces)
-            delete!(a₊, k)
-        end
+        if k ∉ values(replaces); delete!(a₊, k); end
     end
     return
 end

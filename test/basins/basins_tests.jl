@@ -1,10 +1,11 @@
 using ChaosTools
 using DynamicalSystemsBase
 using Test
+using LinearAlgebra
 
 @testset "Basins tests" begin
 
-@testset "Test basin stroboscopic map" begin
+@testset "Stroboscopic map" begin
     ω=1.; F = 0.2
     ds =Systems.duffing([0.1, 0.25]; ω = ω, f = F, d = 0.15, β = -1)
     integ_df  = integrator(ds; abstol=1e-8, save_everystep=false)
@@ -19,7 +20,7 @@ using Test
 
 end
 
-@testset "Test basin poincare map" begin
+@testset "Poincare map" begin
     b=0.1665
     ds = Systems.thomas_cyclical(b = b)
     xg=range(-6.,6.,length=100)
@@ -34,7 +35,7 @@ end
     @test  2640 ≤ count(basin .== 3) ≤ 2691
 end
 
-@testset "Test basin discrete map" begin
+@testset "Discrete map" begin
     ds = Systems.henon(zeros(2); a = 1.4, b = 0.3)
     integ_df  = integrator(ds)
     xg = range(-2.,2.,length=100)
@@ -46,7 +47,7 @@ end
     @test count(basin .== -1) == 5730
 end
 
-@testset "Test basin_general" begin
+@testset "basin_general" begin
     ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
     xg=range(-2,2,length=100)
     yg=range(-2,2,length=100)
@@ -57,7 +58,7 @@ end
     @test count(basin .== 2) == 3332
 end
 
-@testset "Test matching attractors" begin
+@testset "matching attractors" begin
     d, α, ω = 0.3, 0.2, 0.5
     ds = Systems.magnetic_pendulum(; d, α, ω)
     xg = yg = range(-3, 3, length = 100)
@@ -73,4 +74,6 @@ end
             end
         end
     end
+end
+
 end

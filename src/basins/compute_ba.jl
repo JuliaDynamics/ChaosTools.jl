@@ -314,9 +314,10 @@ examples for a Poincaré map of a continuous system.
 * `reinit_f!` : function that sets the initial condition to test on a two dimensional projection of the phase space.
 """
 function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_u::Function, mc_att, mc_bas, mc_unmb)
+    NDS = length(get_state(integ))
     complete = false
     bsn_nfo = BasinInfo(ones(Int16, length(xg), length(yg)), xg, yg,
-                iter_f!, reinit_f!, get_u, 2,4,0,0,0,1,1,0,0,Dict{Int16,Dataset{length(integ.u),eltype(integ.u)}}(), Vector{CartesianIndex}())
+                iter_f!, reinit_f!, get_u, 2,4,0,0,0,1,1,0,0,Dict{Int16,Dataset{NDS,eltype(get_state(integ))}}(), Vector{CartesianIndex}())
     reset_bsn_nfo!(bsn_nfo)
     I = CartesianIndices(bsn_nfo.basin)
     j  = 1
@@ -366,7 +367,7 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, u0, mc_att, mc_bas, mc_unmb
        n = get_box(new_u, bsn_nfo)
 
        if !isnothing(n) # apply procedure only for boxes in the defined space
-           done = procedure!(bsn_nfo, n, integ.u, mc_att, mc_bas, mc_unmb)
+           done = procedure!(bsn_nfo, n, get_state(integ), mc_att, mc_bas, mc_unmb)
            inlimbo = 0
        else
            # We are outside the defined grid

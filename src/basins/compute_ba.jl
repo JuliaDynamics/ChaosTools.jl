@@ -28,13 +28,14 @@ end
 
 """
     basins_map2D(xg, yg, integ; kwargs...) → basins, attractors
-Compute an estimate of the basins of attraction on a two-dimensional plane using a map
+Compute an estimate of the basins of attraction of a "discrete two dimensional"
 of the plane onto itself according to the method of Nusse & Yorke[^Yorke1997].
-The dynamical system should be a discrete two dimensional system such as:
-* Discrete 2D map.
-* 2D poincaré map.
-* A 2D stroboscopic map.
-For a higher-dimensional dynamical system, use [`basins_general`](@ref).
+The dynamical system can be:
+* An actual 2D `DiscreteDynamicalSystem`.
+* 2D poincaré map of a 3D `ContinuousDynamicalSystem`.
+* A 2D stroboscopic map, i.e. a periodically forced 2D `ContinuousDynamicalSystem`.
+
+For a higher-dimensional dynamical systems, use [`basins_general`](@ref).
 
 `integ` is an istance of an integrator, not a `DynamicalSystem`. This includes
 the output of [`poincaremap`](@ref). See documentation online for examples for all cases!
@@ -124,6 +125,18 @@ on a projection of the system dynamics on a two-dimensional plane.
 
 Like [`basins_map2D`](@ref), `xg, yg` are ranges defining the grid of initial conditions
 on the plane. Refer to [`basins_map2D`](@ref) for more details.
+
+This function can be used to make attractor basins of higher dimension. E.g. to make
+a 3D basin you can make many 2D basins and concatenate them. For example:
+```julia
+zg = 0:0.01:1 # the range defining the z part of the grid
+bs = Matrix{Int8}[]
+for z ∈ zg
+    b = basins_general(xg, yg, ds; complete = [z, 0.0])
+    push!(bs, b)
+end
+basins_3D = cat(bs...; dims = 3)
+```
 
 ## Keyword Arguments
 * `dt = 1`: Approxiamte time step of the integrator. It is recommended to use values ≥ 1.

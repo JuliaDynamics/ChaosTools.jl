@@ -9,7 +9,7 @@ using LinearAlgebra
     ds = Systems.duffing([0.1, 0.25]; ω = 1., f = 0.2, d = 0.15, β = -1)
     integ_df  = integrator(ds; abstol=1e-8, save_everystep=false)
     xg = yg = range(-2.2,2.2,length=100)
-    basin,attractors = basins_map2D(xg, yg, integ_df; T=2*pi/1.)
+    basin,attractors = basins_2D(xg, yg, integ_df; T=2*pi/1.)
     # pcolormesh(xg, yg, basin')
 
     @test length(unique(basin)) == 2
@@ -22,7 +22,7 @@ end
     ds = Systems.thomas_cyclical(b = 0.1665)
     xg = yg = range(-6.,6.,length=100)
     pmap = poincaremap(ds, (3, 0.), Tmax=1e6; idxs = 1:2, rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
-    basin,attractors = basins_map2D(xg, yg, pmap)
+    basin,attractors = basins_2D(xg, yg, pmap)
     # pcolormesh(xg, yg, basin')
 
     @test length(attractors) == 3
@@ -35,7 +35,7 @@ end
     ds = Systems.henon(zeros(2); a = 1.4, b = 0.3)
     integ_df  = integrator(ds)
     xg = yg = range(-2.,2.,length=100)
-    basin,attractors = basins_map2D(xg, yg, integ_df)
+    basin,attractors = basins_2D(xg, yg, integ_df)
     # pcolormesh(xg, yg, basin')
     @test count(basin .== 1) == 4270
     @test count(basin .== -1) == 5730

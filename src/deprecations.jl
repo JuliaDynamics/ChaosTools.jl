@@ -71,3 +71,5 @@ function Entropies.genentropy(q::Real, ε::Real, data::AbstractDataset;
           "`genentropy(data::Dataset, ε::Real; q::Real = 1.0)` instead."
     genentropy(data, ε; q, base)
 end
+
+@deprecate basins_map2D basins_2D

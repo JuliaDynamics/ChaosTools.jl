@@ -13,7 +13,7 @@ using OrdinaryDiffEq
     θg=range(0,2π,length=250)
     xg=range(-0.5,0.5,length=250)
 
-    bsn,att=basins_map2D(θg, xg, integ)
+    bsn,att=basins_2D(θg, xg, integ)
 
     e,f,α=uncertainty_exponent(θg,xg,bsn; precision=1e-5)
 
@@ -45,7 +45,7 @@ integ  = integrator(ds)
 xg=range(-1.,1.,length=300)
 yg=range(-1.,1.,length=300)
 
-bsn,att=basins_map2D(xg, yg, integ)
+bsn,att=basins_2D(xg, yg, integ)
 
 e,f,α=uncertainty_exponent(xg,yg,bsn; precision=1e-5)
 

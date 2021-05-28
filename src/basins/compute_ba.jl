@@ -1,4 +1,4 @@
-export draw_basin!, basins_map2D, basins_general, match_attractors!
+export draw_basin!, basins_2D, basins_general, match_attractors!
 
 mutable struct BasinInfo{F,N,T,Q}
     basin::Matrix{Int16}
@@ -27,11 +27,11 @@ function Base.show(io::IO, bsn::BasinInfo)
 end
 
 """
-    basins_map2D(xg, yg, integ; kwargs...) → basins, attractors
+    basins_2D(xg, yg, integ; kwargs...) → basins, attractors
 Compute an estimate of the basins of attraction of a "discrete two dimensional system"
 of the plane onto itself according to the method of Nusse & Yorke[^Yorke1997].
 The dynamical system can be:
-* An actual 2D `DiscreteDynamicalSystem`.
+* An actual 2D `DiscreteDynamicalSystem` or `ContinuousDynamicalSystem`.
 * 2D poincaré map of a 3D `ContinuousDynamicalSystem`.
 * A 2D stroboscopic map, i.e. a periodically forced 2D `ContinuousDynamicalSystem`.
 
@@ -90,7 +90,7 @@ happens:
 Regarding performace, this method is at worst as fast as tracking the attractors.
 In most cases there is a signicative improvement in speed.
 """
-function basins_map2D(xg, yg, pmap::PoincareMap; mc_att = 3, mc_bas = 10, mc_unmb = 60)
+function basins_2D(xg, yg, pmap::PoincareMap; mc_att = 3, mc_bas = 10, mc_unmb = 60)
     reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
     get_u = (pmap) -> pmap.integ.u[pmap.i]
     bsn_nfo = draw_basin!(xg, yg, pmap, step!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
@@ -104,7 +104,7 @@ function _init_map(pmap::PoincareMap, y, idxs)
     reinit!(pmap, u)
 end
 
-function basins_map2D(xg, yg, integ; T=nothing, mc_att = 2, mc_bas = 10, mc_unmb = 60)
+function basins_2D(xg, yg, integ; T=nothing, mc_att = 2, mc_bas = 10, mc_unmb = 60)
     if T isa Real
         iter_f! = (integ) -> step!(integ, abs(T), true)
     elseif isnothing(T)
@@ -123,9 +123,9 @@ end
 Compute an estimate of the basins of attraction of a higher-dimensional dynamical system `ds`
 on a projection of the system dynamics on a two-dimensional plane.
 
-Like [`basins_map2D`](@ref), `xg, yg` are ranges defining the grid of initial conditions
-on the plane. Refer to [`basins_map2D`](@ref) for more details regarding the algorithm.
-Notice that to use the efficient algorithm of [`basins_map2D`](@ref) we have to project
+Like [`basins_2D`](@ref), `xg, yg` are ranges defining the grid of initial conditions
+on the plane. Refer to [`basins_2D`](@ref) for more details regarding the algorithm.
+Notice that to use the efficient algorithm of [`basins_2D`](@ref) we have to project
 the dynamics on a 2D plane. There are edge cases where the system may have two attractors
 that are close on the plane but are far apart in another dimension. They could
 be collapsed or confused into the same attractor. This is a drawback of this method.
@@ -152,7 +152,7 @@ basins_3D = cat(bs...; dims = 3)
   of the dynamical system state on each planar initial condition `x, y`. It can be
   either a vector of length `D-2`, or a function `f(x, y)` that returns a vector of
   length `D-2`.
-* `mc_att, mc_bas, mc_unmb`: As in [`basins_map2D`](@ref).
+* `mc_att, mc_bas, mc_unmb`: As in [`basins_2D`](@ref).
 * `diffeq...`: Keyword arguments propagated to [`integrator`](@ref).
 """
 function basins_general(xg, yg, ds::DynamicalSystem;
@@ -321,7 +321,7 @@ end
 """
     draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function)
 Compute an estimate of the basin of attraction on a two-dimensional plane. This is a low level function,
-for higher level functions see: `basins_map2D`, `basins_general`
+for higher level functions see: `basins_2D`, `basins_general`
 
 ## Arguments
 * `xg`, `yg` : 1-dim range vector that defines the grid of the initial conditions to test.

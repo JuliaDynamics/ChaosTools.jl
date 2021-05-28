@@ -9,7 +9,7 @@ to `0` represent complety fractalized basins, also called riddled basins.
 
 `xg`, `yg` are 1-dim ranges that defines the grid of the initial conditions.
 `basins` is the matrix containing the information of the basin, i.e. the output of
-[`basins_map2D`](@ref) or [`basins_general`](@ref).
+[`basins_2D`](@ref) or [`basins_general`](@ref).
 
 The output `f_ε` is a vector with the fraction of the balls of radius `ε` (in pixels)
 that contain at least two initial conditions that lead to different attractors.

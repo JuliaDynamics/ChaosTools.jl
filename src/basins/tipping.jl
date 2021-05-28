@@ -30,7 +30,7 @@ in the system parameters (or time forcing), according to the definition of ^..
 
 The input `basins` are integer-valued arrays, where the integers enumerate the attractor.
 They can be of any dimensionality provided that `size(basins_before) == size(basins_after).
-Typically they are 2D, as the output of [`basins_map2D`](@ref) or [`basins_general`](@ref)
+Typically they are 2D, as the output of [`basins_2D`](@ref) or [`basins_general`](@ref)
 
 ## Description
 Let ``\\mathcal{B}_i(p)`` denote the basin of attraction of attractor ``A_i`` at

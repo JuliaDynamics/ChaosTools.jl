@@ -9,7 +9,7 @@
 * New function `tipping_probabilities`
 
 # 1.28
-* New functions `basins_map2D` and `basins_general` that efficiently compute basins of attraction on a plane!
+* New functions `basins_2D` and `basins_general` that efficiently compute basins of attraction on a plane!
 
 # 1.27
 * new function `correlationsum_fixedmass` implements a fixed mass algorithm for the correlationsum given by Grassberger in 1988.

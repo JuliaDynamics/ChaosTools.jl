@@ -118,7 +118,8 @@ end
 
     @test size(λlocal) == (2001, 20)
     @test all(λlocal .< 1.0)
-    @test λ-0.1 ≤ mean(λlocal) ≤ λ+0.1
+    mean_local = mean(λlocal[findall(!isinf, λlocal)])
+    @test λ-0.1 ≤ mean_local ≤ λ+0.1
 end
 
 

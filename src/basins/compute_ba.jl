@@ -28,7 +28,7 @@ end
 
 """
     basins_map2D(xg, yg, integ; kwargs...) → basins, attractors
-Compute an estimate of the basins of attraction of a "discrete two dimensional"
+Compute an estimate of the basins of attraction of a "discrete two dimensional system"
 of the plane onto itself according to the method of Nusse & Yorke[^Yorke1997].
 The dynamical system can be:
 * An actual 2D `DiscreteDynamicalSystem`.
@@ -73,19 +73,19 @@ returns a matrix coding the basins of attraction and a dictionary with all attra
 `attractors` has the following organization:
 * The keys of the dictionary correspond to the number of the attractor.
 * The value associated to a key is a [`Dataset`](@ref) with the *guessed* location of the
-  attractor on the plane.
+  attractor on the state space.
 
 The method starts by picking the first available initial condition on the plane not yet
 numbered. The dynamical system is then iterated until one of the following conditions
 happens:
 1. The trajectory hits a known attractor already numbered: the initial condition is
-   numbered with corresponding odd number.
+   numbered with the corresponding number.
 1. The trajectory diverges or hits an attractor outside the defined grid: the initial
    condition is set to -1
 1. The trajectory hits a known basin `mc_bas` times in a row: the initial condition belongs to
    that basin and is numbered accordingly.
 1. The trajectory hits `mc_unmb` times in a row an unnumbered cell: it is considered an attractor
-   and is labelled with a even number.
+   and is labelled with a new number.
 
 Regarding performace, this method is at worst as fast as tracking the attractors.
 In most cases there is a signicative improvement in speed.
@@ -124,22 +124,22 @@ Compute an estimate of the basins of attraction of a higher-dimensional dynamica
 on a projection of the system dynamics on a two-dimensional plane.
 
 Like [`basins_map2D`](@ref), `xg, yg` are ranges defining the grid of initial conditions
-on the plane. Refer to [`basins_map2D`](@ref) for more details.
+on the plane. Refer to [`basins_map2D`](@ref) for more details regarding the algorithm.
 
-This function can be used to make attractor basins of higher dimension. E.g. to make
-a 3D basin you can make many 2D basins and concatenate them. For example:
+This function can be used to make attractor basins of higher dimension via the `complete_state`
+keyword. E.g. to make 3D basins you can make many 2D basins and concatenate them.
+For example:
 ```julia
 zg = 0:0.01:1 # the range defining the z part of the grid
-bs = Matrix{Int8}[]
-for z ∈ zg
-    b = basins_general(xg, yg, ds; complete = [z, 0.0])
-    push!(bs, b)
-end
+bs = [
+    basins_general(xg, yg, ds; complete_state = [z, 0.0])
+    for z ∈ zg
+]
 basins_3D = cat(bs...; dims = 3)
 ```
 
 ## Keyword Arguments
-* `dt = 1`: Approxiamte time step of the integrator. It is recommended to use values ≥ 1.
+* `dt = 1`: Approximate time step of the integrator. It is recommended to use values ≥ 1.
 * `idxs = 1:2`: This vector selects the two variables of the system that will define the
   "plane" the dynamics will be projected into.
 * `complete_state = zeros(D-2)`: This argument allows setting the _remaining_ variables
@@ -150,7 +150,8 @@ basins_3D = cat(bs...; dims = 3)
 * `diffeq...`: Keyword arguments propagated to [`integrator`](@ref).
 """
 function basins_general(xg, yg, ds::DynamicalSystem;
-        dt=1, idxs = SVector(1, 2), mc_att = 10, mc_bas = 10, mc_unmb = 60, complete_state=zeros(dimension(ds)-2), diffeq...
+        dt=1, idxs = SVector(1, 2), mc_att = 10, mc_bas = 10, mc_unmb = 60,
+        complete_state=zeros(dimension(ds)-2), diffeq...
     )
     integ = integrator(ds; diffeq...)
     idxs = SVector(idxs...)

@@ -125,16 +125,22 @@ on a projection of the system dynamics on a two-dimensional plane.
 
 Like [`basins_map2D`](@ref), `xg, yg` are ranges defining the grid of initial conditions
 on the plane. Refer to [`basins_map2D`](@ref) for more details regarding the algorithm.
+Notice that to use the efficient algorithm of [`basins_map2D`](@ref) we have to project
+the dynamics on a 2D plane. There are edge cases where the system may have two attractors
+that are close on the plane but are far apart in another dimension. They could
+be collapsed or confused into the same attractor. This is a drawback of this method.
 
 This function can be used to make attractor basins of higher dimension via the `complete_state`
-keyword. E.g. to make 3D basins you can make many 2D basins and concatenate them.
+keyword. E.g. to make 3D basins you can make many 2D basins slices and concatenate them.
 For example:
 ```julia
 zg = 0:0.01:1 # the range defining the z part of the grid
-bs = [
-    basins_general(xg, yg, ds; complete_state = [z, 0.0])
-    for z ∈ zg
-]
+bs, as = [], []
+for z ∈ zg
+    b, a = basins_general(xg, yg, ds; complete_state = [z, 0.0])
+    push!(bs, b); push!(as, a)
+end
+# use `match_attractors!` to match potential basins, then do:
 basins_3D = cat(bs...; dims = 3)
 ```
 

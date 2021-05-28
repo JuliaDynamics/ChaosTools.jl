@@ -5,13 +5,11 @@ using LinearAlgebra
 
 @testset "Basins tests" begin
 
-@testset "Stroboscopic map" begin
-    ω=1.; F = 0.2
-    ds =Systems.duffing([0.1, 0.25]; ω = ω, f = F, d = 0.15, β = -1)
+@testset "Test basin stroboscopic map" begin
+    ds = Systems.duffing([0.1, 0.25]; ω = 1., f = 0.2, d = 0.15, β = -1)
     integ_df  = integrator(ds; abstol=1e-8, save_everystep=false)
-    xg = range(-2.2,2.2,length=100)
-    yg = range(-2.2,2.2,length=100)
-    basin,attractors = basins_map2D(xg, yg, integ_df; T=2*pi/ω)
+    xg = yg = range(-2.2,2.2,length=100)
+    basin,attractors = basins_map2D(xg, yg, integ_df; T=2*pi/1.)
     # pcolormesh(xg, yg, basin')
 
     @test length(unique(basin)) == 2
@@ -20,11 +18,9 @@ using LinearAlgebra
 
 end
 
-@testset "Poincare map" begin
-    b=0.1665
-    ds = Systems.thomas_cyclical(b = b)
-    xg=range(-6.,6.,length=100)
-    yg=range(-6.,6.,length=100)
+@testset "Test basin poincare map" begin
+    ds = Systems.thomas_cyclical(b = 0.1665)
+    xg = yg = range(-6.,6.,length=100)
     pmap = poincaremap(ds, (3, 0.), Tmax=1e6; idxs = 1:2, rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
     basin,attractors = basins_map2D(xg, yg, pmap)
     # pcolormesh(xg, yg, basin')
@@ -38,11 +34,9 @@ end
 @testset "Discrete map" begin
     ds = Systems.henon(zeros(2); a = 1.4, b = 0.3)
     integ_df  = integrator(ds)
-    xg = range(-2.,2.,length=100)
-    yg = range(-2.,2.,length=100)
+    xg = yg = range(-2.,2.,length=100)
     basin,attractors = basins_map2D(xg, yg, integ_df)
     # pcolormesh(xg, yg, basin')
-
     @test count(basin .== 1) == 4270
     @test count(basin .== -1) == 5730
 end

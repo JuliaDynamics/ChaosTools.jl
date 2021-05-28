@@ -253,6 +253,9 @@ function DynamicalSystemsBase.reinit!(pmap::PoincareMap, u0)
 	reinit!(pmap.integ, u0)
 	return
 end
+function DynamicalSystemsBase.get_state(pmap::PoincareMap)
+	return pmap.integ.u
+end
 
 function Base.show(io::IO, pmap::PoincareMap)
     println(io, "Iterator of the Poincaré map")

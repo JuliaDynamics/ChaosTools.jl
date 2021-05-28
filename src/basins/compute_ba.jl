@@ -1,6 +1,6 @@
 export draw_basin!, basins_map2D, basins_general
 
-mutable struct BasinInfo{F,T,Q}
+mutable struct BasinInfo{F,N,T,Q}
     basin::Matrix{Int16}
     xg::F
     yg::F
@@ -16,7 +16,7 @@ mutable struct BasinInfo{F,T,Q}
     prev_bas::Int
     prev_step::Int
     step::Int
-    attractors::Dict{Int16, Dataset{2, T}}
+    attractors::Dict{Int16, Dataset{N, T}}
     visited::Q
 end
 
@@ -288,7 +288,7 @@ function store_attractor!(bsn_nfo::BasinInfo, u)
     if haskey(bsn_nfo.attractors , bsn_nfo.current_color ÷ 2)
         push!(bsn_nfo.attractors[bsn_nfo.current_color ÷ 2],  u) # store attractor
     else
-        bsn_nfo.attractors[bsn_nfo.current_color ÷ 2] = Dataset([SVector(u[1],u[2])])  # init dic
+        bsn_nfo.attractors[bsn_nfo.current_color ÷ 2] = Dataset([SVector(u...)])  # init dic
     end
 end
 
@@ -314,9 +314,10 @@ examples for a Poincaré map of a continuous system.
 * `reinit_f!` : function that sets the initial condition to test on a two dimensional projection of the phase space.
 """
 function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_u::Function, mc_att, mc_bas, mc_unmb)
+    NDS = length(get_state(integ))
     complete = false
     bsn_nfo = BasinInfo(ones(Int16, length(xg), length(yg)), xg, yg,
-                iter_f!, reinit_f!, get_u, 2,4,0,0,0,1,1,0,0,Dict{Int16,Dataset{2,eltype(get_u(integ))}}(), Vector{CartesianIndex}())
+                iter_f!, reinit_f!, get_u, 2,4,0,0,0,1,1,0,0,Dict{Int16,Dataset{NDS,eltype(get_state(integ))}}(), Vector{CartesianIndex}())
     reset_bsn_nfo!(bsn_nfo)
     I = CartesianIndices(bsn_nfo.basin)
     j  = 1
@@ -366,7 +367,7 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, u0, mc_att, mc_bas, mc_unmb
        n = get_box(new_u, bsn_nfo)
 
        if !isnothing(n) # apply procedure only for boxes in the defined space
-           done = procedure!(bsn_nfo, n, new_u, mc_att, mc_bas, mc_unmb)
+           done = procedure!(bsn_nfo, n, get_state(integ), mc_att, mc_bas, mc_unmb)
            inlimbo = 0
        else
            # We are outside the defined grid

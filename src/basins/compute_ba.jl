@@ -1,4 +1,4 @@
-export draw_basin!, basins_map2D, basins_general
+export draw_basin!, basins_2D, basins_general, match_attractors!
 
 mutable struct BasinInfo{F,N,T,Q}
     basin::Matrix{Int16}
@@ -27,14 +27,15 @@ function Base.show(io::IO, bsn::BasinInfo)
 end
 
 """
-    basins_map2D(xg, yg, integ; kwargs...) → basins, attractors
-Compute an estimate of the basins of attraction on a two-dimensional plane using a map
+    basins_2D(xg, yg, integ; kwargs...) → basins, attractors
+Compute an estimate of the basins of attraction of a "discrete two dimensional system"
 of the plane onto itself according to the method of Nusse & Yorke[^Yorke1997].
-The dynamical system should be a discrete two dimensional system such as:
-* Discrete 2D map.
-* 2D poincaré map.
-* A 2D stroboscopic map.
-For a higher-dimensional dynamical system, use [`basins_general`](@ref).
+The dynamical system can be:
+* An actual 2D `DiscreteDynamicalSystem` or `ContinuousDynamicalSystem`.
+* 2D poincaré map of a 3D `ContinuousDynamicalSystem`.
+* A 2D stroboscopic map, i.e. a periodically forced 2D `ContinuousDynamicalSystem`.
+
+For a higher-dimensional dynamical systems, use [`basins_general`](@ref).
 
 `integ` is an istance of an integrator, not a `DynamicalSystem`. This includes
 the output of [`poincaremap`](@ref). See documentation online for examples for all cases!
@@ -45,7 +46,7 @@ The output `attractors` is a dictionary whose keys correspond to the attractor n
 the values contains the points of the attractors found on the map. Notice that for some
 attractors this list may be incomplete.
 
-See also [`basin_fractions`](@ref), [`tipping_probabilities`](@ref).
+See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_probabilities`](@ref).
 
 [^Yorke1997]: H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations Ch. 7, Springer, New York, 1997
 
@@ -72,24 +73,24 @@ returns a matrix coding the basins of attraction and a dictionary with all attra
 `attractors` has the following organization:
 * The keys of the dictionary correspond to the number of the attractor.
 * The value associated to a key is a [`Dataset`](@ref) with the *guessed* location of the
-  attractor on the plane.
+  attractor on the state space.
 
 The method starts by picking the first available initial condition on the plane not yet
 numbered. The dynamical system is then iterated until one of the following conditions
 happens:
-1. The trajectory hits a known attractor already numbered: the initial condition is
-   numbered with corresponding odd number.
+1. The trajectory hits a known attractor already numbered `mc_att` consecutive times: the initial condition is
+   numbered with the corresponding number.
 1. The trajectory diverges or hits an attractor outside the defined grid: the initial
    condition is set to -1
 1. The trajectory hits a known basin `mc_bas` times in a row: the initial condition belongs to
    that basin and is numbered accordingly.
 1. The trajectory hits `mc_unmb` times in a row an unnumbered cell: it is considered an attractor
-   and is labelled with a even number.
+   and is labelled with a new number.
 
 Regarding performace, this method is at worst as fast as tracking the attractors.
 In most cases there is a signicative improvement in speed.
 """
-function basins_map2D(xg, yg, pmap::PoincareMap; mc_att = 3, mc_bas = 10, mc_unmb = 60)
+function basins_2D(xg, yg, pmap::PoincareMap; mc_att = 3, mc_bas = 10, mc_unmb = 60)
     reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
     get_u = (pmap) -> pmap.integ.u[pmap.i]
     bsn_nfo = draw_basin!(xg, yg, pmap, step!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
@@ -103,7 +104,7 @@ function _init_map(pmap::PoincareMap, y, idxs)
     reinit!(pmap, u)
 end
 
-function basins_map2D(xg, yg, integ; T=nothing, mc_att = 2, mc_bas = 10, mc_unmb = 60)
+function basins_2D(xg, yg, integ; T=nothing, mc_att = 2, mc_bas = 10, mc_unmb = 60)
     if T isa Real
         iter_f! = (integ) -> step!(integ, abs(T), true)
     elseif isnothing(T)
@@ -122,25 +123,41 @@ end
 Compute an estimate of the basins of attraction of a higher-dimensional dynamical system `ds`
 on a projection of the system dynamics on a two-dimensional plane.
 
-Like [`basins_map2D`](@ref), `xg, yg` are ranges defining the grid of initial conditions
-on the plane.
+Like [`basins_2D`](@ref), `xg, yg` are ranges defining the grid of initial conditions
+on the plane. Refer to [`basins_2D`](@ref) for more details regarding the algorithm.
+Notice that to use the efficient algorithm of [`basins_2D`](@ref) we have to project
+the dynamics on a 2D plane. There are edge cases where the system may have two attractors
+that are close on the plane but are far apart in another dimension. They could
+be collapsed or confused into the same attractor. This is a drawback of this method.
 
-Refer to [`basins_map2D`](@ref) for detailed information on the
-computation and the structure of `basin` and `attractors`.
+This function can be used to make attractor basins of higher dimension via the `complete_state`
+keyword. E.g. to make 3D basins you can make many 2D basins slices and concatenate them.
+For example:
+```julia
+zg = 0:0.01:1 # the range defining the z part of the grid
+bs, as = [], []
+for z ∈ zg
+    b, a = basins_general(xg, yg, ds; complete_state = [z, 0.0])
+    push!(bs, b); push!(as, a)
+end
+# use `match_attractors!` to match potential basins, then do:
+basins_3D = cat(bs...; dims = 3)
+```
 
 ## Keyword Arguments
-* `dt = 1`: Approxiamte time step of the integrator. It is recommended to use values ≥ 1.
+* `dt = 1`: Approximate time step of the integrator. It is recommended to use values ≥ 1.
 * `idxs = 1:2`: This vector selects the two variables of the system that will define the
   "plane" the dynamics will be projected into.
 * `complete_state = zeros(D-2)`: This argument allows setting the _remaining_ variables
   of the dynamical system state on each planar initial condition `x, y`. It can be
   either a vector of length `D-2`, or a function `f(x, y)` that returns a vector of
   length `D-2`.
-* `mc_att, mc_bas, mc_unmb`: As in [`basins_map2D`](@ref).
+* `mc_att, mc_bas, mc_unmb`: As in [`basins_2D`](@ref).
 * `diffeq...`: Keyword arguments propagated to [`integrator`](@ref).
 """
 function basins_general(xg, yg, ds::DynamicalSystem;
-        dt=1, idxs = SVector(1, 2), mc_att = 10, mc_bas = 10, mc_unmb = 60, complete_state=zeros(dimension(ds)-2), diffeq...
+        dt=1, idxs = SVector(1, 2), mc_att = 10, mc_bas = 10, mc_unmb = 60,
+        complete_state=zeros(dimension(ds)-2), diffeq...
     )
     integ = integrator(ds; diffeq...)
     idxs = SVector(idxs...)
@@ -304,7 +321,7 @@ end
 """
     draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function)
 Compute an estimate of the basin of attraction on a two-dimensional plane. This is a low level function,
-for higher level functions see: `basins_map2D`, `basins_general`
+for higher level functions see: `basins_2D`, `basins_general`
 
 ## Arguments
 * `xg`, `yg` : 1-dim range vector that defines the grid of the initial conditions to test.
@@ -421,4 +438,93 @@ function reset_bsn_nfo!(bsn_nfo::BasinInfo)
     bsn_nfo.prev_bas = 1
     bsn_nfo.prev_step = 0
     bsn_nfo.step = 0
+end
+
+
+"""
+    match_attractors!(b₋, a₋, b₊, a₊, [, method = :overlap])
+Attempt to match the attractors in basins/attractors `b₊, a₊` with those at `b₋, a₋`.
+`b` is an array whose values encode the attractor ID, while `a` is a dictionary mapping
+IDs to `Dataset`s containing the attractors (e.g. output of [`basins_general`](@ref)).
+Typically the +,- mean after and before some change of parameter for a system.
+
+In [`basins_general`](@ref) different attractors get assigned different IDs, however
+which attractor gets which ID is somewhat arbitrary, and computing the basins of the
+same system for slightly different parameters could label the "same" attractors (at
+the different parameters) with different IDs. `match_attractors!` tries to "match" them
+by modifying the attractor IDs.
+
+The modification of IDs is always done on the `b, a` that have less attractors.
+
+`method` decides the matching process:
+* `method = :overlap` matches attractors whose basins before and after have the most
+  overlap (in pixels).
+* `method = :distance` matches attractors whose state space distance the smallest.
+"""
+function match_attractors!(b₋, a₋, b₊, a₊, method = :overlap)
+    @assert size(b₋) == size(b₊)
+    if length(a₊) > length(a₋)
+        # Set it up so that modification is always done on `+` attractors
+        a₋, a₊ = a₊, a₋
+        b₋, b₊ = b₊, b₋
+    end
+    ids₊, ids₋ = sort!(collect(keys(a₊))), sort!(collect(keys(a₋)))
+    if method == :overlap
+        match_metric = _match_from_overlaps(b₋, a₋, ids₋, b₊, a₊, ids₊)
+    elseif method == :distance
+        match_metric = _match_from_distance(b₋, a₋, ids₋, b₊, a₊, ids₊)
+    else
+        error("Unknown method")
+    end
+
+    # Create the mapping of replacements
+    replaces = Dict{Int, Int}()
+    for (i, ι) in enumerate(ids₊)
+        v = match_metric[i, :]
+        for j in sortperm(v) # go through the match metric in sorted order
+            if ids₋[j] ∈ values(replaces)
+                continue # do not use keys that have been used
+            else
+                replaces[ι] = ids₋[j]
+            end
+        end
+    end
+
+    # Do the actual replacing
+    replace!(b₊, replaces...)
+    aorig = copy(a₊)
+    for (k, v) ∈ replaces
+        a₊[v] = aorig[k]
+    end
+    # delete unused keys
+    for k ∈ keys(a₊)
+        if k ∉ values(replaces); delete!(a₊, k); end
+    end
+    return
+end
+
+function _match_from_overlaps(b₋, a₋, ids₋, b₊, a₊, ids₊)
+    # Compute normalized overlaps of each basin with each other basin
+    overlaps = zeros(length(ids₊), length(ids₋))
+    for (i, ι) in enumerate(ids₊)
+        Bi = findall(isequal(ι), b₊)
+        for (j, ξ) in enumerate(ids₋)
+            Bj = findall(isequal(ξ), b₋)
+            overlaps[i, j] = length(Bi ∩ Bj)/length(Bj)
+        end
+    end
+    overlaps
+end
+
+using LinearAlgebra
+function _match_from_distance(b₋, a₋, ids₋, b₊, a₊, ids₊)
+    closeness = zeros(length(ids₊), length(ids₋))
+    for (i, ι) in enumerate(ids₊)
+        aι = a₊[ι]
+        for (j, ξ) in enumerate(ids₋)
+            aξ = a₋[ξ]
+            closeness[i, j] = 1 / minimum(norm(x .- y) for x ∈ aι for y ∈ aξ)
+        end
+    end
+    closeness
 end

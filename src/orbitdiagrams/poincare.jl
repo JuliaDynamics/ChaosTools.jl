@@ -101,22 +101,24 @@ function poincaresos(
     i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
     planecrossing = PlaneCrossing(plane, direction > 0)
 	Ttr != 0 && step!(integ, Ttr)
-	f = (t) -> planecrossing(integ(t))
+	plane_distance = (t) -> planecrossing(integ(t))
 
-	data = _poincaresos(integ, f, planecrossing, tfinal+Ttr, i, rootkw)
+	data = _poincaresos(integ, plane_distance, planecrossing, tfinal+Ttr, i, rootkw)
     warning && length(data) == 0 && @warn PSOS_ERROR
     return Dataset(data)
 end
 
 # The separation into two functions here exists only to introduce a function barrier
 # for the low level method, to ensure optimization on argments of `poincaremap!`.
-function _poincaresos(integ, f, planecrossing, tfinal, i, rootkw)
+function _poincaresos(integ, plane_distance, planecrossing, tfinal, i, rootkw)
 	data = _initialize_output(integ.u, i)
 	while integ.t < tfinal
-		# find then next intersection with plane, or return `nothing` if
-		# there is no intersection or exceeded Tmax.
-		out = poincaremap!(integ, f, planecrossing, tfinal, i, rootkw)
-		!isnothing(out) && push!(data, out)
+		out = poincaremap!(integ, plane_distance, planecrossing, integ.t+tfinal, i, rootkw)
+		if !isnothing(out)
+            push!(data, out)
+        else
+            break # if we evolved for more than tfinal, we should break anyways.
+        end
 	end
 	return data
 end
@@ -130,12 +132,12 @@ end
 const PSOS_ERROR = "the Poincaré surface of section did not have any points!"
 
 """
-	poincaremap!(integ, f, planecrossing, Tmax, idxs, rootkw)
+	poincaremap!(integ, plane_distance, planecrossing, Tmax, idxs, rootkw)
 Low level function that actual performs the algorithm of finding the next crossing
-of the Poincaré surface of section.
+of the Poincaré surface of section. Return the state at the section or `nothing` if 
+evolved for more than `Tmax` without any crossing.
 """
-function poincaremap!(integ, f, planecrossing, Tmax, idxs, rootkw)
-
+function poincaremap!(integ, plane_distance, planecrossing, Tmax, idxs, rootkw)
     # Check if initial condition is already on the plane
     side = planecrossing(integ.u)
     if side == 0
@@ -143,7 +145,7 @@ function poincaremap!(integ, f, planecrossing, Tmax, idxs, rootkw)
         step!(integ)
 		return dat
     end
-
+    # Otherwise evolve until juuuuuust crossing the plane
     while side < 0
         integ.t > Tmax && break
         step!(integ)
@@ -154,13 +156,9 @@ function poincaremap!(integ, f, planecrossing, Tmax, idxs, rootkw)
         step!(integ)
         side = planecrossing(integ.u)
     end
-
-	if integ.t > Tmax
-		@warn "The Poincaré map is ill defined or time evolution exceeded `Tmax`."
-		return nothing
-	end
-    # I am now guaranteed to have `t` in negative and `tprev` in positive
-    tcross = Roots.find_zero(f, (integ.tprev, integ.t), Roots.A42(); rootkw...)
+    integ.t > Tmax && return nothing # we evolved too long and no crossing, return nothing
+    # Else, we're guaranteed to have `t` after plane and `tprev` before plane
+    tcross = Roots.find_zero(plane_distance, (integ.tprev, integ.t), Roots.A42(); rootkw...)
     ucross = integ(tcross)
     return ucross[idxs]
 end
@@ -233,8 +231,8 @@ function poincaremap(
     i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
 
 	planecrossing = PlaneCrossing(plane, direction > 0)
-	f = (t) -> planecrossing(integ(t))
-	return PoincareMap(integ, f, planecrossing, Tmax, i, rootkw)
+	plane_distance = (t) -> planecrossing(integ(t))
+	return PoincareMap(integ, plane_distance, planecrossing, Tmax, i, rootkw)
 end
 
 struct PoincareMap{I, F, P, A, R}
@@ -321,7 +319,7 @@ function produce_orbitdiagram(
     planecrossing = PlaneCrossing(plane, direction > 0)
     p0 = ds.p[p_index]
     output = Vector{typeof(ds.u0[i])}[]
-	f = (t) -> planecrossing(integ(t))
+	plane_distance = (t) -> planecrossing(integ(t))
 
     for (n, p) in enumerate(pvalues)
         integ.p[p_index] = p
@@ -335,7 +333,7 @@ function produce_orbitdiagram(
         end
         reinit!(integ, st)
 		Ttr != 0 && step!(integ, Ttr)
-		data = _poincaresos(integ, f, planecrossing, tfinal+Ttr, i, rootkw)
+		data = _poincaresos(integ, plane_distance, planecrossing, tfinal+Ttr, i, rootkw)
 		push!(output, data)
         warning && length(output[end]) == 0 && @warn "For parameter $p $PSOS_ERROR"
     end

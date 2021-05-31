@@ -78,7 +78,7 @@ returns a matrix coding the basins of attraction and a dictionary with all attra
 The method starts by picking the first available initial condition on the plane not yet
 numbered. The dynamical system is then iterated until one of the following conditions
 happens:
-1. The trajectory hits a known attractor already numbered: the initial condition is
+1. The trajectory hits a known attractor already numbered `mc_att` consecutive times: the initial condition is
    numbered with the corresponding number.
 1. The trajectory diverges or hits an attractor outside the defined grid: the initial
    condition is set to -1

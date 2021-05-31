@@ -28,7 +28,7 @@ end
 
 """
     basins_2D(xg, yg, integ; kwargs...) → basins, attractors
-Compute an estimate of the basins of attraction of a "discrete two dimensional system"
+Compute an estimate of the basins of attraction of a "two dimensional system"
 of the plane onto itself according to the method of Nusse & Yorke[^Yorke1997].
 The dynamical system can be:
 * An actual 2D `DiscreteDynamicalSystem` or `ContinuousDynamicalSystem`.

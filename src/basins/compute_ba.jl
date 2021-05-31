@@ -442,7 +442,7 @@ end
 
 
 """
-    match_attractors!(b₋, a₋, b₊, a₊, [, method = :overlap])
+    match_attractors!(b₋, a₋, b₊, a₊, [, method = :distance])
 Attempt to match the attractors in basins/attractors `b₊, a₊` with those at `b₋, a₋`.
 `b` is an array whose values encode the attractor ID, while `a` is a dictionary mapping
 IDs to `Dataset`s containing the attractors (e.g. output of [`basins_general`](@ref)).
@@ -461,7 +461,7 @@ The modification of IDs is always done on the `b, a` that have less attractors.
   overlap (in pixels).
 * `method = :distance` matches attractors whose state space distance the smallest.
 """
-function match_attractors!(b₋, a₋, b₊, a₊, method = :overlap)
+function match_attractors!(b₋, a₋, b₊, a₊, method = :distance)
     @assert size(b₋) == size(b₊)
     if length(a₊) > length(a₋)
         # Set it up so that modification is always done on `+` attractors

@@ -123,7 +123,7 @@ Compute an estimate of the basins of attraction of a higher-dimensional dynamica
 on a projection of the system dynamics on a two-dimensional plane.
 
 `grid` in an vector of ranges defining the grid of initial conditions
-on the plane, for example `grid=[xg,yg]` are one dimensional ranges. Refer to
+on the plane, for example `grid=[xg,yg]` where `xg` and `yg` are one dimensional ranges. Refer to
 [`basins_2D`](@ref) for more details regarding the algorithm.
 Notice that in the case we have to project the dynamics on a lower dimensional space,
 there are edge cases where the system may have two attractors

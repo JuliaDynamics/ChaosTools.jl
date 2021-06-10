@@ -1,9 +1,8 @@
 export draw_basin!, basins_2D, basins_general, match_attractors!
 
 mutable struct BasinInfo{F,N,T,Q}
-    basin::Matrix{Int16}
-    xg::F
-    yg::F
+    basin::AbstractArray
+    bbox::F
     iter_f!::Function
     reinit_f!::Function
     get_u::Function
@@ -93,7 +92,7 @@ In most cases there is a signicative improvement in speed.
 function basins_2D(xg, yg, pmap::PoincareMap; mc_att = 3, mc_bas = 10, mc_unmb = 60)
     reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
     get_u = (pmap) -> pmap.integ.u[pmap.i]
-    bsn_nfo = draw_basin!(xg, yg, pmap, step!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
+    bsn_nfo = draw_basin!([xg, yg], pmap, step!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
@@ -113,63 +112,56 @@ function basins_2D(xg, yg, integ; T=nothing, mc_att = 2, mc_bas = 10, mc_unmb = 
     reinit_f! =  (integ,y) -> reinit!(integ, y)
     get_u = (integ) -> integ.u
 
-    bsn_nfo = draw_basin!(xg, yg, integ, iter_f!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
+    bsn_nfo = draw_basin!([xg, yg], integ, iter_f!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
 
 """
-    basins_general(xg, yg, ds::DynamicalSystem; kwargs...) -> basin, attractors
+    basins_general(grid, ds::DynamicalSystem; kwargs...) -> basin, attractors
 Compute an estimate of the basins of attraction of a higher-dimensional dynamical system `ds`
 on a projection of the system dynamics on a two-dimensional plane.
 
-Like [`basins_2D`](@ref), `xg, yg` are ranges defining the grid of initial conditions
-on the plane. Refer to [`basins_2D`](@ref) for more details regarding the algorithm.
-Notice that to use the efficient algorithm of [`basins_2D`](@ref) we have to project
-the dynamics on a 2D plane. There are edge cases where the system may have two attractors
-that are close on the plane but are far apart in another dimension. They could
+`grid` in an vector of ranges defining the grid of initial conditions
+on the plane, for example `grid=[xg,yg]` are one dimensional ranges. Refer to
+[`basins_2D`](@ref) for more details regarding the algorithm.
+Notice that in the case we have to project the dynamics on a lower dimensional space,
+there are edge cases where the system may have two attractors
+that are close on the defined space but are far apart in another dimension. They could
 be collapsed or confused into the same attractor. This is a drawback of this method.
 
-This function can be used to make attractor basins of higher dimension via the `complete_state`
-keyword. E.g. to make 3D basins you can make many 2D basins slices and concatenate them.
-For example:
+This function can be used to make attractor basins in any dimension. For example:
 ```julia
-zg = 0:0.01:1 # the range defining the z part of the grid
-bs, as = [], []
-for z ∈ zg
-    b, a = basins_general(xg, yg, ds; complete_state = [z, 0.0])
-    push!(bs, b); push!(as, a)
-end
-# use `match_attractors!` to match potential basins, then do:
-basins_3D = cat(bs...; dims = 3)
+xg = yg = zg = 0:0.01:1 # the range defining the z part of the grid
+b, a = basins_general([xg, yg, zg], ds; complete_state = [0.0])
 ```
 
 ## Keyword Arguments
 * `dt = 1`: Approximate time step of the integrator. It is recommended to use values ≥ 1.
 * `idxs = 1:2`: This vector selects the two variables of the system that will define the
   "plane" the dynamics will be projected into.
-* `complete_state = zeros(D-2)`: This argument allows setting the _remaining_ variables
-  of the dynamical system state on each planar initial condition `x, y`. It can be
-  either a vector of length `D-2`, or a function `f(x, y)` that returns a vector of
-  length `D-2`.
+* `complete_state = zeros(D-Nu)`: This argument allows setting the _remaining_ variables
+  of the dynamical system state on each initial condition `u` of length `Nu`. It can be
+  either a vector of length `D-Nu`, or a function `f(x, y)` that returns a vector of
+  length `D-Nu`.
 * `mc_att, mc_bas, mc_unmb`: As in [`basins_2D`](@ref).
 * `diffeq...`: Keyword arguments propagated to [`integrator`](@ref).
 """
-function basins_general(xg, yg, ds::DynamicalSystem;
+function basins_general(grid, ds::DynamicalSystem;
         dt=1, idxs = SVector(1, 2), mc_att = 10, mc_bas = 10, mc_unmb = 60,
         complete_state=zeros(dimension(ds)-2), diffeq...
     )
     integ = integrator(ds; diffeq...)
     idxs = SVector(idxs...)
-    return basins_general(xg, yg, integ; dt, idxs, mc_att, mc_bas, mc_unmb, complete_state)
+    return basins_general(grid, integ; dt, idxs, mc_att, mc_bas, mc_unmb, complete_state)
 end
 
-function basins_general(xg, yg, integ; complete_state, idxs::SVector, mc_att, mc_bas, mc_unmb, dt)
+function basins_general(grid, integ; complete_state, idxs::SVector, mc_att, mc_bas, mc_unmb, dt)
     iter_f! = (integ) -> step!(integ, dt) # we don't have to step _exactly_ `dt` here
     D = length(integ.u)
     remidxs = setdiff(1:D, idxs)
     if complete_state isa AbstractVector
-        length(complete_state) ≠ D-2 && error("Vector `complete_state` must have length D-2!")
+        length(complete_state) ≠ D-length(idxs) && error("Vector `complete_state` must have length D-2!")
         u0 = copy(complete_state)
         reinit_f! = (integ, y) -> reinit_integ_idxs!(integ, y, idxs, u0, remidxs)
     elseif complete_state isa Function
@@ -182,7 +174,7 @@ function basins_general(xg, yg, integ; complete_state, idxs::SVector, mc_att, mc
         error("Incorrect type for `complete_state`")
     end
     get_u = (integ) -> integ.u[idxs]
-    bsn_nfo = draw_basin!(xg, yg, integ, iter_f!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
+    bsn_nfo = draw_basin!(grid, integ, iter_f!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
@@ -324,17 +316,29 @@ Compute an estimate of the basin of attraction on a two-dimensional plane. This 
 for higher level functions see: `basins_2D`, `basins_general`
 
 ## Arguments
-* `xg`, `yg` : 1-dim range vector that defines the grid of the initial conditions to test.
+* `grid=[xg,yg]` : Vector of 1-dim range vectors that defines the grid of the initial conditions to test.
 * `integ` : integrator handle of the dynamical system.
 * `iter_f!` : function that iterates the map or the system, see step! from DifferentialEquations.jl and
 examples for a Poincaré map of a continuous system.
 * `reinit_f!` : function that sets the initial condition to test on a two dimensional projection of the phase space.
 """
-function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_u::Function, mc_att, mc_bas, mc_unmb)
+function draw_basin!(grid, integ, iter_f!::Function, reinit_f!::Function, get_u::Function, mc_att, mc_bas, mc_unmb)
     NDS = length(get_state(integ))
     complete = false
-    bsn_nfo = BasinInfo(ones(Int16, length(xg), length(yg)), xg, yg,
-                iter_f!, reinit_f!, get_u, 2,4,0,0,0,1,1,0,0,Dict{Int16,Dataset{NDS,eltype(get_state(integ))}}(), Vector{CartesianIndex}())
+    nstep=map(x->x[2]-x[1],grid)
+    nmax=map(maximum,grid)
+    nmin=map(minimum,grid)
+    bbox=(nstep,nmin,nmax)
+    NDU = length(grid)
+    bsn_nfo = BasinInfo(
+                ones(Int16, map(length,grid)...),
+                bbox,
+                iter_f!,
+                reinit_f!,
+                get_u,
+                2,4,0,0,0,1,1,0,0,
+                Dict{Int16,Dataset{NDS,eltype(get_state(integ))}}(),
+                Vector{CartesianIndex}())
     reset_bsn_nfo!(bsn_nfo)
     I = CartesianIndices(bsn_nfo.basin)
     j  = 1
@@ -356,11 +360,11 @@ function draw_basin!(xg, yg, integ, iter_f!::Function, reinit_f!::Function, get_
              break
          end
 
-         x0 , y0  = xg[ind[1]] , yg[ind[2]]
          # Tentatively assign a color: odd is for basins, even for attractors.
          # First color is one
          bsn_nfo.basin[ind] = bsn_nfo.current_color + 1
-         u0 = SVector(x0, y0)
+         #u0 = SVector(x0, y0)
+         u0 = SVector([grid[k][ind[k]] for k in 1:NDU]...)
          bsn_nfo.basin[ind] = get_color_point!(bsn_nfo, integ, u0, mc_att, mc_bas, mc_unmb)
     end
     # remove attractors and rescale from 1 to Na
@@ -399,19 +403,15 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, u0, mc_att, mc_bas, mc_unmb
 end
 
 function get_box(u, bsn_nfo::BasinInfo)
-    xg = bsn_nfo.xg; yg = bsn_nfo.yg; # aliases
-    xstep = (xg[2]-xg[1])
-    ystep = (yg[2]-yg[1])
-    xu, yu = u
-    n = m = 0
     # check boundary
-    if xu >= xg[1] && xu <= xg[end] && yu >= yg[1] && yu <= yg[end]
-        n = Int(round((xu-xg[1])/xstep)) + 1
-        m = Int(round((yu-yg[1])/ystep)) + 1 # +1 for 1 based indexing
+    bb_max = bsn_nfo.bbox[3]; bb_min = bsn_nfo.bbox[2]; steps = bsn_nfo.bbox[1];
+    if prod(bb_min .<= u .<= bb_max)
+        # Snap point to grid
+        ind = round.(Int,(u-bb_min)./steps) .+ 1
+        return CartesianIndex(ind...)
     else
         return nothing
     end
-    return CartesianIndex(n,m)
 end
 
 function check_outside_the_screen!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)

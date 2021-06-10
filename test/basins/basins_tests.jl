@@ -45,7 +45,7 @@ end
     ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
     xg=range(-2,2,length=100)
     yg=range(-2,2,length=100)
-    basin,attractors = basins_general(xg, yg, ds; dt=1., idxs=1:2)
+    basin,attractors = basins_general([xg, yg], ds; dt=1., idxs=1:2)
     # pcolormesh(xg, yg, basin')
 
     @test count(basin .== 1) == 3332
@@ -56,11 +56,11 @@ end
     d, α, ω = 0.3, 0.2, 0.5
     ds = Systems.magnetic_pendulum(; d, α, ω)
     xg = yg = range(-3, 3, length = 100)
-    b₋, a₋ = basins_general(xg, yg, ds; dt=1., idxs=1:2)
+    b₋, a₋ = basins_general([xg, yg], ds; dt=1., idxs=1:2)
     @testset "method $method" for method ∈ (:overlap, :distance)
         @testset "γ3 $γ3" for γ3 ∈ [0.2, 0.1] # still 3 at 0.2, but only 2 at 0.1
             ds = Systems.magnetic_pendulum(; d, α, ω,  γs = [1, 1, γ3])
-            b₊, a₊ = basins_general(xg, yg, ds; dt=1., idxs=1:2)
+            b₊, a₊ = basins_general([xg, yg], ds; dt=1., idxs=1:2)
             match_attractors!(b₋, a₋, b₊, a₊, method)
             for k in keys(a₊)
                 dist = minimum(norm(x .- y) for x ∈ a₊[k] for y ∈ a₋[k])

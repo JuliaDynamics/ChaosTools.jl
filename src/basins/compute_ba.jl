@@ -415,15 +415,11 @@ function get_box(u, bsn_nfo::BasinInfo)
 end
 
 function check_outside_the_screen!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
-    if norm(new_u-old_u) < 1e-5
+    bb_max = maximum(abs.(bsn_nfo.bbox[3])); # this is the largest size of the phase space
+    if norm(new_u-old_u) < 1e-5 || inlimbo > 60*20 ||  norm(new_u) > 10*bb_max
         recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, 1)
         reset_bsn_nfo!(bsn_nfo)
-        # this CI goes to a attractor outside the screen, set to -1 (even color)
-        return -1  # get next box
-    elseif inlimbo > 60*20
-        recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, 1)
-        reset_bsn_nfo!(bsn_nfo)
-        # this CI is problematic or diverges, set to -1 (even color)
+        # problematic CI : diverges or wanders outside the defined grid
         return -1  # get next box
     end
     return 0

@@ -1,9 +1,11 @@
-mutable struct BasinInfo{F,D,T,Q,B}
+mutable struct BasinInfo{F, D, T, Q, B, IF, RF, UF}
     basin::Array{Int16, B}
-    bbox::F
-    iter_f!::Function
-    reinit_f!::Function
-    get_u::Function
+    grid_steps::G
+    grid_maxima::G
+    grid_minima::G
+    iter_f!::IF
+    reinit_f!::RF
+    get_u::UF
     current_color::Int
     next_avail_color::Int
     consecutive_match::Int
@@ -19,8 +21,8 @@ end
 
 
 """
-    draw_basin!(grid, integ, iter_f!::Function, reinit_f!::Function; kwargs...)
-This is the actual function that creates & computes the basins of attraction, and is
+    draw_basin!(grid, integ, iter_f!, reinit_f!; kwargs...)
+This is the low level function that creates & computes the basins of attraction, and is
 agnostic of the dynamical system. `integ` is an integrator, `iter_f!` a function that
 steps the integrator, `reinit_f!` a function that re-inits the integrator.
 
@@ -29,18 +31,21 @@ and are described in the high level function.
 """
 function draw_basin!(
         grid::Tuple, integ, iter_f!::Function, reinit_f!::Function, get_u::Function;
+        # TODO: The way these keyword arguments are named is very confusing.
+        # Why doesn't their name reveal their purpose? We need to rename all of them.
         mc_att = 10, mc_bas = 10, mc_unmb = 60,
     )
     D = length(get_state(integ)) # dimension of the dynamical system
     complete = false
-    nstep=map(x->x[2]-x[1],grid)
-    nmax=map(maximum,grid)
-    nmin=map(minimum,grid)
-    bbox=(nstep,nmin,nmax)
-    NDU = length(grid)
+    grid_steps = step.(grid)
+    grid_maxima = maximum.(grid)
+    grid_minima = minimum.(grid)
+    B = length(grid)
     bsn_nfo = BasinInfo(
         ones(Int16, length.(grid)),
-        bbox,
+        SVector(grid_steps),
+        SVector(grid_maxima),
+        SVector(grid_minima),
         iter_f!,
         reinit_f!,
         get_u,
@@ -48,9 +53,9 @@ function draw_basin!(
         Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
         Vector{CartesianIndex}()
     )
-    reset_bsn_nfo!(bsn_nfo)
+    reset_basin_counters!(bsn_nfo)
     I = CartesianIndices(bsn_nfo.basin)
-    j  = 1
+    j = 1
 
     while !complete
         # pick the first empty box
@@ -73,7 +78,7 @@ function draw_basin!(
         # First color is one
         bsn_nfo.basin[ind] = bsn_nfo.current_color + 1
         #u0 = SVector(x0, y0)
-        u0 = SVector([grid[k][ind[k]] for k in 1:NDU]...)
+        u0 = SVector([grid[k][ind[k]] for k in 1:B]...)
         bsn_nfo.basin[ind] = get_color_point!(bsn_nfo, integ, u0, mc_att, mc_bas, mc_unmb)
     end
     # remove attractors and rescale from 1 to Na
@@ -87,28 +92,31 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, u0, mc_att, mc_bas, mc_unmb
     # This routine identifies the attractor using the previously defined basin.
     # reinitialize integrator
     bsn_nfo.reinit_f!(integ, u0)
-    reset_bsn_nfo!(bsn_nfo)
+    reset_basin_counters!(bsn_nfo)
     cellcolor = inlimbo = 0
 
     while cellcolor == 0
-       old_u = bsn_nfo.get_u(integ)
-       bsn_nfo.iter_f!(integ)
-       new_u = bsn_nfo.get_u(integ)
-       n = get_box(new_u, bsn_nfo)
+        old_u = bsn_nfo.get_u(integ)
+        bsn_nfo.iter_f!(integ)
+        new_u = bsn_nfo.get_u(integ)
+        n = get_box(new_u, bsn_nfo)
 
-       if !isnothing(n) # apply procedure only for boxes in the defined space
-           cellcolor = _identify_basin_of_cell!(
+        if !isnothing(n) # apply procedure only for boxes in the defined space
+            cellcolor = _identify_basin_of_cell!(
+                # TODO: Why is `get_state(integ)` called here?
+                # It is really confusing at which point is the integrator re-init
+                # to a new state...
                 bsn_nfo, n, get_state(integ), mc_att, mc_bas, mc_unmb
             )
-           inlimbo = 0
-       else
-           # We are outside the defined grid
-           inlimbo += 1
-       end
+            inlimbo = 0
+        else
+            # We are outside the defined grid
+            inlimbo += 1
+        end
 
-       if inlimbo > 60 # TODO: This `60` should be a named keyword
-           cellcolor = check_outside_the_screen!(bsn_nfo, new_u, old_u, inlimbo)
-       end
+        if inlimbo > 60 # TODO: This `60` should be a named keyword
+            cellcolor = check_outside_the_grid!(bsn_nfo, new_u, old_u, inlimbo)
+        end
     end
     return cellcolor
 end
@@ -149,7 +157,7 @@ function _identify_basin_of_cell!(
                 # For higher dimensions we erase the past iterations and visited boxes
                 recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, 1)
             end
-            reset_bsn_nfo!(bsn_nfo)
+            reset_basin_counters!(bsn_nfo)
             return c3
          end
     end
@@ -179,7 +187,10 @@ function _identify_basin_of_cell!(
             # We continue iterating until we hit again the same attractor. In which case we stop.
             return 0;
         end
-    elseif isodd(next_c) && 0 < next_c < bsn_nfo.current_color &&  bsn_nfo.consecutive_match < mc_unmb && mc_att == 2
+    elseif (
+            isodd(next_c) && 0 < next_c < bsn_nfo.current_color && 
+            bsn_nfo.consecutive_match < mc_unmb && mc_att == 2
+        )
         # hit a colored basin point of the wrong basin, happens all the time, we check if it happens
         # mc_bas times in a row or if it happens N times along the trajectory whether to decide if it is another basin.
         bsn_nfo.consecutive_other_basins += 1
@@ -195,11 +206,11 @@ function _identify_basin_of_cell!(
 
         if bsn_nfo.consecutive_other_basins > 60 || bsn_nfo.prevConsecutives > mc_bas
             recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, next_c)
-            reset_bsn_nfo!(bsn_nfo)
+            reset_basin_counters!(bsn_nfo)
             return next_c
         end
         return 0
-    elseif iseven(next_c) &&   (mc_unmb <= bsn_nfo.consecutive_match < 2 * mc_unmb)
+    elseif iseven(next_c) && (mc_unmb <= bsn_nfo.consecutive_match < 2 * mc_unmb)
         # We make sure we hit the attractor 60 consecutive times
         bsn_nfo.consecutive_match += 1
         return 0
@@ -211,7 +222,7 @@ function _identify_basin_of_cell!(
         # pick the next color for coloring the basin.
         bsn_nfo.current_color = bsn_nfo.next_avail_color
         bsn_nfo.next_avail_color += 2
-        reset_bsn_nfo!(bsn_nfo)
+        reset_basin_counters!(bsn_nfo)
         return next_c + 1;
     else
         return 0
@@ -229,37 +240,46 @@ end
 
 function recolor_visited_cell!(bsn_nfo::BasinInfo, old_c, new_c)
     while !isempty(bsn_nfo.visited)
-       ind = pop!(bsn_nfo.visited)
-       if bsn_nfo.basin[ind] == old_c
-           bsn_nfo.basin[ind] = new_c
-       end
+        ind = pop!(bsn_nfo.visited)
+        if bsn_nfo.basin[ind] == old_c
+            bsn_nfo.basin[ind] = new_c
+        end
     end
 end
 
+# TODO: The name of this function is too generic and doesn't revail its purpose
 function get_box(u, bsn_nfo::BasinInfo)
-    # check boundary
-    bb_max = bsn_nfo.bbox[3]; bb_min = bsn_nfo.bbox[2]; steps = bsn_nfo.bbox[1];
-    if prod(bb_min .<= u .<= bb_max)
+    iswithingrid = true
+    @inbounds for i in 1:length(bsn_info.grid_minima)
+        if bsn_nfo.grid_minima[i] ≤ u[i] < bsn_nfo.grid_maxima[i]
+            iswithingrid = false
+        end
+    end
+    if iswithingrid
         # Snap point to grid
-        ind = round.(Int,(u-bb_min)./steps) .+ 1
+        ind = @. round(Int, (u - bsn_nfo.grid_minima)/bsn_nfo.grid_steps) + 1
         return CartesianIndex(ind...)
     else
         return nothing
     end
 end
 
-function check_outside_the_screen!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
-    bb_max = maximum(abs.(bsn_nfo.bbox[3])); # this is the largest size of the phase space
-    if norm(new_u-old_u) < 1e-5 || inlimbo > 60*20 ||  norm(new_u) > 10*bb_max
+function check_outside_the_grid!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
+    # TODO: Not sure if this is a good decider of maximum 
+    grid_maximum = maximum(abs.(bsn_nfo.grid_maxima)); # this is the largest size of the phase space
+    if norm(new_u-old_u) < 1e-5 || inlimbo > 60*20 ||  norm(new_u) > 10*grid_maximum
+        # TODO: all numeric constants in the above line must be replaced with
+        # named variables with intention-revealing name. They must also be tunable
+        # as keyword arguments in `draw_basin!`.
         recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, 1)
-        reset_bsn_nfo!(bsn_nfo)
+        reset_basin_counters!(bsn_nfo)
         # problematic IC : diverges or wanders outside the defined grid
         return -1
     end
     return 0
 end
 
-function reset_bsn_nfo!(bsn_nfo::BasinInfo)
+function reset_basin_counters!(bsn_nfo::BasinInfo)
     bsn_nfo.consecutive_match = 0
     bsn_nfo.consecutive_other_basins = 0
     bsn_nfo.prevConsecutives = 0

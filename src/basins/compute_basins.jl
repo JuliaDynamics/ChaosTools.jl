@@ -150,16 +150,18 @@ b, a = basins_general([xg, yg, zg], ds; complete_state = [0.0])
 * `mc_att, mc_bas, mc_unmb`: As in [`basins_2D`](@ref).
 * `diffeq...`: Keyword arguments propagated to [`integrator`](@ref).
 """
-function basins_general(grid, ds::DynamicalSystem;
-        dt=1, idxs = SVector(1, 2), mc_att = 10, mc_bas = 10, mc_unmb = 60,
-        complete_state=zeros(dimension(ds)-2), diffeq...
+function basins_general(grid::Tuple, ds::DynamicalSystem;
+        dt=1, idxs = SVector(1, 2), # TODO: `idxs` must have same length as `grid`
+        complete_state=zeros(dimension(ds)-2), diffeq = NamedTuple(),
+        kwargs... # `kwargs` tunes the basin finding algorithm, e.g. `mc_att`.
+                  # these keywords are actually expanded in `draw_basin!`
     )
     integ = integrator(ds; diffeq...)
     idxs = SVector(idxs...)
-    return basins_general(grid, integ; dt, idxs, mc_att, mc_bas, mc_unmb, complete_state)
+    return basins_general(grid, integ, dt, idxs, complete_state; kwargs...)
 end
 
-function basins_general(grid, integ; complete_state, idxs::SVector, mc_att, mc_bas, mc_unmb, dt)
+function basins_general(grid, integ, dt, idxs::SVector, complete_state; kwargs...)
     iter_f! = (integ) -> step!(integ, dt) # we don't have to step _exactly_ `dt` here
     D = length(integ.u)
     remidxs = setdiff(1:D, idxs)
@@ -177,7 +179,7 @@ function basins_general(grid, integ; complete_state, idxs::SVector, mc_att, mc_b
         error("Incorrect type for `complete_state`")
     end
     get_u = (integ) -> integ.u[idxs]
-    bsn_nfo = draw_basin!(grid, integ, iter_f!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
+    bsn_nfo = draw_basin!(grid, integ, iter_f!, reinit_f!, get_u; kwargs...)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
@@ -203,7 +205,7 @@ If the trajectory hits another basin many times times in row, the IC is colored 
 same color as this basin.
 """
 function _identify_basin_of_cell!(
-        bsn_nfo::BasinInfo, n::CartesianIndex, u;
+        bsn_nfo::BasinInfo, n::CartesianIndex, u,
         mc_att::Int, mc_bas::Int, mc_unmb::Int
     )
     next_c = bsn_nfo.basin[n]
@@ -331,7 +333,10 @@ for higher level functions see: `basins_2D`, `basins_general`
 examples for a Poincaré map of a continuous system.
 * `reinit_f!` : function that sets the initial condition to test on a two dimensional projection of the phase space.
 """
-function draw_basin!(grid, integ, iter_f!::Function, reinit_f!::Function, get_u::Function, mc_att, mc_bas, mc_unmb)
+function draw_basin!(
+        grid::Tuple, integ, iter_f!::Function, reinit_f!::Function, get_u::Function;
+        mc_att = 10, mc_bas = 10, mc_unmb = 60,
+    )
     NDS = length(get_state(integ))
     complete = false
     nstep=map(x->x[2]-x[1],grid)
@@ -404,7 +409,7 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, u0, mc_att, mc_bas, mc_unmb
            inlimbo += 1
        end
 
-       if inlimbo > 60
+       if inlimbo > 60 # TODO: This `60` should be a named keyword
            done = check_outside_the_screen!(bsn_nfo, new_u, old_u, inlimbo)
        end
     end

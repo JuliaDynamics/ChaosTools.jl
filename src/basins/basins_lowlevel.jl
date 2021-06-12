@@ -1,4 +1,4 @@
-mutable struct BasinInfo{F, D, T, Q, B, IF, RF, UF}
+mutable struct BasinInfo{B, G, IF, RF, UF, D, T, Q}
     basin::Array{Int16, B}
     grid_steps::G
     grid_maxima::G
@@ -43,9 +43,8 @@ function draw_basin!(
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
     grid_minima = minimum.(grid)
-    B = length(grid)
     bsn_nfo = BasinInfo(
-        ones(Int16, length.(grid)),
+        ones(Int16, map(length, grid)),
         SVector(grid_steps),
         SVector(grid_maxima),
         SVector(grid_minima),
@@ -62,20 +61,8 @@ function draw_basin!(
     T = eltype(grid[1]);
 
     while !complete
-        # pick the first empty box
-        ind = 0
-        for k in j:length(bsn_nfo.basin)
-            if bsn_nfo.basin[I[k]] == 1
-                j = k
-                ind = I[k]
-                break
-            end
-        end
-
-        if ind == 0 # We are done
-            complete = true
-            break
-        end
+        ind, complete, j = _next_uncolored_cell(bsn_nfo, j, I)
+        complete && break
 
         # Tentatively assign a color: odd is for basins, even for attractors.
         # First color is one
@@ -90,10 +77,23 @@ function draw_basin!(
     return bsn_nfo
 end
 
-@generated function generate_ic_on_grid(grid, ind)
-    B = length(grid)
-    gens = [:(grid[k][ind[k]] for k=1:B)]
-    return quote SVector{$B, Float64}($(gens...)) end
+function _next_uncolored_cell(bsn_nfo, j, I)
+    @inbounds for k in j:length(bsn_nfo.basin)
+        if bsn_nfo.basin[I[k]] == 1
+            j = k
+            ind = I[k]
+            return ind, false, j
+        end
+    end
+    return I[1], true, length(bsn_nfo.basin)
+end
+
+@generated function generate_ic_on_grid(grid::NTuple{B, T}, ind) where {B, T}
+    gens = [:(grid[$k][ind[$k]]) for k=1:B]
+    quote
+        Base.@_inline_meta
+        @inbounds return SVector{$B, Float64}($(gens...))
+    end
 end
 
 
@@ -239,6 +239,7 @@ function _identify_basin_of_cell!(
 end
 
 function store_attractor!(bsn_nfo::BasinInfo, u)
+    # TODO: This comment is confusing, because `Na` is not used anywhere in the function
     # We divide by to order the attractors from 1 to Na
     if haskey(bsn_nfo.attractors , bsn_nfo.current_color ÷ 2)
         push!(bsn_nfo.attractors[bsn_nfo.current_color ÷ 2],  u) # store attractor
@@ -261,6 +262,7 @@ function basin_cell_index(u, bsn_nfo::BasinInfo)
     @inbounds for i in 1:length(bsn_info.grid_minima)
         if bsn_nfo.grid_minima[i] ≤ u[i] ≤ bsn_nfo.grid_maxima[i]
             iswithingrid = false
+            break
         end
     end
     if iswithingrid
@@ -280,6 +282,9 @@ function check_outside_the_grid!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
         # TODO: all numeric constants in the above line must be replaced with
         # named variables with intention-revealing name. They must also be tunable
         # as keyword arguments in `draw_basin!`.
+        # TODO: Comparing the `norm` of the `new_u` is a mistake, as it assumes
+        # that the grid starts from 0. We instead need to compare the `norm`
+        # of the `new_u` from the center of the grid.
         recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, 1)
         reset_basin_counters!(bsn_nfo)
         # problematic IC : diverges or wanders outside the defined grid

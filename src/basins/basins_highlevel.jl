@@ -64,10 +64,10 @@ happens:
 Regarding performace, this method is at worst as fast as tracking the attractors.
 In most cases there is a signicative improvement in speed.
 """
-function basins_2D(xg, yg, pmap::PoincareMap; mc_att = 3, mc_bas = 10, mc_unmb = 60)
+function basins_2D(xg, yg, pmap::PoincareMap; kwargs...)
     reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
     get_u = (pmap) -> pmap.integ.u[pmap.i]
-    bsn_nfo = draw_basin!((xg, yg), pmap, step!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
+    bsn_nfo = draw_basin!((xg, yg), pmap, step!, reinit_f!, get_u; kwargs...)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
@@ -78,7 +78,7 @@ function _init_map(pmap::PoincareMap, y, idxs)
     reinit!(pmap, u)
 end
 
-function basins_2D(xg, yg, integ; T=nothing, mc_att = 2, mc_bas = 10, mc_unmb = 60)
+function basins_2D(xg, yg, integ; T=nothing, kwargs...)
     if T isa Real
         iter_f! = (integ) -> step!(integ, abs(T), true)
     elseif isnothing(T)
@@ -87,7 +87,7 @@ function basins_2D(xg, yg, integ; T=nothing, mc_att = 2, mc_bas = 10, mc_unmb = 
     reinit_f! = (integ,y) -> reinit!(integ, y)
     get_u = (integ) -> integ.u
 
-    bsn_nfo = draw_basin!((xg, yg), integ, iter_f!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
+    bsn_nfo = draw_basin!((xg, yg), integ, iter_f!, reinit_f!, get_u; kwargs...)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 

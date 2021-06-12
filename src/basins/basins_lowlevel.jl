@@ -61,7 +61,7 @@ function draw_basin!(
     T = eltype(grid[1]);
 
     while !complete
-        ind, complete, j = _next_uncolored_cell(bsn_nfo, j, I)
+        ind, complete, j = next_uncolored_cell(bsn_nfo, j, I)
         complete && break
 
         # Tentatively assign a color: odd is for basins, even for attractors.
@@ -77,7 +77,7 @@ function draw_basin!(
     return bsn_nfo
 end
 
-function _next_uncolored_cell(bsn_nfo, j, I)
+function next_uncolored_cell(bsn_nfo, j, I)
     @inbounds for k in j:length(bsn_nfo.basin)
         if bsn_nfo.basin[I[k]] == 1
             j = k
@@ -259,8 +259,8 @@ end
 
 function basin_cell_index(u, bsn_nfo::BasinInfo)
     iswithingrid = true
-    @inbounds for i in 1:length(bsn_info.grid_minima)
-        if bsn_nfo.grid_minima[i] ≤ u[i] ≤ bsn_nfo.grid_maxima[i]
+    @inbounds for i in 1:length(bsn_nfo.grid_minima)
+        if !(bsn_nfo.grid_minima[i] ≤ u[i] ≤ bsn_nfo.grid_maxima[i])
             iswithingrid = false
             break
         end

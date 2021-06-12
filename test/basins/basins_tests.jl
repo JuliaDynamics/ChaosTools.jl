@@ -5,6 +5,16 @@ using LinearAlgebra
 
 @testset "Basins tests" begin
 
+@testset "Discrete map" begin
+    ds = Systems.henon(zeros(2); a = 1.4, b = 0.3)
+    integ_df  = integrator(ds)
+    xg = yg = range(-2.,2.,length=100)
+    basin,attractors = basins_2D(xg, yg, integ_df)
+    # pcolormesh(xg, yg, basin')
+    @test count(basin .== 1) == 4270
+    @test count(basin .== -1) == 5730
+end
+    
 @testset "Test basin stroboscopic map" begin
     ds = Systems.duffing([0.1, 0.25]; ω = 1., f = 0.2, d = 0.15, β = -1)
     integ_df  = integrator(ds; abstol=1e-8, save_everystep=false)
@@ -29,16 +39,6 @@ end
     @test   4610 ≤ count(basin .== 1) ≤ 4641
     @test  2660 ≤ count(basin .== 2)  ≤ 2691
     @test  2640 ≤ count(basin .== 3) ≤ 2691
-end
-
-@testset "Discrete map" begin
-    ds = Systems.henon(zeros(2); a = 1.4, b = 0.3)
-    integ_df  = integrator(ds)
-    xg = yg = range(-2.,2.,length=100)
-    basin,attractors = basins_2D(xg, yg, integ_df)
-    # pcolormesh(xg, yg, basin')
-    @test count(basin .== 1) == 4270
-    @test count(basin .== -1) == 5730
 end
 
 @testset "basin_general" begin

@@ -1,7 +1,7 @@
 export draw_basin!, basins_2D, basins_general, match_attractors!
 
-mutable struct BasinInfo{F,N,T,Q}
-    basin::AbstractArray
+mutable struct BasinInfo{F,D,T,Q,B}
+    basin::Array{Int16, B}
     bbox::F
     iter_f!::Function
     reinit_f!::Function
@@ -15,7 +15,7 @@ mutable struct BasinInfo{F,N,T,Q}
     prev_bas::Int
     prev_step::Int
     step::Int
-    attractors::Dict{Int16, Dataset{N, T}}
+    attractors::Dict{Int16, Dataset{D, T}}
     visited::Q
 end
 

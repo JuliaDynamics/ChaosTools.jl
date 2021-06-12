@@ -37,7 +37,8 @@ function draw_basin!(
         # Why doesn't their name reveal their purpose? We need to rename all of them.
         mc_att = 10, mc_bas = 10, mc_unmb = 60,
     )
-    D = length(get_state(integ)) # dimension of the dynamical system
+    D = length(get_state(integ)) # dimension of the full dynamical system
+    B = length(grid)             # dimension of the grid, i.e. projected dynamics
     complete = false
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
@@ -58,6 +59,7 @@ function draw_basin!(
     reset_basin_counters!(bsn_nfo)
     I = CartesianIndices(bsn_nfo.basin)
     j = 1
+    T = eltype(grid[1]);
 
     while !complete
         # pick the first empty box
@@ -70,8 +72,7 @@ function draw_basin!(
             end
         end
 
-        if ind == 0
-            # We are done
+        if ind == 0 # We are done
             complete = true
             break
         end
@@ -79,8 +80,7 @@ function draw_basin!(
         # Tentatively assign a color: odd is for basins, even for attractors.
         # First color is one
         bsn_nfo.basin[ind] = bsn_nfo.current_color + 1
-        #u0 = SVector(x0, y0)
-        u0 = SVector([grid[k][ind[k]] for k in 1:B]...)
+        u0 = generate_ic_on_grid(grid, ind)
         bsn_nfo.basin[ind] = get_color_point!(bsn_nfo, integ, u0, mc_att, mc_bas, mc_unmb)
     end
     # remove attractors and rescale from 1 to Na
@@ -89,6 +89,13 @@ function draw_basin!(
     bsn_nfo.basin = (bsn_nfo.basin .- 1) .÷ 2
     return bsn_nfo
 end
+
+@generated function generate_ic_on_grid(grid, ind)
+    B = length(grid)
+    gens = [:(grid[k][ind[k]] for k=1:B)]
+    return quote SVector{$B, Float64}($(gens...)) end
+end
+
 
 function get_color_point!(bsn_nfo::BasinInfo, integ, u0, mc_att, mc_bas, mc_unmb)
     # This routine identifies the attractor using the previously defined basin.
@@ -252,7 +259,7 @@ end
 function basin_cell_index(u, bsn_nfo::BasinInfo)
     iswithingrid = true
     @inbounds for i in 1:length(bsn_info.grid_minima)
-        if bsn_nfo.grid_minima[i] ≤ u[i] < bsn_nfo.grid_maxima[i]
+        if bsn_nfo.grid_minima[i] ≤ u[i] ≤ bsn_nfo.grid_maxima[i]
             iswithingrid = false
         end
     end
@@ -266,9 +273,10 @@ function basin_cell_index(u, bsn_nfo::BasinInfo)
 end
 
 function check_outside_the_grid!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
-    # TODO: Not sure if this is a good decider of maximum 
+    # TODO: Not sure if this is a good decider of maximum, perhaps the diagonal of the grid
+    # is better...?
     grid_maximum = maximum(abs.(bsn_nfo.grid_maxima)); # this is the largest size of the phase space
-    if norm(new_u-old_u) < 1e-5 || inlimbo > 60*20 ||  norm(new_u) > 10*grid_maximum
+    if norm(new_u-old_u) < 1e-5 || inlimbo > 60*20 || norm(new_u) > 10*grid_maximum
         # TODO: all numeric constants in the above line must be replaced with
         # named variables with intention-revealing name. They must also be tunable
         # as keyword arguments in `draw_basin!`.

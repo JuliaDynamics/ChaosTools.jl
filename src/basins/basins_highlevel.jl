@@ -84,7 +84,7 @@ function basins_2D(xg, yg, integ; T=nothing, mc_att = 2, mc_bas = 10, mc_unmb = 
     elseif isnothing(T)
         iter_f! = (integ) -> step!(integ)
     end
-    reinit_f! =  (integ,y) -> reinit!(integ, y)
+    reinit_f! = (integ,y) -> reinit!(integ, y)
     get_u = (integ) -> integ.u
 
     bsn_nfo = draw_basin!((xg, yg), integ, iter_f!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
@@ -140,6 +140,8 @@ function basins_general(grid, integ, dt, idxs::SVector, complete_state; kwargs..
     iter_f! = (integ) -> step!(integ, dt) # we don't have to step _exactly_ `dt` here
     D = length(integ.u)
     remidxs = setdiff(1:D, idxs)
+    # TODO: We should really check here that our functions that complete the state
+    # return static vectors
     if complete_state isa AbstractVector
         length(complete_state) ≠ D-length(idxs) && error("Vector `complete_state` must have length D-2!")
         u0 = copy(complete_state)

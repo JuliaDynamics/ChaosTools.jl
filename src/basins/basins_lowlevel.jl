@@ -136,6 +136,11 @@ The idea is to color the grid with the current color. When an attractor box is h
 (even color), the initial condition is colored with the color of its basin (odd color).
 If the trajectory hits another basin many times times in row, the IC is colored with the
 same color as this basin.
+
+# TODO: In this docstring, we should state that the numbering system is different.
+(i.e. clarify the even / odd numbers, as we decided that in the high level interface,
+there isn't any even/odd distinction and the attractors are numbered according to the
+integers)
 """
 function _identify_basin_of_cell!(
         bsn_nfo::BasinInfo, n::CartesianIndex, u,
@@ -213,6 +218,8 @@ function _identify_basin_of_cell!(
             bsn_nfo.prevConsecutives = 1
         end
 
+        # TODO: The following literal constant `60` needs to be replaced by a 
+        # intention-revealing named variable
         if bsn_nfo.consecutive_other_basins > 60 || bsn_nfo.prevConsecutives > mc_bas
             recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, next_c)
             reset_basin_counters!(bsn_nfo)

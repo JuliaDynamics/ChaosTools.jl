@@ -5,6 +5,8 @@ mutable struct BasinInfo{F, D, T, Q, B, IF, RF, UF}
     grid_minima::G
     iter_f!::IF
     reinit_f!::RF
+    # TODO: Does `get_u` return the *FULL* system state, or only the state in the
+    # subspace given by the grid...? `get_u` should be renamed to convey this info.
     get_u::UF
     current_color::Int
     next_avail_color::Int
@@ -99,7 +101,7 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, u0, mc_att, mc_bas, mc_unmb
         old_u = bsn_nfo.get_u(integ)
         bsn_nfo.iter_f!(integ)
         new_u = bsn_nfo.get_u(integ)
-        n = get_box(new_u, bsn_nfo)
+        n = basin_cell_index(new_u, bsn_nfo)
 
         if !isnothing(n) # apply procedure only for boxes in the defined space
             cellcolor = _identify_basin_of_cell!(
@@ -247,8 +249,7 @@ function recolor_visited_cell!(bsn_nfo::BasinInfo, old_c, new_c)
     end
 end
 
-# TODO: The name of this function is too generic and doesn't revail its purpose
-function get_box(u, bsn_nfo::BasinInfo)
+function basin_cell_index(u, bsn_nfo::BasinInfo)
     iswithingrid = true
     @inbounds for i in 1:length(bsn_info.grid_minima)
         if bsn_nfo.grid_minima[i] ≤ u[i] < bsn_nfo.grid_maxima[i]

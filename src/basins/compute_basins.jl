@@ -92,7 +92,7 @@ In most cases there is a signicative improvement in speed.
 function basins_2D(xg, yg, pmap::PoincareMap; mc_att = 3, mc_bas = 10, mc_unmb = 60)
     reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
     get_u = (pmap) -> pmap.integ.u[pmap.i]
-    bsn_nfo = draw_basin!([xg, yg], pmap, step!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
+    bsn_nfo = draw_basin!((xg, yg), pmap, step!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
@@ -112,19 +112,20 @@ function basins_2D(xg, yg, integ; T=nothing, mc_att = 2, mc_bas = 10, mc_unmb = 
     reinit_f! =  (integ,y) -> reinit!(integ, y)
     get_u = (integ) -> integ.u
 
-    bsn_nfo = draw_basin!([xg, yg], integ, iter_f!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
+    bsn_nfo = draw_basin!((xg, yg), integ, iter_f!, reinit_f!, get_u, mc_att, mc_bas, mc_unmb)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
 
 """
-    basins_general(grid, ds::DynamicalSystem; kwargs...) -> basin, attractors
-Compute an estimate of the basins of attraction of a higher-dimensional dynamical system `ds`
-on a projection of the system dynamics on a two-dimensional plane.
-
-`grid` in an vector of ranges defining the grid of initial conditions
-on the plane, for example `grid=[xg,yg]` where `xg` and `yg` are one dimensional ranges. Refer to
+    basins_general(grid::Tuple, ds::DynamicalSystem; kwargs...) -> basin, attractors
+Compute an estimate of the basins of attraction of a dynamical system `ds` on
+a partitioning of the state space given by `grid`.
+`grid` in tuple of ranges defining the grid of initial conditions
+, for example `grid=[xg,yg]` where `xg` and `yg` are one dimensional ranges. Refer to
 [`basins_2D`](@ref) for more details regarding the algorithm.
+
+# TODO: All of this needs to be re-written, as we no longer project on 2D.
 Notice that in the case we have to project the dynamics on a lower dimensional space,
 there are edge cases where the system may have two attractors
 that are close on the defined space but are far apart in another dimension. They could
@@ -137,7 +138,9 @@ b, a = basins_general([xg, yg, zg], ds; complete_state = [0.0])
 ```
 
 ## Keyword Arguments
-* `dt = 1`: Approximate time step of the integrator. It is recommended to use values ≥ 1.
+* `dt = 1`: Approximate time step of the integrator. It is recommended to use values such
+  that one step will typically make the integrator move to a different cell of the 
+  state space partitioning.
 * `idxs = 1:2`: This vector selects the two variables of the system that will define the
   "plane" the dynamics will be projected into.
 * `complete_state = zeros(D-Nu)`: This argument allows setting the _remaining_ variables
@@ -192,11 +195,17 @@ function reinit_integ_idxs!(integ, y, idxs, u, remidxs)
 end
 
 
-## Procedure described in  H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations, Springer, New York, 1997 Ch. 7
-# The idea is to color the grid with the current color. When an attractor box is hit (even color), the initial condition is colored
-# with the color of its basin (odd color). If the trajectory hits another basin 10 times in row the IC is colored with the same
-# color as this basin.
-function procedure!(bsn_nfo::BasinInfo, n::CartesianIndex, u, mc_att::Int, mc_bas::Int, mc_unmb::Int)
+"""
+Main procedure described by Nusse & Yorke for the grid cell `n`.
+The idea is to color the grid with the current color. When an attractor box is hit
+(even color), the initial condition is colored with the color of its basin (odd color).
+If the trajectory hits another basin many times times in row, the IC is colored with the
+same color as this basin.
+"""
+function _identify_basin_of_cell!(
+        bsn_nfo::BasinInfo, n::CartesianIndex, u;
+        mc_att::Int, mc_bas::Int, mc_unmb::Int
+    )
     next_c = bsn_nfo.basin[n]
     bsn_nfo.step += 1
 
@@ -388,7 +397,7 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, u0, mc_att, mc_bas, mc_unmb
        n = get_box(new_u, bsn_nfo)
 
        if !isnothing(n) # apply procedure only for boxes in the defined space
-           done = procedure!(bsn_nfo, n, get_state(integ), mc_att, mc_bas, mc_unmb)
+           done = _identify_basin_of_cell!(bsn_nfo, n, get_state(integ), mc_att, mc_bas, mc_unmb)
            inlimbo = 0
        else
            # We are outside the defined grid

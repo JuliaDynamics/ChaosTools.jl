@@ -10,6 +10,7 @@ mutable struct BasinInfo{B, G, IF, RF, UF, D, T, Q}
     current_att_color::Int
     current_bas_color::Int
     consecutive_match::Int
+    consecutive_lost::Int
     prev_clr::Int
     attractors::Dict{Int16, Dataset{D, T}}
     visited::Q
@@ -44,7 +45,7 @@ function draw_basin!(
         reinit_f!,
         get_grid_state,
         :att_search,
-        2,4,0,1,
+        2,4,0,1,1,
         Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
         Vector{CartesianIndex}()
     )
@@ -157,6 +158,7 @@ function _identify_basin_of_cell!(
             bsn_nfo.basin[n] = bsn_nfo.current_att_color
             store_attractor!(bsn_nfo, u)
             bsn_nfo.state = :att_found
+            println("Att found",u)
             bsn_nfo.consecutive_match = 1
         end
         bsn_nfo.prev_clr = nxt_clr
@@ -207,8 +209,8 @@ function _identify_basin_of_cell!(
 
     if bsn_nfo.state == :lost
         #grid_maximum = maximum(abs.(bsn_nfo.grid_maxima)); # this is the largest size of the phase space
-        bsn_nfo.consecutive_match += 1
-        if   bsn_nfo.consecutive_match > mx_chk_lost || norm(u) == Inf
+        bsn_nfo.consecutive_lost += 1
+        if   bsn_nfo.consecutive_lost > mx_chk_lost || norm(u) == Inf
             # TODO: all numeric constants in the above line must be replaced with
             # named variables with intention-revealing name. They must also be tunable
             # as keyword arguments in `draw_basin!`.
@@ -262,6 +264,7 @@ end
 
 function reset_basin_counters!(bsn_nfo::BasinInfo)
     bsn_nfo.consecutive_match = 0
+    bsn_nfo.consecutive_lost = 0
     bsn_nfo.prev_clr = 1
     bsn_nfo.state = :att_search
 end
@@ -282,14 +285,16 @@ function check_next_state!(bsn_nfo, nxt_clr)
         next_state = :att_hit
     elseif nxt_clr == -1
         # out of the grid
-        next_state = :lost
+        bsn_nfo.state = :lost
+        bsn_nfo.consecutive_lost = 1
+        return
     elseif isodd(nxt_clr)
         # hit an basin box
         next_state = :bas_hit
     end
 
-    if next_state != current_state
-        # reset counter
+    if next_state != current_state && current_state != :lost
+        # reset counter exept in lost state (the counter freezes in this case)
         bsn_nfo.consecutive_match = 1
     end
     bsn_nfo.state = next_state

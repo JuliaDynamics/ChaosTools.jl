@@ -27,12 +27,14 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
 ## Keyword Arguments
 * `T` : Period of the stroboscopic map, in case `integ` is an integrator of a 2D continuous
   dynamical system with periodic time forcing.
-* `mc_att = 10`: A parameter that sets the maximum checks of consecutives hits of an attractor
+* `mx_chk_att = 2`: A parameter that sets the maximum checks of consecutives hits of an attractor
   before deciding the basin of the initial condition.
-* `mc_bas = 10` : Maximum check of consecutive visits of the same basin of attraction.
+* `mx_chk_hit_bas = 10` : Maximum check of consecutive visits of the same basin of attraction.
   This number can be increased for higher accuracy.
-* `mc_unmb = 60` : Maximum check of unnumbered cell before considering we have an attractor.
+* `mx_chk_fnd_att = 60` : Maximum check of unnumbered cell before considering we have an attractor.
   This number can be increased for higher accuracy.
+* `mx_chk_lost = 2000` : Maximum check of iterations outside the defined grid before we consider the orbit lost outside.
+This number can be increased for higher accuracy.
 
 ## Description
 This method identifies the attractors and their basins of attraction on the grid without
@@ -52,13 +54,13 @@ returns a matrix coding the basins of attraction and a dictionary with all attra
 The method starts by picking the first available initial condition on the plane not yet
 numbered. The dynamical system is then iterated until one of the following conditions
 happens:
-1. The trajectory hits a known attractor already numbered `mc_att` consecutive times: the initial condition is
+1. The trajectory hits a known attractor already numbered `mx_chk_att` consecutive times: the initial condition is
    numbered with the corresponding number.
 1. The trajectory diverges or hits an attractor outside the defined grid: the initial
    condition is set to -1
-1. The trajectory hits a known basin `mc_bas` times in a row: the initial condition belongs to
+1. The trajectory hits a known basin `mx_chk_hit_bas` times in a row: the initial condition belongs to
    that basin and is numbered accordingly.
-1. The trajectory hits `mc_unmb` times in a row an unnumbered cell: it is considered an attractor
+1. The trajectory hits `mx_chk_fnd_att` times in a row an unnumbered cell: it is considered an attractor
    and is labelled with a new number.
 
 Regarding performace, this method is at worst as fast as tracking the attractors.
@@ -114,7 +116,7 @@ b, a = basins_general([xg, yg, zg], ds; complete_state = [0.0])
 
 ## Keyword Arguments
 * `dt = 1`: Approximate time step of the integrator. It is recommended to use values such
-  that one step will typically make the integrator move to a different cell of the 
+  that one step will typically make the integrator move to a different cell of the
   state space partitioning.
 * `idxs = 1:2`: This vector selects the two variables of the system that will define the
   "plane" the dynamics will be projected into.
@@ -122,13 +124,13 @@ b, a = basins_general([xg, yg, zg], ds; complete_state = [0.0])
   of the dynamical system state on each initial condition `u` of length `Nu`. It can be
   either a vector of length `D-Nu`, or a function `f(x, y)` that returns a vector of
   length `D-Nu`.
-* `mc_att, mc_bas, mc_unmb`: As in [`basins_2D`](@ref).
+* `mx_chk_att, mx_chk_hit_bas, mx_chk_fnd_att, mx_chk_lost`: As in [`basins_2D`](@ref).
 * `diffeq...`: Keyword arguments propagated to [`integrator`](@ref).
 """
 function basins_general(grid::Tuple, ds::DynamicalSystem;
         dt=1, idxs = SVector(1, 2), # TODO: `idxs` must have same length as `grid`
         complete_state=zeros(dimension(ds)-2), diffeq = NamedTuple(),
-        kwargs... # `kwargs` tunes the basin finding algorithm, e.g. `mc_att`.
+        kwargs... # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
                   # these keywords are actually expanded in `draw_basin!`
     )
     integ = integrator(ds; diffeq...)

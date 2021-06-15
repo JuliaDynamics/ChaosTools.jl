@@ -5,18 +5,12 @@ mutable struct BasinInfo{B, G, IF, RF, UF, D, T, Q}
     grid_minima::G
     iter_f!::IF
     reinit_f!::RF
-    # TODO: Does `get_u` return the *FULL* system state, or only the state in the
-    # subspace given by the grid...? `get_u` should be renamed to convey this info.
-    get_u::UF
-    current_color::Int
-    next_avail_color::Int
+    get_grid_state::UF
+    state::Symbol
+    current_att_color::Int
+    current_bas_color::Int
     consecutive_match::Int
-    consecutive_other_basins::Int
-    prevConsecutives::Int
-    prev_attr::Int
-    prev_bas::Int
-    prev_step::Int
-    step::Int
+    prev_clr::Int
     attractors::Dict{Int16, Dataset{D, T}}
     visited::Q
 end
@@ -32,10 +26,8 @@ The keywords are the actual algorithm-tuning keywords, expanded first time here,
 and are described in the high level function.
 """
 function draw_basin!(
-        grid::Tuple, integ, iter_f!::Function, reinit_f!::Function, get_u::Function;
-        # TODO: The way these keyword arguments are named is very confusing.
-        # Why doesn't their name reveal their purpose? We need to rename all of them.
-        mc_att = 10, mc_bas = 10, mc_unmb = 60,
+        grid::Tuple, integ, iter_f!::Function, reinit_f!::Function, get_grid_state::Function;
+        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_lost=2000
     )
     D = length(get_state(integ)) # dimension of the full dynamical system
     B = length(grid)             # dimension of the grid, i.e. projected dynamics
@@ -50,8 +42,9 @@ function draw_basin!(
         SVector(grid_minima),
         iter_f!,
         reinit_f!,
-        get_u,
-        2,4,0,0,0,1,1,0,0,
+        get_grid_state,
+        :att_search,
+        2,4,0,1,
         Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
         Vector{CartesianIndex}()
     )
@@ -63,14 +56,13 @@ function draw_basin!(
     while !complete
         ind, complete, j = next_uncolored_cell(bsn_nfo, j, I)
         complete && break
-
         # Tentatively assign a color: odd is for basins, even for attractors.
-        # First color is one
-        bsn_nfo.basin[ind] = bsn_nfo.current_color + 1
-        u0 = generate_ic_on_grid(grid, ind)
-        bsn_nfo.basin[ind] = get_color_point!(bsn_nfo, integ, u0, mc_att, mc_bas, mc_unmb)
+        # First color is 2 for attractor and 3 for basins
+        bsn_nfo.basin[ind] = bsn_nfo.current_bas_color
+        y0 = generate_ic_on_grid(grid, ind)
+        bsn_nfo.basin[ind] = get_color_point!(bsn_nfo, integ, y0, mx_chk_att, mx_chk_hit_bas, mx_chk_fnd_att, mx_chk_lost)
     end
-    # remove attractors and rescale from 1 to Na
+    # remove attractors and rescale from 1 to max nmb of attractors
     ind = iseven.(bsn_nfo.basin)
     bsn_nfo.basin[ind] .+= 1
     bsn_nfo.basin = (bsn_nfo.basin .- 1) .÷ 2
@@ -97,35 +89,20 @@ end
 end
 
 
-function get_color_point!(bsn_nfo::BasinInfo, integ, u0, mc_att, mc_bas, mc_unmb)
+function get_color_point!(bsn_nfo::BasinInfo, integ, y0, mx_chk_att, mx_chk_hit_bas, mx_chk_fnd_att, mx_chk_lost)
     # This routine identifies the attractor using the previously defined basin.
     # reinitialize integrator
-    bsn_nfo.reinit_f!(integ, u0)
+    bsn_nfo.reinit_f!(integ, y0)
     reset_basin_counters!(bsn_nfo)
     cellcolor = inlimbo = 0
 
     while cellcolor == 0
-        old_u = bsn_nfo.get_u(integ)
+        old_y = bsn_nfo.get_grid_state(integ)
         bsn_nfo.iter_f!(integ)
-        new_u = bsn_nfo.get_u(integ)
-        n = basin_cell_index(new_u, bsn_nfo)
-
-        if !isnothing(n) # apply procedure only for boxes in the defined space
-            cellcolor = _identify_basin_of_cell!(
-                # TODO: Why is `get_state(integ)` called here?
-                # It is really confusing at which point is the integrator re-init
-                # to a new state...
-                bsn_nfo, n, get_state(integ), mc_att, mc_bas, mc_unmb
-            )
-            inlimbo = 0
-        else
-            # We are outside the defined grid
-            inlimbo += 1
-        end
-
-        if inlimbo > 60 # TODO: This `60` should be a named keyword
-            cellcolor = check_outside_the_grid!(bsn_nfo, new_u, old_u, inlimbo)
-        end
+        new_y = bsn_nfo.get_grid_state(integ)
+        n = basin_cell_index(new_y, bsn_nfo)
+        u_att = get_state(integ) # in case we need the full state to save the attractor
+        cellcolor = _identify_basin_of_cell!(bsn_nfo, n, u_att, mx_chk_att, mx_chk_hit_bas, mx_chk_fnd_att, mx_chk_lost)
     end
     return cellcolor
 end
@@ -144,114 +121,116 @@ integers)
 """
 function _identify_basin_of_cell!(
         bsn_nfo::BasinInfo, n::CartesianIndex, u,
-        mc_att::Int, mc_bas::Int, mc_unmb::Int
+        mx_chk_att::Int, mx_chk_hit_bas::Int, mx_chk_fnd_att::Int, mx_chk_lost::Int
     )
-    next_c = bsn_nfo.basin[n]
-    bsn_nfo.step += 1
+    #if n[1]==-1 means we are outside the grid
+    nxt_clr = (n[1]==-1) ? -1 : bsn_nfo.basin[n]
+    check_next_state!(bsn_nfo,nxt_clr)
 
-    if iseven(next_c) && bsn_nfo.consecutive_match < mc_unmb
-        # check wether or not we hit an attractor (even color). Make sure we hit mc_att consecutive times.
-        if bsn_nfo.prev_attr == next_c
-            bsn_nfo.prevConsecutives += 1
-        else
-            # reset prevConsecutives
-            bsn_nfo.prev_attr = next_c
-            bsn_nfo.prevConsecutives = 1
-            return 0;
+    if bsn_nfo.state == :att_hit
+        if nxt_clr == bsn_nfo.prev_clr
+             bsn_nfo.consecutive_match += 1
         end
-
-        if bsn_nfo.prevConsecutives ≥ mc_att
-            # Wait if we hit the attractor a mc_att times in a row just to check if it is not a nearby trajectory
-            c3 = next_c + 1
-            if mc_att == 2
-                # For maps we can color the previous steps as well. Every point of the trajectory lead
-                # to the attractor
-                recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, c3)
-            else
-                # For higher dimensions we erase the past iterations and visited boxes
-                recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, 1)
-            end
+        if bsn_nfo.consecutive_match ≥ mx_chk_att
+            # Wait if we hit the attractor a mx_chk_att times in a row just to check if it is not a nearby trajectory
+            hit_att = nxt_clr + 1
+            recolor_visited_cell!(bsn_nfo, bsn_nfo.current_bas_color, 1)
             reset_basin_counters!(bsn_nfo)
-            return c3
+            return hit_att
          end
+         bsn_nfo.prev_clr = nxt_clr
+         return 0
     end
 
-    if next_c == 1 && bsn_nfo.consecutive_match < mc_unmb
-        # uncolored box, color it with current odd color
-        bsn_nfo.basin[n] = bsn_nfo.current_color + 1
-        push!(bsn_nfo.visited,n) # keep track of visited cells
-        bsn_nfo.consecutive_match = 0
-        return 0
-    elseif next_c == 1 && bsn_nfo.consecutive_match >= mc_unmb
-        # Maybe chaotic attractor, perodic or long recursion.
-        # Color this box as part of an attractor
-        bsn_nfo.basin[n] = bsn_nfo.current_color
-        # reinit consecutive match to ensure that we have an attractor
-        bsn_nfo.consecutive_match = mc_unmb
-        store_attractor!(bsn_nfo, u)
-        return 0
-    elseif next_c == bsn_nfo.current_color + 1
-        # hit a previously visited box with the current color, possible attractor?
-        if bsn_nfo.consecutive_match < mc_unmb
+    if bsn_nfo.state == :att_search
+        if nxt_clr == 1
+            # uncolored box, color it with current odd color and reset counter
+            bsn_nfo.basin[n] = bsn_nfo.current_bas_color
+            push!(bsn_nfo.visited,n) # keep track of visited cells
+            bsn_nfo.consecutive_match = 1
+        elseif nxt_clr == bsn_nfo.current_bas_color
+            # hit a previously visited box with the current color, possible attractor?
             bsn_nfo.consecutive_match += 1
-            return 0
-        else
-            bsn_nfo.basin[n] = bsn_nfo.current_color
+        end
+
+        if bsn_nfo.consecutive_match >= mx_chk_fnd_att
+            bsn_nfo.basin[n] = bsn_nfo.current_att_color
             store_attractor!(bsn_nfo, u)
-            # We continue iterating until we hit again the same attractor. In which case we stop.
-            return 0;
+            bsn_nfo.state = :att_found
+            bsn_nfo.consecutive_match = 1
         end
-    elseif (
-            isodd(next_c) && 0 < next_c < bsn_nfo.current_color && 
-            bsn_nfo.consecutive_match < mc_unmb && mc_att == 2
-        )
-        # hit a colored basin point of the wrong basin, happens all the time, we check if it happens
-        # mc_bas times in a row or if it happens N times along the trajectory whether to decide if it is another basin.
-        bsn_nfo.consecutive_other_basins += 1
+        bsn_nfo.prev_clr = nxt_clr
+        return 0
+    end
 
-        if bsn_nfo.prev_bas == next_c &&  bsn_nfo.prev_step == bsn_nfo.step - 1
-            bsn_nfo.prevConsecutives += 1
-            bsn_nfo.prev_step += 1
-        else
-            bsn_nfo.prev_bas = next_c
-            bsn_nfo.prev_step = bsn_nfo.step
-            bsn_nfo.prevConsecutives = 1
-        end
-
-        # TODO: The following literal constant `60` needs to be replaced by a 
-        # intention-revealing named variable
-        if bsn_nfo.consecutive_other_basins > 60 || bsn_nfo.prevConsecutives > mc_bas
-            recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, next_c)
+    if bsn_nfo.state == :att_found
+        if nxt_clr == 1 || nxt_clr == bsn_nfo.current_bas_color
+            # Maybe chaotic attractor, perodic or long recursion.
+            # Color this box as part of an attractor
+            bsn_nfo.basin[n] = bsn_nfo.current_att_color
+            bsn_nfo.consecutive_match = 1
+            store_attractor!(bsn_nfo, u)
+        elseif iseven(nxt_clr) && (bsn_nfo.consecutive_match <  mx_chk_fnd_att)
+            # We make sure we hit the attractor another mx_chk_fnd_att consecutive times
+            # just to be sure that we have the complete attractor
+            bsn_nfo.consecutive_match += 1
+        elseif iseven(nxt_clr) && bsn_nfo.consecutive_match >= mx_chk_fnd_att
+            # We have checked the presence of an attractor: tidy up everything
+            # and get a new box
+            recolor_visited_cell!(bsn_nfo, bsn_nfo.current_bas_color, 1)
+            # pick the next color for coloring the basin.
+            bsn_nfo.current_bas_color += 2
+            bsn_nfo.current_att_color += 2
             reset_basin_counters!(bsn_nfo)
-            return next_c
+            return nxt_clr + 1;
         end
         return 0
-    elseif iseven(next_c) && (mc_unmb <= bsn_nfo.consecutive_match < 2 * mc_unmb)
-        # We make sure we hit the attractor 60 consecutive times
-        bsn_nfo.consecutive_match += 1
+    end
+
+    if bsn_nfo.state == :bas_hit
+        # hit a colored basin point of the wrong basin, happens all the time,
+        # we check if it happens mx_chk_hit_bas times in a row or if it happens
+        # N times along the trajectory whether to decide if it is another basin.
+        if bsn_nfo.prev_clr == nxt_clr
+            bsn_nfo.consecutive_match += 1
+        else
+            bsn_nfo.consecutive_match = 1
+        end
+        if  bsn_nfo.consecutive_match > mx_chk_hit_bas
+            recolor_visited_cell!(bsn_nfo, bsn_nfo.current_bas_color, 1)
+            reset_basin_counters!(bsn_nfo)
+            return nxt_clr
+        end
+        bsn_nfo.prev_clr = nxt_clr
         return 0
-    elseif iseven(next_c) && bsn_nfo.consecutive_match >= mc_unmb * 2
-        # We have checked the presence of an attractor: tidy up everything and get a new box.
-        recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, 1)
-        bsn_nfo.basin[n] = bsn_nfo.current_color
-        store_attractor!(bsn_nfo, u)
-        # pick the next color for coloring the basin.
-        bsn_nfo.current_color = bsn_nfo.next_avail_color
-        bsn_nfo.next_avail_color += 2
-        reset_basin_counters!(bsn_nfo)
-        return next_c + 1;
-    else
+    end
+
+    if bsn_nfo.state == :lost
+        #grid_maximum = maximum(abs.(bsn_nfo.grid_maxima)); # this is the largest size of the phase space
+        bsn_nfo.consecutive_match += 1
+        if   bsn_nfo.consecutive_match > mx_chk_lost || norm(u) == Inf
+            # TODO: all numeric constants in the above line must be replaced with
+            # named variables with intention-revealing name. They must also be tunable
+            # as keyword arguments in `draw_basin!`.
+            # TODO: Comparing the `norm` of the `new_u` is a mistake, as it assumes
+            # that the grid starts from 0. We instead need to compare the `norm`
+            # of the `new_u` from the center of the grid.
+            recolor_visited_cell!(bsn_nfo, bsn_nfo.current_bas_color, 1)
+            reset_basin_counters!(bsn_nfo)
+            # problematic IC : diverges or wanders outside the defined grid
+            return -1
+        end
+        bsn_nfo.prev_clr = nxt_clr
         return 0
     end
 end
 
 function store_attractor!(bsn_nfo::BasinInfo, u)
-    # TODO: This comment is confusing, because `Na` is not used anywhere in the function
-    # We divide by to order the attractors from 1 to Na
-    if haskey(bsn_nfo.attractors , bsn_nfo.current_color ÷ 2)
-        push!(bsn_nfo.attractors[bsn_nfo.current_color ÷ 2],  u) # store attractor
+    # bsn_nfo.current_color is the number of the attractor multiplied by two
+    if haskey(bsn_nfo.attractors , bsn_nfo.current_att_color ÷ 2)
+        push!(bsn_nfo.attractors[bsn_nfo.current_att_color ÷ 2],  u) # store attractor
     else
-        bsn_nfo.attractors[bsn_nfo.current_color ÷ 2] = Dataset([SVector(u...)])  # init dic
+        bsn_nfo.attractors[bsn_nfo.current_att_color ÷ 2] = Dataset([SVector(u...)])  # init dic
     end
 end
 
@@ -277,35 +256,41 @@ function basin_cell_index(u, bsn_nfo::BasinInfo)
         ind = @. round(Int, (u - bsn_nfo.grid_minima)/bsn_nfo.grid_steps) + 1
         return CartesianIndex(ind...)
     else
-        return nothing
+        return CartesianIndex(-1)
     end
-end
-
-function check_outside_the_grid!(bsn_nfo::BasinInfo, new_u, old_u, inlimbo)
-    # TODO: Not sure if this is a good decider of maximum, perhaps the diagonal of the grid
-    # is better...?
-    grid_maximum = maximum(abs.(bsn_nfo.grid_maxima)); # this is the largest size of the phase space
-    if norm(new_u-old_u) < 1e-5 || inlimbo > 60*20 || norm(new_u) > 10*grid_maximum
-        # TODO: all numeric constants in the above line must be replaced with
-        # named variables with intention-revealing name. They must also be tunable
-        # as keyword arguments in `draw_basin!`.
-        # TODO: Comparing the `norm` of the `new_u` is a mistake, as it assumes
-        # that the grid starts from 0. We instead need to compare the `norm`
-        # of the `new_u` from the center of the grid.
-        recolor_visited_cell!(bsn_nfo, bsn_nfo.current_color + 1, 1)
-        reset_basin_counters!(bsn_nfo)
-        # problematic IC : diverges or wanders outside the defined grid
-        return -1
-    end
-    return 0
 end
 
 function reset_basin_counters!(bsn_nfo::BasinInfo)
     bsn_nfo.consecutive_match = 0
-    bsn_nfo.consecutive_other_basins = 0
-    bsn_nfo.prevConsecutives = 0
-    bsn_nfo.prev_attr = 1
-    bsn_nfo.prev_bas = 1
-    bsn_nfo.prev_step = 0
-    bsn_nfo.step = 0
+    bsn_nfo.prev_clr = 1
+    bsn_nfo.state = :att_search
+end
+
+function check_next_state!(bsn_nfo, nxt_clr)
+    next_state = :undef
+    current_state = bsn_nfo.state
+    if current_state == :att_found
+        # this is a terminal state, once reached you don't get out
+        return
+    end
+
+    if nxt_clr == 1 || nxt_clr == bsn_nfo.current_bas_color
+        # uncolored box or previously visited box with the current color
+        next_state = :att_search
+    elseif iseven(nxt_clr)
+        # hit an attractor box
+        next_state = :att_hit
+    elseif nxt_clr == -1
+        # out of the grid
+        next_state = :lost
+    elseif isodd(nxt_clr)
+        # hit an basin box
+        next_state = :bas_hit
+    end
+
+    if next_state != current_state
+        # reset counter
+        bsn_nfo.consecutive_match = 1
+    end
+    bsn_nfo.state = next_state
 end

@@ -115,7 +115,7 @@ end
 
 """
 Main procedure described by Nusse & Yorke for the grid cell `n`.
-The idea is to color the grid with the current color. When an attractor box is hit
+The idea is to color the grid with the current basin color. When an attractor box is hit
 (even color), the initial condition is colored with the color of its basin (odd color).
 If the trajectory hits another basin many times times in row, the IC is colored with the
 same color as this basin.

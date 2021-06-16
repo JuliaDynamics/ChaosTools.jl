@@ -28,7 +28,8 @@ and are described in the high level function.
 """
 function draw_basin!(
         grid::Tuple, integ, iter_f!::Function, reinit_f!::Function, get_grid_state::Function;
-        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_lost=2000
+        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_lost=2000,
+        horizon_limit=10^10
     )
     D = length(get_state(integ)) # dimension of the full dynamical system
     B = length(grid)             # dimension of the grid, i.e. projected dynamics
@@ -61,7 +62,8 @@ function draw_basin!(
         # First color is 2 for attractor and 3 for basins
         bsn_nfo.basin[ind] = bsn_nfo.current_bas_color
         y0 = generate_ic_on_grid(grid, ind)
-        bsn_nfo.basin[ind] = get_color_point!(bsn_nfo, integ, y0, mx_chk_att, mx_chk_hit_bas, mx_chk_fnd_att, mx_chk_lost)
+        bsn_nfo.basin[ind] = get_color_point!(bsn_nfo, integ, y0, mx_chk_att,
+                        mx_chk_hit_bas, mx_chk_fnd_att, mx_chk_lost, horizon_limit)
     end
     # remove attractors and rescale from 1 to max nmb of attractors
     ind = iseven.(bsn_nfo.basin)
@@ -90,7 +92,9 @@ end
 end
 
 
-function get_color_point!(bsn_nfo::BasinInfo, integ, y0, mx_chk_att, mx_chk_hit_bas, mx_chk_fnd_att, mx_chk_lost)
+function get_color_point!(bsn_nfo::BasinInfo, integ, y0, mx_chk_att, mx_chk_hit_bas,
+        mx_chk_fnd_att, mx_chk_lost, horizon_limit
+    )
     # This routine identifies the attractor using the previously defined basin.
     # reinitialize integrator
     bsn_nfo.reinit_f!(integ, y0)
@@ -98,12 +102,13 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, y0, mx_chk_att, mx_chk_hit_
     cellcolor = inlimbo = 0
 
     while cellcolor == 0
-        old_y = bsn_nfo.get_grid_state(integ)
+        #old_y = bsn_nfo.get_grid_state(integ)
         bsn_nfo.iter_f!(integ)
         new_y = bsn_nfo.get_grid_state(integ)
         n = basin_cell_index(new_y, bsn_nfo)
         u_att = get_state(integ) # in case we need the full state to save the attractor
-        cellcolor = _identify_basin_of_cell!(bsn_nfo, n, u_att, mx_chk_att, mx_chk_hit_bas, mx_chk_fnd_att, mx_chk_lost)
+        cellcolor = _identify_basin_of_cell!(bsn_nfo, n, u_att, mx_chk_att, mx_chk_hit_bas,
+                                            mx_chk_fnd_att, mx_chk_lost, horizon_limit)
     end
     return cellcolor
 end
@@ -121,8 +126,9 @@ there isn't any even/odd distinction and the attractors are numbered according t
 integers)
 """
 function _identify_basin_of_cell!(
-        bsn_nfo::BasinInfo, n::CartesianIndex, u,
-        mx_chk_att::Int, mx_chk_hit_bas::Int, mx_chk_fnd_att::Int, mx_chk_lost::Int
+        bsn_nfo::BasinInfo, n::CartesianIndex, u_full_state,
+        mx_chk_att::Int, mx_chk_hit_bas::Int, mx_chk_fnd_att::Int, mx_chk_lost::Int,
+        horizon_limit
     )
     #if n[1]==-1 means we are outside the grid
     nxt_clr = (n[1]==-1) ? -1 : bsn_nfo.basin[n]
@@ -133,7 +139,8 @@ function _identify_basin_of_cell!(
              bsn_nfo.consecutive_match += 1
         end
         if bsn_nfo.consecutive_match ≥ mx_chk_att
-            # Wait if we hit the attractor a mx_chk_att times in a row just to check if it is not a nearby trajectory
+            # Wait if we hit the attractor a mx_chk_att times in a row just
+            # to check if it is not a nearby trajectory
             hit_att = nxt_clr + 1
             recolor_visited_cell!(bsn_nfo, bsn_nfo.current_bas_color, 1)
             reset_basin_counters!(bsn_nfo)
@@ -156,9 +163,8 @@ function _identify_basin_of_cell!(
 
         if bsn_nfo.consecutive_match >= mx_chk_fnd_att
             bsn_nfo.basin[n] = bsn_nfo.current_att_color
-            store_attractor!(bsn_nfo, u)
+            store_attractor!(bsn_nfo, u_full_state)
             bsn_nfo.state = :att_found
-            println("Att found",u)
             bsn_nfo.consecutive_match = 1
         end
         bsn_nfo.prev_clr = nxt_clr
@@ -171,14 +177,14 @@ function _identify_basin_of_cell!(
             # Color this box as part of an attractor
             bsn_nfo.basin[n] = bsn_nfo.current_att_color
             bsn_nfo.consecutive_match = 1
-            store_attractor!(bsn_nfo, u)
+            store_attractor!(bsn_nfo, u_full_state)
         elseif iseven(nxt_clr) && (bsn_nfo.consecutive_match <  mx_chk_fnd_att)
             # We make sure we hit the attractor another mx_chk_fnd_att consecutive times
             # just to be sure that we have the complete attractor
             bsn_nfo.consecutive_match += 1
         elseif iseven(nxt_clr) && bsn_nfo.consecutive_match >= mx_chk_fnd_att
             # We have checked the presence of an attractor: tidy up everything
-            # and get a new box
+            # and get a new cell
             recolor_visited_cell!(bsn_nfo, bsn_nfo.current_bas_color, 1)
             # pick the next color for coloring the basin.
             bsn_nfo.current_bas_color += 2
@@ -208,15 +214,9 @@ function _identify_basin_of_cell!(
     end
 
     if bsn_nfo.state == :lost
-        #grid_maximum = maximum(abs.(bsn_nfo.grid_maxima)); # this is the largest size of the phase space
+        #grid_mid_point = (bsn_nfo.grid_maxima - bsn_nfo.grid_minima) ./2 + bsn_nfo.grid_minima
         bsn_nfo.consecutive_lost += 1
-        if   bsn_nfo.consecutive_lost > mx_chk_lost || norm(u) == Inf
-            # TODO: all numeric constants in the above line must be replaced with
-            # named variables with intention-revealing name. They must also be tunable
-            # as keyword arguments in `draw_basin!`.
-            # TODO: Comparing the `norm` of the `new_u` is a mistake, as it assumes
-            # that the grid starts from 0. We instead need to compare the `norm`
-            # of the `new_u` from the center of the grid.
+        if   bsn_nfo.consecutive_lost > mx_chk_lost || norm(u_full_state) > horizon_limit
             recolor_visited_cell!(bsn_nfo, bsn_nfo.current_bas_color, 1)
             reset_basin_counters!(bsn_nfo)
             # problematic IC : diverges or wanders outside the defined grid
@@ -227,12 +227,12 @@ function _identify_basin_of_cell!(
     end
 end
 
-function store_attractor!(bsn_nfo::BasinInfo, u)
-    # bsn_nfo.current_color is the number of the attractor multiplied by two
+function store_attractor!(bsn_nfo::BasinInfo, u_full_state)
+    # bsn_nfo.current_att_color is the number of the attractor multiplied by two
     if haskey(bsn_nfo.attractors , bsn_nfo.current_att_color ÷ 2)
-        push!(bsn_nfo.attractors[bsn_nfo.current_att_color ÷ 2],  u) # store attractor
+        push!(bsn_nfo.attractors[bsn_nfo.current_att_color ÷ 2],  u_full_state) # store attractor
     else
-        bsn_nfo.attractors[bsn_nfo.current_att_color ÷ 2] = Dataset([SVector(u...)])  # init dic
+        bsn_nfo.attractors[bsn_nfo.current_att_color ÷ 2] = Dataset([SVector(u_full_state...)])  # init dic
     end
 end
 
@@ -245,17 +245,17 @@ function recolor_visited_cell!(bsn_nfo::BasinInfo, old_c, new_c)
     end
 end
 
-function basin_cell_index(u, bsn_nfo::BasinInfo)
+function basin_cell_index(y_grid_state, bsn_nfo::BasinInfo)
     iswithingrid = true
     @inbounds for i in 1:length(bsn_nfo.grid_minima)
-        if !(bsn_nfo.grid_minima[i] ≤ u[i] ≤ bsn_nfo.grid_maxima[i])
+        if !(bsn_nfo.grid_minima[i] ≤ y_grid_state[i] ≤ bsn_nfo.grid_maxima[i])
             iswithingrid = false
             break
         end
     end
     if iswithingrid
         # Snap point to grid
-        ind = @. round(Int, (u - bsn_nfo.grid_minima)/bsn_nfo.grid_steps) + 1
+        ind = @. round(Int, (y_grid_state - bsn_nfo.grid_minima)/bsn_nfo.grid_steps) + 1
         return CartesianIndex(ind...)
     else
         return CartesianIndex(-1)
@@ -284,7 +284,8 @@ function check_next_state!(bsn_nfo, nxt_clr)
         # hit an attractor box
         next_state = :att_hit
     elseif nxt_clr == -1
-        # out of the grid
+        # out of the grid we do not reset the counter of other state
+        # since the trajectory can follow an attractor that spans outside the grid
         bsn_nfo.state = :lost
         bsn_nfo.consecutive_lost = 1
         return
@@ -294,7 +295,7 @@ function check_next_state!(bsn_nfo, nxt_clr)
     end
 
     if next_state != current_state && current_state != :lost
-        # reset counter exept in lost state (the counter freezes in this case)
+        # reset counter except in lost state (the counter freezes in this case)
         bsn_nfo.consecutive_match = 1
     end
     bsn_nfo.state = next_state

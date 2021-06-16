@@ -33,8 +33,10 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   This number can be increased for higher accuracy.
 * `mx_chk_fnd_att = 60` : Maximum check of unnumbered cell before considering we have an attractor.
   This number can be increased for higher accuracy.
-* `mx_chk_lost = 2000` : Maximum check of iterations outside the defined grid before we consider the orbit lost outside.
-This number can be increased for higher accuracy.
+* `mx_chk_lost = 2000` : Maximum check of iterations outside the defined grid before we consider the orbit
+lost outside. This number can be increased for higher accuracy.
+* `horizon_limit = 10^10` : If the norm of the integrator state reaches this limit we consider that the
+orbit diverges. 
 
 ## Description
 This method identifies the attractors and their basins of attraction on the grid without

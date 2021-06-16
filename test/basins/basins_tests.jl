@@ -22,11 +22,9 @@ end
     xg = yg = range(-2.2,2.2,length=100)
     basin,attractors = basins_2D(xg, yg, integ_df; T=2*pi/1.)
     # pcolormesh(xg, yg, basin')
-
     @test length(unique(basin)) == 2
     @test 5000 ≤ count(basin .== 1) ≤ 5100
     @test  4900 ≤  count(basin .== 2) ≤ 5000
-
 end
 
 @testset "Test basin poincare map" begin
@@ -35,7 +33,6 @@ end
     pmap = poincaremap(ds, (3, 0.), Tmax=1e6; idxs = 1:2, rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
     basin,attractors = basins_2D(xg, yg, pmap)
     # pcolormesh(xg, yg, basin')
-
     @test length(attractors) == 3
     @test   4610 ≤ count(basin .== 1) ≤ 4641
     @test  2660 ≤ count(basin .== 2)  ≤ 2691
@@ -48,7 +45,6 @@ end
     yg=range(-2,2,length=100)
     basin,attractors = basins_general((xg, yg), ds; dt=1., idxs=1:2)
     # pcolormesh(xg, yg, basin')
-
     @test count(basin .== 1) == 3332
     @test count(basin .== 2) == 3332
 end

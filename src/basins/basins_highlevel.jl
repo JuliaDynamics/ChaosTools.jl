@@ -1,87 +1,24 @@
-export draw_basin!, basins_2D, basins_general
-
-"""
-    basins_2D(xg, yg, integ; kwargs...) → basins, attractors
-Compute an estimate of the basins of attraction of a "two dimensional system"
-of the plane onto itself according to the method of Nusse & Yorke[^Yorke1997].
-The dynamical system can be:
-* An actual 2D `DiscreteDynamicalSystem` or `ContinuousDynamicalSystem`.
-* 2D poincaré map of a 3D `ContinuousDynamicalSystem`.
-* A 2D stroboscopic map, i.e. a periodically forced 2D `ContinuousDynamicalSystem`.
-
-For a higher-dimensional dynamical systems, use [`basins_general`](@ref).
-
-`integ` is an istance of an integrator, not a `DynamicalSystem`. This includes
-the output of [`poincaremap`](@ref). See documentation online for examples for all cases!
-`xg`, `yg` are 1-dimensional ranges that define the grid of the initial conditions
-to test.
-The output `basins` is a matrix on the grid (`xg, yg`), see below for details.
-The output `attractors` is a dictionary whose keys correspond to the attractor number and
-the values contains the points of the attractors found on the map. Notice that for some
-attractors this list may be incomplete.
-
-See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_probabilities`](@ref).
-
-[^Yorke1997]: H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations Ch. 7, Springer, New York, 1997
-
-## Keyword Arguments
-* `T` : Period of the stroboscopic map, in case `integ` is an integrator of a 2D continuous
-  dynamical system with periodic time forcing.
-* `mx_chk_att = 2`: A parameter that sets the maximum checks of consecutives hits of an attractor
-  before deciding the basin of the initial condition.
-* `mx_chk_hit_bas = 10` : Maximum check of consecutive visits of the same basin of attraction.
-  This number can be increased for higher accuracy.
-* `mx_chk_fnd_att = 60` : Maximum check of unnumbered cell before considering we have an attractor.
-  This number can be increased for higher accuracy.
-* `mx_chk_lost = 2000` : Maximum check of iterations outside the defined grid before we consider the orbit
-lost outside. This number can be increased for higher accuracy.
-* `horizon_limit = 10^10` : If the norm of the integrator state reaches this limit we consider that the
-orbit diverges.
+export draw_basin!, basins_of_attraction
 
 
-
-Regarding performace, this method is at worst as fast as tracking the attractors.
-In most cases there is a signicative improvement in speed.
-"""
-function basins_2D(xg, yg, pmap::PoincareMap; kwargs...)
-    reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
-    get_u = (pmap) -> pmap.integ.u[pmap.i]
-    bsn_nfo = draw_basin!((xg, yg), pmap, step!, reinit_f!, get_u; kwargs...)
-    return bsn_nfo.basin, bsn_nfo.attractors
-end
-
-function _init_map(pmap::PoincareMap, y, idxs)
-    u = zeros(1,length(pmap.integ.u))
-    u[idxs] = y
-    # all other coordinates are zero
-    reinit!(pmap, u)
-end
-
-function basins_2D(xg, yg, integ; T=nothing, kwargs...)
-    if T isa Real
-        iter_f! = (integ) -> step!(integ, abs(T), true)
-    elseif isnothing(T)
-        iter_f! = (integ) -> step!(integ)
-    end
-    reinit_f! = (integ,y) -> reinit!(integ, y)
-    get_u = (integ) -> integ.u
-
-    bsn_nfo = draw_basin!((xg, yg), integ, iter_f!, reinit_f!, get_u; kwargs...)
-    return bsn_nfo.basin, bsn_nfo.attractors
-end
 
 
 """
-    basins_of_attration(grid::Tuple, ds::DynamicalSystem; kwargs...) -> basins, attractors
+    basins_of_attraction(grid::Tuple, ds::DynamicalSystem; kwargs...) -> basins, attractors
 Compute an estimate of the basins of attraction of a dynamical system `ds` on
-a partitioning of the state space given by `grid`.
-`grid` in tuple of ranges defining the grid of initial conditions
-, for example `grid=(xg,yg)` where `xg` and `yg` are one dimensional ranges.
+a partitioning of the state space given by `grid`. `grid` is a tuple of ranges defining
+the grid of initial conditions, for example `grid=(xg,yg)` where `xg` and `yg` are
+one dimensional ranges. The grid is not necessarilly of the same dimension as the dynamical
+system, the attractors can be found in lower dimensional projections. The method has been
+inspired by the 2D grid approach devellopped by Nusse & Yorke [^Yorke1997].
 
-# TODO: All of this needs to be re-written, as we no longer project on 2D.
+The dynamical system can be:
+* An actual `DiscreteDynamicalSystem` or `ContinuousDynamicalSystem`.
+* A Poincaré map of `ContinuousDynamicalSystem`.
+* A stroboscopic map, i.e. a periodically forced `ContinuousDynamicalSystem` (see examples
+for this particular application).
 
 See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_probabilities`](@ref).
-For two-dimensional dynamical systems, use [`basins_2D`](@ref).
 
 [^Yorke1997]: H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations Ch. 7, Springer, New York, 1997
 
@@ -125,14 +62,14 @@ returns an Array coding the basins of attraction and a dictionary with all attra
 The method starts by picking the first available initial condition on the plane not yet
 numbered. The dynamical system is then iterated until one of the following conditions
 happens:
-1. The trajectory hits a known attractor already numbered `mx_chk_att` consecutive times: the initial condition is
-   numbered with the corresponding number.
+1. The trajectory hits a known attractor already numbered `mx_chk_att` consecutive times: the
+   initial condition is numbered with the corresponding number.
 1. The trajectory diverges or hits an attractor outside the defined grid: the initial
    condition is set to -1
-1. The trajectory hits a known basin `mx_chk_hit_bas` times in a row: the initial condition belongs to
-   that basin and is numbered accordingly.
-1. The trajectory hits `mx_chk_fnd_att` times in a row an unnumbered cell: it is considered an attractor
-   and is labelled with a new number.
+1. The trajectory hits a known basin `mx_chk_hit_bas` times in a row: the initial condition
+   belongs to that basin and is numbered accordingly.
+1. The trajectory hits `mx_chk_fnd_att` times in a row an unnumbered cell: it is considered
+   an attractor and is labelled with a new number.
 
 Regarding performace, this method is at worst as fast as tracking the attractors.
 In most cases there is a signicative improvement in speed.
@@ -145,10 +82,10 @@ be collapsed or confused into the same attractor. This is a drawback of this met
 This function can be used to make attractor basins in any dimension. For example:
 ```julia
 xg = yg = zg = 0:0.01:1 # the range defining the z part of the grid
-b, a = basins_general((xg, yg, zg), ds; complete_state = [0.0])
+b, a = basins_of_attraction((xg, yg, zg), ds; complete_state = [0.0])
 ```
 """
-function basins_general(grid::Tuple, ds::DynamicalSystem;
+function basins_of_attraction(grid::Tuple, ds::DynamicalSystem;
         dt=1, idxs = SVector(1, 2), # TODO: `idxs` must have same length as `grid`
         complete_state=zeros(dimension(ds)-2), diffeq = NamedTuple(),
         kwargs... # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
@@ -156,10 +93,10 @@ function basins_general(grid::Tuple, ds::DynamicalSystem;
     )
     integ = integrator(ds; diffeq...)
     idxs = SVector(idxs...)
-    return basins_general(grid, integ, dt, idxs, complete_state; kwargs...)
+    return basins_of_attraction(grid, integ, dt, idxs, complete_state; kwargs...)
 end
 
-function basins_general(grid::Tuple, pmap::PoincareMap; kwargs...)
+function basins_of_attraction(grid::Tuple, pmap::PoincareMap; kwargs...)
     reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
     get_u = (pmap) -> pmap.integ.u[pmap.i]
     bsn_nfo = draw_basin!(grid, pmap, step!, reinit_f!, get_u; kwargs...)
@@ -173,7 +110,7 @@ function _init_map(pmap::PoincareMap, y, idxs)
     reinit!(pmap, u)
 end
 
-function basins_general(grid, integ, dt, idxs::SVector, complete_state; kwargs...)
+function basins_of_attraction(grid, integ, dt, idxs::SVector, complete_state; kwargs...)
     iter_f! = (integ) -> step!(integ, dt) # we don't have to step _exactly_ `dt` here
     D = length(integ.u)
     remidxs = setdiff(1:D, idxs)

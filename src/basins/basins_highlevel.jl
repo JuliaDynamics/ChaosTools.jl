@@ -1,22 +1,28 @@
 export draw_basin!, basins_of_attraction
 
 
-
-
 """
     basins_of_attraction(grid::Tuple, ds::DynamicalSystem; kwargs...) -> basins, attractors
 Compute an estimate of the basins of attraction of a dynamical system `ds` on
-a partitioning of the state space given by `grid`. `grid` is a tuple of ranges defining
-the grid of initial conditions, for example `grid=(xg,yg)` where `xg` and `yg` are
-one dimensional ranges. The grid is not necessarilly of the same dimension as the dynamical
-system, the attractors can be found in lower dimensional projections. The method has been
+a partitioning of the state space given by `grid`. The method has been
 inspired by the 2D grid approach devellopped by Nusse & Yorke [^Yorke1997].
 
 The dynamical system can be:
 * An actual `DiscreteDynamicalSystem` or `ContinuousDynamicalSystem`.
 * A Poincaré map of `ContinuousDynamicalSystem`.
 * A stroboscopic map, i.e. a periodically forced `ContinuousDynamicalSystem` (see examples
-for this particular application).
+  for this particular application).
+
+`grid` is a tuple of ranges defining the grid of initial conditions, for example
+`grid=(xg,yg)` where `xg` and `yg` are one dimensional ranges. The grid is not necessarilly
+of the same dimension as the dynamical system, the attractors can be found in lower dimensional
+projections.
+`ds` is a `DynamicalSystem`. This includes the output of [`poincaremap`](@ref).
+See documentation online for examples for all cases!
+The output `basins` is an array on the grid (`xg, yg`), see below for details.
+The output `attractors` is a dictionary whose keys correspond to the attractor number and
+the values contains the points of the attractors found on the map. Notice that for some
+attractors this list may be incomplete.
 
 See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_probabilities`](@ref).
 
@@ -42,7 +48,7 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
 * `mx_chk_lost = 2000` : Maximum check of iterations outside the defined grid before we consider the orbit
    lost outside. This number can be increased for higher accuracy.
 * `horizon_limit = 10^10` : If the norm of the integrator state reaches this limit we consider that the
-orbit diverges.
+   orbit diverges.
 
 ## Description
 This method identifies the attractors and their basins of attraction on the grid without

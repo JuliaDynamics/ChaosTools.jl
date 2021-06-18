@@ -112,7 +112,6 @@ end
 function _init_map(pmap::PoincareMap, y, idxs)
     u = zeros(1,length(pmap.integ.u))
     u[idxs] = y
-    # all other coordinates are zero
     reinit!(pmap, u)
 end
 
@@ -120,8 +119,7 @@ function basins_of_attraction(grid, integ, dt, idxs::SVector, complete_state; kw
     iter_f! = (integ) -> step!(integ, dt) # we don't have to step _exactly_ `dt` here
     D = length(integ.u)
     remidxs = setdiff(1:D, idxs)
-    # TODO: We should really check here that our functions that complete the state
-    # return static vectors
+
     if complete_state isa AbstractVector
         if D == length(idxs)
             complete_state=[]
@@ -131,9 +129,11 @@ function basins_of_attraction(grid, integ, dt, idxs::SVector, complete_state; kw
         u0 = copy(complete_state)
         reinit_f! = (integ, y) -> reinit_integ_idxs!(integ, y, idxs, u0, remidxs)
     elseif complete_state isa Function
+        y = ones(1,length(grid))
+        u = complete_state(y...)
+        !(typeof(u) <: StaticArray) && error("The function `complete_state` must return a Static vector")
         reinit_f! = (integ, z) -> begin
-            x, y = z
-            u0 = complete_state(x, y)
+            u0 = complete_state(z...)
             return reinit_integ_idxs!(integ, z, idxs, u0, remidxs)
         end
     else

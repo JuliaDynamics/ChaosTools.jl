@@ -114,16 +114,21 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, y0, mx_chk_att, mx_chk_hit_
 end
 
 """
-Main procedure described by Nusse & Yorke for the grid cell `n`.
-The idea is to color the grid with the current basin color. When an attractor box is hit
-(even color), the initial condition is colored with the color of its basin (odd color).
-If the trajectory hits another basin many times times in row, the IC is colored with the
-same color as this basin.
+Main procedure described by Nusse & Yorke for the grid cell `n`. The algorithm can be
+though as a finite state machine with five states: :att_hit, :att_search, :att_found,
+:bas_hit, :lost. The transition between states depends on the current number in the
+cell being visited by the trajectory of the dynamical systems. When the automata switches
+to a state a counter starts and one of the following action can happen depending on the internal
+counter and the input number:
+* The automata stays in the same state and the counter increases.
+* The automata switches to another state.
+* The automata has decided upon the basin of the initial condition and returns a code corresponding
+  to this basin.
 
-# TODO: In this docstring, we should state that the numbering system is different.
-(i.e. clarify the even / odd numbers, as we decided that in the high level interface,
-there isn't any even/odd distinction and the attractors are numbered according to the
-integers)
+The basins and attractors are coded in the array with odd numbers for the basins and even numbers
+for the attractors. The attractor `2n` has the corresponding basin `2n+1`. This codification
+is changed when the basins and attractors are returned to the user. Diverging trajectories
+and the trajectories staying outside the grid are coded with -1.
 """
 function _identify_basin_of_cell!(
         bsn_nfo::BasinInfo, n::CartesianIndex, u_full_state,

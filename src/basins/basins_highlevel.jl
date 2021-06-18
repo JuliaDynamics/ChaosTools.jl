@@ -32,6 +32,8 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
 * `dt = 1`: Approximate time step of the integrator. It is recommended to use values such
   that one step will typically make the integrator move to a different cell of the
   state space partitioning.
+* `T=0` : Period of the stroboscopic map, in case of a continuous dynamical system with periodic
+   time forcing. This argument is incompatible with `dt`. 
 * `idxs = 1:2`: This vector selects the two variables of the system that will define the
   "plane" the dynamics will be projected into.
 * `complete_state = zeros(D-Dg)`: This argument allows setting the _remaining_ variables
@@ -92,14 +94,14 @@ b, a = basins_of_attraction((xg, yg, zg), ds; complete_state = [0.0])
 ```
 """
 function basins_of_attraction(grid::Tuple, ds::DynamicalSystem;
-        dt=1, idxs = SVector(1, 2), # TODO: `idxs` must have same length as `grid`
+        dt=1, T=0, idxs = SVector(1, 2), # TODO: `idxs` must have same length as `grid`
         complete_state=zeros(dimension(ds)-2), diffeq = NamedTuple(),
         kwargs... # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
                   # these keywords are actually expanded in `draw_basin!`
     )
     integ = integrator(ds; diffeq...)
     idxs = SVector(idxs...)
-    return basins_of_attraction(grid, integ, dt, idxs, complete_state; kwargs...)
+    return basins_of_attraction(grid, integ, dt, T, idxs, complete_state; kwargs...)
 end
 
 function basins_of_attraction(grid::Tuple, pmap::PoincareMap; kwargs...)
@@ -115,8 +117,12 @@ function _init_map(pmap::PoincareMap, y, idxs)
     reinit!(pmap, u)
 end
 
-function basins_of_attraction(grid, integ, dt, idxs::SVector, complete_state; kwargs...)
-    iter_f! = (integ) -> step!(integ, dt) # we don't have to step _exactly_ `dt` here
+function basins_of_attraction(grid, integ, dt, T, idxs::SVector, complete_state; kwargs...)
+    if T>0
+        iter_f! = (integ) -> step!(integ, T, true)
+    else
+        iter_f! = (integ) -> step!(integ, dt)# we don't have to step _exactly_ `dt` here
+    end
     D = length(integ.u)
     remidxs = setdiff(1:D, idxs)
 

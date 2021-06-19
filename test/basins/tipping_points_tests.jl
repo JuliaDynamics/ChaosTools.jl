@@ -18,7 +18,7 @@ using Test
     @testset "tipping probabilities" begin
         P = tipping_probabilities(basins_before, basins_after)
         @test size(P) == (3,2)
-        @test all(P[1, :] .≈ 0.5)
+        @test all(0.495 .≤ P[1, :] .≤ 0.505) # must be ≈ 50%
         for i in 1:3; @test sum(P[i, :]) ≈ 1; end
     end
 end

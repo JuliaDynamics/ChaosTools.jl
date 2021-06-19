@@ -8,8 +8,8 @@ An exponent close to `1` means basins with smooth boundaries whereas an exponent
 to `0` represent complety fractalized basins, also called riddled basins.
 
 `xg`, `yg` are 1-dim ranges that defines the grid of the initial conditions.
-`basins` is the matrix containing the information of the basin, i.e. the output of
-[`basins_2D`](@ref) or [`basins_general`](@ref).
+`basins` is the matrix containing the information of the basin.
+This functionality is currently implemented only for 2D basins.
 
 The output `f_ε` is a vector with the fraction of the balls of radius `ε` (in pixels)
 that contain at least two initial conditions that lead to different attractors.
@@ -35,7 +35,7 @@ uncertainty exponent `α`.
 
 Notice that the uncertainty exponent and the box counting dimension of the boundary are
 related. We have `Δ₀ = 2 - α` where `Δ₀` is the box counting dimension,
-see [Fractal Dimension](@ref)
+see [Fractal Dimension](@ref).
 
 [^Grebogi1983]: C. Grebogi, S. W. McDonald, E. Ott and J. A. Yorke, Final state sensitivity: An obstruction to predictability, Physics Letters A, 99, 9, 1983
 """

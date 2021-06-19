@@ -1,3 +1,6 @@
+# 1.31
+* New, general function `basins_of_attraction` that replaces the existing `basins_2D` and `basins_general` and can produce arbitrary-dimensional basins of attraction.
+
 # 1.30
 * New function `local_growth_rates`
 * New function `match_attractors!`

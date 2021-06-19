@@ -84,14 +84,14 @@ there are edge cases where the system may have two attractors
 that are close on the defined space but are far apart in another dimension. They could
 be collapsed or confused into the same attractor. This is a drawback of this method.
 """
-function basins_of_attraction(grid::Tuple, ds::DynamicalSystem;
+function basins_of_attraction(grid::Tuple, ds;
         Δt=1, T=0, idxs = 1:length(grid),
         complete_state=zeros(dimension(ds)-2), diffeq = NamedTuple(),
         kwargs... # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
                   # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
     @assert length(idxs) == length(grid)
-    integ = integrator(ds; diffeq...)
+    integ = ds isa PoincareMap ? ds : integrator(ds; diffeq...)
     idxs = SVector(idxs...)
     return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state; kwargs...)
 end
@@ -103,25 +103,15 @@ function basins_of_attraction(grid, integ, Δt, T, idxs::SVector, complete_state
     end
     if T>0
         iter_f! = (integ) -> step!(integ, T, true)
-    else
+    elseif integ isa PoincareMap
+        iter_f! = step
+    else # generic case
         iter_f! = (integ) -> step!(integ, Δt) # we don't have to step _exactly_ `Δt` here
     end
     complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(integ.u))
-    get_grid_state = (integ) -> integ.u[idxs]
-    bsn_nfo = draw_basin!(grid, integ, iter_f!, complete_and_reinit!, get_grid_state; kwargs...)
+    get_projected_state = (integ) -> view(get_state(integ), idxs)
+    bsn_nfo = draw_basin!(grid, integ, iter_f!, complete_and_reinit!, get_projected_state; kwargs...)
     return bsn_nfo.basin, bsn_nfo.attractors
-end
-"""
-    reinit_integ_idxs!(integ, y, idxs, u, remidxs)
-`reinit!` given integrator by setting its `idxs` entries of the state as
-`y`, and the `remidxs` ones as `u`.
-"""
-function reinit_integ_idxs!(integ, y, idxs, u, remidxs)
-    D = length(integ.u)
-    s = zeros(D)
-    s[idxs] .= y
-    s[remidxs] .= u
-    reinit!(integ, s)
 end
 
 """
@@ -133,7 +123,6 @@ system integrator and `y` the projected initial condition on the grid.
 struct CompleteAndReinit{C, Y, R}
     complete_state::C
     u::Vector{Float64} # dummy variable for a state in full state space
-    y::Vector{Float64} # dummy variable for a state in projected space
     idxs::SVector{Y, Int}
     remidxs::SVector{R, Int}
 end
@@ -141,8 +130,7 @@ function CompleteAndReinit(complete_state, idxs, D::Int)
     remidxs = setdiff(1:D, idxs)
     remidxs = SVector(remidxs...)
     u = zeros(D)
-    y = zeros(length(idxs))
-    return CompleteAndReinit(complete_state, u, y, idxs, remidxs)
+    return CompleteAndReinit(complete_state, u, idxs, remidxs)
 end
 function (c::CompleteAndReinit{C <: AbstractVector})(integ, y)
     c.u[c.idxs] .= y
@@ -153,20 +141,4 @@ function (c::CompleteAndReinit)(integ, y)
     c.u[c.idxs] .= y
     c.u[c.remidxs] .= c.complete_state(y)
     reinit!(integ, c.u)
-end
-
-# TODO: Not sure what's going on here and why there is so different treatment
-# of the Poincare map... Why can't we just treat it as any other dynamical system 
-# That has dimension `X`?
-function basins_of_attraction(grid::Tuple, pmap::PoincareMap; kwargs...)
-    reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
-    get_grid_state = (pmap) -> pmap.integ.u[pmap.i]
-    bsn_nfo = draw_basin!(grid, pmap, step!, reinit_f!, get_grid_state; kwargs...)
-    return bsn_nfo.basin, bsn_nfo.attractors
-end
-
-function _init_map(pmap::PoincareMap, y, idxs)
-    u = zeros(1,length(pmap.integ.u))
-    u[idxs] = y
-    reinit!(pmap, u)
 end

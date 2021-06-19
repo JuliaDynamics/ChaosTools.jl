@@ -5,7 +5,7 @@ mutable struct BasinInfo{B, G, IF, RF, UF, D, T, Q}
     grid_minima::G
     iter_f!::IF
     complete_and_reinit!::RF
-    get_grid_state::UF
+    get_projected_state::UF
     state::Symbol
     current_att_color::Int
     current_bas_color::Int
@@ -24,11 +24,10 @@ steps the integrator, `complete_and_reinit!` a function that re-inits the integr
 at a new full state, given the state on the grid.
 """
 function draw_basin!(
-        grid::Tuple, integ, iter_f!::Function, complete_and_reinit!::Function, get_grid_state::Function;
+        grid::Tuple, integ, iter_f!::Function, complete_and_reinit!::Function, get_projected_state::Function;
         kwargs...,
     )
     D = length(get_state(integ)) # dimension of the full dynamical system
-    B = length(grid)             # dimension of the grid, i.e. projected dynamics
     complete = false
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
@@ -40,7 +39,7 @@ function draw_basin!(
         SVector(grid_minima),
         iter_f!,
         complete_and_reinit!,
-        get_grid_state,
+        get_projected_state,
         :att_search,
         2,4,0,1,1,
         Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
@@ -96,7 +95,7 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, y0; kwargs...)
 
     while cellcolor == 0
         bsn_nfo.iter_f!(integ)
-        new_y = bsn_nfo.get_grid_state(integ)
+        new_y = bsn_nfo.get_projected_state(integ)
         n = basin_cell_index(new_y, bsn_nfo)
         u_att = get_state(integ) # in case we need the full state to save the attractor
         cellcolor = _identify_basin_of_cell!(bsn_nfo, n, u_att; kwargs...)

@@ -28,8 +28,7 @@ and are described in the high level function.
 """
 function draw_basin!(
         grid::Tuple, integ, iter_f!::Function, reinit_f!::Function, get_grid_state::Function;
-        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_lost=2000,
-        horizon_limit=10^10
+        kwargs...,
     )
     D = length(get_state(integ)) # dimension of the full dynamical system
     B = length(grid)             # dimension of the grid, i.e. projected dynamics
@@ -62,8 +61,7 @@ function draw_basin!(
         # First color is 2 for attractor and 3 for basins
         bsn_nfo.basin[ind] = bsn_nfo.current_bas_color
         y0 = generate_ic_on_grid(grid, ind)
-        bsn_nfo.basin[ind] = get_color_point!(bsn_nfo, integ, y0, mx_chk_att,
-                        mx_chk_hit_bas, mx_chk_fnd_att, mx_chk_lost, horizon_limit)
+        bsn_nfo.basin[ind] = get_color_point!(bsn_nfo, integ, y0; kwargs...)
     end
     # remove attractors and rescale from 1 to max nmb of attractors
     ind = iseven.(bsn_nfo.basin)
@@ -92,9 +90,7 @@ end
 end
 
 
-function get_color_point!(bsn_nfo::BasinInfo, integ, y0, mx_chk_att, mx_chk_hit_bas,
-        mx_chk_fnd_att, mx_chk_lost, horizon_limit
-    )
+function get_color_point!(bsn_nfo::BasinInfo, integ, y0; kwargs...)
     # This routine identifies the attractor using the previously defined basin.
     # reinitialize integrator
     bsn_nfo.reinit_f!(integ, y0)
@@ -107,8 +103,7 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, y0, mx_chk_att, mx_chk_hit_
         new_y = bsn_nfo.get_grid_state(integ)
         n = basin_cell_index(new_y, bsn_nfo)
         u_att = get_state(integ) # in case we need the full state to save the attractor
-        cellcolor = _identify_basin_of_cell!(bsn_nfo, n, u_att, mx_chk_att, mx_chk_hit_bas,
-                                            mx_chk_fnd_att, mx_chk_lost, horizon_limit)
+        cellcolor = _identify_basin_of_cell!(bsn_nfo, n, u_att; kwargs...)
     end
     return cellcolor
 end
@@ -131,9 +126,9 @@ is changed when the basins and attractors are returned to the user. Diverging tr
 and the trajectories staying outside the grid are coded with -1.
 """
 function _identify_basin_of_cell!(
-        bsn_nfo::BasinInfo, n::CartesianIndex, u_full_state,
-        mx_chk_att::Int, mx_chk_hit_bas::Int, mx_chk_fnd_att::Int, mx_chk_lost::Int,
-        horizon_limit
+        bsn_nfo::BasinInfo, n::CartesianIndex, u_full_state;
+        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_lost = 1000,
+        horizon_limit = 1e6
     )
     #if n[1]==-1 means we are outside the grid
     nxt_clr = (n[1]==-1) ? -1 : bsn_nfo.basin[n]

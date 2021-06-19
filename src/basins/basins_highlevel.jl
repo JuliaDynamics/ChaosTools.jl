@@ -16,10 +16,11 @@ The dynamical system can be:
 
 `grid` is a tuple of ranges defining the grid of initial conditions, for example
 `grid=(xg,yg)` where `xg` and `yg` are one dimensional ranges. The grid is not necessarilly
-of the same dimension as the dynamical system, the attractors can be found in lower dimensional
+of the same dimension as the state space, attractors can be found in lower dimensional
 projections.
 
-The output `basins` is an array on the grid (`xg, yg`), see below for details.
+The output `basins` is an integer-valued array on the `grid`, with its entries labelling
+which basin of attraction the given grid point belongs to.
 The output `attractors` is a dictionary whose keys correspond to the attractor number and
 the values contains the points of the attractors found.
 Notice that for some attractors this list may be incomplete.
@@ -33,24 +34,24 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   that one step will typically make the integrator move to a different cell of the
   state space partitioning.
 * `T=0` : Period of the stroboscopic map, in case of a continuous dynamical system with periodic
-   time forcing. This argument is incompatible with `Δt`. 
+  time forcing. This argument is incompatible with `Δt`. 
 * `idxs = 1:length(grid)`: This vector selects the variables of the system that will define the
   subspace the dynamics will be projected into.
 * `complete_state = zeros(D-Dg)`: This argument allows setting the _remaining_ variables
   of the dynamical system state on each initial condition `u`, beeing `Dg` the dimension
-  of the grid. It can be either a vector of length `D-Dg`, or a function `f(x, y)` that
-  returns a vector of length `D-Dg`.
+  of the grid. It can be either a vector of length `D-Dg`, or a function `f(y)` that
+  returns a vector of length `D-Dg` given the _projected_ initial condition on the grid `y`.
 * `diffeq...`: Keyword arguments propagated to [`integrator`](@ref).
 * `mx_chk_att = 2`: A parameter that sets the maximum checks of consecutives hits of an attractor
-   before deciding the basin of the initial condition.
+  before deciding the basin of the initial condition.
 * `mx_chk_hit_bas = 10` : Maximum check of consecutive visits of the same basin of attraction.
   This number can be increased for higher accuracy.
 * `mx_chk_fnd_att = 60` : Maximum check of unnumbered cell before considering we have an attractor.
-   This number can be increased for higher accuracy.
+  This number can be increased for higher accuracy.
 * `mx_chk_lost = 1000` : Maximum check of iterations outside the defined grid before we consider the orbit
-   lost outside. This number can be increased for higher accuracy.
+  lost outside. This number can be increased for higher accuracy.
 * `horizon_limit = 1e6` : If the norm of the integrator state reaches this limit we consider that the
-   orbit diverges.
+  orbit diverges.
 
 ## Description
 `basins` has the following organization:
@@ -84,62 +85,32 @@ that are close on the defined space but are far apart in another dimension. They
 be collapsed or confused into the same attractor. This is a drawback of this method.
 """
 function basins_of_attraction(grid::Tuple, ds::DynamicalSystem;
-        Δt=1, T=0, idxs = SVector(1, 2), # TODO: `idxs` must have same length as `grid`
+        Δt=1, T=0, idxs = 1:length(grid),
         complete_state=zeros(dimension(ds)-2), diffeq = NamedTuple(),
         kwargs... # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
                   # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
+    @assert length(idxs) == length(grid)
     integ = integrator(ds; diffeq...)
     idxs = SVector(idxs...)
     return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state; kwargs...)
 end
 
-function basins_of_attraction(grid::Tuple, pmap::PoincareMap; kwargs...)
-    reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
-    get_u = (pmap) -> pmap.integ.u[pmap.i]
-    bsn_nfo = draw_basin!(grid, pmap, step!, reinit_f!, get_u; kwargs...)
-    return bsn_nfo.basin, bsn_nfo.attractors
-end
-
-function _init_map(pmap::PoincareMap, y, idxs)
-    u = zeros(1,length(pmap.integ.u))
-    u[idxs] = y
-    reinit!(pmap, u)
-end
-
 function basins_of_attraction(grid, integ, Δt, T, idxs::SVector, complete_state; kwargs...)
+    D = length(integ.u)
+    if complete_state isa AbstractVector && (length(complete_state) ≠ D-length(idxs))
+        error("Vector `complete_state` must have length D-Dg!")
+    end
     if T>0
         iter_f! = (integ) -> step!(integ, T, true)
     else
-        iter_f! = (integ) -> step!(integ, Δt)# we don't have to step _exactly_ `Δt` here
+        iter_f! = (integ) -> step!(integ, Δt) # we don't have to step _exactly_ `Δt` here
     end
-    D = length(integ.u)
-    remidxs = setdiff(1:D, idxs)
-
-    if complete_state isa AbstractVector
-        if D == length(idxs)
-            complete_state=[]
-        elseif length(complete_state) ≠ D-length(idxs)
-             error("Vector `complete_state` must have length D-Dg!")
-        end
-        u0 = copy(complete_state)
-        reinit_f! = (integ, y) -> reinit_integ_idxs!(integ, y, idxs, u0, remidxs)
-    elseif complete_state isa Function
-        y = ones(1,length(grid))
-        u = complete_state(y...)
-        !(typeof(u) <: StaticArray) && error("The function `complete_state` must return a Static vector")
-        reinit_f! = (integ, z) -> begin
-            u0 = complete_state(z...)
-            return reinit_integ_idxs!(integ, z, idxs, u0, remidxs)
-        end
-    else
-        error("Incorrect type for `complete_state`")
-    end
-    get_u = (integ) -> integ.u[idxs]
-    bsn_nfo = draw_basin!(grid, integ, iter_f!, reinit_f!, get_u; kwargs...)
+    complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(integ.u))
+    get_grid_state = (integ) -> integ.u[idxs]
+    bsn_nfo = draw_basin!(grid, integ, iter_f!, complete_and_reinit!, get_grid_state; kwargs...)
     return bsn_nfo.basin, bsn_nfo.attractors
 end
-
 """
     reinit_integ_idxs!(integ, y, idxs, u, remidxs)
 `reinit!` given integrator by setting its `idxs` entries of the state as
@@ -151,4 +122,51 @@ function reinit_integ_idxs!(integ, y, idxs, u, remidxs)
     s[idxs] .= y
     s[remidxs] .= u
     reinit!(integ, s)
+end
+
+"""
+    CompleteAndReinit(complete_state, idxs, D)
+Helper struct that completes a state and reinitializes the integrator once called
+as a function with arguments `f(integ, y)` with `integ` the initialized dynamical
+system integrator and `y` the projected initial condition on the grid.
+"""
+struct CompleteAndReinit{C, Y, R}
+    complete_state::C
+    u::Vector{Float64} # dummy variable for a state in full state space
+    y::Vector{Float64} # dummy variable for a state in projected space
+    idxs::SVector{Y, Int}
+    remidxs::SVector{R, Int}
+end
+function CompleteAndReinit(complete_state, idxs, D::Int)
+    remidxs = setdiff(1:D, idxs)
+    remidxs = SVector(remidxs...)
+    u = zeros(D)
+    y = zeros(length(idxs))
+    return CompleteAndReinit(complete_state, u, y, idxs, remidxs)
+end
+function (c::CompleteAndReinit{C <: AbstractVector})(integ, y)
+    c.u[c.idxs] .= y
+    c.u[c.remidxs] .= c.complete_state
+    reinit!(integ, c.u)
+end
+function (c::CompleteAndReinit)(integ, y)
+    c.u[c.idxs] .= y
+    c.u[c.remidxs] .= c.complete_state(y)
+    reinit!(integ, c.u)
+end
+
+# TODO: Not sure what's going on here and why there is so different treatment
+# of the Poincare map... Why can't we just treat it as any other dynamical system 
+# That has dimension `X`?
+function basins_of_attraction(grid::Tuple, pmap::PoincareMap; kwargs...)
+    reinit_f! = (pmap,y) -> _init_map(pmap, y, pmap.i)
+    get_grid_state = (pmap) -> pmap.integ.u[pmap.i]
+    bsn_nfo = draw_basin!(grid, pmap, step!, reinit_f!, get_grid_state; kwargs...)
+    return bsn_nfo.basin, bsn_nfo.attractors
+end
+
+function _init_map(pmap::PoincareMap, y, idxs)
+    u = zeros(1,length(pmap.integ.u))
+    u[idxs] = y
+    reinit!(pmap, u)
 end

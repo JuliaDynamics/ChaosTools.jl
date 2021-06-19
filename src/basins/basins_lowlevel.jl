@@ -98,7 +98,6 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, y0; kwargs...)
     cellcolor = inlimbo = 0
 
     while cellcolor == 0
-        #old_y = bsn_nfo.get_grid_state(integ)
         bsn_nfo.iter_f!(integ)
         new_y = bsn_nfo.get_grid_state(integ)
         n = basin_cell_index(new_y, bsn_nfo)

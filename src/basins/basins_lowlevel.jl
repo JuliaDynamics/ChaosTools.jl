@@ -24,7 +24,7 @@ steps the integrator, `complete_and_reinit!` a function that re-inits the integr
 at a new full state, given the state on the grid.
 """
 function draw_basin!(
-        grid::Tuple, integ, iter_f!::Function, complete_and_reinit!::Function, get_projected_state::Function;
+        grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function;
         kwargs...,
     )
     D = length(get_state(integ)) # dimension of the full dynamical system

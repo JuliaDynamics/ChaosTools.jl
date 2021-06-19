@@ -86,7 +86,7 @@ be collapsed or confused into the same attractor. This is a drawback of this met
 """
 function basins_of_attraction(grid::Tuple, ds;
         Δt=1, T=0, idxs = 1:length(grid),
-        complete_state=zeros(dimension(ds)-2), diffeq = NamedTuple(),
+        complete_state=zeros(length(get_state(ds))-2), diffeq = NamedTuple(),
         kwargs... # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
                   # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
@@ -97,18 +97,18 @@ function basins_of_attraction(grid::Tuple, ds;
 end
 
 function basins_of_attraction(grid, integ, Δt, T, idxs::SVector, complete_state; kwargs...)
-    D = length(integ.u)
+    D = length(get_state(integ))
     if complete_state isa AbstractVector && (length(complete_state) ≠ D-length(idxs))
         error("Vector `complete_state` must have length D-Dg!")
     end
     if T>0
         iter_f! = (integ) -> step!(integ, T, true)
     elseif integ isa PoincareMap
-        iter_f! = step
+        iter_f! = step!
     else # generic case
         iter_f! = (integ) -> step!(integ, Δt) # we don't have to step _exactly_ `Δt` here
     end
-    complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(integ.u))
+    complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
     get_projected_state = (integ) -> view(get_state(integ), idxs)
     bsn_nfo = draw_basin!(grid, integ, iter_f!, complete_and_reinit!, get_projected_state; kwargs...)
     return bsn_nfo.basin, bsn_nfo.attractors
@@ -124,21 +124,25 @@ struct CompleteAndReinit{C, Y, R}
     complete_state::C
     u::Vector{Float64} # dummy variable for a state in full state space
     idxs::SVector{Y, Int}
-    remidxs::SVector{R, Int}
+    remidxs::R
 end
 function CompleteAndReinit(complete_state, idxs, D::Int)
     remidxs = setdiff(1:D, idxs)
-    remidxs = SVector(remidxs...)
+    remidxs = isempty(remidxs) ? nothing : SVector(remidxs...)
     u = zeros(D)
     return CompleteAndReinit(complete_state, u, idxs, remidxs)
 end
-function (c::CompleteAndReinit{C <: AbstractVector})(integ, y)
+function (c::CompleteAndReinit{<: AbstractVector})(integ, y)
     c.u[c.idxs] .= y
-    c.u[c.remidxs] .= c.complete_state
+    if !isnothing(c.remidxs)
+        c.u[c.remidxs] .= c.complete_state
+    end
     reinit!(integ, c.u)
 end
-function (c::CompleteAndReinit)(integ, y)
+function (c::CompleteAndReinit)(integ, y) # case where `complete_state` is a function
     c.u[c.idxs] .= y
-    c.u[c.remidxs] .= c.complete_state(y)
+    if !isnothing(c.remidxs)
+        c.u[c.remidxs] .= c.complete_state(y)
+    end
     reinit!(integ, c.u)
 end

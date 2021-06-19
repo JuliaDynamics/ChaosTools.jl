@@ -4,7 +4,7 @@ mutable struct BasinInfo{B, G, IF, RF, UF, D, T, Q}
     grid_maxima::G
     grid_minima::G
     iter_f!::IF
-    reinit_f!::RF
+    complete_and_reinit!::RF
     get_grid_state::UF
     state::Symbol
     current_att_color::Int
@@ -18,16 +18,13 @@ end
 
 
 """
-    draw_basin!(grid, integ, iter_f!, reinit_f!; kwargs...)
 This is the low level function that creates & computes the basins of attraction, and is
 agnostic of the dynamical system. `integ` is an integrator, `iter_f!` a function that
-steps the integrator, `reinit_f!` a function that re-inits the integrator.
-
-The keywords are the actual algorithm-tuning keywords, expanded first time here,
-and are described in the high level function.
+steps the integrator, `complete_and_reinit!` a function that re-inits the integrator
+at a new full state, given the state on the grid.
 """
 function draw_basin!(
-        grid::Tuple, integ, iter_f!::Function, reinit_f!::Function, get_grid_state::Function;
+        grid::Tuple, integ, iter_f!::Function, complete_and_reinit!::Function, get_grid_state::Function;
         kwargs...,
     )
     D = length(get_state(integ)) # dimension of the full dynamical system
@@ -42,7 +39,7 @@ function draw_basin!(
         SVector(grid_maxima),
         SVector(grid_minima),
         iter_f!,
-        reinit_f!,
+        complete_and_reinit!,
         get_grid_state,
         :att_search,
         2,4,0,1,1,
@@ -93,9 +90,9 @@ end
 function get_color_point!(bsn_nfo::BasinInfo, integ, y0; kwargs...)
     # This routine identifies the attractor using the previously defined basin.
     # reinitialize integrator
-    bsn_nfo.reinit_f!(integ, y0)
+    bsn_nfo.complete_and_reinit!(integ, y0)
     reset_basin_counters!(bsn_nfo)
-    cellcolor = inlimbo = 0
+    cellcolor = 0
 
     while cellcolor == 0
         bsn_nfo.iter_f!(integ)

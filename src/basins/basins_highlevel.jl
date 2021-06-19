@@ -6,7 +6,7 @@ export draw_basin!, basins_of_attraction
 Compute an estimate of the basins of attraction of a dynamical system `ds` on
 a partitioning of the state space given by `grid`. The method has been
 inspired by the 2D grid approach devellopped by Nusse & Yorke [^Yorke1997].
-It works _without_ knowledge of where attractors are, and instead identifies automatically.
+It works _without_ knowledge of where attractors are; it identifies them automatically.
 
 The dynamical system can be:
 * An actual `DiscreteDynamicalSystem` or `ContinuousDynamicalSystem`.

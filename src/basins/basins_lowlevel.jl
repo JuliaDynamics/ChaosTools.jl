@@ -28,7 +28,7 @@ function draw_basin!(
         kwargs...,
     )
     B = length(grid)
-    D = length(get_state(integ)) # dimension of the full dynamical system
+    D = length(get_state(integ)) # dimension of the full state space
     complete = false
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
@@ -44,7 +44,7 @@ function draw_basin!(
         :att_search,
         2,4,0,1,1,
         Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
-        Vector{CartesianIndex}()
+        Vector{CartesianIndex{B}}()
     )
     reset_basin_counters!(bsn_nfo)
     I = CartesianIndices(bsn_nfo.basin)

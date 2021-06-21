@@ -1,8 +1,8 @@
-mutable struct BasinInfo{B, G, IF, RF, UF, D, T, Q}
+mutable struct BasinInfo{B, IF, RF, UF, D, T, Q}
     basin::Array{Int16, B}
-    grid_steps::G
-    grid_maxima::G
-    grid_minima::G
+    grid_steps::SVector{B, Float64}
+    grid_maxima::SVector{B, Float64}
+    grid_minima::SVector{B, Float64}
     iter_f!::IF
     complete_and_reinit!::RF
     get_projected_state::UF
@@ -27,6 +27,7 @@ function draw_basin!(
         grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function;
         kwargs...,
     )
+    B = length(grid)
     D = length(get_state(integ)) # dimension of the full dynamical system
     complete = false
     grid_steps = step.(grid)
@@ -34,9 +35,9 @@ function draw_basin!(
     grid_minima = minimum.(grid)
     bsn_nfo = BasinInfo(
         ones(Int16, map(length, grid)),
-        SVector(grid_steps),
-        SVector(grid_maxima),
-        SVector(grid_minima),
+        SVector{B, Float64}(grid_steps),
+        SVector{B, Float64}(grid_maxima),
+        SVector{B, Float64}(grid_minima),
         iter_f!,
         complete_and_reinit!,
         get_projected_state,

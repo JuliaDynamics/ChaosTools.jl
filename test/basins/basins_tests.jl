@@ -49,6 +49,19 @@ end
     @test count(basin .== 2) == 3332
 end
 
+@testset "3D basins" begin 
+    ds = Systems.lorenz84()
+    xg=yg=range(-1.,2.,length=100)
+    zg=range(-1.5,1.5,length=30)
+    bsn,att = basins_of_attraction((xg, yg, zg), ds)
+    @test length(size(bsn)) == 3
+    for i in 1:size(bsn)[3]
+        # While there are 4 attractors, because system is chaotic we might
+        # miss one of the 4 due to coarse state space partition
+        @test sort!(unique(bsn[:, :, i])) ∈ ([1,2,3], [1,2,3,4])
+    end
+end
+
 @testset "matching attractors" begin
     d, α, ω = 0.3, 0.2, 0.5
     ds = Systems.magnetic_pendulum(; d, α, ω)

@@ -241,7 +241,7 @@ function recolor_visited_cell!(bsn_nfo::BasinInfo, old_c, new_c)
     end
 end
 
-function basin_cell_index(y_grid_state, bsn_nfo::BasinInfo)
+function basin_cell_index(y_grid_state, bsn_nfo::BasinInfo{B}) where {B}
     iswithingrid = true
     @inbounds for i in 1:length(bsn_nfo.grid_minima)
         if !(bsn_nfo.grid_minima[i] ≤ y_grid_state[i] ≤ bsn_nfo.grid_maxima[i])
@@ -252,9 +252,9 @@ function basin_cell_index(y_grid_state, bsn_nfo::BasinInfo)
     if iswithingrid
         # Snap point to grid
         ind = @. round(Int, (y_grid_state - bsn_nfo.grid_minima)/bsn_nfo.grid_steps) + 1
-        return CartesianIndex(ind...)
+        return CartesianIndex{B}(ind...)
     else
-        return CartesianIndex(-1)
+        return CartesianIndex{B}(-1)
     end
 end
 

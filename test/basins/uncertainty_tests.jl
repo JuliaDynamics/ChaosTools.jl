@@ -6,20 +6,13 @@ using OrdinaryDiffEq
 @testset "Uncertainty exponent tests" begin
 
 @testset "Test uncertainty orginal paper" begin
-
     ds = Systems.grebogi_map(rand(2))
-    integ  = integrator(ds)
-
     θg=range(0,2π,length=250)
     xg=range(-0.5,0.5,length=250)
-
-    bsn,att=basins_2D(θg, xg, integ)
-
+    bsn,att=basins_of_attraction((θg, xg), ds)
     e,f,α=uncertainty_exponent(θg,xg,bsn; precision=1e-5)
-
     # In the paper the value is roughly 0.2
     @test (0.2 ≤ α ≤ 0.3)
-
 end
 
 @testset "Test uncertainty Newton map" begin
@@ -40,12 +33,11 @@ function newton_map_J(J,z0, p, n)
    return
 end
 ds = DiscreteDynamicalSystem(newton_map,[0.1, 0.2], [3] , newton_map_J)
-integ  = integrator(ds)
 
 xg=range(-1.,1.,length=300)
 yg=range(-1.,1.,length=300)
 
-bsn,att=basins_2D(xg, yg, integ)
+bsn,att=basins_of_attraction((xg, yg), ds)
 
 e,f,α=uncertainty_exponent(xg,yg,bsn; precision=1e-5)
 

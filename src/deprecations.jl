@@ -73,3 +73,11 @@ function Entropies.genentropy(q::Real, ε::Real, data::AbstractDataset;
 end
 
 @deprecate basins_map2D basins_2D
+
+export basins_2D, basins_general
+function basins_2D(args...; kwargs...)
+    error("`basins_2D` is deprecated for `basins_of_attraction`")
+end
+function basins_general(args...; kwargs...)
+    error("`basins_general` is deprecated for `basins_of_attraction`")
+end

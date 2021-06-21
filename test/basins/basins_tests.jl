@@ -62,6 +62,15 @@ end
     end
 end
 
+@testset "Basins for in-place system" begin
+    ds = Systems.henon_iip(zeros(2); a = 1.4, b = 0.3)
+    xg = yg = range(-2.,2.,length=100)
+    basin, attractors = basins_of_attraction((xg,yg), ds)
+    # pcolormesh(xg,yg, basin')
+    @test 4260 ≤ count(basin .== 1) ≤ 4280
+    @test 5700 ≤ count(basin .== -1) ≤ 5800
+end
+
 @testset "matching attractors" begin
     d, α, ω = 0.3, 0.2, 0.5
     ds = Systems.magnetic_pendulum(; d, α, ω)

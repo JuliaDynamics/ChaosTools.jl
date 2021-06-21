@@ -86,9 +86,10 @@ be collapsed or confused into the same attractor. This is a drawback of this met
 """
 function basins_of_attraction(grid::Tuple, ds;
         Δt=1, T=0, idxs = 1:length(grid),
-        complete_state = zeros(length(get_state(ds)) - length(grid)), diffeq = NamedTuple(),
-        kwargs... # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
-                  # these keywords are actually expanded in `_identify_basin_of_cell!`
+        complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
+        diffeq = NamedTuple(), kwargs... 
+        # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
+        # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
     @assert length(idxs) == length(grid)
     integ = ds isa PoincareMap ? ds : integrator(ds; diffeq...)
@@ -133,7 +134,7 @@ function CompleteAndReinit(complete_state, idxs, D::Int)
     remidxs = isempty(remidxs) ? nothing : SVector(remidxs...)
     u = zeros(D)
     if complete_state isa AbstractVector
-        @assert eltype(complete_state) isa Number
+        @assert eltype(complete_state) <: Number
     end
     return CompleteAndReinit(complete_state, u, idxs, remidxs)
 end

@@ -86,7 +86,7 @@ be collapsed or confused into the same attractor. This is a drawback of this met
 """
 function basins_of_attraction(grid::Tuple, ds;
         Δt=1, T=0, idxs = 1:length(grid),
-        complete_state=zeros(length(get_state(ds))-2), diffeq = NamedTuple(),
+        complete_state=zeros(length(get_state(ds))-length(grid)), diffeq = NamedTuple(),
         kwargs... # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
                   # these keywords are actually expanded in `_identify_basin_of_cell!`
     )

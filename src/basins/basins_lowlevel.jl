@@ -86,7 +86,7 @@ end
 end
 
 
-function get_color_point!(bsn_nfo::BasinInfo, integ, y0; kwargs...)
+function get_color_point!(bsn_nfo::BasinInfo, integ, y0; Tfail = 1e3, kwargs...)
     # This routine identifies the attractor using the previously defined basin.
     # reinitialize integrator
     bsn_nfo.complete_and_reinit!(integ, y0)
@@ -95,6 +95,10 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, y0; kwargs...)
 
     while cellcolor == 0
         bsn_nfo.iter_f!(integ)
+        if (integ.t - integ.t0 > Tfail)
+            cellcolor = typemin(Int16)
+            break
+        end
         new_y = bsn_nfo.get_projected_state(integ)
         n = basin_cell_index(new_y, bsn_nfo)
         u_att = get_state(integ) # in case we need the full state to save the attractor
@@ -123,11 +127,12 @@ and the trajectories staying outside the grid are coded with -1.
 function _identify_basin_of_cell!(
         bsn_nfo::BasinInfo, n::CartesianIndex, u_full_state;
         mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_lost = 1000,
-        horizon_limit = 1e6
+        horizon_limit = 1e3
     )
+
     #if n[1]==-1 means we are outside the grid
     nxt_clr = (n[1]==-1) ? -1 : bsn_nfo.basin[n]
-    check_next_state!(bsn_nfo,nxt_clr)
+    check_next_state!(bsn_nfo, nxt_clr)
 
     if bsn_nfo.state == :att_hit
         if nxt_clr == bsn_nfo.prev_clr

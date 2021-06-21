@@ -49,6 +49,11 @@ end
     @test count(basin .== 2) == 3332
 end
 
+@testset "higher dim. basins" begin
+    ds = Systems.lorenz84()
+    error("TODO")
+end
+
 @testset "matching attractors" begin
     d, α, ω = 0.3, 0.2, 0.5
     ds = Systems.magnetic_pendulum(; d, α, ω)

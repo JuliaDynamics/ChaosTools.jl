@@ -50,8 +50,13 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   This number can be increased for higher accuracy.
 * `mx_chk_lost = 1000` : Maximum check of iterations outside the defined grid before we consider the orbit
   lost outside. This number can be increased for higher accuracy.
-* `horizon_limit = 1e6` : If the norm of the integrator state reaches this limit we consider that the
+* `horizon_limit = 1e3` : If the norm of the integrator state reaches this limit we consider that the
   orbit diverges.
+* `Tfail = 1e3` : If an initial condition is evolved for longer than `Tfail`, but none of
+  the algorithm conditions outlined below are satisfied, then integration stops and the
+  value `NaN` is attributed to this cell. (this can happen if the provided `grid` is 
+  so coarse grained that multiple attractors exist in multiple cells and the algorithm
+  cannot tell the two apart)
 
 ## Description
 `basins` has the following organization:

@@ -1,8 +1,8 @@
-mutable struct BasinInfo{B, G, IF, RF, UF, D, T, Q}
+mutable struct BasinInfo{B, IF, RF, UF, D, T, Q}
     basin::Array{Int16, B}
-    grid_steps::G
-    grid_maxima::G
-    grid_minima::G
+    grid_steps::SVector{B, Float64}
+    grid_maxima::SVector{B, Float64}
+    grid_minima::SVector{B, Float64}
     iter_f!::IF
     complete_and_reinit!::RF
     get_projected_state::UF
@@ -28,22 +28,23 @@ function draw_basin!(
         kwargs...,
     )
     D = length(get_state(integ)) # dimension of the full dynamical system
+    B = length(grid)
     complete = false
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
     grid_minima = minimum.(grid)
     bsn_nfo = BasinInfo(
         ones(Int16, map(length, grid)),
-        SVector(grid_steps),
-        SVector(grid_maxima),
-        SVector(grid_minima),
+        SVector{B, Float64}(grid_steps),
+        SVector{B, Float64}(grid_maxima),
+        SVector{B, Float64}(grid_minima),
         iter_f!,
         complete_and_reinit!,
         get_projected_state,
         :att_search,
-        2,4,0,1,1,
+        2, 4, 0, 1, 1,
         Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
-        Vector{CartesianIndex}()
+        Vector{CartesianIndex{B}}()
     )
     reset_basin_counters!(bsn_nfo)
     I = CartesianIndices(bsn_nfo.basin)

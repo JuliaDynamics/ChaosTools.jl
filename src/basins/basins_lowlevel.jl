@@ -146,12 +146,11 @@ function _identify_basin_of_cell!(
             recolor_visited_cell!(bsn_nfo, bsn_nfo.current_bas_color, 1)
             reset_basin_counters!(bsn_nfo)
             return hit_att
-         end
-         bsn_nfo.prev_clr = nxt_clr
-         return 0
-    end
+        end
+        bsn_nfo.prev_clr = nxt_clr
+        return 0
 
-    if bsn_nfo.state == :att_search
+    elseif bsn_nfo.state == :att_search
         if nxt_clr == 1
             # uncolored box, color it with current odd color and reset counter
             bsn_nfo.basin[n] = bsn_nfo.current_bas_color
@@ -170,9 +169,8 @@ function _identify_basin_of_cell!(
         end
         bsn_nfo.prev_clr = nxt_clr
         return 0
-    end
 
-    if bsn_nfo.state == :att_found
+    elseif bsn_nfo.state == :att_found
         if nxt_clr == 1 || nxt_clr == bsn_nfo.current_bas_color
             # Maybe chaotic attractor, perodic or long recursion.
             # Color this box as part of an attractor
@@ -194,9 +192,8 @@ function _identify_basin_of_cell!(
             return nxt_clr + 1;
         end
         return 0
-    end
 
-    if bsn_nfo.state == :bas_hit
+    elseif bsn_nfo.state == :bas_hit
         # hit a colored basin point of the wrong basin, happens all the time,
         # we check if it happens mx_chk_hit_bas times in a row or if it happens
         # N times along the trajectory whether to decide if it is another basin.
@@ -212,9 +209,8 @@ function _identify_basin_of_cell!(
         end
         bsn_nfo.prev_clr = nxt_clr
         return 0
-    end
-
-    if bsn_nfo.state == :lost
+        
+    elseif bsn_nfo.state == :lost
         #grid_mid_point = (bsn_nfo.grid_maxima - bsn_nfo.grid_minima) ./2 + bsn_nfo.grid_minima
         bsn_nfo.consecutive_lost += 1
         if   bsn_nfo.consecutive_lost > mx_chk_lost || norm(u_full_state) > horizon_limit

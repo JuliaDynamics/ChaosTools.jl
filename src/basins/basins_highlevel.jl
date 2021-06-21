@@ -101,7 +101,7 @@ function basins_of_attraction(grid, integ, Δt, T, idxs::SVector, complete_state
     if complete_state isa AbstractVector && (length(complete_state) ≠ D-length(idxs))
         error("Vector `complete_state` must have length D-Dg!")
     end
-    if T>0
+    if T > 0
         iter_f! = (integ) -> step!(integ, T, true)
     elseif integ isa PoincareMap
         iter_f! = step!
@@ -110,7 +110,9 @@ function basins_of_attraction(grid, integ, Δt, T, idxs::SVector, complete_state
     end
     complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
     get_projected_state = (integ) -> view(get_state(integ), idxs)
-    bsn_nfo = draw_basin!(grid, integ, iter_f!, complete_and_reinit!, get_projected_state; kwargs...)
+    bsn_nfo = draw_basin!(
+        grid, integ, iter_f!, complete_and_reinit!, get_projected_state; kwargs...
+    )
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 

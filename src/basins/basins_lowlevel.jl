@@ -223,12 +223,16 @@ function _identify_basin_of_cell!(
     end
 end
 
-function store_attractor!(bsn_nfo::BasinInfo, u_full_state)
+function store_attractor!(bsn_nfo::BasinInfo{B, IF, RF, UF, D, T, Q}, 
+    u_full_state) where {B, IF, RF, UF, D, T, Q}
     # bsn_nfo.current_att_color is the number of the attractor multiplied by two
-    if haskey(bsn_nfo.attractors , bsn_nfo.current_att_color ÷ 2)
-        push!(bsn_nfo.attractors[bsn_nfo.current_att_color ÷ 2],  u_full_state) # store attractor
+    attractor_id = bsn_nfo.current_att_color ÷ 2
+    V = SVector{D, T}
+    if haskey(bsn_nfo.attractors, attractor_id)
+        push!(bsn_nfo.attractors[attractor_id], V(u_full_state))
     else
-        bsn_nfo.attractors[bsn_nfo.current_att_color ÷ 2] = Dataset([SVector(u_full_state...)])  # init dic
+        # initialize container for new attractor
+        bsn_nfo.attractors[attractor_id] = Dataset([V(u_full_state)])
     end
 end
 

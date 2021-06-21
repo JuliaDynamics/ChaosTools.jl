@@ -132,6 +132,9 @@ function CompleteAndReinit(complete_state, idxs, D::Int)
     remidxs = setdiff(1:D, idxs)
     remidxs = isempty(remidxs) ? nothing : SVector(remidxs...)
     u = zeros(D)
+    if complete_state isa AbstractVector
+        @assert eltype(complete_state) isa Number
+    end
     return CompleteAndReinit(complete_state, u, idxs, remidxs)
 end
 function (c::CompleteAndReinit{<: AbstractVector})(integ, y)

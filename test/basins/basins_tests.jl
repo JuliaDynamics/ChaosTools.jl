@@ -64,11 +64,17 @@ end
 
 @testset "Basins for in-place system" begin
     ds = Systems.henon_iip(zeros(2); a = 1.4, b = 0.3)
-    xg = yg = range(-2.,2.,length=100)
+    xg = yg = range(-2.,2.;length=100)
     basin, attractors = basins_of_attraction((xg,yg), ds)
     # pcolormesh(xg,yg, basin')
     @test 4260 ≤ count(basin .== 1) ≤ 4280
     @test 5700 ≤ count(basin .== -1) ≤ 5800
+    # Same test but for continuous systems (at the moment it doesn't terminate)
+    # TODO: Uncomment these once we fix this issue
+    # ds = Systems.lorenz_iip()
+    # xg = yg = range(-5.,5.; length=5)
+    # zg = range(0,10; length=5)
+    # @time basin, attractors = basins_of_attraction((xg,yg,zg), ds)
 end
 
 @testset "matching attractors" begin

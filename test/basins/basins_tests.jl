@@ -68,7 +68,7 @@ end
     basin, attractors = basins_of_attraction((xg,yg), ds)
     # pcolormesh(xg,yg, basin')
     @test 4260 ≤ count(basin .== 1) ≤ 4280
-    @test 5700 ≤ count(basin .== -1) ≤ 5800
+    @test 5600 ≤ count(basin .== -1) ≤ 5800
     # Same test but for continuous systems (at the moment it doesn't terminate)
     # TODO: Uncomment these once we fix this issue
     # ds = Systems.lorenz_iip()

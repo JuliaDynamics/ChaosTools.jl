@@ -52,6 +52,7 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   lost outside. This number can be increased for higher accuracy.
 * `horizon_limit = 1e6` : If the norm of the integrator state reaches this limit we consider that the
   orbit diverges.
+* `show_progress = true` : By default a progress bar is shown using ProgressMeter.jl.
 
 ## Description
 `basins` has the following organization:
@@ -86,9 +87,10 @@ be collapsed or confused into the same attractor. This is a drawback of this met
 """
 function basins_of_attraction(grid::Tuple, ds;
         Δt=1, T=0, idxs = 1:length(grid),
-        complete_state=zeros(length(get_state(ds))-2), diffeq = NamedTuple(),
-        kwargs... # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
-                  # these keywords are actually expanded in `_identify_basin_of_cell!`
+        complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
+        diffeq = NamedTuple(), kwargs... 
+        # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
+        # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
     @assert length(idxs) == length(grid)
     integ = ds isa PoincareMap ? ds : integrator(ds; diffeq...)
@@ -101,7 +103,7 @@ function basins_of_attraction(grid, integ, Δt, T, idxs::SVector, complete_state
     if complete_state isa AbstractVector && (length(complete_state) ≠ D-length(idxs))
         error("Vector `complete_state` must have length D-Dg!")
     end
-    if T>0
+    if T > 0
         iter_f! = (integ) -> step!(integ, T, true)
     elseif integ isa PoincareMap
         iter_f! = step!
@@ -110,7 +112,9 @@ function basins_of_attraction(grid, integ, Δt, T, idxs::SVector, complete_state
     end
     complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
     get_projected_state = (integ) -> view(get_state(integ), idxs)
-    bsn_nfo = draw_basin!(grid, integ, iter_f!, complete_and_reinit!, get_projected_state; kwargs...)
+    bsn_nfo = draw_basin!(
+        grid, integ, iter_f!, complete_and_reinit!, get_projected_state; kwargs...
+    )
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
@@ -130,6 +134,9 @@ function CompleteAndReinit(complete_state, idxs, D::Int)
     remidxs = setdiff(1:D, idxs)
     remidxs = isempty(remidxs) ? nothing : SVector(remidxs...)
     u = zeros(D)
+    if complete_state isa AbstractVector
+        @assert eltype(complete_state) <: Number
+    end
     return CompleteAndReinit(complete_state, u, idxs, remidxs)
 end
 function (c::CompleteAndReinit{<: AbstractVector})(integ, y)

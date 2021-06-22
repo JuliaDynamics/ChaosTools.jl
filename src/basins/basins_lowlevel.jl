@@ -1,8 +1,10 @@
-mutable struct BasinInfo{B, G, IF, RF, UF, D, T, Q}
+import ProgressMeter
+
+mutable struct BasinInfo{B, IF, RF, UF, D, T, Q}
     basin::Array{Int16, B}
-    grid_steps::G
-    grid_maxima::G
-    grid_minima::G
+    grid_steps::SVector{B, Float64}
+    grid_maxima::SVector{B, Float64}
+    grid_minima::SVector{B, Float64}
     iter_f!::IF
     complete_and_reinit!::RF
     get_projected_state::UF
@@ -25,33 +27,37 @@ at a new full state, given the state on the grid.
 """
 function draw_basin!(
         grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function;
-        kwargs...,
+        show_progress = true, kwargs...,
     )
-    D = length(get_state(integ)) # dimension of the full dynamical system
+    B = length(grid)
+    D = length(get_state(integ)) # dimension of the full state space
     complete = false
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
     grid_minima = minimum.(grid)
     bsn_nfo = BasinInfo(
         ones(Int16, map(length, grid)),
-        SVector(grid_steps),
-        SVector(grid_maxima),
-        SVector(grid_minima),
+        SVector{B, Float64}(grid_steps),
+        SVector{B, Float64}(grid_maxima),
+        SVector{B, Float64}(grid_minima),
         iter_f!,
         complete_and_reinit!,
         get_projected_state,
         :att_search,
         2,4,0,1,1,
         Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
-        Vector{CartesianIndex}()
+        Vector{CartesianIndex{B}}()
     )
     reset_basin_counters!(bsn_nfo)
     I = CartesianIndices(bsn_nfo.basin)
     j = 1
-    T = eltype(grid[1]);
+    progress = ProgressMeter.Progress(
+        length(bsn_nfo.basin); desc = "Basins of attraction: ", dt = 1.0
+    )
 
     while !complete
         ind, complete, j = next_uncolored_cell(bsn_nfo, j, I)
+        show_progress && ProgressMeter.update!(progress, j)
         complete && break
         # Tentatively assign a color: odd is for basins, even for attractors.
         # First color is 2 for attractor and 3 for basins
@@ -62,7 +68,7 @@ function draw_basin!(
     # remove attractors and rescale from 1 to max nmb of attractors
     ind = iseven.(bsn_nfo.basin)
     bsn_nfo.basin[ind] .+= 1
-    bsn_nfo.basin = (bsn_nfo.basin .- 1) .÷ 2
+    bsn_nfo.basin .= (bsn_nfo.basin .- 1) .÷ 2
     return bsn_nfo
 end
 
@@ -222,12 +228,16 @@ function _identify_basin_of_cell!(
     end
 end
 
-function store_attractor!(bsn_nfo::BasinInfo, u_full_state)
+function store_attractor!(bsn_nfo::BasinInfo{B, IF, RF, UF, D, T, Q}, 
+    u_full_state) where {B, IF, RF, UF, D, T, Q}
     # bsn_nfo.current_att_color is the number of the attractor multiplied by two
-    if haskey(bsn_nfo.attractors , bsn_nfo.current_att_color ÷ 2)
-        push!(bsn_nfo.attractors[bsn_nfo.current_att_color ÷ 2],  u_full_state) # store attractor
+    attractor_id = bsn_nfo.current_att_color ÷ 2
+    V = SVector{D, T}
+    if haskey(bsn_nfo.attractors, attractor_id)
+        push!(bsn_nfo.attractors[attractor_id], V(u_full_state))
     else
-        bsn_nfo.attractors[bsn_nfo.current_att_color ÷ 2] = Dataset([SVector(u_full_state...)])  # init dic
+        # initialize container for new attractor
+        bsn_nfo.attractors[attractor_id] = Dataset([V(u_full_state)])
     end
 end
 
@@ -240,7 +250,7 @@ function recolor_visited_cell!(bsn_nfo::BasinInfo, old_c, new_c)
     end
 end
 
-function basin_cell_index(y_grid_state, bsn_nfo::BasinInfo)
+function basin_cell_index(y_grid_state, bsn_nfo::BasinInfo{B}) where {B}
     iswithingrid = true
     @inbounds for i in 1:length(bsn_nfo.grid_minima)
         if !(bsn_nfo.grid_minima[i] ≤ y_grid_state[i] ≤ bsn_nfo.grid_maxima[i])
@@ -251,9 +261,9 @@ function basin_cell_index(y_grid_state, bsn_nfo::BasinInfo)
     if iswithingrid
         # Snap point to grid
         ind = @. round(Int, (y_grid_state - bsn_nfo.grid_minima)/bsn_nfo.grid_steps) + 1
-        return CartesianIndex(ind...)
+        return CartesianIndex{B}(ind...)
     else
-        return CartesianIndex(-1)
+        return CartesianIndex{B}(-1)
     end
 end
 

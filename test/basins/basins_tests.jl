@@ -9,7 +9,7 @@ using OrdinaryDiffEq
 @testset "Discrete map" begin
     ds = Systems.henon(zeros(2); a = 1.4, b = 0.3)
     xg = yg = range(-2.,2.,length=100)
-    basin, attractors = basins_of_attraction((xg,yg), ds)
+    basin, attractors = basins_of_attraction((xg,yg), ds; show_progress = false)
     # pcolormesh(xg,yg, basin')
     @test 4260 ≤ count(basin .== 1) ≤ 4280
     @test 5700 ≤ count(basin .== -1) ≤ 5800
@@ -19,7 +19,8 @@ end
     ds = Systems.duffing([0.1, 0.25]; ω = 1., f = 0.2, d = 0.15, β = -1)
     xg = yg = range(-2.2,2.2,length=100)
     T = 2π/1.
-    basin,attractors = basins_of_attraction((xg,yg), ds;  T=T, diffeq = (;alg=Tsit5()))
+    basin,attractors = basins_of_attraction((xg,yg), ds;  
+    T, diffeq = (;alg=Tsit5()), show_progress = false)
     # pcolormesh(xg, yg, basin')
     @test length(unique(basin)) == 2
     @test 4900 ≤ count(basin .== 1) ≤ 5100
@@ -30,11 +31,11 @@ end
     ds = Systems.thomas_cyclical(b = 0.1665)
     xg = yg = range(-6.,6.,length=100)
     pmap = poincaremap(ds, (3, 0.), Tmax=1e6; idxs = 1:2, rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
-    basin,attractors = basins_of_attraction((xg,yg), pmap)
+    basin,attractors = basins_of_attraction((xg,yg), pmap; show_progress = false)
     # pcolormesh(xg,yg, basin')
     @test length(attractors) == 3
-    @test   4610 ≤ count(basin .== 1) ≤ 4641
-    @test  2660 ≤ count(basin .== 2)  ≤ 2691
+    @test  4610 ≤ count(basin .== 1) ≤ 4641
+    @test  2660 ≤ count(basin .== 2) ≤ 2691
     @test  2640 ≤ count(basin .== 3) ≤ 2691
 end
 
@@ -43,10 +44,39 @@ end
     xg=range(-2,2,length=100)
     yg=range(-2,2,length=100)
     complete_state(y) = SVector(0,0)
-    basin, attractors = basins_of_attraction((xg,yg), ds; idxs=1:2, complete_state)
+    basin, attractors = basins_of_attraction((xg,yg), ds; 
+    idxs=1:2, complete_state, show_progress = false)
     # pcolormesh(xg,yg, basin')
     @test count(basin .== 1) == 3332
     @test count(basin .== 2) == 3332
+end
+
+@testset "3D basins" begin 
+    ds = Systems.lorenz84()
+    xg=yg=range(-1.,2.,length=100)
+    zg=range(-1.5,1.5,length=30)
+    bsn,att = basins_of_attraction((xg, yg, zg), ds; show_progress = false)
+    @test length(size(bsn)) == 3
+    for i in 1:size(bsn)[3]
+        # While there are 4 attractors, because system is chaotic we might
+        # miss one of the 4 due to coarse state space partition
+        @test sort!(unique(bsn[:, :, i])) ∈ ([1,2,3], [1,2,3,4])
+    end
+end
+
+@testset "Basins for in-place system" begin
+    ds = Systems.henon_iip(zeros(2); a = 1.4, b = 0.3)
+    xg = yg = range(-2.,2.;length=100)
+    basin, attractors = basins_of_attraction((xg,yg), ds; show_progress = false)
+    # pcolormesh(xg,yg, basin')
+    @test 4260 ≤ count(basin .== 1) ≤ 4280
+    @test 5600 ≤ count(basin .== -1) ≤ 5800
+    # Same test but for continuous systems (at the moment it doesn't terminate)
+    # TODO: Uncomment these once we fix this issue
+    # ds = Systems.lorenz_iip()
+    # xg = yg = range(-5.,5.; length=5)
+    # zg = range(0,10; length=5)
+    # @time basin, attractors = basins_of_attraction((xg,yg,zg), ds)
 end
 
 @testset "matching attractors" begin

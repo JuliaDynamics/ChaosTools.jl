@@ -1,3 +1,5 @@
+import ProgressMeter
+
 mutable struct BasinInfo{B, IF, RF, UF, D, T, Q}
     basin::Array{Int16, B}
     grid_steps::SVector{B, Float64}
@@ -25,7 +27,7 @@ at a new full state, given the state on the grid.
 """
 function draw_basin!(
         grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function;
-        kwargs...,
+        show_progress = true, kwargs...,
     )
     B = length(grid)
     D = length(get_state(integ)) # dimension of the full state space
@@ -49,10 +51,13 @@ function draw_basin!(
     reset_basin_counters!(bsn_nfo)
     I = CartesianIndices(bsn_nfo.basin)
     j = 1
-    T = eltype(grid[1]);
+    progress = ProgressMeter.Progress(
+        length(bsn_nfo.basin); desc = "Basins of attraction: ", dt = 1.0
+    )
 
     while !complete
         ind, complete, j = next_uncolored_cell(bsn_nfo, j, I)
+        show_progress && ProgressMeter.update!(progress, j)
         complete && break
         # Tentatively assign a color: odd is for basins, even for attractors.
         # First color is 2 for attractor and 3 for basins
@@ -63,7 +68,7 @@ function draw_basin!(
     # remove attractors and rescale from 1 to max nmb of attractors
     ind = iseven.(bsn_nfo.basin)
     bsn_nfo.basin[ind] .+= 1
-    bsn_nfo.basin = (bsn_nfo.basin .- 1) .÷ 2
+    bsn_nfo.basin .= (bsn_nfo.basin .- 1) .÷ 2
     return bsn_nfo
 end
 

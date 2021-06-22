@@ -52,6 +52,7 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   lost outside. This number can be increased for higher accuracy.
 * `horizon_limit = 1e6` : If the norm of the integrator state reaches this limit we consider that the
   orbit diverges.
+* `show_progress = true` : By default a progress bar is shown using ProgressMeter.jl.
 
 ## Description
 `basins` has the following organization:

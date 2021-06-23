@@ -93,7 +93,7 @@ function basins_of_attraction(grid::Tuple, ds;
         # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
     @assert length(idxs) == length(grid)
-    if ds isa ContinuousDynamicalSystem && isinplace(ds)
+    if ds isa ContinuousDynamicalSystem && DynamicalSystemsBase.isinplace(ds)
         @warn "Application is bugged for continuous in-place systems."
     end
     if ds isa PoincareMap

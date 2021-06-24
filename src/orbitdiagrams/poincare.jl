@@ -115,7 +115,7 @@ function _poincaresos(integ, plane_distance, planecrossing, tfinal, i, rootkw)
 	while integ.t < tfinal
 		out = poincaremap!(integ, plane_distance, planecrossing, integ.t+tfinal, i, rootkw)
 		if !isnothing(out)
-            push!(data, out)
+            push!(data, out[i])
         else
             break # if we evolved for more than tfinal, we should break anyways.
         end
@@ -247,8 +247,13 @@ mutable struct PoincareMap{I, F, P, A, R,V}
 end
 
 function DynamicalSystemsBase.step!(pmap::PoincareMap)
-	pmap.proj_state = poincaremap!(pmap.integ, pmap.f, pmap.planecrossing, pmap.Tmax, pmap.i, pmap.rootkw)
-	return pmap.proj_state[pmap.i]
+	u = poincaremap!(pmap.integ, pmap.f, pmap.planecrossing, pmap.Tmax, pmap.i, pmap.rootkw)
+	if isnothing(u)
+		return nothing
+	else
+		pmap.proj_state = u
+		return pmap.proj_state[pmap.i]
+	end
 end
 function DynamicalSystemsBase.reinit!(pmap::PoincareMap, u0)
 	reinit!(pmap.integ, u0)

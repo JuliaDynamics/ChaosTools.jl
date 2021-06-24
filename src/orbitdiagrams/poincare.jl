@@ -134,14 +134,14 @@ const PSOS_ERROR = "the Poincaré surface of section did not have any points!"
 """
 	poincaremap!(integ, plane_distance, planecrossing, Tmax, idxs, rootkw)
 Low level function that actual performs the algorithm of finding the next crossing
-of the Poincaré surface of section. Return the state at the section or `nothing` if 
+of the Poincaré surface of section. Return the state at the section or `nothing` if
 evolved for more than `Tmax` without any crossing.
 """
 function poincaremap!(integ, plane_distance, planecrossing, Tmax, idxs, rootkw)
     # Check if initial condition is already on the plane
     side = planecrossing(integ.u)
     if side == 0
-		dat = integ.u[idxs]
+		dat = integ.u
         step!(integ)
 		return dat
     end
@@ -160,7 +160,8 @@ function poincaremap!(integ, plane_distance, planecrossing, Tmax, idxs, rootkw)
     # Else, we're guaranteed to have `t` after plane and `tprev` before plane
     tcross = Roots.find_zero(plane_distance, (integ.tprev, integ.t), Roots.A42(); rootkw...)
     ucross = integ(tcross)
-    return ucross[idxs]
+
+    return ucross
 end
 
 
@@ -232,27 +233,29 @@ function poincaremap(
 
 	planecrossing = PlaneCrossing(plane, direction > 0)
 	plane_distance = (t) -> planecrossing(integ(t))
-	return PoincareMap(integ, plane_distance, planecrossing, Tmax, i, rootkw)
+	return PoincareMap(integ, plane_distance, planecrossing, Tmax, i, rootkw, SVector{length(u0), eltype(u0)}(u0))
 end
 
-struct PoincareMap{I, F, P, A, R}
+mutable struct PoincareMap{I, F, P, A, R,V}
 	integ::I
 	f::F
  	planecrossing::P
 	Tmax::Float64
 	i::A
 	rootkw::R
+	proj_state::V
 end
 
 function DynamicalSystemsBase.step!(pmap::PoincareMap)
-	return poincaremap!(pmap.integ, pmap.f, pmap.planecrossing, pmap.Tmax, pmap.i, pmap.rootkw)
+	pmap.proj_state = poincaremap!(pmap.integ, pmap.f, pmap.planecrossing, pmap.Tmax, pmap.i, pmap.rootkw)
+	return pmap.proj_state[pmap.i]
 end
 function DynamicalSystemsBase.reinit!(pmap::PoincareMap, u0)
 	reinit!(pmap.integ, u0)
 	return
 end
 function DynamicalSystemsBase.get_state(pmap::PoincareMap)
-	return pmap.integ.u
+	return pmap.proj_state
 end
 
 function Base.show(io::IO, pmap::PoincareMap)

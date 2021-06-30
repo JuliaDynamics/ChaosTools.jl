@@ -34,7 +34,7 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   that one step will typically make the integrator move to a different cell of the
   state space partitioning.
 * `T=0` : Period of the stroboscopic map, in case of a continuous dynamical system with periodic
-  time forcing. This argument is incompatible with `Δt`. 
+  time forcing. This argument is incompatible with `Δt`.
 * `idxs = 1:length(grid)`: This vector selects the variables of the system that will define the
   subspace the dynamics will be projected into.
 * `complete_state = zeros(D-Dg)`: This argument allows setting the _remaining_ variables
@@ -88,7 +88,7 @@ be collapsed or confused into the same attractor. This is a drawback of this met
 function basins_of_attraction(grid::Tuple, ds;
         Δt=1, T=0, idxs = 1:length(grid),
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
-        diffeq = NamedTuple(), kwargs... 
+        diffeq = NamedTuple(), kwargs...
         # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
         # these keywords are actually expanded in `_identify_basin_of_cell!`
     )

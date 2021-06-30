@@ -260,7 +260,11 @@ function DynamicalSystemsBase.reinit!(pmap::PoincareMap, u0)
 	return
 end
 function DynamicalSystemsBase.get_state(pmap::PoincareMap)
-	return pmap.proj_state
+	if pmap.integ.t < pmap.Tmax
+		return pmap.proj_state
+	else
+		return ones(length(pmap.proj_state))*NaN
+	end
 end
 
 function Base.show(io::IO, pmap::PoincareMap)

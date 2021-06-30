@@ -132,7 +132,7 @@ function _identify_basin_of_cell!(
         horizon_limit = 1e6
     )
     #if n[1]==-1 means we are outside the grid
-    nxt_clr = (n[1]==-1) ? -1 : bsn_nfo.basin[n]
+    nxt_clr = (n[1]==-1  || isnan(u_full_state[1])) ? -1 : bsn_nfo.basin[n]
     check_next_state!(bsn_nfo,nxt_clr)
 
     if bsn_nfo.state == :att_hit
@@ -228,7 +228,7 @@ function _identify_basin_of_cell!(
     end
 end
 
-function store_attractor!(bsn_nfo::BasinInfo{B, IF, RF, UF, D, T, Q}, 
+function store_attractor!(bsn_nfo::BasinInfo{B, IF, RF, UF, D, T, Q},
     u_full_state) where {B, IF, RF, UF, D, T, Q}
     # bsn_nfo.current_att_color is the number of the attractor multiplied by two
     attractor_id = bsn_nfo.current_att_color ÷ 2
@@ -292,16 +292,19 @@ function check_next_state!(bsn_nfo, nxt_clr)
         # out of the grid we do not reset the counter of other state
         # since the trajectory can follow an attractor that spans outside the grid
         bsn_nfo.state = :lost
-        bsn_nfo.consecutive_lost = 1
         return
     elseif isodd(nxt_clr)
         # hit an basin box
         next_state = :bas_hit
     end
 
-    if next_state != current_state && current_state != :lost
+    if next_state != current_state
         # reset counter except in lost state (the counter freezes in this case)
-        bsn_nfo.consecutive_match = 1
+        if current_state == :lost
+            bsn_nfo.consecutive_lost = 1
+        else
+            bsn_nfo.consecutive_match = 1
+        end
     end
     bsn_nfo.state = next_state
 end

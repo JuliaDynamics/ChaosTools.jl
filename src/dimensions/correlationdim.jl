@@ -2,25 +2,8 @@
 # Original correlation sum
 #######################################################################################
 using Distances, Roots
-export kernelprob, correlationsum, grassberger, boxed_correlationsum,
+export correlationsum, grassberger, boxed_correlationsum,
 estimate_r0_buenoorovio, data_boxing
-
-"""
-    kernelprob(X, ε; norm = Euclidean()) → p::Probabilities
-Associate each point in `X` (`Dataset` or timesries) with a probability `p` using the
-"kernel estimation" (also called "nearest neighbor kernel estimation" and other names):
-```math
-p_j = \\frac{1}{N}\\sum_{i=1}^N B(||X_i - X_j|| < \\epsilon)
-```
-where ``N`` is its length and ``B`` gives 1 if the argument is `true`.
-
-See also [`genentropy`](@ref) and [`correlationsum`](@ref).
-`kernelprob` is equivalent with `probabilities(X, NaiveKernel(ε, TreeDistance(norm)))`.
-"""
-function kernelprob(X, ε; norm = Euclidean())
-    probabilities(X, NaiveKernel(ϵ, TreeDistance(norm)))
-end
-
 
 """
     correlationsum(X, ε::Real; w = 0, norm = Euclidean(), q = 2) → C_q(ε)

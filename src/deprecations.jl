@@ -1,8 +1,28 @@
+export kernelprob
+
 function kernelprob(X, ε, norm)
     @warn "`kernelprob` with `norm` as positional argument is deprecated. "*
     "Use `norm` as a keyword argument instead."
     kernelprob(X, ε; norm)
 end
+
+"""
+    kernelprob(X, ε; norm = Euclidean()) → p::Probabilities
+Associate each point in `X` (`Dataset` or timesries) with a probability `p` using the
+"kernel estimation" (also called "nearest neighbor kernel estimation" and other names):
+```math
+p_j = \\frac{1}{N}\\sum_{i=1}^N B(||X_i - X_j|| < \\epsilon)
+```
+where ``N`` is its length and ``B`` gives 1 if the argument is `true`.
+
+See also [`genentropy`](@ref) and [`correlationsum`](@ref).
+`kernelprob` is equivalent with `probabilities(X, NaiveKernel(ε, TreeDistance(norm)))`.
+"""
+function kernelprob(X, ε; norm = Euclidean(), w = 0)
+    @warn "`kernelprob` is deprecated in favor of `probabilities(X, NaiveKernel(...))`"
+    probabilities(X, NaiveKernel(ϵ; metric = norm, w))
+end
+
 
 """
     permentropy_old(x::AbstractVector, order [, interval=1]; base = Base.MathConstants.e)

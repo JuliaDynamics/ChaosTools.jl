@@ -5,7 +5,7 @@ export draw_basin!, basins_of_attraction
     basins_of_attraction(grid::Tuple, ds::DynamicalSystem; kwargs...) -> basins, attractors
 Compute an estimate of the basins of attraction of a dynamical system `ds` on
 a partitioning of the state space given by `grid`. The method has been
-inspired by the 2D grid approach devellopped by Nusse & Yorke [^Yorke1997].
+inspired by the 2D grid approach developed by Nusse & Yorke [^Yorke1997].
 It works _without_ knowledge of where attractors are; it identifies them automatically.
 
 The dynamical system can be:
@@ -93,6 +93,12 @@ function basins_of_attraction(grid::Tuple, ds;
         # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
     @assert length(idxs) == length(grid)
+    if ds isa ContinuousDynamicalSystem && DynamicalSystemsBase.isinplace(ds)
+        @warn "Application is bugged for continuous in-place systems."
+    end
+    if ds isa PoincareMap
+        @warn "Application is bugged for Poincare maps."
+    end
     integ = ds isa PoincareMap ? ds : integrator(ds; diffeq...)
     idxs = SVector(idxs...)
     return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state; kwargs...)

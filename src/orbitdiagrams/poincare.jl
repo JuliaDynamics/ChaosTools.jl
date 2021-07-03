@@ -209,7 +209,8 @@ and then calling `step!` as normally.
 of being evolved for infinite time, to avoid cases where iteration would continue
 forever for ill-defined hyperplanes or for convergence to fixed points.
 If during `step!` the system has been evolved for more than `Tmax`,
-then `step!(pmap)` will return `nothing`.
+then `step!(pmap)` will return `nothing`, while `get_state(pmap)` will return a vector
+of `NaN`.
 
 ## Example
 ```julia
@@ -263,7 +264,7 @@ function DynamicalSystemsBase.get_state(pmap::PoincareMap)
 	if pmap.integ.t < pmap.Tmax
 		return pmap.proj_state
 	else
-		return ones(length(pmap.proj_state))*NaN
+		return pmap.proj_state*NaN
 	end
 end
 

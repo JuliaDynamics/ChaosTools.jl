@@ -9,7 +9,7 @@ using OrdinaryDiffEq
     ds = Systems.grebogi_map(rand(2))
     θg=range(0,2π,length=250)
     xg=range(-0.5,0.5,length=250)
-    bsn,att=basins_of_attraction((θg, xg), ds)
+    bsn,att=basins_of_attraction((θg, xg), ds; show_progress = false)
     e,f,α=uncertainty_exponent(θg,xg,bsn; precision=1e-5)
     # In the paper the value is roughly 0.2
     @test (0.2 ≤ α ≤ 0.3)
@@ -37,7 +37,7 @@ ds = DiscreteDynamicalSystem(newton_map,[0.1, 0.2], [3] , newton_map_J)
 xg=range(-1.,1.,length=300)
 yg=range(-1.,1.,length=300)
 
-bsn,att=basins_of_attraction((xg, yg), ds)
+bsn,att=basins_of_attraction((xg, yg), ds; show_progress = false)
 
 e,f,α=uncertainty_exponent(xg,yg,bsn; precision=1e-5)
 

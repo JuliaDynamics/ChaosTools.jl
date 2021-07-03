@@ -128,7 +128,7 @@ and the trajectories staying outside the grid are coded with -1.
 """
 function _identify_basin_of_cell!(
         bsn_nfo::BasinInfo, n::CartesianIndex, u_full_state;
-        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_lost = 1000,
+        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_lost = 100,
         horizon_limit = 1e6
     )
     #if n[1]==-1 means we are outside the grid

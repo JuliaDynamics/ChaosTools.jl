@@ -113,7 +113,7 @@ end
 function _poincaresos(integ, plane_distance, planecrossing, tfinal, i, rootkw)
 	data = _initialize_output(integ.u, i)
 	while integ.t < tfinal
-		out = poincaremap!(integ, plane_distance, planecrossing, integ.t+tfinal, i, rootkw)
+		out = poincaremap!(integ, plane_distance, planecrossing, tfinal, i, rootkw)
 		if !isnothing(out)
             push!(data, out[i])
         else
@@ -123,13 +123,13 @@ function _poincaresos(integ, plane_distance, planecrossing, tfinal, i, rootkw)
 	return data
 end
 
-_initialize_output(u::S, i::Int) where {S} = eltype(S)[]
+_initialize_output(::S, ::Int) where {S} = eltype(S)[]
 _initialize_output(u::S, i::SVector{N, Int}) where {N, S} = typeof(u[i])[]
 function _initialize_output(u, i)
     error("The variable index when producing the PSOS must be Int or SVector{Int}")
 end
 
-const PSOS_ERROR = "the Poincaré surface of section did not have any points!"
+const PSOS_ERROR = "The Poincaré surface of section did not have any points!"
 
 """
 	poincaremap!(integ, plane_distance, planecrossing, Tmax, idxs, rootkw)
@@ -138,6 +138,7 @@ of the Poincaré surface of section. Return the state at the section or `nothing
 evolved for more than `Tmax` without any crossing.
 """
 function poincaremap!(integ, plane_distance, planecrossing, Tmax, idxs, rootkw)
+    t0 = integ.t
     # Check if initial condition is already on the plane
     side = planecrossing(integ.u)
     if side == 0
@@ -147,20 +148,19 @@ function poincaremap!(integ, plane_distance, planecrossing, Tmax, idxs, rootkw)
     end
     # Otherwise evolve until juuuuuust crossing the plane
     while side < 0
-        integ.t > Tmax && break
+        (integ.t - t0) > Tmax && break
         step!(integ)
         side = planecrossing(integ.u)
     end
     while side ≥ 0
-        integ.t > Tmax && break
+        (integ.t - t0) > Tmax && break
         step!(integ)
         side = planecrossing(integ.u)
     end
-    integ.t > Tmax && return nothing # we evolved too long and no crossing, return nothing
+    (integ.t - t0) > Tmax && return nothing # we evolved too long and no crossing, return nothing
     # Else, we're guaranteed to have `t` after plane and `tprev` before plane
     tcross = Roots.find_zero(plane_distance, (integ.tprev, integ.t), Roots.A42(); rootkw...)
     ucross = integ(tcross)
-
     return ucross
 end
 
@@ -208,10 +208,10 @@ and then calling `step!` as normally.
 **Notice**: The argument `Tmax` exists so that the integrator can terminate instead
 of being evolved for infinite time, to avoid cases where iteration would continue
 forever for ill-defined hyperplanes or for convergence to fixed points.
-Once the system has been evolved for more than `Tmax`, `step!(pmap)` will always
-return `nothing`.
+If during `step!` the system has been evolved for more than `Tmax`,
+then `step!(pmap)` will return `nothing`.
 
-## Example:
+## Example
 ```julia
 ds = Systems.rikitake([0.,0.,0.], μ = 0.47, α = 1.0)
 pmap = poincaremap(ds, (3,0.), Tmax=200.)

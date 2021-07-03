@@ -82,7 +82,7 @@ In most cases there is a signicative improvement in speed.
 
 Notice that in the case we have to project the dynamics on a lower dimensional space,
 there are edge cases where the system may have two attractors
-that are close on the defined space but are far apart in another dimension. They could
+that are close on the projected space but are far apart in another dimension. They could
 be collapsed or confused into the same attractor. This is a drawback of this method.
 """
 function basins_of_attraction(grid::Tuple, ds;

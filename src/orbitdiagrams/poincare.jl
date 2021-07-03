@@ -113,7 +113,7 @@ end
 function _poincaresos(integ, plane_distance, planecrossing, tfinal, i, rootkw)
 	data = _initialize_output(integ.u, i)
 	while integ.t < tfinal
-		out = poincaremap!(integ, plane_distance, planecrossing, tfinal, i, rootkw)
+		out = poincaremap!(integ, plane_distance, planecrossing, tfinal, rootkw)
 		if !isnothing(out)
             push!(data, out[i])
         else
@@ -132,12 +132,12 @@ end
 const PSOS_ERROR = "The Poincaré surface of section did not have any points!"
 
 """
-	poincaremap!(integ, plane_distance, planecrossing, Tmax, idxs, rootkw)
+	poincaremap!(integ, plane_distance, planecrossing, Tmax, rootkw)
 Low level function that actual performs the algorithm of finding the next crossing
 of the Poincaré surface of section. Return the state at the section or `nothing` if
 evolved for more than `Tmax` without any crossing.
 """
-function poincaremap!(integ, plane_distance, planecrossing, Tmax, idxs, rootkw)
+function poincaremap!(integ, plane_distance, planecrossing, Tmax, rootkw)
     t0 = integ.t
     # Check if initial condition is already on the plane
     side = planecrossing(integ.u)
@@ -198,6 +198,7 @@ end
 Return a map (integrator) that produces iterations over the Poincaré map of the `ds`.
 This map is defined as the sequence of points on the Poincaré surface of section.
 See [`poincaresos`](@ref) for details on `plane` and all other `kwargs`.
+Keyword `idxs` does not apply to `poincaremap`, as it doesn't save any states.
 
 You can progress the map one step on the section by calling `step!(pmap)`,
 which also returns the next state crossing the hyperplane.
@@ -224,36 +225,34 @@ next_state_on_psos = step!(pmap)
 """
 function poincaremap(
 		ds::CDS{IIP, S, D}, plane, Tmax = 1e6;
-	    direction = -1, idxs = 1:D, u0 = get_state(ds),
+	    direction = -1, u0 = get_state(ds),
 	    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...
 	) where {IIP, S, D}
 
 	_check_plane(plane, D)
     integ = integrator(ds, u0; diffeq...)
-    i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
-
 	planecrossing = PlaneCrossing(plane, direction > 0)
 	plane_distance = (t) -> planecrossing(integ(t))
-	return PoincareMap(integ, plane_distance, planecrossing, Tmax, i, rootkw, SVector{length(u0), eltype(u0)}(u0))
+    v = SVector{length(u0), eltype(u0)}(u0)
+	return PoincareMap(integ, plane_distance, planecrossing, Tmax, rootkw, v)
 end
 
-mutable struct PoincareMap{I, F, P, A, R,V}
+mutable struct PoincareMap{I, F, P, R, V}
 	integ::I
 	f::F
  	planecrossing::P
 	Tmax::Float64
-	i::A
 	rootkw::R
 	proj_state::V
 end
 
 function DynamicalSystemsBase.step!(pmap::PoincareMap)
-	u = poincaremap!(pmap.integ, pmap.f, pmap.planecrossing, pmap.Tmax, pmap.i, pmap.rootkw)
+	u = poincaremap!(pmap.integ, pmap.f, pmap.planecrossing, pmap.Tmax, pmap.rootkw)
 	if isnothing(u)
 		return nothing
 	else
 		pmap.proj_state = u
-		return pmap.proj_state[pmap.i]
+		return pmap.proj_state
 	end
 end
 function DynamicalSystemsBase.reinit!(pmap::PoincareMap, u0)

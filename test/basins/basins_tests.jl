@@ -30,7 +30,7 @@ end
 @testset "Test basin poincare map" begin
     ds = Systems.thomas_cyclical(b = 0.1665)
     xg = yg = range(-6.0, 6.0; length = 100)
-    pmap = poincaremap(ds, (3, 0.0), 1e6; idxs = 1:2, rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
+    pmap = poincaremap(ds, (3, 0.0), 1e6; rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
     basin,attractors = basins_of_attraction((xg,yg), pmap; show_progress = false)
     # pcolormesh(xg,yg, basin')
     @test length(attractors) == 3

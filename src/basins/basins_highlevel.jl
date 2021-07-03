@@ -33,8 +33,8 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
 * `Δt = 1`: Approximate time step of the integrator. It is recommended to use values such
   that one step will typically make the integrator move to a different cell of the
   state space partitioning.
-* `T=0` : Period of the stroboscopic map, in case of a continuous dynamical system with periodic
-  time forcing. This argument is incompatible with `Δt`. 
+* `T` : Period of the stroboscopic map, in case of a continuous dynamical system with periodic
+  time forcing. This argument is incompatible with `Δt`.
 * `idxs = 1:length(grid)`: This vector selects the variables of the system that will define the
   subspace the dynamics will be projected into.
 * `complete_state = zeros(D-Dg)`: This argument allows setting the _remaining_ variables
@@ -48,7 +48,7 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   This number can be increased for higher accuracy.
 * `mx_chk_fnd_att = 60` : Maximum check of unnumbered cell before considering we have an attractor.
   This number can be increased for higher accuracy.
-* `mx_chk_lost = 1000` : Maximum check of iterations outside the defined grid before we consider the orbit
+* `mx_chk_lost = 100` : Maximum check of iterations outside the defined grid before we consider the orbit
   lost outside. This number can be increased for higher accuracy.
 * `horizon_limit = 1e6` : If the norm of the integrator state reaches this limit we consider that the
   orbit diverges.
@@ -65,9 +65,8 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
 * The value associated to a key is a [`Dataset`](@ref) with the *guessed* location of the
   attractor on the state space.
 
-The method starts by picking the first available initial condition on the plane not yet
-numbered. The dynamical system is then iterated until one of the following conditions
-happens:
+The method starts by picking the first available initial condition on the grid not yet
+numbered. The dynamical system is then iterated until one of the following conditions happens:
 1. The trajectory hits a known attractor already numbered `mx_chk_att` consecutive times: the
    initial condition is numbered with the corresponding number.
 1. The trajectory spends `mx_chk_lost` steps outside the defiend grid: the initial
@@ -82,23 +81,17 @@ In most cases there is a signicative improvement in speed.
 
 Notice that in the case we have to project the dynamics on a lower dimensional space,
 there are edge cases where the system may have two attractors
-that are close on the defined space but are far apart in another dimension. They could
+that are close on the projected space but are far apart in another dimension. They could
 be collapsed or confused into the same attractor. This is a drawback of this method.
 """
 function basins_of_attraction(grid::Tuple, ds;
         Δt=1, T=0, idxs = 1:length(grid),
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
-        diffeq = NamedTuple(), kwargs... 
+        diffeq = NamedTuple(), kwargs...
         # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
         # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
     @assert length(idxs) == length(grid)
-    if ds isa ContinuousDynamicalSystem && DynamicalSystemsBase.isinplace(ds)
-        @warn "Application is bugged for continuous in-place systems."
-    end
-    if ds isa PoincareMap
-        @warn "Application is bugged for Poincare maps."
-    end
     integ = ds isa PoincareMap ? ds : integrator(ds; diffeq...)
     idxs = SVector(idxs...)
     return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state; kwargs...)

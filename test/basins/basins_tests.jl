@@ -29,8 +29,8 @@ end
 
 @testset "Test basin poincare map" begin
     ds = Systems.thomas_cyclical(b = 0.1665)
-    xg = yg = range(-6.,6.,length=100)
-    pmap = poincaremap(ds, (3, 0.), Tmax=1e6; idxs = 1:2, rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
+    xg = yg = range(-6.0, 6.0; length = 100)
+    pmap = poincaremap(ds, (3, 0.0), 1e6; rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
     basin,attractors = basins_of_attraction((xg,yg), pmap; show_progress = false)
     # pcolormesh(xg,yg, basin')
     @test length(attractors) == 3
@@ -73,21 +73,23 @@ end
     @test 5600 ≤ count(basin .== -1) ≤ 5800
     # Same test but for continuous systems (at the moment it doesn't terminate)
     # TODO: Uncomment these once we fix this issue
-    # ds = Systems.lorenz_iip()
-    # xg = yg = range(-5.,5.; length=5)
-    # zg = range(0,10; length=5)
-    # @time basin, attractors = basins_of_attraction((xg,yg,zg), ds)
+    ds = Systems.lorenz_iip()
+    xg = yg = range(-30.0, 30.0; length=10)
+    zg = range(0, 50; length=10)
+    basin, attractors = basins_of_attraction((xg,yg,zg), ds; show_progress=false)
+    @test length(attractors) == 1
+    @test unique(basin) == [1]
 end
 
 @testset "matching attractors" begin
     d, α, ω = 0.3, 0.2, 0.5
     ds = Systems.magnetic_pendulum(; d, α, ω)
     xg = yg = range(-3, 3, length = 100)
-    b₋, a₋ = basins_of_attraction((xg,yg), ds; Δt=1., idxs=1:2)
+    b₋, a₋ = basins_of_attraction((xg,yg), ds; Δt=1., idxs=1:2, show_progress = false)
     @testset "method $method" for method ∈ (:overlap, :distance)
         @testset "γ3 $γ3" for γ3 ∈ [0.2, 0.1] # still 3 at 0.2, but only 2 at 0.1
             ds = Systems.magnetic_pendulum(; d, α, ω,  γs = [1, 1, γ3])
-            b₊, a₊ = basins_of_attraction((xg,yg), ds; Δt=1., idxs=1:2)
+            b₊, a₊ = basins_of_attraction((xg,yg), ds; Δt=1., idxs=1:2, show_progress = false)
             match_attractors!(b₋, a₋, b₊, a₊, method)
             for k in keys(a₊)
                 dist = minimum(norm(x .- y) for x ∈ a₊[k] for y ∈ a₋[k])

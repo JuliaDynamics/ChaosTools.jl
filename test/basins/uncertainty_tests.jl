@@ -7,8 +7,8 @@ using OrdinaryDiffEq
 
 @testset "Test uncertainty orginal paper" begin
     ds = Systems.grebogi_map(rand(2))
-    θg=range(0,2π,length=250)
-    xg=range(-0.5,0.5,length=250)
+    θg=range(0,2π,length=251)
+    xg=range(-0.5,0.5,length=251)
     bsn,att=basins_of_attraction((θg, xg), ds; show_progress = false)
     e,f,α=uncertainty_exponent(θg,xg,bsn; precision=1e-5)
     # In the paper the value is roughly 0.2

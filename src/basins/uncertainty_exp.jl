@@ -62,13 +62,13 @@ function uncertainty_exponent(basins::AbstractArray; range_ε = 2:maximum(size(b
         N[k] = Nb
         ε[k] = eps
     end
-    f_ε = N_u
+    N_ε = N_u
     # remove zeros in case there are any:
-    ind = f_ε .> 0.0
-    f_ε = f_ε[ind]
+    ind = N_ε .> 0.0
+    N_ε = N_ε[ind]
     ε = ε[ind]
     # get exponent via liner regression on `f_ε ~ ε^α`
-    b, d = linreg(vec(-log10.(ε)), vec(log10.(f_ε)))
+    b, d = linreg(vec(-log10.(ε)), vec(log10.(N_ε)))
     α = length(n_dim) - d
-    return ε, f_ε, α
+    return ε, N_ε, α
 end

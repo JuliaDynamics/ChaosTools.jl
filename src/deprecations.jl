@@ -103,7 +103,6 @@ function basins_general(args...; kwargs...)
 end
 
 
-using Entropies
 export non0hist, binhist, genentropy, permentropy, probabilities
 
 """

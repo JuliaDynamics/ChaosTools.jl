@@ -119,9 +119,8 @@ different basins using the same box size `ε`.
 function basin_entropy(basins; ε = 20)
     n_dim = size(basins)
     vals = unique(basins)
-    S=Int16(length(vals))
-    pn=zeros(Float64,1,S)
-    Sb=0; Nb=0; N=0
+    pn = zeros(length(vals))
+    Sb = 0; Nb = 0; N = 0
     bx_tuple = ntuple(i -> range(1, n_dim[i] - rem(n_dim[i],ε), step = ε), length(n_dim))
     box_indices = CartesianIndices(bx_tuple)
     for box in box_indices
@@ -129,20 +128,17 @@ function basin_entropy(basins; ε = 20)
         I = CartesianIndices(ntuple(i -> range(box[i], box[i]+ε-1, step = 1), length(n_dim)))
         box_values = [basins[k] for k in I]
         N = N + 1
-        for (k,v) in enumerate(vals)
-            pn[k]=count(x->x==v,box_values)/length(box_values)
-        end
-        Nb = Nb + (length(unique(box_values))>1)
-        Sb = Sb + sum(_entropy.(pn))
+        Nb = Nb + (length(unique(box_values)) > 1)
+        Sb = Sb + _box_entropy(box_values)
     end
     return Sb/N, Sb/Nb
 end
 
-function _entropy(p::Float64)
-    if p == 0.
-        h = 0.
-    else
-        h=p*log(1/p)
+function _box_entropy(box_values)
+    h = 0.
+    for (k,v) in enumerate(unique(box_values))
+        p = count( x -> (x == v), box_values)/length(box_values)
+        h += p*log(1/p)
     end
     return h
 end
@@ -183,7 +179,7 @@ function basins_fractal_test(basins; ε = 20, Ntotal = 1000)
         @warn "Maybe the size of the grid is not fine enough."
     end
     if Ntotal < 100
-        error("Ntotal must be larger than 100 to gather enough statitics.")
+        error("Ntotal must be larger than 1000 to gather enough statitics.")
     end
 
     v_pts = zeros(Float64, length(n_dim), prod(n_dim))
@@ -199,15 +195,13 @@ function basins_fractal_test(basins; ε = 20, Ntotal = 1000)
         p = [rand()*(sz-ε)+ε for sz in n_dim]
         (idxs,r) = inrange(tree, p, ε)
         box_values = basins[idxs]
-        for (k,v) in enumerate(vals)
-            pn[k]=count(x->x==v,box_values)/length(box_values)
-        end
-        if sum(pn .> 0) > 1
+        bx_ent = _box_entropy(box_values)
+        if bx_ent > 0
             Nb = Nb + 1
-            Sb = Sb + sum(_entropy.(pn))
+            Sb = Sb + bx_ent
             N_stat[Nb] = Sb/Nb
         end
-        N = N+1
+        N = N + 1
     end
 
     Ŝbb = mean(N_stat[100:end])

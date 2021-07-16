@@ -100,26 +100,26 @@ end
 
 @testset "Basin entropy" begin
     ds = Systems.grebogi_map()
-    θg=range(0,2π,length=200)
-    xg=range(-0.5,0.5,length=200)
+    θg=range(0,2π,length = 200)
+    xg=range(-0.5,0.5,length = 200)
     basin, attractors = basins_of_attraction((θg,xg), ds; show_progress = false)
-    Sb, Sbb = basin_entropy(basin; ε=5)
+    Sb, Sbb = basin_entropy(basin; ε = 5)
     @test 0.4 ≤ Sb ≤ 0.42
     @test 0.6 ≤ Sbb ≤ 0.61
 end
 
 @testset "Fractal test" begin
     ds = Systems.grebogi_map()
-    θg=range(0,2π,length=300)
-    xg=range(-0.5,0.5,length=300)
+    θg=range(0,2π,length = 300)
+    xg=range(-0.5,0.5,length = 300)
     basin, attractors = basins_of_attraction((θg,xg), ds; show_progress = false)
-    test_res, Sbb = basins_fractal_test(basin; ε=5)
+    test_res, Sbb = basins_fractal_test(basin; ε = 5)
     @test test_res == :fractal
 
     ds = Systems.henon(zeros(2); a = 1.4, b = 0.3)
-    xg = yg = range(-2.,2.,length=300)
+    xg = yg = range(-2.,2.,length = 300)
     basin, attractors = basins_of_attraction((xg,yg), ds; show_progress = false)
-    test_res, Sbb = basins_fractal_test(basin; ε=5)
+    test_res, Sbb = basins_fractal_test(basin; ε = 5)
     @test test_res == :smooth
 
 

@@ -101,7 +101,7 @@ The later is the average of the entropy only for boxes that contains at least tw
 different basins, that is, for the boxes on the boundary.
 
 The basin entropy is a measure of the uncertainty on the initial conditions of the basins.
-It is maximum at the value `log(n_att)` being `n_att` the number of attractor. In
+It is maximum at the value `log(n_att)` being `n_att` the number of attractors. In
 this case the boundary is intermingled: for a given initial condition we can find
 another initial condition that lead to another basin arbitriraly close. It provides also
 a simple criterion for fractality: if the boundary basin entropy `Sbb` is above `log(2)`
@@ -147,7 +147,7 @@ end
 This is an automated test to decide if the boundary of the basins has fractal structures.
 The bottom line is to look at the basins with a magnifier of size `ε` at random in `basins`.
 If what we see in the magnifier looks like a smooth boundary (in average) we decide that
-the boundary if smooth. If it is not smooth we can say that at the scale `ε` we have
+the boundary is smooth. If it is not smooth we can say that at the scale `ε` we have
 structures, i.e., it is fractal.
 
 In practice the algorithm computes the boundary basin entropy `Sbb` [`basin_entropy`](@ref) for `Ntotal`

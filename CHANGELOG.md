@@ -1,3 +1,6 @@
+# 1.32
+* New functions for examining the fractal nature of basin boundaries: `basins_fractal_dimension, basin_entropy, basins_fractal_test`.
+
 # 1.31
 * New, general function `basins_of_attraction` that replaces the existing `basins_2D` and `basins_general` and can produce arbitrary-dimensional basins of attraction.
 

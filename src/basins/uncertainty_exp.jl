@@ -1,26 +1,80 @@
-export uncertainty_exponent
+export uncertainty_exponent, basins_fractal_dimension
 
 """
-    uncertainty_exponent(xg, yg, basins::Matrix; kwargs...) -> ε, f_ε ,α
+    basins_fractal_dimension(basins; kwargs...) -> V_ε, N_ε ,d
+Estimate the [Fractal Dimension](@ref) `d` of the boundary between basins of attraction using
+the box-counting algorithm.
+
+The output `N_ε` is a vector with the number of the balls of radius `ε` (in pixels)
+that contain at least two initial conditions that lead to different attractors. `V_ε`
+is a vector with the corresponding size of the balls. The ouput `d` is the estimation
+of the box-counting dimension of the boundary by fitting a line in the `log.(N_ε)`
+vs `log.(1/V_ε)` curve. However it is recommended to analyze the curve directly
+for more accuracy.
+
+## Keyword arguments
+* `range_ε = 2:maximum(size(basins))÷20` is the range of sizes of the ball to
+  test (in pixels).
+
+## Description
+
+It is the implementation of the popular algorithm of the estimation of the box-counting
+dimension. The algorithm search for a covering the boundary with `N_ε` boxes of size
+`ε` in pixels.
+"""
+function basins_fractal_dimension(basins::AbstractArray; range_ε = 3:maximum(size(basins))÷20)
+
+    dims = size(basins)
+    num_step = length(range_ε)
+    N_u = zeros(Int, num_step) # number of uncertain box
+    N = zeros(Int, num_step) # number of boxes
+    V_ε = zeros(1, num_step) # resolution
+
+    # Naive box counting estimator
+    for (k,eps) in enumerate(range_ε)
+        Nb, Nu = 0, 0
+        # get indices of boxes
+        bx_tuple = ntuple(i -> range(1, dims[i] - rem(dims[i],eps), step = eps), length(dims))
+        box_indices = CartesianIndices(bx_tuple)
+        for box in box_indices
+            # compute the range of indices for the current box
+            ind = CartesianIndices(ntuple(i -> range(box[i], box[i]+eps-1, step = 1), length(dims)))
+            c = basins[ind]
+            if length(unique(c))>1
+                Nu = Nu + 1
+            end
+            Nb += 1
+        end
+        N_u[k] = Nu
+        N[k] = Nb
+        V_ε[k] = eps
+    end
+    N_ε = N_u
+    # remove zeros in case there are any:
+    ind = N_ε .> 0.0
+    N_ε = N_ε[ind]
+    V_ε = V_ε[ind]
+    # get exponent via liner regression on `f_ε ~ ε^α`
+    b, d = linreg(vec(-log10.(V_ε)), vec(log10.(N_ε)))
+    return V_ε, N_ε, d
+end
+
+"""
+    uncertainty_exponent(basins; kwargs...) -> ε, N_ε ,α
 Estimate the uncertainty exponent[^Grebogi1983] of the basins of attraction. This exponent
 is related to the final state sensitivity of the trajectories in the phase space.
 An exponent close to `1` means basins with smooth boundaries whereas an exponent close
 to `0` represent complety fractalized basins, also called riddled basins.
 
-`xg`, `yg` are 1-dim ranges that defines the grid of the initial conditions.
-`basins` is the matrix containing the information of the basin.
-This functionality is currently implemented only for 2D basins.
-
-The output `f_ε` is a vector with the fraction of the balls of radius `ε` (in pixels)
+The output `N_ε` is a vector with the number of the balls of radius `ε` (in pixels)
 that contain at least two initial conditions that lead to different attractors.
-The ouput `α` is the estimation of the uncertainty exponent of the basins of attraction
-by fitting a line in the `log.(f_ε)` vs `log.(ε)` curve, however it is recommended to
-analyze the curve directly for more accuracy.
+The ouput `α` is the estimation of the uncertainty exponent using the box-counting
+dimension of the boundary by fitting a line in the `log.(N_ε)` vs `log.(1/ε)` curve.
+However it is recommended to analyze the curve directly for more accuracy.
 
 ## Keyword arguments
-* `precision = 1e-5` is the variance of the estimator of the uncertainty function.
-  Values between `1e-7` and `1e-5` brings reasonable results.
-* `max_ε = floor(Int, length(xg)/20)` is the maximum size in pixels of the ball to test.
+* `range_ε = 2:maximum(size(basins))÷20` is the range of sizes of the ball to
+  test (in pixels).
 
 ## Description
 
@@ -34,66 +88,14 @@ law between, `f_ε ~ ε^α`. The number that characterizes this scaling is calle
 uncertainty exponent `α`.
 
 Notice that the uncertainty exponent and the box counting dimension of the boundary are
-related. We have `Δ₀ = 2 - α` where `Δ₀` is the box counting dimension,
-see [Fractal Dimension](@ref).
+related. We have `Δ₀ = D - α` where `Δ₀` is the box counting dimension computed with
+[`basins_fractal_dimension`](@ref) and `D` is the dimension of the phase space.
+The algorithm first estimates the box counting dimension of the boundary and
+returns the uncertainty exponent.
 
 [^Grebogi1983]: C. Grebogi, S. W. McDonald, E. Ott and J. A. Yorke, Final state sensitivity: An obstruction to predictability, Physics Letters A, 99, 9, 1983
 """
-function uncertainty_exponent(xg, yg, basins::Matrix;
-        precision = 1e-5, max_ε = floor(Int, length(xg)/20),
-    )
-
-    nx, ny = length.((xg, yg))
-    y_grid_res = yg[2] - yg[1]
-    r_ε = 1:max_ε # resolution in pixels
-    num_step = length(r_ε)
-    N_u = zeros(Int, num_step) # number of uncertain box
-    N = zeros(Int, num_step) # number of boxes
-    ε = zeros(1, num_step) # resolution
-
-    for (k,eps) in enumerate(r_ε)
-        Nb, Nu, μ, σ², M₂ = 0, 0, 0, 0, 0
-        completed = false;
-        # Find uncertain boxes
-        while !completed
-            kx = rand(1:nx)
-            ky = rand(ceil(Int,eps+1):floor(Int,ny-eps))
-            indy = range(ky-eps,ky+eps,step=1)
-            c = basins[kx, indy]
-            if length(unique(c))>1
-                Nu = Nu + 1
-            end
-            Nb += 1
-            # Welford's online average estimation and variance of the estimator
-            M₂ = wel_var(M₂, μ, Nu/Nb, Nb)
-            μ = wel_mean(μ, Nu/Nb, Nb)
-            σ² = M₂/Nb
-            # Stopping criterion: variance of the estimator of the mean bellow precision
-            if Nu > 50 && σ² < precision
-                completed = true
-            end
-        end
-        N_u[k] = Nu
-        N[k] = Nb
-        ε[k] = eps*y_grid_res
-    end
-    f_ε = N_u ./ N
-    # remove zeros in case there are any:
-    ind = f_ε .> 0.0
-    f_ε = f_ε[ind]
-    ε = ε[ind]
-    # get exponent via liner regression on `f_ε ~ ε^α`
-    b, α = linreg(vec(log10.(ε)), vec(log10.(f_ε)))
-    return ε, f_ε, α
-end
-
-
-function wel_var(M₂, μ, xₙ, n)
-    μ₂ = μ + (xₙ - μ)/n
-    M₂ = M₂ + (xₙ - μ)*(xₙ - μ₂)
-    return M₂
-end
-
-function wel_mean(μ, xₙ, n)
-    return μ + (xₙ - μ)/n
+function uncertainty_exponent(basins::AbstractArray; range_ε = 2:maximum(size(basins))÷20)
+    V_ε, N_ε, d = basins_fractal_dimension(basins; range_ε)
+    return V_ε, N_ε, length(size(basins)) - d
 end

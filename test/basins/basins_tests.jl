@@ -19,7 +19,7 @@ end
     ds = Systems.duffing([0.1, 0.25]; ω = 1., f = 0.2, d = 0.15, β = -1)
     xg = yg = range(-2.2,2.2,length=100)
     T = 2π/1.
-    basin,attractors = basins_of_attraction((xg,yg), ds;  
+    basin,attractors = basins_of_attraction((xg,yg), ds;
     T, diffeq = (;alg=Tsit5()), show_progress = false)
     # pcolormesh(xg, yg, basin')
     @test length(unique(basin)) == 2
@@ -44,14 +44,14 @@ end
     xg=range(-2,2,length=100)
     yg=range(-2,2,length=100)
     complete_state(y) = SVector(0,0)
-    basin, attractors = basins_of_attraction((xg,yg), ds; 
+    basin, attractors = basins_of_attraction((xg,yg), ds;
     idxs=1:2, complete_state, show_progress = false)
     # pcolormesh(xg,yg, basin')
     @test count(basin .== 1) == 3332
     @test count(basin .== 2) == 3332
 end
 
-@testset "3D basins" begin 
+@testset "3D basins" begin
     ds = Systems.lorenz84()
     xg=yg=range(-1.,2.,length=100)
     zg=range(-1.5,1.5,length=30)
@@ -71,8 +71,7 @@ end
     # pcolormesh(xg,yg, basin')
     @test 4260 ≤ count(basin .== 1) ≤ 4280
     @test 5600 ≤ count(basin .== -1) ≤ 5800
-    # Same test but for continuous systems (at the moment it doesn't terminate)
-    # TODO: Uncomment these once we fix this issue
+
     ds = Systems.lorenz_iip()
     xg = yg = range(-30.0, 30.0; length=10)
     zg = range(0, 50; length=10)
@@ -98,5 +97,28 @@ end
         end
     end
 end
+
+@testset "Basin entropy and Fractal test" begin
+    ds = Systems.grebogi_map()
+    θg=range(0,2π,length = 300)
+    xg=range(-0.5,0.5,length = 300)
+    basin, attractors = basins_of_attraction((θg,xg), ds; show_progress = false)
+    Sb, Sbb = basin_entropy(basin, 6)
+    @test 0.4 ≤ Sb ≤ 0.42
+    @test 0.6 ≤ Sbb ≤ 0.61
+
+    test_res, Sbb = basins_fractal_test(basin; ε = 5)
+    @test test_res == :fractal
+
+    ds = Systems.henon(zeros(2); a = 1.4, b = 0.3)
+    xg = yg = range(-2.,2.,length = 300)
+    basin, attractors = basins_of_attraction((xg,yg), ds; show_progress = false)
+    test_res, Sbb = basins_fractal_test(basin; ε = 5)
+    @test test_res == :smooth
+
+
+end
+
+
 
 end

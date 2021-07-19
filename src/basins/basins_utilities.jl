@@ -151,7 +151,7 @@ end
 
 This is an automated test to decide if the boundary of the basins has fractal structures.
 The bottom line is to look at the basins with a magnifier of size `ε` a litlle bit everywhere.
-If what we see in the magnifier looks like a smooth boundary we decide that the boundary if smooth.
+If what we see in the magnifier looks like a smooth boundary we decide that the boundary is smooth.
 If it is not smooth we can say that at the scale `ε` we have structures, i.e., it is fractal.
 
 In practice the algorithm computes the boundary basin entropy `Sbb` [`basin_entropy`](@ref) for `Ntotal`

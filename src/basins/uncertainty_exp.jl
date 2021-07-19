@@ -2,7 +2,7 @@ export uncertainty_exponent
 
 """
     basins_fractal_dimension(basins; kwargs...) -> V_ε, N_ε ,d
-Estimates the [Fractal Dimension](@ref) `d` of the boundary between basins of attraction using
+Estimate the [Fractal Dimension](@ref) `d` of the boundary between basins of attraction using
 the box-counting algorithm.
 
 The output `N_ε` is a vector with the number of the balls of radius `ε` (in pixels)

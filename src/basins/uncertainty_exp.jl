@@ -88,9 +88,10 @@ law between, `f_ε ~ ε^α`. The number that characterizes this scaling is calle
 uncertainty exponent `α`.
 
 Notice that the uncertainty exponent and the box counting dimension of the boundary are
-related. We have `Δ₀ = 2 - α` where `Δ₀` is the box counting dimension,
-see [Fractal Dimension](@ref). The algorithm first estimates the box counting dimension of the
-boundary and returns the uncertainty exponent.
+related. We have `Δ₀ = D - α` where `Δ₀` is the box counting dimension computed with
+[`basins_fractal_dimension`](@ref) and `D` is the dimension of the phase space.
+The algorithm first estimates the box counting dimension of the boundary and
+returns the uncertainty exponent.
 
 [^Grebogi1983]: C. Grebogi, S. W. McDonald, E. Ott and J. A. Yorke, Final state sensitivity: An obstruction to predictability, Physics Letters A, 99, 9, 1983
 """

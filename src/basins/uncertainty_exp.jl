@@ -1,4 +1,4 @@
-export uncertainty_exponent
+export uncertainty_exponent, basins_fractal_dimension
 
 """
     basins_fractal_dimension(basins; kwargs...) -> V_ε, N_ε ,d

@@ -4,6 +4,7 @@ Tools for the exploration of chaos and nonlinear dynamics
 module ChaosTools
 
 using DelayEmbeddings
+using Entropies
 using DynamicalSystemsBase
 
 using DynamicalSystemsBase: DS, DDS, CDS
@@ -22,7 +23,6 @@ include("basins/basins_utilities.jl")
 include("basins/uncertainty_exp.jl")
 include("basins/tipping.jl")
 
-include("dimensions/entropies.jl")
 include("dimensions/linear_regions.jl")
 include("dimensions/dims.jl")
 include("dimensions/correlationdim.jl")

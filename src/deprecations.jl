@@ -101,3 +101,27 @@ end
 function basins_general(args...; kwargs...)
     error("`basins_general` is deprecated for `basins_of_attraction`")
 end
+
+
+export non0hist, binhist, genentropy, permentropy, probabilities
+
+"""
+    permentropy(x, m = 3; τ = 1, base = Base.MathConstants.e)
+
+Compute the permutation entropy[^Brandt2002] of given order `m`
+from the `x` timeseries.
+
+This method is textually equivalent with
+```julia
+genentropy(x, SymbolicPermutation(; m, τ); base)
+```
+
+[^Bandt2002]: C. Bandt, & B. Pompe, [Phys. Rev. Lett. **88** (17), pp 174102 (2002)](http://doi.org/10.1103/PhysRevLett.88.174102)
+"""
+function permentropy(x, m = 3; τ = 1, base = Base.MathConstants.e)
+    @warn """
+    The function `permentropy` is deprecated in favor of using 
+    `genentropy(x, SymbolicPermutation(; m, τ); base)`.
+    """
+    Entropies.genentropy(x, SymbolicPermutation(; τ, m); base)
+end

@@ -92,40 +92,36 @@ end
 
 
 """
-    basin_entropy(basins; ε = 20) -> Sb, Sbb
+    basin_entropy(basins, ε = 20) -> Sb, Sbb
+This algorithm computes the basin entropy `Sb` of the basins of attraction. First, the input `basins`
+is divided regularly into n-dimensional boxes of side `ε` (along all dimensions).
+Then `Sb` is simply the average of the Gibbs entropy computed over these boxes. The
+function returns the basin entropy `Sb` as well as the boundary basin entropy `Sbb`.
+The later is the average of the entropy only for boxes that contains at least two
+different basins, that is, for the boxes on the boundary.
 
-This algorithm computes the basin entropy `Sb` of a basins of attraction on a regular grid.
-It is a measure of the uncertainty on the initial conditions of the basins. The basin
-entropy is maximum at the value `log(n_att)` being `n_att` the number of attractor. In
+The basin entropy is a measure of the uncertainty on the initial conditions of the basins.
+It is maximum at the value `log(n_att)` being `n_att` the number of attractor. In
 this case the boundary is intermingled: for a given initial condition we can find
 another initial condition that lead to another basin arbitriraly close. It provides also
 a simple criterion for fractality: if the boundary basin entropy `Sbb` is above `log(2)`
 then we have a fractal boundary. It doesn't mean that basins with values below cannot
-have a fractal boundary.
-
-The basin entropy is an average of the Gibbs entropy for a many boxes of side ε
-(along all dimensions). The function return the basin entropy `Sb` and the boundary
-basin entropy `Sbb` which is the entropy averaged only on the boxes on the boundary
-(the boxes with only one attractor are discarded).
-
-An important feature of the basin entropy is that it allows comparisons between
-different basins using the same box size `ε`.
+have a fractal boundary, for a more precise test see [`basins_fractal_test`](@ref). An important feature of the basin entropy is that it allows
+comparisons between different basins using the same box size `ε`.
 
 [^Daza2016]: A. Daza, A. Wagemakers, B. Georgeot, D. Guéry-Odelin and M. A. F. Sanjuán, Basin entropy: a new tool to analyze uncertainty in dynamical systems, Sci. Rep., 6, 31416, 2016.
 
-## Keyword arguments
-* `ε`: define the size of the box that will be used to sample the basin
 """
-function basin_entropy(basins; ε = 20)
-    n_dim = size(basins)
+function basin_entropy(basins, ε = 20)
+    dims = size(basins)
     vals = unique(basins)
     pn = zeros(length(vals))
     Sb = 0; Nb = 0; N = 0
-    bx_tuple = ntuple(i -> range(1, n_dim[i] - rem(n_dim[i],ε), step = ε), length(n_dim))
+    bx_tuple = ntuple(i -> range(1, dims[i] - rem(dims[i],ε), step = ε), length(dims))
     box_indices = CartesianIndices(bx_tuple)
     for box in box_indices
         # compute the range of indices for the current box
-        I = CartesianIndices(ntuple(i -> range(box[i], box[i]+ε-1, step = 1), length(n_dim)))
+        I = CartesianIndices(ntuple(i -> range(box[i], box[i]+ε-1, step = 1), length(dims)))
         box_values = [basins[k] for k in I]
         N = N + 1
         Nb = Nb + (length(unique(box_values)) > 1)
@@ -148,17 +144,17 @@ end
 
 """
     basins_fractal_test(basins; ε = 20, Ntotal = 1000) -> test_res, Sbb
-
 This is an automated test to decide if the boundary of the basins has fractal structures.
-The bottom line is to look at the basins with a magnifier of size `ε` a litlle bit everywhere.
-If what we see in the magnifier looks like a smooth boundary we decide that the boundary if smooth.
-If it is not smooth we can say that at the scale `ε` we have structures, i.e., it is fractal.
+The bottom line is to look at the basins with a magnifier of size `ε` at random in `basins`.
+If what we see in the magnifier looks like a smooth boundary (in average) we decide that
+the boundary if smooth. If it is not smooth we can say that at the scale `ε` we have
+structures, i.e., it is fractal.
 
 In practice the algorithm computes the boundary basin entropy `Sbb` [`basin_entropy`](@ref) for `Ntotal`
-random balls of radius `ε`. If the computed value is compatible with the theoretical boundary
-basin entropy of a smooth boundary within the statiscal error then we decide that we have a smooth
+random balls of radius `ε`. If the computed value is equal to theoretical value of a smooth boundary
+(taking into account statistical errors and biases) then we decide that we have a smooth
 boundary. Notice that the response `test_res` may depend on the chosen ball radius `ε`. For larger size,
-we may observe structures for smooth boundary and have a *wrong* answer.
+we may observe structures for smooth boundary and we obtain a *different* answer.
 
 The output `test_res` is a symbol describing the nature of the basin and the output `Sbb` is
 the estimated value of the boundary basin entropy with the sampling method.
@@ -170,19 +166,19 @@ the estimated value of the boundary basin entropy with the sampling method.
 * `Ntotal = 1000`: number of balls to test in the boundary for the computation of `Sbb`
 """
 function basins_fractal_test(basins; ε = 20, Ntotal = 1000)
-    n_dim = size(basins)
+    dims = size(basins)
     vals = unique(basins)
     S=Int(length(vals))
     pn=zeros(Float64,1,S)
     # Sanity check.
-    if minimum(n_dim)/ε < 50
+    if minimum(dims)/ε < 50
         @warn "Maybe the size of the grid is not fine enough."
     end
     if Ntotal < 100
         error("Ntotal must be larger than 1000 to gather enough statitics.")
     end
 
-    v_pts = zeros(Float64, length(n_dim), prod(n_dim))
+    v_pts = zeros(Float64, length(dims), prod(dims))
     I = CartesianIndices(basins)
     for (k,coord) in enumerate(I)
          v_pts[:, k] = [Tuple(coord)...]
@@ -192,8 +188,8 @@ function basins_fractal_test(basins; ε = 20, Ntotal = 1000)
     Nb = 1; N = 1; Sb = 0;
     N_stat = zeros(Ntotal)
     while Nb < Ntotal
-        p = [rand()*(sz-ε)+ε for sz in n_dim]
-        (idxs,r) = inrange(tree, p, ε)
+        p = [rand()*(sz-ε)+ε for sz in dims]
+        idxs = isearch(tree, p, WithinRange(ε))
         box_values = basins[idxs]
         bx_ent = _box_entropy(box_values)
         if bx_ent > 0
@@ -208,10 +204,10 @@ function basins_fractal_test(basins; ε = 20, Ntotal = 1000)
     σ_sbb = std(N_stat[100:end])
     # Table of boundary basin entropy of a smooth boundary for dimension 1 to 5:
     Sbb_tab = [0.499999, 0.4395093, 0.39609176, 0.36319428, 0.33722572]
-    if length(n_dim) ≤ 5
-        Sbb_s = Sbb_tab[length(n_dim)]
+    if length(dims) ≤ 5
+        Sbb_s = Sbb_tab[length(dims)]
     else
-        Sbb_s = 0.898*length(n_dim)^-0.4995
+        Sbb_s = 0.898*length(dims)^-0.4995
     end
     # Systematic error aproximation for the disk of radius ε
     δub = 0.224*ε^-1.006

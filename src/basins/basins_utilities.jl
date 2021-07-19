@@ -96,7 +96,7 @@ end
 
 This algorithm computes the basin entropy `Sb` of a basins of attraction on a regular grid.
 It is a measure of the uncertainty on the initial conditions of the basins. The basin
-entropy is maximum at the value `log(n_att)` being `n_att` the number of attractor. In
+entropy is maximum at the value `log(n_att)` being `n_att` the number of attractors. In
 this case the boundary is intermingled: for a given initial condition we can find
 another initial condition that lead to another basin arbitriraly close. It provides also
 a simple criterion for fractality: if the boundary basin entropy `Sbb` is above `log(2)`

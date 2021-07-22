@@ -83,7 +83,6 @@ function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix;
 end
 
 function lyapunovspectrum(integ, N, dt::Real, Ttr::Real = 0.0)
-    T = stateeltype(integ)
     B = copy(get_deviations(integ)) # for use in buffer
     if Ttr > 0
         t0 = integ.t
@@ -93,9 +92,9 @@ function lyapunovspectrum(integ, N, dt::Real, Ttr::Real = 0.0)
             set_deviations!(integ, Q)
         end
     end
-    
+
     k = size(get_deviations(integ))[2]
-    λ::Vector{T} = zeros(T, k)
+    λ = zeros(stateeltype(integ), k)
     t0 = integ.t
     for _ in 2:N
         step!(integ, dt)

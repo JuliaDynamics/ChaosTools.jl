@@ -68,57 +68,66 @@ ChaosTools.lyapunovspectrum_convergence(tinteg, N, dt, Ttr)
 lyapunovspectrum(ds::DS, N, k::Int = dimension(ds); kwargs...) =
 lyapunovspectrum(ds, N, orthonormal(dimension(ds), k); kwargs...)
 
-function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; Ttr::Real = 0,
-    dt::Real = 1, u0 = get_state(ds), diffeq...) where {IIP, S, D}
+function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; 
+        Ttr::Real = 0, dt::Real = 1, u0 = get_state(ds), diffeq...
+    ) where {IIP, S, D}
 
-    T = stateeltype(ds)
-    # Create tangent integrator:
     if typeof(ds) <: DDS
         @assert typeof(Ttr) == Int
-        integ = tangent_integrator(ds, Q0; u0 = u0)
+        integ = tangent_integrator(ds, Q0; u0)
     else
-        integ = tangent_integrator(ds, Q0; u0 = u0, diffeq...)
+        integ = tangent_integrator(ds, Q0; u0, diffeq...)
     end
-
-    λ::Vector{T} = lyapunovspectrum(integ, N, dt, Ttr)
+    λ = lyapunovspectrum(integ, N, dt, Ttr)
     return λ
 end
 
 function lyapunovspectrum(integ, N, dt::Real, Ttr::Real = 0.0)
-
     T = stateeltype(integ)
-    t0 = integ.t
+    B = copy(get_deviations(integ)) # for use in buffer
     if Ttr > 0
+        t0 = integ.t
         while integ.t < t0 + Ttr
             step!(integ, dt)
-            qrdec = LinearAlgebra.qr(get_deviations(integ))
-            set_deviations!(integ, qrdec.Q)
+            Q, R = _buffered_qr(B, get_deviations(integ))
+            set_deviations!(integ, Q)
         end
     end
+    
     k = size(get_deviations(integ))[2]
     λ::Vector{T} = zeros(T, k)
     t0 = integ.t
-
-    for i in 2:N
+    for _ in 2:N
         step!(integ, dt)
-        qrdec = LinearAlgebra.qr(get_deviations(integ))
+        Q, R = _buffered_qr(B, get_deviations(integ))
         for j in 1:k
-            @inbounds λ[j] += log(abs(qrdec.R[j,j]))
+            @inbounds λ[j] += log(abs(R[j,j]))
         end
-        set_deviations!(integ, qrdec.Q)
+        set_deviations!(integ, Q)
     end
     λ ./= (integ.t - t0)
     return λ
 end
 
-lyapunovspectrum(ds::DynamicalSystem{IIP, T, 1}, a...; kw...) where {IIP, T} =
-error("For 1D systems, only discrete & out-of-place method is implemented.")
+# For out-of-place systems, this is just standard QR decomposition.
+# For in-place systems, this is a more performant buffered version.
+function _buffered_qr(B::SMatrix, Y) # Y are the deviations
+    Q, R = LinearAlgebra.qr(Y)
+    return Q, R
+end
+function _buffered_qr(B::Matrix, Y) # Y are the deviations
+    B .= Y
+    Q, R = LinearAlgebra.qr!(B)
+    return Q, R
+end
+
+
+lyapunovspectrum(ds::DiscreteDynamicalSystem{IIP, T, 1}, a...; kw...) where {IIP, T} =
+error("For discrete 1D systems, only method with state type = number is implemented.")
 
 function lyapunovspectrum(ds::DDS{false, T, 1}, N; Ttr = 0) where {T}
-
     x = get_state(ds); f = ds.f
     p = ds.p; t0 = ds.t0
-    t = 0
     if Ttr > 0
         for i in t0:(Ttr+t0)
             x = f(x, p, i)
@@ -131,8 +140,6 @@ function lyapunovspectrum(ds::DDS{false, T, 1}, N; Ttr = 0) where {T}
     end
     return λ/N
 end
-
-lyapunov(ds::DDS{false, T, 1}, N; Ttr = 0) where {T} = lyapunovspectrum(ds, N; Ttr = Ttr)
 
 #####################################################################################
 #                           Maximum Lyapunov Exponent                               #
@@ -257,6 +264,8 @@ function lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
     λ += log(a)
     return λ/(pinteg.t - t0)
 end
+
+lyapunov(ds::DDS{false, T, 1}, N; Ttr = 0) where {T} = lyapunovspectrum(ds, N; Ttr = Ttr)
 
 ################ Helper functions that allow a single definition ######################
 function λdist(integ::AbstractODEIntegrator{Alg, IIP, M}) where {Alg, IIP, M<:Matrix}

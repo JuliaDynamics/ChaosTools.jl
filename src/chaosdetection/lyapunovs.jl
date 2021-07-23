@@ -1,8 +1,8 @@
 using LinearAlgebra, StaticArrays
+import ProgressMeter
 using DynamicalSystemsBase: MinimalDiscreteIntegrator
 
 export lyapunovspectrum, lyapunov, local_growth_rates
-@deprecate lyapunovs lyapunovspectrum
 
 #####################################################################################
 #                               Lyapunov Spectum                                    #
@@ -29,6 +29,7 @@ See also [`lyapunov`](@ref), [`local_growth_rates`](@ref).
   deviation vectors are evolved for this time.
 * `dt = 1` : Time of individual evolutions
   between successive orthonormalization steps. For continuous systems this is approximate.
+* `show_progress = false` : Display a progress bar of the process.
 * `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
   See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
@@ -69,7 +70,7 @@ lyapunovspectrum(ds::DS, N, k::Int = dimension(ds); kwargs...) =
 lyapunovspectrum(ds, N, orthonormal(dimension(ds), k); kwargs...)
 
 function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; 
-        Ttr::Real = 0, dt::Real = 1, u0 = get_state(ds), diffeq...
+        Ttr::Real = 0, dt::Real = 1, u0 = get_state(ds), show_progress = false, diffeq...
     ) where {IIP, S, D}
 
     if typeof(ds) <: DDS
@@ -78,11 +79,14 @@ function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix;
     else
         integ = tangent_integrator(ds, Q0; u0, diffeq...)
     end
-    λ = lyapunovspectrum(integ, N, dt, Ttr)
+    λ = lyapunovspectrum(integ, N, dt, Ttr, show_progress)
     return λ
 end
 
-function lyapunovspectrum(integ, N, dt::Real, Ttr::Real = 0.0)
+function lyapunovspectrum(integ, N, dt::Real, Ttr::Real = 0.0, show_progress = false)
+    if show_progress
+        progress = ProgressMeter.Progress(N; desc = "Lyapunov Spectrum: ", dt = 1.0)
+    end
     B = copy(get_deviations(integ)) # for use in buffer
     if Ttr > 0
         t0 = integ.t
@@ -96,13 +100,14 @@ function lyapunovspectrum(integ, N, dt::Real, Ttr::Real = 0.0)
     k = size(get_deviations(integ))[2]
     λ = zeros(stateeltype(integ), k)
     t0 = integ.t
-    for _ in 2:N
+    for i in 1:N
         step!(integ, dt)
         Q, R = _buffered_qr(B, get_deviations(integ))
         for j in 1:k
             @inbounds λ[j] += log(abs(R[j,j]))
         end
         set_deviations!(integ, Q)
+        show_progress && ProgressMeter.update!(progress, i)
     end
     λ ./= (integ.t - t0)
     return λ

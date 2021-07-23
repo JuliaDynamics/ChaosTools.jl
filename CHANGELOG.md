@@ -1,3 +1,6 @@
+# 1.33
+* `lyapunovspectrum` now has a progress meter option.
+
 # 1.32
 * New functions for examining the fractal nature of basin boundaries: `basins_fractal_dimension, basin_entropy, basins_fractal_test`.
 

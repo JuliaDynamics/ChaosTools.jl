@@ -1,3 +1,5 @@
+@deprecate lyapunovs lyapunovspectrum
+
 export kernelprob
 
 function kernelprob(X, ε, norm)

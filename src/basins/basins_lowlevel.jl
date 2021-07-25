@@ -16,7 +16,7 @@ mutable struct BasinInfo{B, IF, RF, UF, D, T, Q, K}
     prev_clr::Int
     attractors::Dict{Int16, Dataset{D, T}}
     visited::Q
-    search_trees::Vector{K}
+    search_trees::K
 end
 
 
@@ -33,11 +33,12 @@ function draw_basin!(
     B = length(grid)
     D = length(get_state(integ)) # dimension of the full state space
     complete = false
-    trees = Vector{KDTree{}}()
+    trees = nothing
     if !isnothing(attractors)
-        for k in keys(attractors)
-            push!(trees, searchstructure(KDTree, attractors[k], Euclidean()))
-        end
+        trees = [searchstructure(KDTree, att, Euclidean()) for att in values(attractors)]
+        # reorder to get correct attractors
+        idxs = collect(keys(attractors))
+        trees = trees[idxs]
     end
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
@@ -139,18 +140,21 @@ function _identify_basin_of_cell!(
         mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_lost = 100,
         horizon_limit = 1e6, ε = 1e-5
     )
+
+    #if n[1]==-1 means we are outside the grid
+    nxt_clr = (n[1]==-1  || isnan(u_full_state[1])) ? -1 : bsn_nfo.basin[n]
+
     # search attractors directly
-    if !isempty(bsn_nfo.search_trees)
+    if !isnothing(bsn_nfo.search_trees)
         for (k,t) in enumerate(bsn_nfo.search_trees)
             idxs = isearch(t, u_full_state, WithinRange(ε))
             if !isempty(idxs)
-                return  2*k + 1
+                nxt_clr = 2*k + 1
+                break
             end
         end
     end
 
-    #if n[1]==-1 means we are outside the grid
-    nxt_clr = (n[1]==-1  || isnan(u_full_state[1])) ? -1 : bsn_nfo.basin[n]
     check_next_state!(bsn_nfo,nxt_clr)
 
     if bsn_nfo.state == :att_hit

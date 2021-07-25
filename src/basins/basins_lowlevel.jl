@@ -1,6 +1,6 @@
 import ProgressMeter
 
-mutable struct BasinInfo{B, IF, RF, UF, D, T, Q}
+mutable struct BasinInfo{B, IF, RF, UF, D, T, Q, K}
     basin::Array{Int16, B}
     grid_steps::SVector{B, Float64}
     grid_maxima::SVector{B, Float64}
@@ -16,6 +16,7 @@ mutable struct BasinInfo{B, IF, RF, UF, D, T, Q}
     prev_clr::Int
     attractors::Dict{Int16, Dataset{D, T}}
     visited::Q
+    search_trees::Vector{K}
 end
 
 
@@ -27,11 +28,17 @@ at a new full state, given the state on the grid.
 """
 function draw_basin!(
         grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function;
-        show_progress = true, kwargs...,
+        show_progress = true, attractors = nothing, kwargs...,
     )
     B = length(grid)
     D = length(get_state(integ)) # dimension of the full state space
     complete = false
+    trees = Vector{KDTree{}}()
+    if !isnothing(attractors)
+        for k in keys(attractors)
+            push!(trees, searchstructure(KDTree, attractors[k], Euclidean()))
+        end
+    end
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
     grid_minima = minimum.(grid)
@@ -46,7 +53,8 @@ function draw_basin!(
         :att_search,
         2,4,0,1,1,
         Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
-        Vector{CartesianIndex{B}}()
+        Vector{CartesianIndex{B}}(),
+        trees
     )
     reset_basin_counters!(bsn_nfo)
     I = CartesianIndices(bsn_nfo.basin)
@@ -129,8 +137,18 @@ and the trajectories staying outside the grid are coded with -1.
 function _identify_basin_of_cell!(
         bsn_nfo::BasinInfo, n::CartesianIndex, u_full_state;
         mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_lost = 100,
-        horizon_limit = 1e6
+        horizon_limit = 1e6, ε = 1e-5
     )
+    # search attractors directly
+    if !isempty(bsn_nfo.search_trees)
+        for (k,t) in enumerate(bsn_nfo.search_trees)
+            idxs = isearch(t, u_full_state, WithinRange(ε))
+            if !isempty(idxs)
+                return  2*k + 1
+            end
+        end
+    end
+
     #if n[1]==-1 means we are outside the grid
     nxt_clr = (n[1]==-1  || isnan(u_full_state[1])) ? -1 : bsn_nfo.basin[n]
     check_next_state!(bsn_nfo,nxt_clr)

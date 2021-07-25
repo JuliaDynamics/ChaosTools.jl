@@ -1,3 +1,6 @@
+# 1.34
+* New option in `basins_of_attraction` that allows refining already found basins.
+
 # 1.33
 * `lyapunovspectrum` now has a progress meter option.
 

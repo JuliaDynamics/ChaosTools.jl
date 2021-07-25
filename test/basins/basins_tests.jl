@@ -55,8 +55,8 @@ end
     basins, att = basins_of_attraction((xg,yg), ds;
     idxs = 1:2, complete_state, show_progress = false,
     attractors = attractors, mx_chk_lost = 1000, ε = 1e-3)
-    @test count(basin .== 1) == 407
-    @test count(basin .== 2) == 737
+    @test count(basins .== 1) == 407
+    @test count(basins .== 2) == 737
 end
 
 @testset "3D basins" begin

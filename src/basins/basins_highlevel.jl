@@ -50,11 +50,11 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   This number can be increased for higher accuracy.
 * `mx_chk_lost` : Maximum check of iterations outside the defined grid before we consider the orbit
   lost outside. This number can be increased for higher accuracy. It defaults to `20` if no
-  attractors are given (see discussion on refining the basins), and to `1000` if attractors are given.
+  attractors are given (see discussion on refining basins), and to `1000` if attractors are given.
 * `horizon_limit = 1e6` : If the norm of the integrator state reaches this limit we consider that the
   orbit diverges.
 * `show_progress = true` : By default a progress bar is shown using ProgressMeter.jl.
-* `attractors, ε`: See discussion on refining the basin below.
+* `attractors, ε`: See discussion on refining basins below.
 
 ## Description
 `basins` has the following organization:

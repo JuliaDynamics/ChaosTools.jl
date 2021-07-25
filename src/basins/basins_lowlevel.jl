@@ -33,12 +33,10 @@ function draw_basin!(
     B = length(grid)
     D = length(get_state(integ)) # dimension of the full state space
     complete = false
-    trees = nothing
-    if !isnothing(attractors)
-        trees = [searchstructure(KDTree, att, Euclidean()) for att in values(attractors)]
-        # reorder to get correct attractors
-        idxs = collect(keys(attractors))
-        trees = trees[idxs]
+    trees = if isnothing(attractors)
+        nothing
+    else
+        Dict(k => searchstructure(KDTree, att, Euclidean()) for (k, att) in attractors)
     end
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
@@ -146,7 +144,7 @@ function _identify_basin_of_cell!(
 
     # search attractors directly
     if !isnothing(bsn_nfo.search_trees)
-        for (k,t) in enumerate(bsn_nfo.search_trees)
+        for (k, t) in bsn_nfo.search_trees # this is a `Dict`
             idxs = isearch(t, u_full_state, WithinRange(ε))
             if !isempty(idxs)
                 nxt_clr = 2*k + 1

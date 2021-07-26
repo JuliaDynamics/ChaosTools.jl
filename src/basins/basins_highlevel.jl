@@ -15,7 +15,7 @@ The dynamical system can be:
   for this particular application).
 
 `grid` is a tuple of ranges defining the grid of initial conditions, for example
-`grid=(xg,yg)` where `xg` and `yg` are one dimensional ranges. The grid is not necessarilly
+`grid = (xg, yg)` where `xg = yg = range(-5, 5; length = 100)`. The grid is not necessarilly
 of the same dimension as the state space, attractors can be found in lower dimensional
 projections.
 
@@ -38,7 +38,7 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
 * `idxs = 1:length(grid)`: This vector selects the variables of the system that will define the
   subspace the dynamics will be projected into.
 * `complete_state = zeros(D-Dg)`: This argument allows setting the _remaining_ variables
-  of the dynamical system state on each initial condition `u`, beeing `Dg` the dimension
+  of the dynamical system state on each initial condition `u`, with `Dg` the dimension
   of the grid. It can be either a vector of length `D-Dg`, or a function `f(y)` that
   returns a vector of length `D-Dg` given the _projected_ initial condition on the grid `y`.
 * `diffeq...`: Keyword arguments propagated to [`integrator`](@ref).
@@ -48,11 +48,13 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   This number can be increased for higher accuracy.
 * `mx_chk_fnd_att = 60` : Maximum check of unnumbered cell before considering we have an attractor.
   This number can be increased for higher accuracy.
-* `mx_chk_lost = 100` : Maximum check of iterations outside the defined grid before we consider the orbit
-  lost outside. This number can be increased for higher accuracy.
+* `mx_chk_lost` : Maximum check of iterations outside the defined grid before we consider the orbit
+  lost outside. This number can be increased for higher accuracy. It defaults to `20` if no
+  attractors are given (see discussion on refining basins), and to `1000` if attractors are given.
 * `horizon_limit = 1e6` : If the norm of the integrator state reaches this limit we consider that the
   orbit diverges.
 * `show_progress = true` : By default a progress bar is shown using ProgressMeter.jl.
+* `attractors, ε`: See discussion on refining basins below.
 
 ## Description
 `basins` has the following organization:
@@ -83,6 +85,23 @@ Notice that in the case we have to project the dynamics on a lower dimensional s
 there are edge cases where the system may have two attractors
 that are close on the projected space but are far apart in another dimension. They could
 be collapsed or confused into the same attractor. This is a drawback of this method.
+
+## Refining basins of attraction
+Sometimes one would like to be able to refine the found basins of attraction by recomputing
+`basins_of_attraction` on a smaller, and more fine-grained, `grid`. If however this
+new `grid` does not contain the attractors, `basins_of_attraction` would (by default)
+attribute the value `-1` to all grid points. For these cases, an extra search clause can
+be provided by setting the keywords `attractors, ε`. The `attractors` is a dictionary
+mapping attractor IDs to `Dataset`s (i.e., the same as the return value of
+`basins_of_attraction`). The algorithm checks at each step whether the system state is
+`ε`-close (Euclidean norm) to any of the given attractors, and if so it attributes the stating grid point
+to the basin of the close attractor. By default `ε` is equal to the mean grid spacing.
+
+A word of advice while using this method: in order to work properly, `ε` should be
+about the size of a grid cell that has been used to compute the given `attractors`. It is
+recomended to keep the same step size (i.e., use the same integrator) since it may have an
+influence in some cases. This algorithm is usually slower than the method with the 
+attractors on the grid.
 """
 function basins_of_attraction(grid::Tuple, ds;
         Δt=1, T=0, idxs = 1:length(grid),

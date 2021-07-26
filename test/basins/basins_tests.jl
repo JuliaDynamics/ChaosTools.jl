@@ -39,16 +39,24 @@ end
     @test  2640 ≤ count(basin .== 3) ≤ 2691
 end
 
-@testset "basin_general" begin
+@testset "basins_of_attraction" begin
     ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
-    xg=range(-2,2,length=100)
-    yg=range(-2,2,length=100)
-    complete_state(y) = SVector(0,0)
+    xg = range(-2,2,length=100)
+    yg = range(-2,2,length=100)
+    complete_state(y) = SVector(0.0, 0.0)
     basin, attractors = basins_of_attraction((xg,yg), ds;
     idxs=1:2, complete_state, show_progress = false)
     # pcolormesh(xg,yg, basin')
     @test count(basin .== 1) == 3332
     @test count(basin .== 2) == 3332
+
+    # Now test the zoom capability
+    xg = yg = range(-2,-1.9,length=50)
+    basins, att = basins_of_attraction((xg,yg), ds;
+    idxs = 1:2, complete_state, show_progress = false,
+    attractors = attractors, mx_chk_lost = 1000, ε = 1e-3)
+    @test count(basins .== 2) == 407
+    @test count(basins .== 3) == 737
 end
 
 @testset "3D basins" begin

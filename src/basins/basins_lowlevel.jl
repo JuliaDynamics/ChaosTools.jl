@@ -1,6 +1,7 @@
 import ProgressMeter
+using Statistics: mean
 
-mutable struct BasinInfo{B, IF, RF, UF, D, T, Q}
+mutable struct BasinInfo{B, IF, RF, UF, D, T, Q, K}
     basin::Array{Int16, B}
     grid_steps::SVector{B, Float64}
     grid_maxima::SVector{B, Float64}
@@ -16,6 +17,7 @@ mutable struct BasinInfo{B, IF, RF, UF, D, T, Q}
     prev_clr::Int
     attractors::Dict{Int16, Dataset{D, T}}
     visited::Q
+    search_trees::K
 end
 
 
@@ -27,11 +29,16 @@ at a new full state, given the state on the grid.
 """
 function draw_basin!(
         grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function;
-        show_progress = true, kwargs...,
+        show_progress = true, attractors = nothing, kwargs...,
     )
     B = length(grid)
     D = length(get_state(integ)) # dimension of the full state space
     complete = false
+    trees = if isnothing(attractors)
+        nothing
+    else
+        Dict(k => searchstructure(KDTree, att, Euclidean()) for (k, att) in attractors)
+    end
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
     grid_minima = minimum.(grid)
@@ -46,7 +53,8 @@ function draw_basin!(
         :att_search,
         2,4,0,1,1,
         Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
-        Vector{CartesianIndex{B}}()
+        Vector{CartesianIndex{B}}(),
+        trees
     )
     reset_basin_counters!(bsn_nfo)
     I = CartesianIndices(bsn_nfo.basin)
@@ -65,7 +73,7 @@ function draw_basin!(
         y0 = generate_ic_on_grid(grid, ind)
         bsn_nfo.basin[ind] = get_color_point!(bsn_nfo, integ, y0; kwargs...)
     end
-    # remove attractors and rescale from 1 to max nmb of attractors
+    # remove attractors and rescale from 1 to max number of attractors
     ind = iseven.(bsn_nfo.basin)
     bsn_nfo.basin[ind] .+= 1
     bsn_nfo.basin .= (bsn_nfo.basin .- 1) .÷ 2
@@ -110,7 +118,7 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, y0; kwargs...)
 end
 
 """
-Main procedure described by Nusse & Yorke for the grid cell `n`. The algorithm can be
+Main procedure motivated by Nusse & Yorke for the grid cell `n`. The algorithm can be
 though as a finite state machine with five states: :att_hit, :att_search, :att_found,
 :bas_hit, :lost. The transition between states depends on the current number in the
 cell being visited by the trajectory of the dynamical systems. When the automata switches
@@ -128,11 +136,25 @@ and the trajectories staying outside the grid are coded with -1.
 """
 function _identify_basin_of_cell!(
         bsn_nfo::BasinInfo, n::CartesianIndex, u_full_state;
-        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_lost = 100,
-        horizon_limit = 1e6
+        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100,
+        horizon_limit = 1e6, ε = 1e-3,
+        mx_chk_lost = isnothing(bsn_nfo.search_trees) ? 20 : 1000,
     )
+
     #if n[1]==-1 means we are outside the grid
     nxt_clr = (n[1]==-1  || isnan(u_full_state[1])) ? -1 : bsn_nfo.basin[n]
+
+    # search attractors directly
+    if !isnothing(bsn_nfo.search_trees)
+        for (k, t) in bsn_nfo.search_trees # this is a `Dict`
+            idxs = isearch(t, u_full_state, WithinRange(ε))
+            if !isempty(idxs)
+                nxt_clr = 2*k + 1
+                break
+            end
+        end
+    end
+
     check_next_state!(bsn_nfo,nxt_clr)
 
     if bsn_nfo.state == :att_hit

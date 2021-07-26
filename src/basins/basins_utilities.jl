@@ -201,7 +201,7 @@ function basins_fractal_test(basins; ε = 20, Ntotal = 1000)
     end
 
     Ŝbb = mean(N_stat[100:end])
-    σ_sbb = std(N_stat[100:end])
+    σ_sbb = std(N_stat[100:end])/sqrt(length(N_stat[100:end]))
     # Table of boundary basin entropy of a smooth boundary for dimension 1 to 5:
     Sbb_tab = [0.499999, 0.4395093, 0.39609176, 0.36319428, 0.33722572]
     if length(dims) ≤ 5

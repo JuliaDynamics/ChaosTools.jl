@@ -1,4 +1,5 @@
 import ProgressMeter
+using Statistics: mean
 
 mutable struct BasinInfo{B, IF, RF, UF, D, T, Q, K}
     basin::Array{Int16, B}
@@ -72,7 +73,7 @@ function draw_basin!(
         y0 = generate_ic_on_grid(grid, ind)
         bsn_nfo.basin[ind] = get_color_point!(bsn_nfo, integ, y0; kwargs...)
     end
-    # remove attractors and rescale from 1 to max nmb of attractors
+    # remove attractors and rescale from 1 to max number of attractors
     ind = iseven.(bsn_nfo.basin)
     bsn_nfo.basin[ind] .+= 1
     bsn_nfo.basin .= (bsn_nfo.basin .- 1) .÷ 2
@@ -117,7 +118,7 @@ function get_color_point!(bsn_nfo::BasinInfo, integ, y0; kwargs...)
 end
 
 """
-Main procedure described by Nusse & Yorke for the grid cell `n`. The algorithm can be
+Main procedure motivated by Nusse & Yorke for the grid cell `n`. The algorithm can be
 though as a finite state machine with five states: :att_hit, :att_search, :att_found,
 :bas_hit, :lost. The transition between states depends on the current number in the
 cell being visited by the trajectory of the dynamical systems. When the automata switches

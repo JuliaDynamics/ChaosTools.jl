@@ -88,16 +88,19 @@ be collapsed or confused into the same attractor. This is a drawback of this met
 
 ## Refining basins of attraction
 Sometimes one would like to be able to refine the found basins of attraction by recomputing
-`basins_of_attraction` on a smaller, and more fine-grained, `grid`. If however this 
+`basins_of_attraction` on a smaller, and more fine-grained, `grid`. If however this
 new `grid` does not contain the attractors, `basins_of_attraction` would (by default)
 attribute the value `-1` to all grid points. For these cases, an extra search clause can
-be provided by setting the keywords `attractors, ε`. The `attractors` is a dictionary 
-mapping attractor IDs to `Dataset`s (i.e., the same as the return value of 
-`basins_of_attraction`). The algorithm checks at each step whether the system state is 
+be provided by setting the keywords `attractors, ε`. The `attractors` is a dictionary
+mapping attractor IDs to `Dataset`s (i.e., the same as the return value of
+`basins_of_attraction`). The algorithm checks at each step whether the system state is
 `ε`-close to any of the given attractors, and if so it attributes the stating grid point
 to the basin of the close attractor. By default `ε = 1e-3`.
 
-*Some comments here on why this method could be a bit wonky or fail*.
+A word of advice while using this method: in order to work properly, `ε` should be
+about the size of a grid cell that has been used to compute the attractors. It is
+recomended to keep the same step size since it may have an influence in some cases.
+Also this algorithm is usually slower than the method with the attractors on the grid.
 """
 function basins_of_attraction(grid::Tuple, ds;
         Δt=1, T=0, idxs = 1:length(grid),

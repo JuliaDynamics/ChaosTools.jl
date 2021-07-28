@@ -194,15 +194,12 @@ function basins_fractal_test(basins; ε = 20, Ntotal = 1000)
         bx_ent = _box_entropy(box_values)
         if bx_ent > 0
             Nb = Nb + 1
-            Sb = Sb + bx_ent
-            N_stat[Nb] = Sb/Nb
+            N_stat[Nb] = bx_ent
         end
-        N = N + 1
     end
 
-    Ŝbb = mean(N_stat[100:end])
-    σ_sbb = std(N_stat[100:end])/sqrt(length(N_stat[100:end]))
-    # Table of boundary basin entropy of a smooth boundary for dimension 1 to 5:
+    Ŝbb = mean(N_stat)
+    σ_sbb = std(N_stat)/sqrt(Nb)    # Table of boundary basin entropy of a smooth boundary for dimension 1 to 5:
     Sbb_tab = [0.499999, 0.4395093, 0.39609176, 0.36319428, 0.33722572]
     if length(dims) ≤ 5
         Sbb_s = Sbb_tab[length(dims)]

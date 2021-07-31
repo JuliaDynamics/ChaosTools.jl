@@ -15,7 +15,7 @@ a matrix with its columns being the deviation vectors (then
 ## Keyword Arguments
 * `threshold = 1e-12` : If `GALI_k` falls below the `threshold`
   iteration is terminated.
-* `dt = 1` : Time-step between deviation vector normalizations. For continuous
+* `Δt = 1` : Time-step between deviation vector normalizations. For continuous
   systems this is approximate.
 * `u0` : Initial state for the system. Defaults to `get_state(ds)`.
 * `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
@@ -64,7 +64,7 @@ an integrator, and `reinit!` it to new initial conditions.
 See the "advanced documentation" for info on the integrator object.
 The low level method is
 ```
-ChaosTools.gali(tinteg, tmax, dt, threshold)
+ChaosTools.gali(tinteg, tmax, Δt, threshold)
 ```
 
 [^Skokos2007]: Skokos, C. H. *et al.*, Physica D **231**, pp 30–54 (2007)
@@ -77,7 +77,7 @@ gali(ds::DS, tmax::Real, k::Int; kwargs...) =
     gali(ds, tmax, orthonormal(dimension(ds), k); kwargs...)
 
 function gali(ds::DS{IIP, S, D}, tmax::Real, Q0::AbstractMatrix;
-    threshold = 1e-12, dt = 1, u0 = get_state(ds),
+    threshold = 1e-12, Δt = 1, u0 = get_state(ds),
     diffeq...) where {IIP, S, D}
 
     size(Q0)[1] != D && throw(ArgumentError(
@@ -95,18 +95,18 @@ function gali(ds::DS{IIP, S, D}, tmax::Real, Q0::AbstractMatrix;
 
     ST = stateeltype(ds)
     TT = typeof(ds.t0)
-    gal::Vector{ST}, tvec::Vector{TT} = gali(tinteg, tmax, dt, threshold)
+    gal::Vector{ST}, tvec::Vector{TT} = gali(tinteg, tmax, Δt, threshold)
     return gal, tvec
 end
 
-function gali(tinteg, tmax, dt, threshold)
+function gali(tinteg, tmax, Δt, threshold)
 
     rett = [tinteg.t]
     gali_k = [one(eltype(tinteg.u))]
     t0 = tinteg.t
 
     while tinteg.t < tmax + t0
-        step!(tinteg, dt)
+        step!(tinteg, Δt)
         # Normalize deviation vectors
         normalize_deviations!(tinteg)
         # Calculate singular values:

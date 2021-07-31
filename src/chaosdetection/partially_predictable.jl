@@ -105,9 +105,7 @@ function predictability(ds::DynamicalSystem;
             # Update integrator with new initial conditions
             reinit!(p_integ, [u, û])
             # Simulate trajectory until T
-            while p_integ.t < T
-                step!(p_integ)
-            end
+            step!(p_integ, T)
             # Accumulate distance and square-distance
             d = norm(p_integ.u[1]-p_integ.u[2], 2)
             Σd  += d

@@ -85,7 +85,7 @@ end
 
 function lyapunovspectrum(integ, N, Δt::Real, Ttr::Real = 0.0, show_progress = false)
     if show_progress
-        progress = ProgressMeter.Progress(N; desc = "Lyapunov Spectrum: ", Δt = 1.0)
+        progress = ProgressMeter.Progress(N; desc = "Lyapunov Spectrum: ", dt = 1.0)
     end
     B = copy(get_deviations(integ)) # for use in buffer
     if Ttr > 0

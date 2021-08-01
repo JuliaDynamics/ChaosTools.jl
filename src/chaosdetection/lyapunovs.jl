@@ -27,7 +27,7 @@ See also [`lyapunov`](@ref), [`local_growth_rates`](@ref).
 * `Ttr = 0` : Extra "transient" time to evolve the system before application of the
   algorithm. Should be `Int` for discrete systems. Both the system and the
   deviation vectors are evolved for this time.
-* `dt = 1` : Time of individual evolutions
+* `Δt = 1` : Time of individual evolutions
   between successive orthonormalization steps. For continuous systems this is approximate.
 * `show_progress = false` : Display a progress bar of the process.
 * `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
@@ -50,13 +50,13 @@ an integrator, and `reinit!` it to new initial conditions.
 See the "advanced documentation" for info on the integrator object.
 The low level method is
 ```julia
-lyapunovspectrum(tinteg, N, dt::Real, Ttr::Real)
+lyapunovspectrum(tinteg, N, Δt::Real, Ttr::Real)
 ```
 
 If you want to obtain the convergence timeseries of the Lyapunov spectrum,
 use the method
 ```julia
-ChaosTools.lyapunovspectrum_convergence(tinteg, N, dt, Ttr)
+ChaosTools.lyapunovspectrum_convergence(tinteg, N, Δt, Ttr)
 ```
 (not exported).
 
@@ -70,7 +70,7 @@ lyapunovspectrum(ds::DS, N, k::Int = dimension(ds); kwargs...) =
 lyapunovspectrum(ds, N, orthonormal(dimension(ds), k); kwargs...)
 
 function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; 
-        Ttr::Real = 0, dt::Real = 1, u0 = get_state(ds), show_progress = false, diffeq...
+        Ttr::Real = 0, Δt::Real = 1, u0 = get_state(ds), show_progress = false, diffeq...
     ) where {IIP, S, D}
 
     if typeof(ds) <: DDS
@@ -79,11 +79,11 @@ function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix;
     else
         integ = tangent_integrator(ds, Q0; u0, diffeq...)
     end
-    λ = lyapunovspectrum(integ, N, dt, Ttr, show_progress)
+    λ = lyapunovspectrum(integ, N, Δt, Ttr, show_progress)
     return λ
 end
 
-function lyapunovspectrum(integ, N, dt::Real, Ttr::Real = 0.0, show_progress = false)
+function lyapunovspectrum(integ, N, Δt::Real, Ttr::Real = 0.0, show_progress = false)
     if show_progress
         progress = ProgressMeter.Progress(N; desc = "Lyapunov Spectrum: ", dt = 1.0)
     end
@@ -91,7 +91,7 @@ function lyapunovspectrum(integ, N, dt::Real, Ttr::Real = 0.0, show_progress = f
     if Ttr > 0
         t0 = integ.t
         while integ.t < t0 + Ttr
-            step!(integ, dt)
+            step!(integ, Δt)
             Q, R = _buffered_qr(B, get_deviations(integ))
             set_deviations!(integ, Q)
         end
@@ -101,7 +101,7 @@ function lyapunovspectrum(integ, N, dt::Real, Ttr::Real = 0.0, show_progress = f
     λ = zeros(stateeltype(integ), k)
     t0 = integ.t
     for i in 1:N
-        step!(integ, dt)
+        step!(integ, Δt)
         Q, R = _buffered_qr(B, get_deviations(integ))
         for j in 1:k
             @inbounds λ[j] += log(abs(R[j,j]))
@@ -169,7 +169,7 @@ See also [`lyapunovspectrum`](@ref), [`local_growth_rates`](@ref).
 * `upper_threshold = 1e-6` : Upper distance threshold for rescaling.
 * `lower_threshold = 1e-12` : Lower distance threshold for rescaling (in order to
    be able to detect negative exponents).
-* `dt = 1` : Time of evolution between each check of
+* `Δt = 1` : Time of evolution between each check of
   distance exceeding the thresholds. For continuous
   systems this is approximate.
 * `inittest = (u1, d0) -> u1 .+ d0/sqrt(D)` :
@@ -206,7 +206,7 @@ an integrator, and `reinit!` it to new initial conditions.
 See the "advanced documentation" for info on the integrator object.
 The low level method is
 ```
-lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
+lyapunov(pinteg, T, Ttr, Δt, d0, ut, lt)
 ```
 
 [^Benettin1976]: G. Benettin *et al.*, Phys. Rev. A **14**, pp 2338 (1976)
@@ -218,7 +218,7 @@ function lyapunov(ds::DS, T;
                   upper_threshold = 1e-6,
                   lower_threshold = 1e-12,
                   inittest = inittest_default(dimension(ds)),
-                  dt = 1,
+                  Δt = 1,
                   diffeq...
                   )
 
@@ -231,15 +231,15 @@ function lyapunov(ds::DS, T;
     else
         pinteg = parallel_integrator(ds, [deepcopy(u0), inittest(u0, d0)]; diffeq...)
     end
-    λ::ST = lyapunov(pinteg, T, Ttr, dt, d0, upper_threshold, lower_threshold)
+    λ::ST = lyapunov(pinteg, T, Ttr, Δt, d0, upper_threshold, lower_threshold)
     return λ
 end
 
-function lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
+function lyapunov(pinteg, T, Ttr, Δt, d0, ut, lt)
     # transient
     t0 = pinteg.t
     while pinteg.t < t0 + Ttr
-        step!(pinteg, dt)
+        step!(pinteg, Δt)
         d = λdist(pinteg)
         lt ≤ d ≤ ut || rescale!(pinteg, d/d0)
     end
@@ -253,7 +253,7 @@ function lyapunov(pinteg, T, Ttr, dt, d0, ut, lt)
         d = λdist(pinteg)
         #evolve until rescaling:
         while lt ≤ d ≤ ut
-            step!(pinteg, dt)
+            step!(pinteg, Δt)
             d = λdist(pinteg)
             pinteg.t ≥ t0 + T && break
         end

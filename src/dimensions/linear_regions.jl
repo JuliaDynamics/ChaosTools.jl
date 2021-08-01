@@ -142,7 +142,7 @@ end
     estimate_boxsizes(A::Dataset; kwargs...) → εs
 Return `k` exponentially spaced values: `εs = base .^ range(lower + w, upper + z; length = k)`,
 that are a good estimate for sizes ε that are used in calculating a [Fractal Dimension](@ref).
-It is strongly recommended to [`regularize`](@ref) input dataset `A` before using this
+It is strongly recommended to [`standardize`](@ref) input dataset `A` before using this
 function.
 
 Let `d₋` be the minimum pair-wise distance in `A` and `d₊` the maximum distance along

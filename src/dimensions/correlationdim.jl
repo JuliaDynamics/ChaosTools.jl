@@ -2,7 +2,7 @@
 # Original correlation sum
 #######################################################################################
 using Distances, Roots
-export correlationsum, grassberger, boxed_correlationsum,
+export correlationsum, grassberger_dim, boxed_correlationsum,
 estimate_r0_buenoorovio, data_boxing
 
 """
@@ -149,11 +149,11 @@ function distancematrix(X, norm = Euclidean())
 end
 
 """
-    grassberger(data, εs = estimate_boxsizes(data); kwargs...) → D_C
+    grassberger_dim(data, εs = estimate_boxsizes(data); kwargs...) → D_C
 Use the method of Grassberger and Proccacia[^Grassberger1983], and the correction by
 Theiler[^Theiler1986], to estimate the correlation dimension `D_C` of the given `data`.
 
-This function does something extrely simple:
+This function does something extremely simple:
 ```julia
 cm = correlationsum(data, εs; kwargs...)
 return linear_region(log.(sizes), log(cm))[2]
@@ -168,11 +168,10 @@ See also [`takens_best_estimate`](@ref).
 
 [^Theiler1986]: Theiler, [Spurious dimension from correlation algorithms applied to limited time-series data. Physical Review A, 34](https://doi.org/10.1103/PhysRevA.34.2427)
 """
-function grassberger(data::AbstractDataset, εs = estimate_boxsizes(data); kwargs...)
+function grassberger_dim(data::AbstractDataset, εs = estimate_boxsizes(data); kwargs...)
     cm = correlationsum(data, εs; kwargs...)
     return linear_region(log.(εs), log.(cm))[2]
 end
-
 
 ################################################################################
 # Correlationsum, but we distributed data to boxes beforehand

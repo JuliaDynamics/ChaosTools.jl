@@ -15,8 +15,8 @@ Each entry are the points at each parameter value.
 * `Ttr::Int = 1000` : Transient steps;
   each orbit is evolved for `Ttr` first before saving output.
 * `n::Int = 100` : Amount of points to save for each initial condition.
-* `dt = 1` : Stepping time. Changing this will give you the orbit diagram of
-  the `dt` order map.
+* `Δt = 1` : Stepping time. Changing this will give you the orbit diagram of
+  the `Δt` order map.
 * `u0 = nothing` : Specify an initial state. If `nothing`, the previous state after each
   parameter is used to seed the new initial condition at the new parameter
   (with the very first state being the system's state). This makes convergence to the
@@ -29,7 +29,7 @@ See also [`poincaresos`](@ref) and [`produce_orbitdiagram`](@ref).
 """
 function orbitdiagram(
         ds::DDS{IIP, S, D}, idxs, p_index, pvalues;
-        n::Int = 100, Ttr::Int = 1000, u0 = nothing, dt = 1, ulims = nothing
+        n::Int = 100, Ttr::Int = 1000, u0 = nothing, Δt = 1, ulims = nothing
     ) where {IIP, S, D}
 
     p0 = ds.p[p_index]
@@ -43,7 +43,7 @@ function orbitdiagram(
 
     output = _initialize_od_output(ds.u0, i, n, length(pvalues))
     integ = integrator(ds)
-    _fill_orbitdiagram!(output, integ, i, pvalues, p_index, n, Ttr, u0, dt, ulims)
+    _fill_orbitdiagram!(output, integ, i, pvalues, p_index, n, Ttr, u0, Δt, ulims)
     ds.p[p_index] = p0
     return output
 end
@@ -56,7 +56,7 @@ function _initialize_od_output(u::S, i::SVector, n, l) where {S}
     output = [Vector{typeof(s)}(undef, n) for k in 1:l]
 end
 
-function _fill_orbitdiagram!(output, integ, i, pvalues, p_index, n, Ttr, u0, dt, ulims)
+function _fill_orbitdiagram!(output, integ, i, pvalues, p_index, n, Ttr, u0, Δt, ulims)
     isavector = i isa AbstractVector
     for (j, p) in enumerate(pvalues)
         integ.p[p_index] = p
@@ -72,13 +72,13 @@ function _fill_orbitdiagram!(output, integ, i, pvalues, p_index, n, Ttr, u0, dt,
         step!(integ, Ttr)
         if isavector || isnothing(ulims) # if-clause gets compiled away (I hope)
             @inbounds for k in 1:n
-                step!(integ, dt)
+                step!(integ, Δt)
                 output[j][k] = integ.u[i]
             end
         else
             k = 1
             while k ≤ n
-                step!(integ, dt)
+                step!(integ, Δt)
                 u = integ.u[i]
                 @inbounds if ulims[1] ≤ u ≤ ulims[2]
                     output[j][k] = u

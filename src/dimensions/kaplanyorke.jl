@@ -1,3 +1,5 @@
+export kaplanyorke_dim
+
 """
     kaplanyorke_dim(λs::AbstractVector)
 Calculate the Kaplan-Yorke dimension, a.k.a. Lyapunov dimension[^Kaplan1970].

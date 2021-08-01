@@ -5,10 +5,10 @@ export match_attractors!, basin_entropy, basins_fractal_test
     match_attractors!(b₋, a₋, b₊, a₊, [, method = :distance])
 Attempt to match the attractors in basins/attractors `b₊, a₊` with those at `b₋, a₋`.
 `b` is an array whose values encode the attractor ID, while `a` is a dictionary mapping
-IDs to `Dataset`s containing the attractors (e.g. output of [`basins_general`](@ref)).
+IDs to `Dataset`s containing the attractors (e.g. output of [`basins_of_attraction`](@ref)).
 Typically the +,- mean after and before some change of parameter for a system.
 
-In [`basins_general`](@ref) different attractors get assigned different IDs, however
+In [`basins_of_attraction`](@ref) different attractors get assigned different IDs, however
 which attractor gets which ID is somewhat arbitrary, and computing the basins of the
 same system for slightly different parameters could label the "same" attractors (at
 the different parameters) with different IDs. `match_attractors!` tries to "match" them

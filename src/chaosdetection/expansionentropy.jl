@@ -31,11 +31,12 @@ multidimension box.
 * `Ttr = 0` : Transient time to evolve each initial condition before starting to comute ``E``.
   This is `t0` of [1] and of the following notation.
 * `batches = 100` : Number of batches to run the calculation, see below.
+* `Δt = 1` : Integration step size.
 * `diffeq...` : Other keywords are propagated to the solvers of DifferentialEquations.jl.
 
 ## Description
 `N` samples are initialized and propagated forwards in time (along with their tangent space).
-At every time ``t`` in `[t0+dt, t0+2dt, ... t0+steps*dt]` we calculate ``H``:
+At every time ``t`` in `[t0+Δt, t0+2dt, ... t0+steps*Δt]` we calculate ``H``:
 ```math
 H[t] = \\log E_{t0+T, t0}(f, S),
 ```
@@ -115,13 +116,13 @@ Return `times, H` for one sample of `ds` (see [`expansionentropy`](@ref)).
 Accepts the same argumets as `expansionentropy`, besides `batches`.
 """
 function expansionentropy_sample(system::DynamicalSystem, sampler, restraining;
-    N=1000, steps=40, dt=1, Ttr=0, diffeq...)
+    N=1000, steps=40, Δt=1, Ttr=0, diffeq...)
     D = dimension(system)
     M = zeros(steps)
     # M[t] will be Σᵢ G(Dfₜ₀,ₜ₀₊ₜ(xᵢ))
     # The summation is over all sampled xᵢ that stay inside S during [t0, t0 + t].
 
-    times = @. (system.t0+Ttr)+dt*(1:steps)
+    times = @. (system.t0+Ttr)+Δt*(1:steps)
     t_identity = SMatrix{D, D, Float64}(I)
     t_integ = tangent_integrator(system)
     Ttr > 0 && (u_integ = integrator(system))
@@ -134,8 +135,8 @@ function expansionentropy_sample(system::DynamicalSystem, sampler, restraining;
             u = u_integ.u
         end
         reinit!(t_integ, u, t_identity; t0 = t_integ.t0 + Ttr)
-        for i ∈ 1:steps # Evolve the sample point for the duration [t0, t0+steps*dt]
-            step!(t_integ, dt, true)
+        for i ∈ 1:steps # Evolve the sample point for the duration [t0, t0+steps*Δt]
+            step!(t_integ, Δt, true)
             u = get_state(t_integ)
             !restraining(u) && break # Stop the integration if the orbit leaves the region.
             Df = get_deviations(t_integ)
@@ -148,14 +149,14 @@ end
 # This version only deals with 1-dimensional discrete dynamical systems, but does
 # it really fast, by avoiding `tangent_integrator` and `maximalexpansion`.
 function expansionentropy_sample(system::DiscreteDynamicalSystem{IIP, S, 1}, sampler, restraining;
-    N=1000, steps=40, dt=1, Ttr=0, kwargs...) where {IIP, S}
+    N=1000, steps=40, Δt=1, Ttr=0, kwargs...) where {IIP, S}
     f = system.f
     p = system.p
     jacob = system.jacobian
     t0 = system.t0
-    times = @. (t0+Ttr)+dt*(1:steps)
+    times = @. (t0+Ttr)+Δt*(1:steps)
 
-    dt = max(Int(floor(dt)), 1)
+    Δt = max(Int(floor(Δt)), 1)
     Ttr = max(Int(floor(Ttr)), 0)
     M = zeros(steps)
 
@@ -171,7 +172,7 @@ function expansionentropy_sample(system::DiscreteDynamicalSystem{IIP, S, 1}, sam
 
         Df = 1.0
         for step ∈ 1:steps # Evolve point x for `steps` steps.
-            for _ ∈ 1:dt # Evolve dt steps at a time.
+            for _ ∈ 1:Δt # Evolve Δt steps at a time.
                 Df = jacob(x, p, t) * Df
                 x = f(x, p, t)
                 t += 1

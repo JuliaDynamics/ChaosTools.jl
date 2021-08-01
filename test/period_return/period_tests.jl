@@ -1,7 +1,7 @@
-using ChaosTools, Test
+using ChaosTools, DynamicalSystemsBase, Test
 
 println("\nTesting period estimation...")
-dt = 0.005
+Δt = 0.005
 
 function test_algs(vs, ts, trueperiod, atol; methods = [
             :autocorrelation, :periodogram,
@@ -17,28 +17,28 @@ function test_algs(vs, ts, trueperiod, atol; methods = [
 end
 
 @testset "sin(t)" begin
-    tsin = 0:dt:22π
+    tsin = 0:Δt:22π
     vsin = sin.(tsin)
 
-    test_algs(vsin, tsin, 2π, 11.53dt)
+    test_algs(vsin, tsin, 2π, 11.53Δt)
 end
 
 @testset "sin(2t)" begin
 
-    tsin = 0:dt:22π
+    tsin = 0:Δt:22π
     vsin = sin.(2 .* tsin)
 
-    test_algs(vsin, tsin, π, 3dt)
+    test_algs(vsin, tsin, π, 3Δt)
 end
 
 @testset "Roessler" begin
 
-    dt = 0.1
+    Δt = 0.1
     ds = Systems.roessler(ones(3))
     T = 5000.0
-    tr = trajectory(ds, T; Ttr = 100.0, dt = dt)
+    tr = trajectory(ds, T; Ttr = 100.0, Δt)
     v = tr[:, 1]
-    t = 0:dt:T
+    t = 0:Δt:T
 
     test_algs(v, t, 6, 1.5)
 end
@@ -61,8 +61,8 @@ end
 
     fhn = ContinuousDynamicalSystem(FHN, SVector(-2, -0.6667), p0)
     T = 1000.0
-    v = trajectory(fhn, T; dt = dt)[:, 1]
+    v = trajectory(fhn, T; Δt)[:, 1]
     real_p = 91
 
-    test_algs(v, 0:dt:T, real_p, 0.8)
+    test_algs(v, 0:Δt:T, real_p, 0.8)
 end

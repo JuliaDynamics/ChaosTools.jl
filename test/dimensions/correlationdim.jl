@@ -24,7 +24,7 @@ println("\nTesting correlation sum...")
         cs2 = correlationsum(ts, es; q = 2.0001)
         dim2 = linear_region(log.(es), log.(cs2))[2]
         test_value(dim2, 1.1, 1.3)
-        test_value(grassberger(ts), 1.1, 1.3)
+        test_value(grassberger_dim(ts), 1.1, 1.3)
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
@@ -36,7 +36,7 @@ println("\nTesting correlation sum...")
         cs2 = correlationsum(ts, es; q = 2.001, w = 5)
         dim2 = linear_region(log.(es), log.(cs2))[2]
         test_value(dim2, 1.85, 2.2)
-        test_value(grassberger(ts), 1.85, 2.2)
+        test_value(grassberger_dim(ts), 1.85, 2.2)
     end
 end
 

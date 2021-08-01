@@ -1,7 +1,9 @@
+using ChaosTools
 using Test
 using DynamicalSystemsBase, DelayEmbeddings
 
 ti = time()
+@testset "ChaosTools tests" begin
 
 include("basins/basins_tests.jl")
 include("basins/uncertainty_tests.jl")
@@ -24,6 +26,8 @@ include("dimensions/dims.jl")
 include("dimensions/correlationdim.jl")
 include("nlts_tests.jl")
 # include("dyca_tests.jl")
+
+end
 
 ti = time() - ti
 println("\nTest took total time of:")

@@ -24,7 +24,7 @@ include("basins/uncertainty_exp.jl")
 include("basins/tipping.jl")
 
 include("dimensions/linear_regions.jl")
-include("dimensions/dims.jl")
+include("dimensions/generalized_dim.jl")
 include("dimensions/correlationdim.jl")
 include("dimensions/correlation_fixedmass.jl")
 include("dimensions/molteno.jl")

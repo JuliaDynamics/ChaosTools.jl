@@ -1,4 +1,4 @@
-using LinearAlgebra, Distributions
+using LinearAlgebra, Distributions, Random
 using Statistics: mean
 export predictability
 
@@ -99,7 +99,7 @@ function predictability(ds::DynamicalSystem;
         Σd² = 0
         for u in samples
             # Sample perturbation from surface of sphere
-            n = rand(Normal(), size(u))
+            n = rand(Random.GLOBAL_RNG, Normal(), size(u))
             n /= norm(n)
             û = u + δ*n
             # Update integrator with new initial conditions

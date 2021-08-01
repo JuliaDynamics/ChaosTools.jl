@@ -47,23 +47,23 @@ end
     qp = [0, .483000, .278980390, 0] #quasiperiodic orbit: 2D torus
     ch = [0, -0.25, 0.42081, 0] # chaotic orbit
     tt = 3000
-    dt = 0.8 # <- very important!
+    Δt = 0.8 # <- very important!
     ds = Systems.henonheiles()
     diffeq = Dict(:Ttr => 10, :abstol=>1e-9, :reltol=>1e-9, :solver => Vern9())
     cs = range(0.1, π/3-0.1, length = 50)
 
     @testset "stable" begin
-        tr = trajectory(ds, tt, sp; dt = dt, diffeq...)[:, 1]
+        tr = trajectory(ds, tt, sp; Δt, diffeq...)[:, 1]
         @test !testchaos01(tr)
         @test !testchaos01(tr, cs)
     end
     @testset "quasiperidic" begin
-        tr = trajectory(ds, tt, qp; dt = dt, diffeq...)[:, 1]
+        tr = trajectory(ds, tt, qp; Δt, diffeq...)[:, 1]
         @test !testchaos01(tr)
         @test !testchaos01(tr, cs)
     end
     @testset "chaotic" begin
-        tr = trajectory(ds, tt, ch; dt = dt, diffeq...)[:, 1]
+        tr = trajectory(ds, tt, ch; Δt, diffeq...)[:, 1]
         @test testchaos01(tr, cs)
     end
 end

@@ -1,3 +1,5 @@
+export molteno_dim, molteno_boxing
+
 ################################################################################
 # Molteno histogram based dimension by boxing values
 ################################################################################
@@ -17,7 +19,7 @@ logarithm of one over the boxsize using [`linear_region`](@ref).
 This algorithm is faster than the traditional approach of using [`probabilities`](@ref),
 but it is only suited for low dimensional data since it divides each
 box into `2^D` new boxes if `D` is the dimension. For large `D` this leads to low numbers of
-box divisions before the threshold is passed and the divison stops and as a result
+box divisions before the threshold is passed and the divison stops. This results
 to a low number of data points to fit the dimension to and thereby a poor estimate.
 
 [^Molteno1993]: Molteno, T. C. A., [Fast O(N) box-counting algorithm for estimating dimensions. Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/10.1103/PhysRevE.48.R3263)

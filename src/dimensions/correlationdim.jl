@@ -168,11 +168,10 @@ See also [`takens_best_estimate`](@ref).
 
 [^Theiler1986]: Theiler, [Spurious dimension from correlation algorithms applied to limited time-series data. Physical Review A, 34](https://doi.org/10.1103/PhysRevA.34.2427)
 """
-function grassberger(data::AbstractDataset, εs = estimate_boxsizes(data); kwargs...)
+function grassberger_dim(data::AbstractDataset, εs = estimate_boxsizes(data); kwargs...)
     cm = correlationsum(data, εs; kwargs...)
     return linear_region(log.(εs), log.(cm))[2]
 end
-@deprecate grassberger grassberger_dim
 
 ################################################################################
 # Correlationsum, but we distributed data to boxes beforehand

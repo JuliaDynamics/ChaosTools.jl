@@ -3,7 +3,7 @@ using Distances: Metric, Cityblock, Euclidean
 export NeighborNumber, WithinRange
 
 export broomhead_king
-export numericallyapunov
+export lyapunov_from_data
 export Cityblock, Euclidean
 
 #####################################################################################
@@ -12,7 +12,7 @@ export Cityblock, Euclidean
 # Everything in this section is based on Ulrich Parlitz [1]
 
 """
-    numericallyapunov(R::Dataset, ks;  refstates, w, distance, ntype)
+    lyapunov_from_data(R::Dataset, ks;  refstates, w, distance, ntype)
 Return `E = [E(k) for k ∈ ks]`, where `E(k)` is the average logarithmic distance
 between states of a neighborhood that are evolved in time for `k` steps
 (`k` must be integer).
@@ -62,17 +62,17 @@ of `R` (distance ``d_F`` in ref.[^Skokos2016], useful when `R` comes from delay 
 
 [^Kantz1994]: Kantz, H., Phys. Lett. A **185**, pp 77–87 (1994)
 """
-function numericallyapunov(
+function lyapunov_from_data(
         R::AbstractDataset{D, T}, ks;
         refstates = 1:(length(R) - ks[end]),
         w = 1,
         distance = Cityblock(),
         ntype = NeighborNumber(1),
     ) where {D, T}
-    Ek = numericallyapunov(R, ks, refstates, Theiler(w), distance, ntype)
+    Ek = lyapunov_from_data(R, ks, refstates, Theiler(w), distance, ntype)
 end
 
-function numericallyapunov(
+function lyapunov_from_data(
         R::AbstractDataset{D, T},
         ks::AbstractVector{Int},
         ℜ::AbstractVector{Int},
@@ -140,11 +140,11 @@ function numericallyapunov(
     E ./= (length(ℜ) - skippedn)
 end
 
-@inline function delay_distance(di::Cityblock, R, m, n, k)
+@inline function delay_distance(::Cityblock, R, m, n, k)
     @inbounds abs(R[m+k][1] - R[n+k][1])
 end
 
-@inline function delay_distance(di::Euclidean, R, m, n, k)
+@inline function delay_distance(::Euclidean, R, m, n, k)
     @inbounds norm(R[m+k] - R[n+k])
 end
 

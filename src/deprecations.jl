@@ -1,0 +1,1 @@
+@deprecate numericallyapunov(args...; kwargs...) lyapunov_from_data(args...; kwargs...)

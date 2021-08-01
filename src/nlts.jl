@@ -69,15 +69,6 @@ function numericallyapunov(
         distance = Cityblock(),
         ntype = NeighborNumber(1),
     ) where {D, T}
-
-    if ntype isa FixedMassNeighborhood
-        @warn "`FixedMassNeighborhood` is deprecated in favor of `NeighborNumber`."
-        ntype = NeighborNumber(ntype.k)
-    end
-    if ntype isa FixedSizeNeighborhood
-        @warn "`FixedSizeNeighborhood` is deprecated in favor of `WithinRange`."
-        ntype = WithinRange(ntype.k)
-    end
     Ek = numericallyapunov(R, ks, refstates, Theiler(w), distance, ntype)
 end
 

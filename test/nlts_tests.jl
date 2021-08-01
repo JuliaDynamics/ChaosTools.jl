@@ -1,6 +1,6 @@
-using ChaosTools
+using ChaosTools, DynamicalSystemsBase
 using Test
-using Distances: Cityblock, Euclidean
+using ChaosTools.Distances: Cityblock, Euclidean
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 

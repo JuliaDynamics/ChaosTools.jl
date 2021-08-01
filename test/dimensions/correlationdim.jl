@@ -1,4 +1,4 @@
-using ChaosTools
+using ChaosTools, DynamicalSystemsBase
 using Test
 using StatsBase
 using Statistics
@@ -28,7 +28,7 @@ println("\nTesting correlation sum...")
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
-        ts = trajectory(ds, 1000; dt = 0.1)
+        ts = trajectory(ds, 1000; Δt = 0.1)
         es = 10 .^ range(-3, stop = 1, length = 8)
         cs1 = correlationsum(ts, es)
         dim1 = linear_region(log.(es), log.(cs1))[2]
@@ -56,7 +56,7 @@ println("\nTesting correlation sum with boxing beforehand...")
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
-        ts = trajectory(ds, 1000; dt = 0.1)
+        ts = trajectory(ds, 1000; Δt = 0.1)
         r0 = estimate_r0_buenoorovio(ts)
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
         C = [correlationsum(ts, e) for e in es]
@@ -83,7 +83,7 @@ println("\nTesting the fixed mass correlation sum...")
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
-        ts = trajectory(ds, 1000; dt = 0.1)
+        ts = trajectory(ds, 1000; Δt = 0.1)
         rs, ys = correlationsum_fixedmass(ts, 30)
         test_value(linear_region(rs, ys)[2], 1.7, 2.2)
         rs, ys = correlationsum_fixedmass(ts, 30; M = 2000)
@@ -108,7 +108,7 @@ println("\nTesting Takens' best estimate")
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
-        tr = trajectory(ds, 2000; dt = 0.1)
+        tr = trajectory(ds, 2000; Δt = 0.1)
         x = tr[:, 1]
         τ = estimate_delay(x, "mi_min", 1:20)
         X = embed(x, 4, τ)

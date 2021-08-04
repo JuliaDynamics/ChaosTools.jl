@@ -1,16 +1,19 @@
 export fixedpoints
 
-import IntervalRootFinding
+import IntervalRootFinding, LinearAlgebra
 
 """
-    fixedpoints(ds::DynamicalSystem, box, p = ds.p; kwargs...) → fp
-Return all fixed of the given `ds` that exist within the state space subset `box` for
-parameter configuration `p`. The fixed points are returned as a [`Dataset`](@ref).
+    fixedpoints(ds::DynamicalSystem, box, p = ds.p; kwargs...) → fp, eigs, stable
+Return all fixed points `fp` of the given `ds`
+that exist within the state space subset `box` for parameter configuration `p`.
+Fixed points are returned as a [`Dataset`](@ref).
+For convenience, a vector of the Jacobian eigenvalues of each fixed point, and whether 
+the fixed points are stable or not, are also returned.
 `fixedpoints` is valid for both discrete and continuous systems, but only for out of place
 format (see [`DynamicalSystem`](@ref)).
 
-Internally IntervalRootFinding.jl is used and as a result we can find all
-fixed points that exist in `box`, both stable and unstable.
+Internally IntervalRootFinding.jl is used and as a result we are guaranteed to find all
+fixed points that exist in `box`, regardless of stability.
 `box` is an appropriate `IntervalBox` from IntervalRootFinding.jl. E.g. for a 3D system
 it would be something like 
 ```julia
@@ -30,6 +33,16 @@ function fixedpoints(ds::DynamicalSystem, box, p = ds.p;
     f = to_root_form(ds, p, o)
     r = IntervalRootFinding.roots(f, box, method)
     # convert `r` to a dataset
+
+    # Find eigenvalues
+    eigs = Vector{Vector{Float64}}(undef, length(fp))
+    for u in fp
+        J = ds.jacobian(u, p, 0.0)
+        eigs[i] = LinearAlgebra.eigvals(J)
+
+    end
+    stable = isstable.(ds, eigs)
+    return fp, eigs, stable
 end
 
 to_root_form(ds::CDS, p, ::Nothing) = u -> ds.f(u, p, 0.0)
@@ -43,3 +56,6 @@ function to_root_form(ds::DDS, p, o::Int)
         return v .- u
     end
 end
+
+isstable(::CDS, e) = max(real(x) for x in e) < 0
+isstable(::DDS, e) = max(abs(x) for x in e) < 1

@@ -2,8 +2,6 @@ import IntervalRootFinding, LinearAlgebra
 using IntervalRootFinding: (..), (×)
 export fixedpoints, .., ×
 
-# TODO: Pass Jacobian to fixed point calculation
-
 """
     fixedpoints(ds::DynamicalSystem, box, p = ds.p; kwargs...) → fp, eigs, stable
 Return all fixed points `fp` of the given `ds`
@@ -33,22 +31,23 @@ box = v × v × z       # `\\times = ×`, or use `IntervalBox`
   (i.e., periodic orbits of length `o`). It is only valid for discrete dynamical systems.
 """
 function fixedpoints(ds::DynamicalSystem, box, p = ds.p;
-    method = IntervalRootFinding.Krawczyk, o = nothing, tol = 1e-15)
+        method = IntervalRootFinding.Krawczyk, o = nothing, tol = 1e-15
+    )
     DynamicalSystemsBase.isinplace(ds) && error("`fixedpoints` works only for out-of-place dynamical systems.")
+    # Find roots via IntervalRootFinding.jl
     f = to_root_f(ds, p, o)
     jac = to_root_J(ds, p, o)
-    r = IntervalRootFinding.roots(f, box, method, tol)
-    # convert `r` to a dataset
+    r = IntervalRootFinding.roots(f, jac, box, method, tol)
     D = dimension(ds)
     fp::Dataset{D, Float64} = roots_to_dataset(r, D)
-    # Find eigenvalues
+    # Find eigenvalues and stability
     eigs = Vector{Vector{Complex{Float64}}}(undef, length(fp))
-    J = Array(jac(ds.u0)) # `eigvals` doesn't work with StaticArrays.jl
+    J = Array(jacobian(ds)) # `eigvals` doesn't work with StaticArrays.jl
     for (i, u) in enumerate(fp)
-        J .= jac(u)
+        J .= jacobian(ds, u, p, 0.0) # notice that we use the "pure" jacobian, no -u!
         eigs[i] = LinearAlgebra.eigvals(Array(J))
     end
-    stable = [isstable(ds, e) for e in eigs]
+    stable = Bool[isstable(ds, e) for e in eigs]
     return fp, eigs, stable
 end
 
@@ -61,25 +60,27 @@ function to_root_J(ds::DDS{IIP, S}, p, ::Nothing) where {IIP, S}
 end
 
 # Discrete with periodic order
-function to_root_form(ds::DDS, p, o::Int) 
+function to_root_f(ds::DDS, p, o::Int) 
     u -> begin
         v = copy(u) # copy is free for StaticArrays
         for _ in 1:o
             v = ds.f(v, p, 0.0)
         end
-        return v .- u
+        return v - u
     end
 end
 
+
 function roots_to_dataset(r, D)
     if isempty(r)
-        @warn "No roots found!"
+        @warn "No fixed points found!"
         return Dataset{D, Float64}()
+    end
+    if any(root.status != :unique for root in r)
+        @warn "Non-unique fixed points found!"
     end
     F = zeros(length(r), D)
     for (j, root) in enumerate(r)
-        # @assert root.status == :unique
-        @show root
         F[j, :] .= map(i -> (i.hi + i.lo)/2, root.interval)
     end
     return Dataset(F; warn = false)

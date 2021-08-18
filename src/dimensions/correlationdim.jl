@@ -231,11 +231,16 @@ function boxed_correlationsum(
     end
 end
 
+# An algorithm to find the ideal choice of a prism size for the boxed correlation dimension.
+# See Theiler as mentioned in `boxed_correlationsum`
 function _autoprismdim(data)
     D = dimension(data)
-    L = length(data)
-    # The best choice given by Theiler is $P = 0.5\log_2N$ and should be used when $D$ exceeds $0.75\log_2N$.
-    return size(data, 2)
+    N = length(data)
+    if D > 0.75 * log2(N)
+        return ceil(0.5 * log2(N))
+    else
+        return size(data, 2)
+    end
 end
 
 """

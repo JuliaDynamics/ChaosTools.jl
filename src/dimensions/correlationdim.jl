@@ -208,12 +208,13 @@ and also [`data_boxing`](@ref).
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 """
-function boxed_correlationsum(data; kwargs...)
+function boxed_correlationsum(data; q = 2, M = _autoprismdim(data), w = 0)
     r0 = estimate_r0_buenoorovio(data, M)
     ε0 = minimum_pairwise_distance(data)[1]
+    @assert  r0 < ε0 "The calculated box size was smaller than the minimum interpoint " *
+    "distance. Please choose manually."
     εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
-    Cs = boxed_correlationsum(data, εs, r0; kwargs...)
-    return εs, Cs
+    boxed_correlationsum(data, εs, r0; q, M, w)
 end
 
 function boxed_correlationsum(

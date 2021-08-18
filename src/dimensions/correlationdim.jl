@@ -237,7 +237,7 @@ function _autoprismdim(data)
     D = dimension(data)
     N = length(data)
     if D > 0.75 * log2(N)
-        return ceil(0.5 * log2(N))
+        return max(2, ceil(0.5 * log2(N)))
     else
         return size(data, 2)
     end

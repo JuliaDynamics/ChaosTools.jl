@@ -177,32 +177,31 @@ end
 # Correlationsum, but we distributed data to boxes beforehand
 ################################################################################
 """
-    boxed_correlationsum(data, εs, r0 = maximum(εs); q=2 , M=dimension(data), w=0) → Cs
+    boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2, M::Int = automatic, w = 0) → Cs
 
 Estimate the box assisted q-order correlation sum[^Kantz2003] `Cs` out of a
 dataset `data` for each radius in `εs`, by splitting the data into boxes of size `r0`
-beforehand.
-
-This method is much faster than [`correlationsum`](@ref), **provided that** the 
+beforehand. This method is much faster than [`correlationsum`](@ref), **provided that** the 
 box size `r0` is significantly smaller than then the attractor length.
 A good estimate for `r0` is [`estimate_r0_buenoorovio`](@ref).
 
-    boxed_correlationsum(data; q = 2 , M = size(data, 2), w = 0) → εs, Cs
+    boxed_correlationsum(data; q = 2 , M::Int = automatic, w = 0) → εs, Cs
 
 In this method the minimum inter-point distance and [`estimate_r0_buenoorovio`](@ref)
 are used to estimate good `εs` for the calculation, which are also returned.
 
 ## Description
 `C_q(ε)` is calculated for every `ε ∈ εs` and each of the boxes to then be
-summed up afterwards. If `M` is unequal to the dimension of the data, only the
-first `M` dimensions are considered for the box distribution (this is called the
-prism-assisted version). The method of splitting the data into boxes was 
+summed up afterwards. The method of splitting the data into boxes was 
 implemented according to Theiler[^Theiler1987]. `w` is the [Theiler window](@ref).
+If `M` is unequal to the dimension of the data, only the
+first `M` dimensions are considered for the box distribution (this is called the
+prism-assisted version). By default `M` is choosen automatically.
 
 The function is explicitly optimized for `q = 2` but becomes quite slow for `q ≠ 2`.
 
 See [`correlationsum`](@ref) for the definition of `C_q`
-and also [`data_boxing`](@ref).
+and also [`data_boxing`](@ref) to use the algorithm that splits data into boxes.
 
 [^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)
 

@@ -177,7 +177,7 @@ end
 # Correlationsum, but we distributed data to boxes beforehand
 ################################################################################
 """
-    boxed_correlationsum(data, εs, r0 = maximum(εs); q = 2, M::Int = automatic, w = 0) → Cs
+    boxed_correlationsum(data, εs, r0 = maximum(εs); q=2, M::Int=autoprisimdim(data), w=0) → Cs
 
 Estimate the box assisted q-order correlation sum[^Kantz2003] `Cs` out of a
 dataset `data` for each radius in `εs`, by splitting the data into boxes of size `r0`
@@ -185,7 +185,7 @@ beforehand. This method is much faster than [`correlationsum`](@ref), **provided
 box size `r0` is significantly smaller than then the attractor length.
 A good estimate for `r0` is [`estimate_r0_buenoorovio`](@ref).
 
-    boxed_correlationsum(data; q = 2 , M::Int = automatic, w = 0) → εs, Cs
+    boxed_correlationsum(data; q = 2 , M::Int = autoprisimdim(data), w = 0) → εs, Cs
 
 In this method the minimum inter-point distance and [`estimate_r0_buenoorovio`](@ref)
 are used to estimate good `εs` for the calculation, which are also returned.
@@ -207,7 +207,7 @@ and also [`data_boxing`](@ref) to use the algorithm that splits data into boxes.
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 """
-function boxed_correlationsum(data; q = 2, M = _autoprismdim(data), w = 0)
+function boxed_correlationsum(data; q = 2, M = autoprismdim(data), w = 0)
     r0 = estimate_r0_buenoorovio(data, M)
     ε0 = minimum_pairwise_distance(data)[1]
     @assert  r0 < ε0 "The calculated box size was smaller than the minimum interpoint " *
@@ -218,7 +218,7 @@ end
 
 function boxed_correlationsum(
         data, εs, r0 = maximum(εs);
-        q = 2, M = _autoprismdim(data), w = 0
+        q = 2, M = autoprismdim(data), w = 0
     )
     @assert M ≤ size(data, 2) "Prism dimension has to be lower or equal than " *
     "data dimension."
@@ -232,9 +232,12 @@ end
 
 # An algorithm to find the ideal choice of a prism size for the boxed correlation dimension.
 # See Theiler as mentioned in `boxed_correlationsum`
-function _autoprismdim(data)
+function autoprismdim(data)
     D = dimension(data)
     N = length(data)
+    # This is Bueno-Orivio and Perez-Garcia version:
+    return min(D, 2)
+    # This is Theiler's version:
     if D > 0.75 * log2(N)
         return max(2, ceil(0.5 * log2(N)))
     else

@@ -199,7 +199,7 @@ Return `min_d, min_pair`: the minimum pairwise distance
 of all points in the dataset, and the corresponding point pair.
 """
 function minimum_pairwise_distance(A::AbstractDataset, metric = Euclidean())
-    tree = KDTree(A)
+    tree = KDTree(A, metric)
     min_d = eltype(A[1])(Inf)
     max_d = -min_d
     min_pair = max_pair = (0, 0)

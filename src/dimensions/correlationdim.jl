@@ -3,7 +3,7 @@
 #######################################################################################
 using Distances, Roots
 export correlationsum, grassberger_dim, boxed_correlationsum,
-estimate_r0_buenoorovio, data_boxing
+estimate_r0_buenoorovio, data_boxing, autoprismdim
 
 """
     correlationsum(X, ε::Real; w = 0, norm = Euclidean(), q = 2) → C_q(ε)
@@ -177,7 +177,7 @@ end
 # Correlationsum, but we distributed data to boxes beforehand
 ################################################################################
 """
-    boxed_correlationsum(data, εs, r0 = maximum(εs); q=2, M::Int=autoprisimdim(data), w=0) → Cs
+    boxed_correlationsum(data, εs, r0 = maximum(εs); q=2, P=autoprisimdim(data), w=0) → Cs
 
 Estimate the box assisted q-order correlation sum[^Kantz2003] `Cs` out of a
 dataset `data` for each radius in `εs`, by splitting the data into boxes of size `r0`
@@ -185,7 +185,7 @@ beforehand. This method is much faster than [`correlationsum`](@ref), **provided
 box size `r0` is significantly smaller than then the attractor length.
 A good estimate for `r0` is [`estimate_r0_buenoorovio`](@ref).
 
-    boxed_correlationsum(data; q = 2 , M::Int = autoprisimdim(data), w = 0) → εs, Cs
+    boxed_correlationsum(data; q = 2 , P = autoprisimdim(data), w = 0) → εs, Cs
 
 In this method the minimum inter-point distance and [`estimate_r0_buenoorovio`](@ref)
 are used to estimate good `εs` for the calculation, which are also returned.
@@ -194,9 +194,9 @@ are used to estimate good `εs` for the calculation, which are also returned.
 `C_q(ε)` is calculated for every `ε ∈ εs` and each of the boxes to then be
 summed up afterwards. The method of splitting the data into boxes was 
 implemented according to Theiler[^Theiler1987]. `w` is the [Theiler window](@ref).
-If `M` is unequal to the dimension of the data, only the
-first `M` dimensions are considered for the box distribution (this is called the
-prism-assisted version). By default `M` is choosen automatically.
+`P` is the prism dimension. If `P` is unequal to the dimension of the data, only the
+first `P` dimensions are considered for the box distribution (this is called the
+prism-assisted version). By default `P` is choosen automatically.
 
 The function is explicitly optimized for `q = 2` but becomes quite slow for `q ≠ 2`.
 
@@ -207,22 +207,22 @@ and also [`data_boxing`](@ref) to use the algorithm that splits data into boxes.
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 """
-function boxed_correlationsum(data; q = 2, M = autoprismdim(data), w = 0)
-    r0 = estimate_r0_buenoorovio(data, M)
+function boxed_correlationsum(data; q = 2, P = autoprismdim(data), w = 0)
+    r0 = estimate_r0_buenoorovio(data, P)
     ε0 = minimum_pairwise_distance(data)[1]
     @assert  r0 < ε0 "The calculated box size was smaller than the minimum interpoint " *
     "distance. Please choose manually."
     εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
-    boxed_correlationsum(data, εs, r0; q, M, w)
+    boxed_correlationsum(data, εs, r0; q, P, w)
 end
 
 function boxed_correlationsum(
         data, εs, r0 = maximum(εs);
-        q = 2, M = autoprismdim(data), w = 0
+        q = 2, P = autoprismdim(data), w = 0
     )
-    @assert M ≤ size(data, 2) "Prism dimension has to be lower or equal than " *
+    @assert P ≤ size(data, 2) "Prism dimension has to be lower or equal than " *
     "data dimension."
-    boxes, contents = data_boxing(data, r0, M)
+    boxes, contents = data_boxing(data, r0, P)
     if q == 2
         boxed_correlationsum_2(boxes, contents, data, εs; w)
     else
@@ -230,28 +230,33 @@ function boxed_correlationsum(
     end
 end
 
-# An algorithm to find the ideal choice of a prism size for the boxed correlation dimension.
-# See Theiler as mentioned in `boxed_correlationsum`
-function autoprismdim(data)
+"""
+    autoprismdim(data, version = :bueno)
+
+An algorithm to find the ideal choice of a prism dimension for [`boxed_correlationsum`](@ref).
+`version = :bueno` uses `P=2`, while `version = :theiler` uses Theiler's original suggestion.
+"""
+function autoprismdim(data, version = :bueno)
     D = dimension(data)
     N = length(data)
-    # This is Bueno-Orivio and Perez-Garcia version:
-    return min(D, 2)
-    # This is Theiler's version:
-    if D > 0.75 * log2(N)
-        return max(2, ceil(0.5 * log2(N)))
-    else
-        return size(data, 2)
+    if version == :bueno
+        return min(D, 2)
+    elseif version == :theiler
+        if D > 0.75 * log2(N)
+            return max(2, ceil(0.5 * log2(N)))
+        else
+            return D
+        end
     end
 end
 
 """
-    data_boxing(data, r0, M = size(data, 2))
+    data_boxing(data, r0, P = size(data, 2))
 Distribute the `data` points into boxes of size `r0`. Return box positions
 and the contents of each box as two separate vectors. Implemented according to
 the paper by Theiler[^Theiler1987] improving the algorithm by Grassberger and
-Procaccia[^Grassberger1983]. If `M` is smaller than the dimension of the data,
-only the first `M` dimensions are considered for the distribution into boxes.
+Procaccia[^Grassberger1983]. If `P` is smaller than the dimension of the data,
+only the first `P` dimensions are considered for the distribution into boxes.
 
 See also: [`boxed_correlationsum`](@ref).
 
@@ -259,13 +264,13 @@ See also: [`boxed_correlationsum`](@ref).
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
-function data_boxing(data, r0, M = size(data, 2))
-    @assert M ≤ size(data, 2) "Prism dimension has to be lower or equal than "*
+function data_boxing(data, r0, P = size(data, 2))
+    @assert P ≤ size(data, 2) "Prism dimension has to be lower or equal than "*
     "data dimension."
-    mini = minima(data)[1:M]
+    mini = minima(data)[1:P]
 
     # Map each datapoint to its bin edge and sort the resulting list:
-    bins = map(point -> floor.(Int, (point[1:M] - mini)/r0), data)
+    bins = map(point -> floor.(Int, (point[1:P] - mini)/r0), data)
     permutations = sortperm(bins, alg=QuickSort)
 
     boxes = unique(bins[permutations])
@@ -468,11 +473,11 @@ function estimate_r0_theiler(data)
 end
 
 """
-    estimate_r0_buenoorovio(X, M = size(X, 2))
+    estimate_r0_buenoorovio(X, P = size(X, 2))
 Estimates a reasonable size for boxing the time series `X` proposed by
 Bueno-Orovio and Pérez-García[^Bueno2007] before calculating the correlation
 dimension as presented by Theiler[^Theiler1983]. If instead of boxes, prisms
-are chosen everything stays the same but `M` is the dimension of the prism.
+are chosen everything stays the same but `P` is the dimension of the prism.
 To do so the dimension `ν` is estimated by running the algorithm by Grassberger
 and Procaccia[^Grassberger1983] with `√N` points where `N` is the number of
 total data points.
@@ -485,9 +490,9 @@ boxes `η_ℓ`.
 The optimal number of filled boxes `η_opt` is calculated by minimising the number
 of calculations.
 ```math
-\\eta_\\textrm{opt} = N^{2/3}\\cdot \\frac{3^\\nu - 1}{3^M - 1}^{1/2}.
+\\eta_\\textrm{opt} = N^{2/3}\\cdot \\frac{3^\\nu - 1}{3^P - 1}^{1/2}.
 ```
-`M` is the dimension of the data or the number of edges on the prism that don't
+`P` is the dimension of the data or the number of edges on the prism that don't
 span the whole dataset.
 
 Then the optimal boxsize ``r_0`` computes as
@@ -501,7 +506,7 @@ r_0 = \\ell / \\eta_\\textrm{opt}^{1/\\nu}.
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
-function estimate_r0_buenoorovio(X, M = size(X, 2))
+function estimate_r0_buenoorovio(X, P = size(X, 2))
     mini, maxi = minmaxima(X)
     N = length(X)
     R = maximum(maxi .- mini)
@@ -524,7 +529,7 @@ function estimate_r0_buenoorovio(X, M = size(X, 2))
         # Estimate the effictive size of the chaotic attractor.
         ℓ = r_ℓ * η_ℓ^(1/ν)
         # Calculate the optimal number of filled boxes according to Bueno-Orovio
-        η_opt = N^(2/3) * ((3^ν - 1/2) / (3^M - 1))^(1/2)
+        η_opt = N^(2/3) * ((3^ν - 1/2) / (3^P - 1))^(1/2)
         # The optimal box size is the effictive size divided by the box number # to the power of the inverse dimension.
         r0 = ℓ / η_opt^(1/ν)
         !isnan(r0) && break

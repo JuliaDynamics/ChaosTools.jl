@@ -1,3 +1,5 @@
+# 2.1.1
+* Fixed bug in `estimate_r0_buenoorovio` that didn't consider min pairwise distance = 0
 # 2.1
 * Various improvements to the boxed correlation sum method. Now it also uses an automatic prism dimension.
 

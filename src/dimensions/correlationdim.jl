@@ -506,12 +506,21 @@ r_0 = \\ell / \\eta_\\textrm{opt}^{1/\\nu}.
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
-function estimate_r0_buenoorovio(X, P = size(X, 2))
+function estimate_r0_buenoorovio(X, P = autoprismdim(X))
     mini, maxi = minmaxima(X)
     N = length(X)
     R = maximum(maxi .- mini)
     # The possibility of a bad pick exists, if so, the calculation is repeated.
     ν = zero(eltype(X))
+    min_d, _ = minimum_pairwise_distance(X)
+    if min_d == 0
+        @warn(
+        "Minimum distance in the dataset is zero! Probably because of having data "*
+        "with low resolution, or duplicate data points. Setting to `d₊/1000` for now.")
+        min_d = R/(10^3)
+    end
+    lower = log10(min_d)
+    
     # Sample N/10 datapoints out of data for rough estimate of effective size.
     sample1 = X[unique(rand(1:N, N÷10))] |> Dataset
     r_ℓ = R / 10
@@ -521,11 +530,10 @@ function estimate_r0_buenoorovio(X, P = size(X, 2))
         # Sample √N datapoints for rough dimension estimate
         sample2 = X[unique(rand(1:N, ceil(Int, sqrt(N))))] |> Dataset
         # Define logarithmic series of radii.
-        lower = log10(minimum_pairwise_distance(X)[1])
-        εs = 10 .^ range(lower, stop = log10(R), length = 16)
+        εs = 10.0 .^ range(lower, log10(R); length = 16)
         # Estimate ν from a sample using the Grassberger Procaccia algorithm.
         cm = correlationsum(sample2, εs)
-        ν = linear_region(log.(εs), log.(cm), tol = 0.5)[2]
+        ν = linear_region(log.(εs), log.(cm); tol = 0.5)[2]
         # Estimate the effictive size of the chaotic attractor.
         ℓ = r_ℓ * η_ℓ^(1/ν)
         # Calculate the optimal number of filled boxes according to Bueno-Orovio

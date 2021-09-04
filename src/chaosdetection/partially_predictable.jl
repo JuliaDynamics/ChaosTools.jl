@@ -72,7 +72,7 @@ function predictability(ds::DynamicalSystem;
                         T_max::Real = Inf,
                         δ_range::AbstractArray = 10.0 .^ (-9:-6),
                         diffeq...
-                        )
+    )
 
     λ_max < 0 && return :REG, 1.0, 1.0
     # Internal Constants

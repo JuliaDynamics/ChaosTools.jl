@@ -3,7 +3,7 @@
 #######################################################################################
 using Distances, Roots
 export correlationsum, grassberger_dim, boxed_correlationsum,
-estimate_r0_buenoorovio, data_boxing, autoprismdim
+estimate_r0_buenoorovio, data_boxing, autoprismdim, estimate_r0_theiler
 
 """
     correlationsum(X, ε::Real; w = 0, norm = Euclidean(), q = 2) → C_q(ε)
@@ -37,7 +37,7 @@ If `εs` is a vector, `C_q` is calculated for each `ε ∈ εs`.
 If also `q=2`, some strong optimizations are done, but this requires the allocation
 a matrix of size `N×N`. If this is larger than your available memory please use instead:
 ```julia
-[correlationsum(..., ε) for ε in εs]
+[correlationsum(X, ε; ...) for ε in εs]
 ```
 
 See [`grassberger`](@ref) for more.
@@ -441,9 +441,9 @@ function inner_correlationsum_q(indices_X, indices_Y, data, εs, q::Real; norm =
 end
 
 """
-    estimate_r0_theiler(data)
-Estimates a reasonable size for boxing the data before calculating the
-correlation dimension proposed by Theiler[^Theiler1987].
+    estimate_r0_theiler(X::Dataset)
+Estimates a reasonable size for boxing the data `X` before calculating the
+[`boxed_correlationsum`](@ref) proposed by Theiler[^Theiler1987].
 To do so the dimension is estimated by running the algorithm by Grassberger and
 Procaccia[^Grassberger1983] with `√N` points where `N` is the number of total
 data points. Then the optimal boxsize ``r_0`` computes as
@@ -459,11 +459,18 @@ where ``R`` is the size of the chaotic attractor and ``\\nu`` is the estimated d
 function estimate_r0_theiler(data)
     N = length(data)
     mini, maxi = minmaxima(data)
-    R = maximum(maxi .- mini)
+    R = mean(maxi .- mini)
     # Sample √N datapoints for a rough estimate of the dimension.
     data_sample = data[unique(rand(1:N, ceil(Int, sqrt(N))))] |> Dataset
     # Define radii for the rough dimension estimate
-    lower = log10(minimum_pairwise_distance(data_sample)[1])
+    min_d, _ = minimum_pairwise_distance(data)
+    if min_d == 0
+        @warn(
+        "Minimum distance in the dataset is zero! Probably because of having data "*
+        "with low resolution, or duplicate data points. Setting to `d₊/1000` for now.")
+        min_d = R/(10^3)
+    end
+    lower = log10(min_d)
     εs = 10 .^ range(lower, stop = log10(R), length = 12)
     # Actually estimate the dimension.
     cm = correlationsum(data_sample, εs)
@@ -473,7 +480,7 @@ function estimate_r0_theiler(data)
 end
 
 """
-    estimate_r0_buenoorovio(X, P = size(X, 2))
+    estimate_r0_buenoorovio(X::Dataset, P = size(X, 2))
 Estimates a reasonable size for boxing the time series `X` proposed by
 Bueno-Orovio and Pérez-García[^Bueno2007] before calculating the correlation
 dimension as presented by Theiler[^Theiler1983]. If instead of boxes, prisms
@@ -509,7 +516,7 @@ r_0 = \\ell / \\eta_\\textrm{opt}^{1/\\nu}.
 function estimate_r0_buenoorovio(X, P = size(X, 2))
     mini, maxi = minmaxima(X)
     N = length(X)
-    R = maximum(maxi .- mini)
+    R = mean(maxi .- mini)
     # The possibility of a bad pick exists, if so, the calculation is repeated.
     ν = zero(eltype(X))
     min_d, _ = minimum_pairwise_distance(X)

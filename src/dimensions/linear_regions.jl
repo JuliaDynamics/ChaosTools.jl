@@ -145,7 +145,7 @@ that are a good estimate for sizes ε that are used in calculating a [Fractal Di
 It is strongly recommended to [`standardize`](@ref) input dataset `A` before using this
 function.
 
-Let `d₋` be the minimum pair-wise distance in `A` and `d₊` the maximum distance along
+Let `d₋` be the minimum pair-wise distance in `A` and `d₊` the average total length along
 each of the dimensions of `A`.
 Then `lower = log(base, d₋)` and `upper = log(base, d₊)`.
 Because by default `w=1, z=-1`, the returned sizes are an order of mangitude
@@ -162,7 +162,7 @@ function estimate_boxsizes(
     )
 
     mi, ma = minmaxima(A)
-    max_d = maximum(ma - mi)
+    max_d = mean(ma - mi)
     min_d, _ = minimum_pairwise_distance(A)
     if min_d == 0
         @warn(

@@ -507,7 +507,6 @@ r_0 = \\ell / \\eta_\\textrm{opt}^{1/\\nu}.
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
 function estimate_r0_buenoorovio(X, P = size(X, 2))
-function estimate_r0_buenoorovio(X, P = autoprismdim(X))
     mini, maxi = minmaxima(X)
     N = length(X)
     R = maximum(maxi .- mini)

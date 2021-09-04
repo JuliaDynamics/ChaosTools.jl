@@ -1,3 +1,6 @@
+# 2.1
+* Various improvements to the boxed correlation sum method. Now it also uses an automatic prism dimension.
+
 # 2.0
 * The keyword `dt` that was used to denote a chunk of time in many functions that 
   a `DynamicalSystem` has been changed to `Δt` due to conflicts with DifferentialEquations.jl solver options. This change is breaking and cannot be warned or deprecated. Functions affected: `lyapunov, lyapunovspectrum, gali, expansionentropy, orbitdiagram`

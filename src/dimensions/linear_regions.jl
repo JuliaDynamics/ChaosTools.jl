@@ -112,9 +112,12 @@ and its slope. The region starts and stops at `x[ind1:ind2]`.
 The keywords `dxi, tol` are propagated as-is to [`linear_regions`](@ref).
 The keyword `ignore_saturation = true` ignores saturation that (typically) happens
 at the final points of the curve `y(x)`, where the curve flattens out.
+
+The keyword `warning = true` prints a warning if the linear region is less than 1/3
+of the available x-axis.
 """
 function linear_region(x::AbstractVector, y::AbstractVector;
-    dxi::Int = 1, tol::Real = 0.2, ignore_saturation = true)
+    dxi::Int = 1, tol::Real = 0.2, ignore_saturation = true, warning = true)
 
     if ignore_saturation
         j = findfirst(i -> y[i] ≠ y[i-1], length(y):-1:2)
@@ -127,7 +130,7 @@ function linear_region(x::AbstractVector, y::AbstractVector;
     lrs, tangents = linear_regions(x,y; dxi, tol)
     # Find biggest linear region:
     j = findmax(diff(lrs))[2]
-    if lrs[j+1] - lrs[j] ≤ length(x)÷3
+    if lrs[j+1] - lrs[j] ≤ length(x)÷3 && warning
         @warn "Found linear region spans less than a 3rd of the available x-axis "*
               "and might imply inaccurate slope or insufficient data. "*
               "Recommended: plot `x` vs `y`."
@@ -155,16 +158,18 @@ distance.
 ## Keywords
 * `w = 1, z = -1, k = 20` : as explained above.
 * `base = MathConstants.e` : the base used in the `log` function.
+* `warning = true`: Print some warnings for bad estimates.
 """
 function estimate_boxsizes(
         A::AbstractDataset;
-        k::Int = 20, z = -1, w = 1, base = MathConstants.e
+        k::Int = 20, z = -1, w = 1, base = MathConstants.e,
+        warning = true,
     )
 
     mi, ma = minmaxima(A)
     max_d = mean(ma - mi)
     min_d, _ = minimum_pairwise_distance(A)
-    if min_d == 0
+    if min_d == 0 && warning
         @warn(
         "Minimum distance in the dataset is zero! Probably because of having data "*
         "with low resolution, or duplicate data points. Setting to `d₊/base^4` for now.")
@@ -176,13 +181,13 @@ function estimate_boxsizes(
 
     if lower ≥ upper
         error("`lower ≥ upper`. There must be something fundamentally wrong with dataset.")
-    elseif lower+w ≥ upper+z
+    elseif lower+w ≥ upper+z && warning
         @warn(
         "Automatic boxsize determination was inappropriate: `lower+w` was found ≥ than "*
         "`upper+z`. Returning `base .^ range(lower, upper; length = k)`. "*
         "Please adjust keywords or provide a bigger dataset.")
         εs = float(base) .^ range(lower, upper; length = k)
-    elseif abs(upper+z - (lower+w)) < 2
+    elseif abs(upper+z - (lower+w)) < 2 && warning
         @warn(
         "Boxsize limits do not differ by at least 2 orders of magnitude. "*
         "Setting `w-=1` and `z+=1`, please adjust keywords `w, z` otherwise.")

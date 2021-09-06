@@ -3,6 +3,7 @@ using Test
 using StatsBase
 using Statistics
 using ChaosTools.DynamicalSystemsBase
+using ChaosTools.DelayEmbeddings: standardize
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
@@ -44,10 +45,10 @@ println("\nTesting correlation sum with boxing beforehand...")
 @testset "Theilers correlation boxing algorithm" begin
     @testset "Henon Map" begin
         ds = Systems.henon()
-        ts = trajectory(ds, 10000)
-        r0 = estimate_r0_buenoorovio(ts)
+        ts = standardize(trajectory(ds, 10000))
+        r0 = estimate_r0_buenoorovio(ts)[1]
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
-        C = [correlationsum(ts, e) for e in es]
+        C = correlationsum(ts, es)
         @test boxed_correlationsum(ts, es, r0) ≈ C
         @test boxed_correlationsum(ts, es) ≈ C
         @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlationsum(ts, es, q = 2.3)
@@ -56,10 +57,10 @@ println("\nTesting correlation sum with boxing beforehand...")
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
-        ts = trajectory(ds, 1000; Δt = 0.1)
-        r0 = estimate_r0_buenoorovio(ts)
+        ts = standardize(trajectory(ds, 1000; Δt = 0.1))
+        r0 = estimate_r0_buenoorovio(ts)[1]
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
-        C = [correlationsum(ts, e) for e in es]
+        C = correlationsum(ts, es)
         @test boxed_correlationsum(ts, es, r0) ≈ C
         @test boxed_correlationsum(ts, es) ≈ C
         @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlationsum(ts, es; q = 2.3)

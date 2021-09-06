@@ -83,10 +83,10 @@ end
 # Optimized version
 function correlationsum_2(X, εs::AbstractVector, norm = Euclidean(), w = 0)
     @assert issorted(εs) "Sorted εs required for optimized version."
-    try
-        d = distancematrix(X, norm)
+    d = try
+        distancematrix(X, norm)
     catch err
-        @warn "Couldn't create distance metric (OutOfMemoryError). Using slower algorithm."
+        @warn "Couldn't create distance matrix ($(typeof(err))). Using slower algorithm..."
         return [correlationsum_2(X, ε, norm) for ε in εs]
     end
     return correlationsum_2_fb(X, εs, d, w) # function barrier for the d result

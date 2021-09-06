@@ -280,7 +280,7 @@ function autoprismdim(data, version = :bueno)
 end
 
 """
-    data_boxing(data, r0, P = size(data, 2))
+    data_boxing(data, r0, P) → boxes, contents
 Distribute the `data` points into boxes of size `r0`. Return box positions
 and the contents of each box as two separate vectors. Implemented according to
 the paper by Theiler[^Theiler1987] improving the algorithm by Grassberger and
@@ -293,9 +293,8 @@ See also: [`boxed_correlationsum`](@ref).
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
-function data_boxing(data, r0, P = size(data, 2))
-    @assert P ≤ size(data, 2) "Prism dimension has to be lower or equal than "*
-    "data dimension."
+function data_boxing(data, r0, P)
+    @assert P ≤ size(data, 2) "Prism dimension has to be ≤ than data dimension."
     mini = minima(data)[1:P]
 
     # Map each datapoint to its bin edge and sort the resulting list:
@@ -309,7 +308,7 @@ function data_boxing(data, r0, P = size(data, 2))
     prior, prior_perm = 1, permutations[1]
     # distributes all permutation indices into boxes
     for (index, perm) in enumerate(permutations)
-        if bins[perm] != bins[prior_perm]
+        if bins[perm] ≠ bins[prior_perm]
             push!(contents, permutations[prior:index-1])
             prior, prior_perm = index, perm
         end
@@ -325,7 +324,7 @@ For a vector of `boxes` and the indices of their `contents` inside of `data`,
 calculate the classic correlationsum of a radius or multiple radii `εs`.
 `w` is the Theiler window, for explanation see [`boxed_correlationsum`](@ref).
 """
-function boxed_correlationsum_2(boxes, contents, data, εs; w = 0, progress = false)
+function boxed_correlationsum_2(boxes, contents, data, εs; w = 0, show_progress = false)
     Cs = zeros(eltype(data), length(εs))
     N = length(data)
     M = length(boxes)
@@ -403,7 +402,7 @@ For a vector of `boxes` and the indices of their `contents` inside of `data`,
 calculate the `q`-order correlationsum of a radius or radii `εs`.
 `w` is the Theiler window, for explanation see [`boxed_correlationsum`](@ref).
 """
-function boxed_correlationsum_q(boxes, contents, data, εs, q; w = 0)
+function boxed_correlationsum_q(boxes, contents, data, εs, q; w = 0, show_progress = false)
     q <= 1 && @warn "This function is currently not specialized for q <= 1" *
     " and may show unexpected behaviour for these values."
     Cs = zeros(eltype(data), length(εs))

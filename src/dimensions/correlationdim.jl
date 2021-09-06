@@ -518,7 +518,7 @@ function estimate_r0_theiler(data)
     εs = 10 .^ range(lower, stop = log10(R), length = 12)
     # Actually estimate the dimension.
     cm = correlationsum(data_sample, εs)
-    ν = linear_region(log.(εs), log.(cm), tol = 0.5)[2]
+    ν = linear_region(log.(εs), log.(cm), tol = 0.5, warning = false)[2]
     # The combination yields the optimal box size
     r0 = R * (2/N)^(1/ν)
     return r0, min_d
@@ -584,7 +584,7 @@ function estimate_r0_buenoorovio(X, P = size(X, 2))
         εs = 10.0 .^ range(log10(min_d), log10(R); length = 16)
         # Estimate ν from a sample using the Grassberger Procaccia algorithm.
         cm = correlationsum(sample2, εs)
-        ν = linear_region(log.(εs), log.(cm); tol = 0.5)[2]
+        ν = linear_region(log.(εs), log.(cm); tol = 0.5, warning = false)[2]
         # Estimate the effictive size of the chaotic attractor.
         ℓ = r_ℓ * η_ℓ^(1/ν)
         # Calculate the optimal number of filled boxes according to Bueno-Orovio

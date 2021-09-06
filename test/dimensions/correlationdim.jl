@@ -44,7 +44,7 @@ println("\nTesting correlation sum with boxing beforehand...")
 @testset "Theilers correlation boxing algorithm" begin
     @testset "Henon Map" begin
         ds = Systems.henon()
-        ts = trajectory(ds, 10000)
+        ts = standardize(trajectory(ds, 10000))
         r0 = estimate_r0_buenoorovio(ts)
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
         C = [correlationsum(ts, e) for e in es]
@@ -56,7 +56,7 @@ println("\nTesting correlation sum with boxing beforehand...")
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
-        ts = trajectory(ds, 1000; Δt = 0.1)
+        ts = standardize(trajectory(ds, 1000; Δt = 0.1))
         r0 = estimate_r0_buenoorovio(ts)
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
         C = [correlationsum(ts, e) for e in es]

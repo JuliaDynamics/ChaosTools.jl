@@ -34,14 +34,10 @@ explicit definition of the q-order correlationsum.
     correlationsum(X, εs::AbstractVector; w, norm, q) → C_q(ε)
 
 If `εs` is a vector, `C_q` is calculated for each `ε ∈ εs`.
-If also `q=2`, some strong optimizations are done, but this requires the allocation
-a matrix of size `N×N`. If this is larger than your available memory please use instead:
-```julia
-[correlationsum(X, ε; ...) for ε in εs]
-```
+If also `q=2`, we attempt to do further optimizations are done, if the allocation
+a matrix of size `N×N` is possible
 
-See [`grassberger`](@ref) for more.
-See also [`takens_best_estimate`](@ref).
+See [`grassberger`](@ref) for more. See also [`takens_best_estimate`](@ref).
 
 [^Grassberger]: Peter Grassberger (2007) [Grassberger-Procaccia algorithm. Scholarpedia, 2(5):3043.](http://dx.doi.org/10.4249/scholarpedia.3043)
 
@@ -87,7 +83,15 @@ end
 # Optimized version
 function correlationsum_2(X, εs::AbstractVector, norm = Euclidean(), w = 0)
     @assert issorted(εs) "Sorted εs required for optimized version."
-    d = distancematrix(X, norm)
+    try
+        d = distancematrix(X, norm)
+    catch err
+        @warn "Couldn't create distance metric (OutOfMemoryError). Using slower algorithm."
+        return [correlationsum_2(X, ε, norm) for ε in εs]
+    end
+    return correlationsum_2_fb(X, εs, d, w) # function barrier for the d result
+end
+function correlationsum_2_fb(X, εs, d, w)
     Cs = zeros(eltype(X), length(εs))
     N = length(X)
     factor = 2/((N-w)*(N-1-w))

@@ -54,17 +54,19 @@ function correlationsum(X, ε; q = 2, norm = Euclidean(), w = 0, show_progress =
 end
 
 function correlationsum_2(X, ε::Real, norm, w, show_progress)
-    N, C = length(X), zero(eltype(X))
+    N = length(X)
     if show_progress
         progress = ProgressMeter.Progress(N; desc = "Correlation sum: ", dt = 1.0)
     end
-    for (i, x) in enumerate(X)
+    Cs = zeros(Threads.nthreads())
+    Threads.@threads for (i, x) in enumerate(X)
+        t = Threads.threadid()
         for j in i+1+w:N
-            C += evaluate(norm, x, X[j]) < ε
+            Cs[t] += evaluate(norm, x, X[j]) < ε
         end
-        show_progress && ProgressMeter.update!(progress, i)
+        show_progress && ProgressMeter.next!(progress)
     end
-    return C * 2 / ((N-w-1)*(N-w))
+    return sum(Cs) * 2 / ((N-w-1)*(N-w))
 end
 
 function correlationsum_q(X, ε::Real, q, norm, w, show_progress)
@@ -524,7 +526,7 @@ function estimate_r0_theiler(data)
 end
 
 """
-    estimate_r0_buenoorovio(X::Dataset, P = size(X, 2))
+    estimate_r0_buenoorovio(X::Dataset, P = autoprismdim(X))
 Estimates a reasonable size for boxing the time series `X` proposed by
 Bueno-Orovio and Pérez-García[^Bueno2007] before calculating the correlation
 dimension as presented by Theiler[^Theiler1983]. If instead of boxes, prisms
@@ -557,7 +559,7 @@ r_0 = \\ell / \\eta_\\textrm{opt}^{1/\\nu}.
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
-function estimate_r0_buenoorovio(X, P = size(X, 2))
+function estimate_r0_buenoorovio(X, P = autoprismdim(X))
     mini, maxi = minmaxima(X)
     N = length(X)
     R = mean(maxi .- mini)
@@ -574,7 +576,7 @@ function estimate_r0_buenoorovio(X, P = size(X, 2))
     # Sample N/10 datapoints out of data for rough estimate of effective size.
     sample1 = X[unique(rand(1:N, N÷10))] |> Dataset
     r_ℓ = R / 10
-    η_ℓ = length(data_boxing(sample1, r_ℓ)[1])
+    η_ℓ = length(data_boxing(sample1, r_ℓ, P)[1])
     r0 = zero(eltype(X))
     while true
         # Sample √N datapoints for rough dimension estimate

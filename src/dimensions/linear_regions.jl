@@ -59,6 +59,7 @@ function linear_regions(
         x::AbstractVector, y::AbstractVector;
         method = :sequential, dxi::Int = method == :overlap ? 3 : 1, tol = 0.25,
     )
+    @assert length(x) == length(y)
     return if method == :overlap
         linear_regions_overlap(x, y, dxi, tol)
     elseif method == :sequential
@@ -159,11 +160,13 @@ distance.
 * `w = 1, z = -1, k = 20` : as explained above.
 * `base = MathConstants.e` : the base used in the `log` function.
 * `warning = true`: Print some warnings for bad estimates.
+* `autoexpand = true`: If the final estimated range does not cover at least 2 orders of
+  magnitude, it is automatically expanded by setting `w-=1` and `z+=1`.
 """
 function estimate_boxsizes(
         A::AbstractDataset;
         k::Int = 20, z = -1, w = 1, base = MathConstants.e,
-        warning = true,
+        warning = true, autoexpand = true,
     )
 
     mi, ma = minmaxima(A)
@@ -187,10 +190,12 @@ function estimate_boxsizes(
         "`upper+z`. Returning `base .^ range(lower, upper; length = k)`. "*
         "Please adjust keywords or provide a bigger dataset.")
         εs = float(base) .^ range(lower, upper; length = k)
-    elseif abs(upper+z - (lower+w)) < 2 && warning
-        @warn(
-        "Boxsize limits do not differ by at least 2 orders of magnitude. "*
-        "Setting `w-=1` and `z+=1`, please adjust keywords `w, z` otherwise.")
+    elseif abs(upper+z - (lower+w)) < 2 && autoexpand
+        if warning
+            @warn(
+            "Boxsize limits do not differ by at least 2 orders of magnitude. "*
+            "Setting `w-=1` and `z+=1`, please adjust keywords `w, z` otherwise.")
+        end
         εs = float(base) .^ range(lower+w-1, upper+z+1; length = k)
     else
         εs = float(base) .^ range(lower+w, upper+z; length = k)

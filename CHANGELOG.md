@@ -1,3 +1,8 @@
+# 2.3
+* Correlation sum functions now have a `show_progress = false` keyword. It shows a progress bar!
+* `linear_region` and `estimate_boxsizes` have `warning = true` keyword.
+* The `estimate_boxsizes` function now has keywords `autoexpand = true, we = w, ze = z`.
+
 # 2.2
 * Functions `estimate_r0_buenoorovio, estimate_r0_theiler` now return `r0, ε0` with `ε0` the minimum inter-point distance. This increases performance of other methods by reducing duplicate computations.
 * Fixed bug in `estimate_r0_buenoorovio` that didn't consider min pairwise distance = 0.

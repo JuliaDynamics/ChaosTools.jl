@@ -1,6 +1,8 @@
 using ChaosTools
 using Test
 using DynamicalSystemsBase, DelayEmbeddings
+using StatsBase
+standardize = DelayEmbeddings.standardize
 
 ti = time()
 @testset "ChaosTools tests" begin

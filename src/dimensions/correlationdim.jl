@@ -1,3 +1,4 @@
+import ProgressMeter
 #######################################################################################
 # Original correlation sum
 #######################################################################################
@@ -8,7 +9,8 @@ estimate_r0_buenoorovio, data_boxing, autoprismdim, estimate_r0_theiler
 """
     correlationsum(X, ε::Real; w = 0, norm = Euclidean(), q = 2) → C_q(ε)
 Calculate the `q`-order correlation sum of `X` (`Dataset` or timeseries)
-for a given radius `ε` and `norm`.
+for a given radius `ε` and `norm`. They keyword `show_progress = false` can be used
+to display a progress bar for large `X`.
 
 The function [`boxed_correlationsum`](@ref) is faster and should be preferred over this one.
 
@@ -43,27 +45,35 @@ See [`grassberger`](@ref) for more. See also [`takens_best_estimate`](@ref).
 
 [^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)
 """
-function correlationsum(X, ε; q = 2, norm = Euclidean(), w = 0)
+function correlationsum(X, ε; q = 2, norm = Euclidean(), w = 0, show_progress = false)
     if q == 2
-        correlationsum_2(X, ε, norm, w)
+        correlationsum_2(X, ε, norm, w, show_progress)
     else
-        correlationsum_q(X, ε, q, norm, w)
+        correlationsum_q(X, ε, q, norm, w, show_progress)
     end
 end
 
-function correlationsum_2(X, ε::Real, norm = Euclidean(), w = 0)
-    N, C = length(X), zero(eltype(X))
-    for (i, x) in enumerate(X)
+function correlationsum_2(X, ε::Real, norm, w, show_progress)
+    N = length(X)
+    if show_progress
+        progress = ProgressMeter.Progress(N; desc = "Correlation sum: ", dt = 1.0)
+    end
+    C = zero(eltype(X))
+    @inbounds for (i, x) in enumerate(X)
         for j in i+1+w:N
             C += evaluate(norm, x, X[j]) < ε
         end
+        show_progress && ProgressMeter.next!(progress)
     end
     return C * 2 / ((N-w-1)*(N-w))
 end
 
-function correlationsum_q(X, ε::Real, q, norm = Euclidean(), w = 0)
+function correlationsum_q(X, ε::Real, q, norm, w, show_progress)
     N, C = length(X), zero(eltype(X))
     normalisation = (N-2w)*(N-2w-one(eltype(X)))^(q-1)
+    if show_progress
+        progress = ProgressMeter.Progress(length(1+w:N-w); desc = "Correlation sum: ", dt = 1.0)
+    end
     for i in 1+w:N-w
         x = X[i]
         C_current = zero(eltype(X))
@@ -76,52 +86,65 @@ function correlationsum_q(X, ε::Real, q, norm = Euclidean(), w = 0)
             C_current += evaluate(norm, x, X[j]) < ε
         end
         C += C_current^(q - 1)
+        show_progress && ProgressMeter.next!(progress)
     end
     return (C / normalisation) ^ (1 / (q-1))
 end
 
 # Optimized version
-function correlationsum_2(X, εs::AbstractVector, norm = Euclidean(), w = 0)
+function correlationsum_2(X, εs::AbstractVector, norm, w, show_progress)
     @assert issorted(εs) "Sorted εs required for optimized version."
     d = try
         distancematrix(X, norm)
     catch err
         @warn "Couldn't create distance matrix ($(typeof(err))). Using slower algorithm..."
-        return [correlationsum_2(X, ε, norm) for ε in εs]
+        return [correlationsum_2(X, ε, norm, w, show_progress) for ε in εs]
     end
-    return correlationsum_2_fb(X, εs, d, w) # function barrier for the d result
+    return correlationsum_2_fb(X, εs, d, w, show_progress) # function barrier
 end
-function correlationsum_2_fb(X, εs, d, w)
+function correlationsum_2_fb(X, εs, d, w, show_progress)
     Cs = zeros(eltype(X), length(εs))
     N = length(X)
     factor = 2/((N-w)*(N-1-w))
+    if show_progress
+        K = length(length(εs)÷2:-1:1)
+        M = K + length((length(εs)÷2 + 1):length(εs))
+        progress = ProgressMeter.Progress(M; desc = "Correlation sum: ", dt = 1.0)
+    end
+
     # First loop: mid-way ε until lower saturation point (C=0)
-    for k in length(εs)÷2:-1:1
+    for (ki, k) in enumerate(length(εs)÷2:-1:1)
         ε = εs[k]
         for i in 1:N
             @inbounds Cs[k] += count(d[j, i] < ε for j in i+1+w:N)
         end
+        show_progress && ProgressMeter.update!(progress, ki)
         Cs[k] == 0 && break
     end
     # Second loop: mid-way ε until higher saturation point (C=max)
-    for k in (length(εs)÷2 + 1):length(εs)
+    for (ki, k) in enumerate((length(εs)÷2 + 1):length(εs))
         ε = εs[k]
         for i in 1:N
             @inbounds Cs[k] += count(d[j, i] < ε for j in i+1+w:N)
         end
+        show_progress && ProgressMeter.update!(progress, ki+K)
         if Cs[k] ≈ 1/factor
             Cs[k:end] .= 1/factor
             break
         end
     end
+    show_progress && ProgressMeter.finish!(progress)
     return Cs .* factor
 end
 
-function correlationsum_q(X, εs::AbstractVector, q, norm = Euclidean(), w = 0)
+function correlationsum_q(X, εs::AbstractVector, q, norm, w, show_progress)
     @assert issorted(εs) "Sorted εs required for optimized version."
     Nε, T, N = length(εs), eltype(X), length(X)
     Cs = zeros(T, Nε)
     normalisation = (N-2w)*(N-2w-one(T))^(q-1)
+    if show_progress
+        progress = ProgressMeter.Progress(length(1+w:N-w); desc = "Correlation sum: ", dt = 1.0)
+    end
     for i in 1+w:N-w
         x = X[i]
         C_current = zeros(T, Nε)
@@ -137,6 +160,7 @@ function correlationsum_q(X, εs::AbstractVector, q, norm = Euclidean(), w = 0)
             end
         end
         Cs .+= C_current .^ (q-1)
+        show_progress && ProgressMeter.next!(progress)
     end
     return (Cs ./ normalisation) .^ (1/(q-1))
 end
@@ -181,18 +205,24 @@ end
 # Boxed Correlation sum (we distribute data to boxes beforehand)
 ################################################################################
 """
-    boxed_correlationsum(data, εs, r0 = maximum(εs); q=2, P=autoprisimdim(data), w=0) → Cs
+    boxed_correlationsum(X::Dataset, εs, r0 = maximum(εs); kwargs...) → Cs
 
 Estimate the box assisted q-order correlation sum[^Kantz2003] `Cs` out of a
-dataset `data` for each radius in `εs`, by splitting the data into boxes of size `r0`
+dataset `X` for each radius in `εs`, by splitting the data into boxes of size `r0`
 beforehand. This method is much faster than [`correlationsum`](@ref), **provided that** the 
 box size `r0` is significantly smaller than then the attractor length.
 A good estimate for `r0` is [`estimate_r0_buenoorovio`](@ref).
 
-    boxed_correlationsum(data; q = 2 , P = autoprisimdim(data), w = 0) → εs, Cs
+    boxed_correlationsum(X; kwargs...) → εs, Cs
 
 In this method the minimum inter-point distance and [`estimate_r0_buenoorovio`](@ref)
 are used to estimate good `εs` for the calculation, which are also returned.
+
+## Keywords
+* `q = 2`
+* `P = autoprismdim(data)` : The prism dimension.
+* `w = 0` : The [Theiler window](@ref).
+* `show_progress = false` : Whether to display a progress bar for the calculation.
 
 ## Description
 `C_q(ε)` is calculated for every `ε ∈ εs` and each of the boxes to then be
@@ -211,25 +241,26 @@ and also [`data_boxing`](@ref) to use the algorithm that splits data into boxes.
 
 [^Theiler1987]: Theiler, [Efficient algorithm for estimating the correlation dimension from a set of discrete points. Physical Review A, 36](https://doi.org/10.1103/PhysRevA.36.4456)
 """
-function boxed_correlationsum(data; q = 2, P = autoprismdim(data), w = 0)
+function boxed_correlationsum(data; q = 2, P = autoprismdim(data), w = 0, show_progress=false)
     r0, ε0 = estimate_r0_buenoorovio(data, P)
     @assert  r0 < ε0 "The calculated box size was smaller than the minimum interpoint " *
     "distance. Please choose manually."
-    εs = 10 .^ range(log10(ε0), log10(r0), length = 16)
-    boxed_correlationsum(data, εs, r0; q, P, w)
+    εs = 10.0 .^ range(log10(ε0), log10(r0), length = 16)
+    boxed_correlationsum(data, εs, r0; q, P, w, show_progress)
 end
 
 function boxed_correlationsum(
         data, εs, r0 = maximum(εs);
-        q = 2, P = autoprismdim(data), w = 0
+        q = 2, P = autoprismdim(data), w = 0,
+        show_progress = false,
     )
     @assert P ≤ size(data, 2) "Prism dimension has to be lower or equal than " *
     "data dimension."
     boxes, contents = data_boxing(data, r0, P)
     if q == 2
-        boxed_correlationsum_2(boxes, contents, data, εs; w)
+        boxed_correlationsum_2(boxes, contents, data, εs; w, show_progress)
     else
-        boxed_correlationsum_q(boxes, contents, data, εs, q; w)
+        boxed_correlationsum_q(boxes, contents, data, εs, q; w, show_progress)
     end
 end
 
@@ -254,7 +285,7 @@ function autoprismdim(data, version = :bueno)
 end
 
 """
-    data_boxing(data, r0, P = size(data, 2))
+    data_boxing(data, r0, P) → boxes, contents
 Distribute the `data` points into boxes of size `r0`. Return box positions
 and the contents of each box as two separate vectors. Implemented according to
 the paper by Theiler[^Theiler1987] improving the algorithm by Grassberger and
@@ -267,9 +298,8 @@ See also: [`boxed_correlationsum`](@ref).
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
-function data_boxing(data, r0, P = size(data, 2))
-    @assert P ≤ size(data, 2) "Prism dimension has to be lower or equal than "*
-    "data dimension."
+function data_boxing(data, r0, P)
+    @assert P ≤ size(data, 2) "Prism dimension has to be ≤ than data dimension."
     mini = minima(data)[1:P]
 
     # Map each datapoint to its bin edge and sort the resulting list:
@@ -283,7 +313,7 @@ function data_boxing(data, r0, P = size(data, 2))
     prior, prior_perm = 1, permutations[1]
     # distributes all permutation indices into boxes
     for (index, perm) in enumerate(permutations)
-        if bins[perm] != bins[prior_perm]
+        if bins[perm] ≠ bins[prior_perm]
             push!(contents, permutations[prior:index-1])
             prior, prior_perm = index, perm
         end
@@ -299,13 +329,18 @@ For a vector of `boxes` and the indices of their `contents` inside of `data`,
 calculate the classic correlationsum of a radius or multiple radii `εs`.
 `w` is the Theiler window, for explanation see [`boxed_correlationsum`](@ref).
 """
-function boxed_correlationsum_2(boxes, contents, data, εs; w = 0)
+function boxed_correlationsum_2(boxes, contents, data, εs; w = 0, show_progress = false)
     Cs = zeros(eltype(data), length(εs))
     N = length(data)
-    for index in 1:length(boxes)
+    M = length(boxes)
+    if show_progress
+        progress = ProgressMeter.Progress(M; desc = "Boxed correlation sum: ", dt = 1.0)
+    end
+    for index in 1:M
         indices_neighbors = find_neighborboxes_2(index, boxes, contents)
         indices_box = contents[index]
         Cs .+= inner_correlationsum_2(indices_box, indices_neighbors, data, εs; w)
+        show_progress && ProgressMeter.update!(progress, index)
     end
     Cs .* (2 / ((N - w) * (N - w - 1)))
 end
@@ -372,15 +407,20 @@ For a vector of `boxes` and the indices of their `contents` inside of `data`,
 calculate the `q`-order correlationsum of a radius or radii `εs`.
 `w` is the Theiler window, for explanation see [`boxed_correlationsum`](@ref).
 """
-function boxed_correlationsum_q(boxes, contents, data, εs, q; w = 0)
+function boxed_correlationsum_q(boxes, contents, data, εs, q; w = 0, show_progress = false)
     q <= 1 && @warn "This function is currently not specialized for q <= 1" *
     " and may show unexpected behaviour for these values."
     Cs = zeros(eltype(data), length(εs))
     N = length(data)
-    for index in 1:length(boxes)
+    M = length(boxes)
+    if show_progress
+        progress = ProgressMeter.Progress(M; desc = "Boxed correlation sum: ", dt = 1.0)
+    end
+    for index in 1:M
         indices_neighbors = find_neighborboxes_q(index, boxes, contents, q)
         indices_box = contents[index]
         Cs .+= inner_correlationsum_q(indices_box, indices_neighbors, data, εs, q; w)
+        show_progress && ProgressMeter.update!(progress, index)
     end
     clamp.((Cs ./ ((N - 2w) * (N - 2w - 1) ^ (q-1))), 0, Inf) .^ (1 / (q-1))
 end
@@ -482,14 +522,14 @@ function estimate_r0_theiler(data)
     εs = 10 .^ range(lower, stop = log10(R), length = 12)
     # Actually estimate the dimension.
     cm = correlationsum(data_sample, εs)
-    ν = linear_region(log.(εs), log.(cm), tol = 0.5)[2]
+    ν = linear_region(log.(εs), log.(cm), tol = 0.5, warning = false)[2]
     # The combination yields the optimal box size
     r0 = R * (2/N)^(1/ν)
     return r0, min_d
 end
 
 """
-    estimate_r0_buenoorovio(X::Dataset, P = size(X, 2))
+    estimate_r0_buenoorovio(X::Dataset, P = autoprismdim(X))
 Estimates a reasonable size for boxing the time series `X` proposed by
 Bueno-Orovio and Pérez-García[^Bueno2007] before calculating the correlation
 dimension as presented by Theiler[^Theiler1983]. If instead of boxes, prisms
@@ -522,7 +562,7 @@ r_0 = \\ell / \\eta_\\textrm{opt}^{1/\\nu}.
 
 [^Grassberger1983]: Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)](https://journals-aps-org.e-bis.mpimet.mpg.de/prl/abstract/10.1103/PhysRevLett.50.346)
 """
-function estimate_r0_buenoorovio(X, P = size(X, 2))
+function estimate_r0_buenoorovio(X, P = autoprismdim(X))
     mini, maxi = minmaxima(X)
     N = length(X)
     R = mean(maxi .- mini)
@@ -539,7 +579,7 @@ function estimate_r0_buenoorovio(X, P = size(X, 2))
     # Sample N/10 datapoints out of data for rough estimate of effective size.
     sample1 = X[unique(rand(1:N, N÷10))] |> Dataset
     r_ℓ = R / 10
-    η_ℓ = length(data_boxing(sample1, r_ℓ)[1])
+    η_ℓ = length(data_boxing(sample1, r_ℓ, P)[1])
     r0 = zero(eltype(X))
     while true
         # Sample √N datapoints for rough dimension estimate
@@ -548,7 +588,7 @@ function estimate_r0_buenoorovio(X, P = size(X, 2))
         εs = 10.0 .^ range(log10(min_d), log10(R); length = 16)
         # Estimate ν from a sample using the Grassberger Procaccia algorithm.
         cm = correlationsum(sample2, εs)
-        ν = linear_region(log.(εs), log.(cm); tol = 0.5)[2]
+        ν = linear_region(log.(εs), log.(cm); tol = 0.5, warning = false)[2]
         # Estimate the effictive size of the chaotic attractor.
         ℓ = r_ℓ * η_ℓ^(1/ν)
         # Calculate the optimal number of filled boxes according to Bueno-Orovio

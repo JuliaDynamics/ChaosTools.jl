@@ -59,6 +59,7 @@ function linear_regions(
         x::AbstractVector, y::AbstractVector;
         method = :sequential, dxi::Int = method == :overlap ? 3 : 1, tol = 0.25,
     )
+    @assert length(x) == length(y)
     return if method == :overlap
         linear_regions_overlap(x, y, dxi, tol)
     elseif method == :sequential
@@ -112,9 +113,12 @@ and its slope. The region starts and stops at `x[ind1:ind2]`.
 The keywords `dxi, tol` are propagated as-is to [`linear_regions`](@ref).
 The keyword `ignore_saturation = true` ignores saturation that (typically) happens
 at the final points of the curve `y(x)`, where the curve flattens out.
+
+The keyword `warning = true` prints a warning if the linear region is less than 1/3
+of the available x-axis.
 """
 function linear_region(x::AbstractVector, y::AbstractVector;
-    dxi::Int = 1, tol::Real = 0.2, ignore_saturation = true)
+    dxi::Int = 1, tol::Real = 0.2, ignore_saturation = true, warning = true)
 
     if ignore_saturation
         j = findfirst(i -> y[i] ≠ y[i-1], length(y):-1:2)
@@ -127,7 +131,7 @@ function linear_region(x::AbstractVector, y::AbstractVector;
     lrs, tangents = linear_regions(x,y; dxi, tol)
     # Find biggest linear region:
     j = findmax(diff(lrs))[2]
-    if lrs[j+1] - lrs[j] ≤ length(x)÷3
+    if lrs[j+1] - lrs[j] ≤ length(x)÷3 && warning
         @warn "Found linear region spans less than a 3rd of the available x-axis "*
               "and might imply inaccurate slope or insufficient data. "*
               "Recommended: plot `x` vs `y`."
@@ -145,8 +149,8 @@ that are a good estimate for sizes ε that are used in calculating a [Fractal Di
 It is strongly recommended to [`standardize`](@ref) input dataset `A` before using this
 function.
 
-Let `d₋` be the minimum pair-wise distance in `A` and `d₊` the average total length along
-each of the dimensions of `A`.
+Let `d₋` be the minimum pair-wise distance in `A` and `d₊` the average total length of `A`
+along each of the dimensions of `A`.
 Then `lower = log(base, d₋)` and `upper = log(base, d₊)`.
 Because by default `w=1, z=-1`, the returned sizes are an order of mangitude
 larger than the minimum distance, and an order of magnitude smaller than the maximum
@@ -155,16 +159,21 @@ distance.
 ## Keywords
 * `w = 1, z = -1, k = 20` : as explained above.
 * `base = MathConstants.e` : the base used in the `log` function.
+* `warning = true`: Print some warnings for bad estimates.
+* `autoexpand = true`: If the final estimated range does not cover at least 2 orders of
+  magnitude, it is automatically expanded by setting `w -= we` and `z -= ze`.
+  You can set different default values to the keywords `we = w, ze = z`.
 """
 function estimate_boxsizes(
         A::AbstractDataset;
-        k::Int = 20, z = -1, w = 1, base = MathConstants.e
+        k::Int = 20, z = -1, w = 1, base = MathConstants.e,
+        warning = true, autoexpand = true, ze = z, we = w
     )
 
     mi, ma = minmaxima(A)
     max_d = mean(ma - mi)
     min_d, _ = minimum_pairwise_distance(A)
-    if min_d == 0
+    if min_d == 0 && warning
         @warn(
         "Minimum distance in the dataset is zero! Probably because of having data "*
         "with low resolution, or duplicate data points. Setting to `d₊/base^4` for now.")
@@ -176,17 +185,19 @@ function estimate_boxsizes(
 
     if lower ≥ upper
         error("`lower ≥ upper`. There must be something fundamentally wrong with dataset.")
-    elseif lower+w ≥ upper+z
+    elseif lower+w ≥ upper+z && warning
         @warn(
         "Automatic boxsize determination was inappropriate: `lower+w` was found ≥ than "*
         "`upper+z`. Returning `base .^ range(lower, upper; length = k)`. "*
         "Please adjust keywords or provide a bigger dataset.")
         εs = float(base) .^ range(lower, upper; length = k)
-    elseif abs(upper+z - (lower+w)) < 2
-        @warn(
-        "Boxsize limits do not differ by at least 2 orders of magnitude. "*
-        "Setting `w-=1` and `z+=1`, please adjust keywords `w, z` otherwise.")
-        εs = float(base) .^ range(lower+w-1, upper+z+1; length = k)
+    elseif abs(upper+z - (lower+w)) < 2 && autoexpand
+        if warning
+            @warn(
+            "Boxsize limits do not differ by at least 2 orders of magnitude. "*
+            "Setting `w-=$(we)` and `z+=$(ze)`, please adjust keywords `w, z` otherwise.")
+        end
+        εs = float(base) .^ range(lower+w-we, upper+z-ze; length = k)
     else
         εs = float(base) .^ range(lower+w, upper+z; length = k)
     end

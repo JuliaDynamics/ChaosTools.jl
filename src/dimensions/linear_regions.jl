@@ -149,8 +149,8 @@ that are a good estimate for sizes ε that are used in calculating a [Fractal Di
 It is strongly recommended to [`standardize`](@ref) input dataset `A` before using this
 function.
 
-Let `d₋` be the minimum pair-wise distance in `A` and `d₊` the average total length along
-each of the dimensions of `A`.
+Let `d₋` be the minimum pair-wise distance in `A` and `d₊` the average total length of `A`
+along each of the dimensions of `A`.
 Then `lower = log(base, d₋)` and `upper = log(base, d₊)`.
 Because by default `w=1, z=-1`, the returned sizes are an order of mangitude
 larger than the minimum distance, and an order of magnitude smaller than the maximum
@@ -161,13 +161,13 @@ distance.
 * `base = MathConstants.e` : the base used in the `log` function.
 * `warning = true`: Print some warnings for bad estimates.
 * `autoexpand = true`: If the final estimated range does not cover at least 2 orders of
-  magnitude, it is automatically expanded by setting `w -= we` and `z += ze`.
-  You can different default values to the keywords `we = w, ze = -z`.
+  magnitude, it is automatically expanded by setting `w -= we` and `z -= ze`.
+  You can set different default values to the keywords `we = w, ze = z`.
 """
 function estimate_boxsizes(
         A::AbstractDataset;
         k::Int = 20, z = -1, w = 1, base = MathConstants.e,
-        warning = true, autoexpand = true, ze = -z, we = w
+        warning = true, autoexpand = true, ze = z, we = w
     )
 
     mi, ma = minmaxima(A)
@@ -197,7 +197,7 @@ function estimate_boxsizes(
             "Boxsize limits do not differ by at least 2 orders of magnitude. "*
             "Setting `w-=$(we)` and `z+=$(ze)`, please adjust keywords `w, z` otherwise.")
         end
-        εs = float(base) .^ range(lower+w-we, upper+z+ze; length = k)
+        εs = float(base) .^ range(lower+w-we, upper+z-ze; length = k)
     else
         εs = float(base) .^ range(lower+w, upper+z; length = k)
     end

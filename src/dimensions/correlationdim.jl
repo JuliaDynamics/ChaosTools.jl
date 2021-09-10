@@ -58,15 +58,14 @@ function correlationsum_2(X, ε::Real, norm, w, show_progress)
     if show_progress
         progress = ProgressMeter.Progress(N; desc = "Correlation sum: ", dt = 1.0)
     end
-    Cs = zeros(Threads.nthreads())
-    Threads.@threads for (i, x) in enumerate(X)
-        t = Threads.threadid()
+    C = zero(eltype(X))
+    @inbounds for (i, x) in enumerate(X)
         for j in i+1+w:N
-            Cs[t] += evaluate(norm, x, X[j]) < ε
+            C += evaluate(norm, x, X[j]) < ε
         end
         show_progress && ProgressMeter.next!(progress)
     end
-    return sum(Cs) * 2 / ((N-w-1)*(N-w))
+    return C * 2 / ((N-w-1)*(N-w))
 end
 
 function correlationsum_q(X, ε::Real, q, norm, w, show_progress)
@@ -138,11 +137,14 @@ function correlationsum_2_fb(X, εs, d, w, show_progress)
     return Cs .* factor
 end
 
-function correlationsum_q(X, εs::AbstractVector, q, norm = Euclidean(), w = 0)
+function correlationsum_q(X, εs::AbstractVector, q, norm, w, show_progress)
     @assert issorted(εs) "Sorted εs required for optimized version."
     Nε, T, N = length(εs), eltype(X), length(X)
     Cs = zeros(T, Nε)
     normalisation = (N-2w)*(N-2w-one(T))^(q-1)
+    if show_progress
+        progress = ProgressMeter.Progress(length(1+w:N-w); desc = "Correlation sum: ", dt = 1.0)
+    end
     for i in 1+w:N-w
         x = X[i]
         C_current = zeros(T, Nε)
@@ -158,6 +160,7 @@ function correlationsum_q(X, εs::AbstractVector, q, norm = Euclidean(), w = 0)
             end
         end
         Cs .+= C_current .^ (q-1)
+        show_progress && ProgressMeter.next!(progress)
     end
     return (Cs ./ normalisation) .^ (1/(q-1))
 end

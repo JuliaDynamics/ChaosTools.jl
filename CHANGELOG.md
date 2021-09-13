@@ -1,3 +1,5 @@
+# 2.4
+* `linear_region` now detects a saturation regime also at the start of the curve y(x). Furthermore a keyword `sat` now decides what the saturation regime is.
 # 2.3
 * Correlation sum functions now have a `show_progress = false` keyword. It shows a progress bar!
 * `linear_region` and `estimate_boxsizes` have `warning = true` keyword.

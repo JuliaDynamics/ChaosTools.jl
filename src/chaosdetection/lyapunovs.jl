@@ -424,7 +424,8 @@ export Cityblock, Euclidean
     lyapunov_from_data(R::Dataset, ks;  refstates, w, distance, ntype)
 Return `E = [E(k) for k ∈ ks]`, where `E(k)` is the average logarithmic distance
 between states of a neighborhood that are evolved in time for `k` steps
-(`k` must be integer).
+(`k` must be integer). The slope of `E` vs `k` approximate the maximum Lyapunov exponent,
+see below.
 Typically `R` is the result of delay coordinates of a single timeseries.
 
 ## Keyword Arguments

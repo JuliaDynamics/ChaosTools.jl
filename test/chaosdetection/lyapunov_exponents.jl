@@ -3,7 +3,7 @@ using Test, StaticArrays
 using DynamicalSystemsBase: CDS, DDS
 using DynamicalSystemsBase.Systems: hoop, hoop_jac, hiip, hiip_jac
 using DynamicalSystemsBase.Systems: loop, loop_jac, liip, liip_jac
-using OrdinaryDiffEq
+# using OrdinaryDiffEq
 using Statistics
 
 println("\nTesting lyapunov exponents...")
@@ -96,7 +96,7 @@ end
     @test isapprox(λ1, log(0.9); rtol = 1e-4)
     ds = DiscreteDynamicalSystem(g, rand(3), nothing)
     λ2 = lyapunov(ds, 100000)
-    @test isapprox(λ1, log(0.9); rtol = 1e-4)
+    @test isapprox(λ2, log(0.9); rtol = 1e-4)
 end
 
 @testset "Lyapunov convergence" begin

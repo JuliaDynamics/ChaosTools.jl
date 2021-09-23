@@ -337,7 +337,7 @@ function rescale!(integ,a,r::SVector)
 end
 function rescale!(integ,a,r::AbstractArray)  
     r .= get_state(integ,1) .+ (get_state(integ,2).-get_state(integ,1))./a
-    set_state!(integ,r,2)
+    set_state!(integ,copy(r),2)
 end
 
 

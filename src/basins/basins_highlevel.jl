@@ -171,3 +171,32 @@ function (c::CompleteAndReinit)(integ, y) # case where `complete_state` is a fun
     end
     reinit!(integ, c.u)
 end
+
+
+
+using LinearAlgebra
+# TODO: Use CompleteAndReinit code to initialize initial conditions on the grid
+# and then just calculate the rule `f` there which gives rate of change directly
+function automatic_Δt_basins(ds, grid, N = 1000)
+    steps = step.(grid)
+    s = sqrt(sum(x^2 for x in steps)) # diagonal length of a cell
+    # N = min(prod(length.(grid)), N)
+
+    integ = integrator(ds)
+    step!(integ, 10) # remove a little bit of transients, and set optimal dt
+    uprev = copy(integ.u)
+    du = 0.0
+    t0 = integ.t
+
+    for i in 1:N # do 100 steps, kinda arbitrarily chosen
+        step!(integ)
+        du += norm(uprev .- integ.u)
+        if isimmutable(uprev)
+            uprev = integ.u
+        else
+            uprev .= integ.u
+        end
+    end
+    dudt = du/(integ.t - t0) # state space distance convered per time unit
+    return Δt = s/dudt
+end

@@ -84,11 +84,11 @@ conditions to attractors using a clustering technique.
 """
 function basin_fractions(ds::DynamicalSystem, feature_extraction::Function, ic_grid::AbstractMatrix, clust_mod="supervised"; kwargs...)
     #-- Integrate ICs to find features
-    println("Integrating ICs to find features.")
+    # println("Integrating ICs to find features.")
     feature_array = featurizer(ds, ic_grid,  feature_extraction; kwargs...)
 
     #-- Classify features
-    println("Classifying features in $(clust_mod) manner.")
+    # println("Classifying features in $(clust_mod) manner.")
     if(clust_mod == "supervised")
         y0 = kwargs[:y0]
         feature_templates = featurizer(ds, y0, feature_extraction; kwargs...) #TODO: could allow the user to directly pass the templates featuers also, instead of just their initial conditions

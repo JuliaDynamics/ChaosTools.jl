@@ -1,6 +1,6 @@
 using DynamicalSystems
 using Test
-include("../ChaosTools.jl/src/basins/basins_fractions.jl")
+# include("../../src/basins/basins_fractions.jl")
 
 @testset "Basin Stability Pendulum" begin
     @inline @inbounds function damped_driven_pendulum(u, p, t)
@@ -109,7 +109,7 @@ end
     @test S[1] == 0.5086
     @test S[2] == 0.2424
     @test S[3] == 0.1962
-    @test S[4] == 0.028 
+    @test S[4] == 0.028
     @test S[5] == 0.0248
 
     #plot basins

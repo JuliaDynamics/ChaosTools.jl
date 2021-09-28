@@ -1,6 +1,6 @@
 export basin_fractions
 using Statistics: mean
-using NearestNeighbors #for kNN
+using Neighborhood #for kNN
 using Distances
 using DataFrames
 using Clustering
@@ -53,10 +53,11 @@ vector of "features". Various pre-defined featurizers are available, see below.
 * Ttr = 0 : transient time to evolve initial conditions
 * Δt = 1 : Integration time step, Δt = 1/fs, fs being the sampling frequency used in the bSTAB paper
 * y0 = []: initial conditions for the templates in the "supervised case"
-* templates_labels : labels for the templates
+* templates_labels : (for supervised) labels for the templates
 * clust_params = NamedTuple() : other parameters for clustering method
 * diffeq = NamedTuple() : other parameters for the solvers of DiffEqs
 * extract_params = NamedTuplee() : other parameters for the feature_extraction function
+* min_neighbors = 10 : (for unsupervised) minimum number of neighbors (similar features) each feature needs to have in order to be considered in a cluster (fewer than this, it is labeled as an outlier, id=-1). This is somewhat hard to define, as it directly interferes with how many attractors the clustering finds. The authors use it equal to 10 always.
 
 ## Available featurizers
 * lyapunov spectrum
@@ -93,7 +94,7 @@ function basin_fractions(ds::DynamicalSystem, feature_extraction::Function, ic_g
         feature_templates = featurizer(ds, y0, feature_extraction; kwargs...) #TODO: could allow the user to directly pass the templates featuers also, instead of just their initial conditions
         class_labels, class_errors, template_labels_id = classify_solution(feature_array, feature_templates; kwargs...);
     else
-        class_labels, class_errors, template_id = classify_solution(feature_array);
+        class_labels, class_errors, template_id = classify_solution(feature_array; kwargs...);
     end
 
     #-- Compute basin stability values
@@ -147,17 +148,23 @@ The templates are also evolved from the initial conditions y0, and are a matrix 
 The classification is done using a first-neighbor clustering method, identifying, for each feature,
 the closest template.
 
+label : for each feature, it is the id of the closest template == index of the template in y0
+error : distance from the feature to its closest template (in the specified metric)
+class_labels = Array{Int64,1} with the labels for each feature
+class_errors = Array{Float64,1} with the errors for each feature
+template_ids = Array{Int64, 1} with the labels for each template. Not really needed.
 
-
-dist_norm = props.clust.clustMethodNorm; #possible choices: 'seuclidean', 'cityblock', 'chebychev', 'minkowski', 'mahalanobis', 'cosine', 'correlation', 'spearman', 'hamming', 'jaccard'
+dist_norm = metric for calculating the distance in kNN. Possible examples are 'seuclidean', 'cityblock', 'chebychev', 'minkowski', 'mahalanobis', 'cosine', 'correlation', 'spearman', 'hamming', 'jaccard'.
+Typically, these are subtypes of '<:Metric' from Distances.jl.
 """
-function classify_solution(features, templates; clustMethod="kNN", clustMethodNorm=Euclidean(), templates_labels::Array{String, 1}=String[], kwargs...)
+function classify_solution(features, templates; clustMethod="kNN", clustMethodNorm=Euclidean(), templates_labels::Array{String, 1}=String[], clustering_threshold=0.0, kwargs...)
     # find the classification by the nearest neighbors
     if clustMethod == "kNN" || clustMethod == "kNN_thresholded" #k=1 nearest neighbor classification; find nearest neighbor through kNN (k=1)
-        template_tree = KDTree(templates, clustMethodNorm) #TODO: make sure templates in Float64; templates has to be dimensionality x k (k = no of templates)
-        class_labels, class_errors = nn(template_tree, features)  #feature has to be dimensionality x N matrix; label = idx of the closest template; error = distance from template to point
+        template_tree = searchstructure(KDTree, templates, clustMethodNorm)
+        class_labels, class_errors = Neighborhood.bulksearch(template_tree, features, Neighborhood.NeighborNumber(1))
+        class_labels = vcat(class_labels...); class_errors = vcat(class_errors...); #convert to simple 1d arrays
         if clustMethod == "kNN_thresholded"
-                apply_threshold!(class_labels, class_error) #TODO: implement this
+                class_labels[class_errors .>= clustering_threshold] .= -1 #Make label -1 if error bigger than threshold
         end
     else
         @warn("clustering mode not available")
@@ -171,27 +178,28 @@ function classify_solution(features, templates; clustMethod="kNN", clustMethodNo
     # return class_result, class_template_labels
 end
 
+
+
 """
 Unsupervised method
 'classify_function' classifies the features in an unsupervised fashion. It assumes that features belonging to the
 same attractor will be clustered in feature space, and therefore groups clustered features in a same attractor.
 It identifies these clusters using the DBSCAN method. The clusters are labeled according to their size, so that cluster No. 1 is the biggest.
 Features not belonging to any cluster (attractor) are given id -1.
+## Keyword arguments
+* min_neighbors = 10
 """
-function classify_solution(features)
-    minpts = 10 #TODO: allow passing this as parameter?
-
+function classify_solution(features; min_neighbors=10, kwargs...)
     #--find optimal ϵ
     #initialize
-    feat_ranges = maximum(features, dims=1)[1,:] .- minimum(features, dims=1)[1,:]; #gap between max and min for each column of features (within each feature, calc the gap)
-    # ϵ_grid = range(minimum(feat_ranges)/200, minimum(feat_ranges), length=200) #TODO: return to this after testing
-    ϵ_grid = range(minimum(feat_ranges)/3, minimum(feat_ranges), length=3)
+    feat_ranges = maximum(features, dims=2)[:,1] .- minimum(features, dims=2)[:,1]; # (within each type of feature, calc the gap)
+    ϵ_grid = range(minimum(feat_ranges)/200, minimum(feat_ranges), length=200) #This hard-coded 200 is perhaps not ideal. TODO: Should we change it?
     k_grid = zeros(size(ϵ_grid)) # number of clusters
     s_grid = zeros(size(ϵ_grid)) #min silhouette values (which we want to maximize)
 
     #vary ϵ to find the best one (which will maximize the minimum sillhoute)
     for i=1:length(ϵ_grid)
-        clusters = dbscan(features, ϵ_grid[i], min_neighbors=minpts) #points: the d×n matrix of points. points[:, j] is a d-dimensional coordinates of j-th point
+        clusters = dbscan(features, ϵ_grid[i], min_neighbors=min_neighbors)
         dists = pairwise(Euclidean(), features)
         class_labels = cluster_props(clusters, features)
         sils = silhouettes(class_labels, dists) #values == 0 are due to boundary points
@@ -203,10 +211,10 @@ function classify_solution(features)
     ϵ_optimal = ϵ_grid[idx]
 
     #Now recalculate the final clustering with the optimal ϵ
-    clusters = dbscan(features, ϵ_optimal, min_neighbors=minpts) #points: the d×n matrix of points. points[:, j] is a d-dimensional coordinates of j-th point
+    clusters = dbscan(features, ϵ_optimal, min_neighbors=min_neighbors) #points: the d×n matrix of points. points[:, j] is a d-dimensional coordinates of j-th point
     clusters, sizes = sort_clusters_calc_size(clusters) #calcs their sizes and sorts them in descrecent order according to their sizes
     class_labels = cluster_props(clusters, features; include_boundary=false)
-    k = length(sizes[sizes .> minpts]) #number of real clusters (size above minimum points); this is also the number of "templates"
+    k = length(sizes[sizes .> min_neighbors]) #number of real clusters (size above minimum points); this is also the number of "templates"
 
     #create templates/labels, assign errors
     class_errors = zeros(size(features)[2])
@@ -215,7 +223,7 @@ function classify_solution(features)
     for i=1:k
         idxs_cluster = class_labels .== i
         center = mean(features[:, class_labels .== i], dims=2)[:,1]
-        # templ_features[i] = center #TODO: implement templ_features
+        # templ_features[i] = center #TODO: could return this also
         dists = colwise(Euclidean(), center, features[:, idxs_cluster])
         class_errors[idxs_cluster] = dists
     end
@@ -231,4 +239,4 @@ end
 
 # TODO: Perhaps we can optimize the featurizers to instead of initializing an integrator # all the time by calling `trajectory`, to instead use `reinit!`
 # TODO: implement usability for sampler method. For now, we are passing ic_grid directly to the function, as done in the bSTAB algorithm.
-# TODO: maybe we should also return more info to basin_stability's output, like the classification error, and the properties of each attractor (such its center, in the unsupervised case). I fear maybe the user can confuse which attractor corresponds to which ID
+# TODO: maybe we should also return more info in basin_stability's output, like the classification error, and the properties of each attractor (such its center, in the unsupervised case). I fear maybe the user can confuse which attractor corresponds to which ID

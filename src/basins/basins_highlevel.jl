@@ -136,44 +136,9 @@ function basins_of_attraction(grid, integ, Δt, T, idxs::SVector, complete_state
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
-"""
-    CompleteAndReinit(complete_state, idxs, D)
-Helper struct that completes a state and reinitializes the integrator once called
-as a function with arguments `f(integ, y)` with `integ` the initialized dynamical
-system integrator and `y` the projected initial condition on the grid.
-"""
-struct CompleteAndReinit{C, Y, R}
-    complete_state::C
-    u::Vector{Float64} # dummy variable for a state in full state space
-    idxs::SVector{Y, Int}
-    remidxs::R
-end
-function CompleteAndReinit(complete_state, idxs, D::Int)
-    remidxs = setdiff(1:D, idxs)
-    remidxs = isempty(remidxs) ? nothing : SVector(remidxs...)
-    u = zeros(D)
-    if complete_state isa AbstractVector
-        @assert eltype(complete_state) <: Number
-    end
-    return CompleteAndReinit(complete_state, u, idxs, remidxs)
-end
-function (c::CompleteAndReinit{<: AbstractVector})(integ, y)
-    c.u[c.idxs] .= y
-    if !isnothing(c.remidxs)
-        c.u[c.remidxs] .= c.complete_state
-    end
-    reinit!(integ, c.u)
-end
-function (c::CompleteAndReinit)(integ, y) # case where `complete_state` is a function
-    c.u[c.idxs] .= y
-    if !isnothing(c.remidxs)
-        c.u[c.remidxs] .= c.complete_state(y)
-    end
-    reinit!(integ, c.u)
-end
 
 
-
+# Estimate Δt
 using LinearAlgebra
 # TODO: Use CompleteAndReinit code to initialize initial conditions on the grid
 # and then just calculate the rule `f` there which gives rate of change directly
@@ -188,7 +153,7 @@ function automatic_Δt_basins(ds, grid, N = 1000)
     du = 0.0
     t0 = integ.t
 
-    for i in 1:N # do 100 steps, kinda arbitrarily chosen
+    for i in 1:N
         step!(integ)
         du += norm(uprev .- integ.u)
         if isimmutable(uprev)

@@ -46,7 +46,7 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   before deciding the basin of the initial condition.
 * `mx_chk_hit_bas = 10` : Maximum check of consecutive visits of the same basin of attraction.
   This number can be increased for higher accuracy.
-* `mx_chk_fnd_att = 60` : Maximum check of unnumbered cell before considering we have an attractor.
+* `mx_chk_fnd_att = 100` : Maximum check of unnumbered cell before considering we have an attractor.
   This number can be increased for higher accuracy.
 * `mx_chk_loc_att = 60` : Maximum check of consecutive cells marked as an attractor before considering
   that we have all the available pieces of the attractor.

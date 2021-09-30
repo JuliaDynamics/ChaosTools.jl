@@ -136,7 +136,7 @@ and the trajectories staying outside the grid are coded with -1.
 """
 function _identify_basin_of_cell!(
         bsn_nfo::BasinInfo, n::CartesianIndex, u_full_state;
-        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 60, mx_chk_loc_att = 60,
+        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_loc_att = 60,
         horizon_limit = 1e6, ε = 1e-3,
         mx_chk_lost = isnothing(bsn_nfo.search_trees) ? 20 : 1000,
     )

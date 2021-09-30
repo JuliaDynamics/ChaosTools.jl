@@ -48,7 +48,7 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   This number can be increased for higher accuracy.
 * `mx_chk_fnd_att = 60` : Maximum check of unnumbered cell before considering we have an attractor.
   This number can be increased for higher accuracy.
-* `mx_chk_fnd_att = 60` : Maximum check of consecutive cells marked as an attractor before considering
+* `mx_chk_loc_att = 60` : Maximum check of consecutive cells marked as an attractor before considering
   that we have all the available pieces of the attractor.
 * `mx_chk_lost` : Maximum check of iterations outside the defined grid before we consider the orbit
   lost outside. This number can be increased for higher accuracy. It defaults to `20` if no

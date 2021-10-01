@@ -32,7 +32,8 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
 ## Keyword Arguments
 * `Δt = 1`: Approximate time step of the integrator. It is recommended to use values such
   that one step will typically make the integrator move to a different cell of the
-  state space partitioning.
+  state space partitioning. 
+  If `nothing` (default), automatic estimation.... TODO
 * `T` : Period of the stroboscopic map, in case of a continuous dynamical system with periodic
   time forcing. This argument is incompatible with `Δt`.
 * `idxs = 1:length(grid)`: This vector selects the variables of the system that will define the
@@ -104,7 +105,7 @@ influence in some cases. This algorithm is usually slower than the method with t
 attractors on the grid.
 """
 function basins_of_attraction(grid::Tuple, ds;
-        Δt=1, T=0, idxs = 1:length(grid),
+        Δt=nothing, T=nothing, idxs = 1:length(grid),
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
         diffeq = NamedTuple(), kwargs...
         # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
@@ -121,47 +122,48 @@ function basins_of_attraction(grid, integ, Δt, T, idxs::SVector, complete_state
     if complete_state isa AbstractVector && (length(complete_state) ≠ D-length(idxs))
         error("Vector `complete_state` must have length D-Dg!")
     end
-    if T > 0
+    complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
+    get_projected_state = (integ) -> view(get_state(integ), idxs)
+
+    if isnothing(Δt) && isnothing(T)
+        Δt = automatic_Δt_basins(integ, grid, complete_and_reinit!)
+        @show Δt
+    end
+
+    if !isnothing(T)
         iter_f! = (integ) -> step!(integ, T, true)
     elseif integ isa PoincareMap
         iter_f! = step!
     else # generic case
         iter_f! = (integ) -> step!(integ, Δt) # we don't have to step _exactly_ `Δt` here
     end
-    complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
-    get_projected_state = (integ) -> view(get_state(integ), idxs)
     bsn_nfo = draw_basin!(
         grid, integ, iter_f!, complete_and_reinit!, get_projected_state; kwargs...
     )
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
-
-
 # Estimate Δt
 using LinearAlgebra
-# TODO: Use CompleteAndReinit code to initialize initial conditions on the grid
-# and then just calculate the rule `f` there which gives rate of change directly
-function automatic_Δt_basins(ds, grid, N = 1000)
+function automatic_Δt_basins(integ, grid, complete_and_reinit!, N = 1000)
+    if integ isa Union{PoincareMap, MinimalDiscreteIntegrator}
+        return 1
+    end
     steps = step.(grid)
     s = sqrt(sum(x^2 for x in steps)) # diagonal length of a cell
-    # N = min(prod(length.(grid)), N)
-
-    integ = integrator(ds)
-    step!(integ, 10) # remove a little bit of transients, and set optimal dt
-    uprev = copy(integ.u)
-    du = 0.0
-    t0 = integ.t
-
-    for i in 1:N
-        step!(integ)
-        du += norm(uprev .- integ.u)
-        if isimmutable(uprev)
-            uprev = integ.u
+    indices = CartesianIndices(length.(grid))
+    random_points = [generate_ic_on_grid(grid, ind) for ind in rand(indices, N)]
+    dudt = 0.0
+    udummy = copy(integ.u)
+    for p in random_points
+        complete_and_reinit!(integ, p)
+        deriv = if integ.u isa SVector
+            integ.f(integ.u, integ.p, 0.0)
         else
-            uprev .= integ.u
+            integ.f(udummy, integ.u, integ.p, 0.0)
+            udummy
         end
+        dudt += norm(deriv)
     end
-    dudt = du/(integ.t - t0) # state space distance convered per time unit
-    return Δt = s/dudt
+    return Δt = s*N/dudt
 end

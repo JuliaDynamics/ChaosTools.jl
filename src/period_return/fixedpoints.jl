@@ -35,7 +35,9 @@ See also [`periodicorbits`](@ref).
 function fixedpoints(ds::DynamicalSystem, box, p = ds.p;
         method = IntervalRootFinding.Krawczyk, o = nothing, tol = 1e-15
     )
-    DynamicalSystemsBase.isinplace(ds) && error("`fixedpoints` works only for out-of-place dynamical systems.")
+    if DynamicalSystemsBase.isinplace(ds) 
+        error("At the moment `fixedpoints` works only for out-of-place dynamical systems.")
+    end
     # Find roots via IntervalRootFinding.jl
     f = to_root_f(ds, p, o)
     jac = to_root_J(ds, p, o)

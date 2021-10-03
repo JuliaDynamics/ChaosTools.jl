@@ -1,4 +1,5 @@
 using ChaosTools
+using ChaosTools.DynamicalSystemsBase
 using Test
 using StatsBase
 using Statistics

@@ -1,8 +1,8 @@
 using ChaosTools, DynamicalSystemsBase
 using Test
-using StatsBase
 using Statistics
 using ChaosTools.DynamicalSystemsBase
+using ChaosTools.DelayEmbeddings
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
@@ -11,12 +11,12 @@ println("\nTesting correlation sum...")
     @testset "Henon Map" begin
         ds = Systems.henon()
         ts = trajectory(ds, 5000)
-        R = maximum(maxima(ts) - minima(ts))
+        R = 1.5maximum(maxima(ts) - minima(ts))
         # check for right normalisation with various combinations of `q` and `w`
-        @test correlationsum(ts, R+1; q = 2, w = 0) ≈ 1
-        @test correlationsum(ts, R+1; q = 2, w = 1) ≈ 1
-        @test correlationsum(ts, R+1; q = 2.2, w = 0) ≈ 1
-        @test correlationsum(ts, R+1; q = 2.2, w = 1) ≈ 1
+        @test correlationsum(ts, R; q = 2, w = 0) ≈ 1
+        @test correlationsum(ts, R; q = 2, w = 1) ≈ 1
+        @test correlationsum(ts, R; q = 2.2, w = 0) ≈ 1
+        @test correlationsum(ts, R; q = 2.2, w = 1) ≈ 1
         es = 10 .^ range(-3, stop = 0, length = 7)
         cs1 = correlationsum(ts, es)
         dim1 = linear_region(log.(es), log.(cs1))[2]
@@ -40,14 +40,14 @@ println("\nTesting correlation sum...")
     end
 end
 
-println("\nTesting correlation sum with boxing beforehand...")
-@testset "Theilers correlation boxing algorithm" begin
+println("\nTesting box-assisted correlation sum...")
+@testset "Box-assisted correlation sum" begin
     @testset "Henon Map" begin
         ds = Systems.henon()
-        ts = trajectory(ds, 10000)
-        r0 = estimate_r0_buenoorovio(ts)
+        ts = standardize(trajectory(ds, 10000))
+        r0 = estimate_r0_buenoorovio(ts)[1]
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
-        C = [correlationsum(ts, e) for e in es]
+        C = correlationsum(ts, es)
         @test boxed_correlationsum(ts, es, r0) ≈ C
         @test boxed_correlationsum(ts, es) ≈ C
         @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlationsum(ts, es, q = 2.3)
@@ -56,10 +56,10 @@ println("\nTesting correlation sum with boxing beforehand...")
     end
     @testset "Lorenz System" begin
         ds = Systems.lorenz()
-        ts = trajectory(ds, 1000; Δt = 0.1)
-        r0 = estimate_r0_buenoorovio(ts)
+        ts = standardize(trajectory(ds, 1000; Δt = 0.1))
+        r0 = estimate_r0_buenoorovio(ts)[1]
         es = r0 .* 10 .^ range(-2, stop = 0, length = 10)
-        C = [correlationsum(ts, e) for e in es]
+        C = correlationsum(ts, es)
         @test boxed_correlationsum(ts, es, r0) ≈ C
         @test boxed_correlationsum(ts, es) ≈ C
         @test boxed_correlationsum(ts, es, r0; q = 2.3) ≈ correlationsum(ts, es; q = 2.3)
@@ -70,7 +70,7 @@ end
 
 
 println("\nTesting the fixed mass correlation sum...")
-@testset "Fixed mass correlation sum by Grassberger" begin
+@testset "Fixed mass correlation sum" begin
     @testset "Henon Map" begin
         ds = Systems.henon()
         ts = trajectory(ds, 10000)

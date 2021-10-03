@@ -1,6 +1,8 @@
 using ChaosTools
 using Test
 using DynamicalSystemsBase, DelayEmbeddings
+using StatsBase
+standardize = DelayEmbeddings.standardize
 
 ti = time()
 @testset "ChaosTools tests" begin
@@ -13,14 +15,14 @@ include("orbitdiagrams/orbitdiagram_tests.jl")
 include("orbitdiagrams/poincare_tests.jl")
 
 include("chaosdetection/lyapunov_exponents.jl")
-#include("chaosdetection/gali_tests.jl") # TODO: Restore those
+#include("chaosdetection/gali_tests.jl") # TODO: make those faster
 include("chaosdetection/partially_predictable_tests.jl")
 include("chaosdetection/01test.jl")
 #include("chaosdetection/expansionentropy_tests.jl")  # TODO: make those faster
 
 include("period_return/periodicity_tests.jl")
 include("period_return/period_tests.jl")
-include("period_return/transit_time_tests.jl")
+# include("period_return/transit_time_tests.jl")
 
 include("dimensions/dims.jl")
 include("dimensions/correlationdim.jl")

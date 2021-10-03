@@ -1,3 +1,19 @@
+# 2.4
+* `linear_region` now detects a saturation regime also at the start of the curve y(x). Furthermore a keyword `sat` now decides what the saturation regime is.
+# 2.3
+* Correlation sum functions now have a `show_progress = false` keyword. It shows a progress bar!
+* `linear_region` and `estimate_boxsizes` have `warning = true` keyword.
+* The `estimate_boxsizes` function now has keywords `autoexpand = true, we = w, ze = z`.
+
+# 2.2
+* Functions `estimate_r0_buenoorovio, estimate_r0_theiler` now return `r0, ε0` with `ε0` the minimum inter-point distance. This increases performance of other methods by reducing duplicate computations.
+* Fixed bug in `estimate_r0_buenoorovio` that didn't consider min pairwise distance = 0.
+* Exported the already implemented `estimate_r0_theiler`.
+* For accuracy improvement, the mean of maximal lengths along each dimension is used in `estimate_boxsizes`. Before it was the maximum of maxima.
+
+# 2.1
+* Various improvements to the boxed correlation sum method. Now it also uses an automatic prism dimension.
+
 # 2.0
 * The keyword `dt` that was used to denote a chunk of time in many functions that 
   a `DynamicalSystem` has been changed to `Δt` due to conflicts with DifferentialEquations.jl solver options. This change is breaking and cannot be warned or deprecated. Functions affected: `lyapunov, lyapunovspectrum, gali, expansionentropy, orbitdiagram`

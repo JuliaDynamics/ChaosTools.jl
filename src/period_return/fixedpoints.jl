@@ -15,7 +15,9 @@ format (see [`DynamicalSystem`](@ref)).
 Internally IntervalRootFinding.jl is used and as a result we are guaranteed to find all
 fixed points that exist in `box`, regardless of stability. Since IntervalRootFinding.jl
 returns an interval containing a unique fixed point, we return the midpoint of the
-interval as a fixed point.
+interval as a fixed point. Naturally, limitations inherent to IntervalRootFinding.jl 
+apply here, e.g., if the dynamical rule is not continuous the method may not work.
+
 `box` is an appropriate `IntervalBox` from IntervalRootFinding.jl. 
 E.g. for a 3D system it would be something like 
 ```julia
@@ -23,12 +25,12 @@ v, z = -5..5, -2..2   # 1D intervals
 box = v × v × z       # `\\times = ×`, or use `IntervalBox`
 ```
 
+See also [`periodicorbits`](@ref).
+
 ## Keywords
 * `method = IntervalRootFinding.Krawczyk` configures the root finding method, 
   see the docs of IntervalRootFinding.jl for all posibilities.
 * `tol = 1e-15` is the root-finding tolerance.
-* `o = nothing` if given, must be an integer. It finds `o`-th order fixed points
-  (i.e., periodic orbits of length `o`). It is only valid for discrete dynamical systems.
 """
 function fixedpoints(ds::DynamicalSystem, box, p = ds.p;
         method = IntervalRootFinding.Krawczyk, o = nothing, tol = 1e-15
@@ -53,18 +55,21 @@ end
 
 to_root_f(ds::CDS, p, ::Nothing) = u -> ds.f(u, p, 0.0)
 to_root_J(ds::CDS, p, ::Nothing) = u -> ds.jacobian(u, p, 0.0)
-to_root_f(ds::DDS, p, ::Nothing) = u -> ds.f(u, p, 0.0) - u
+to_root_f(ds::DDS, p, ::Nothing) = u -> ds.f(u, p, 0) - u
 function to_root_J(ds::DDS{IIP, S}, p, ::Nothing) where {IIP, S}
     c = Diagonal(ones(S))
-    return u -> ds.jacobian(u, p, 0.0) - c
+    return u -> ds.jacobian(u, p, 0) - c
 end
+
+# TODO: Estimate periodic orbits of period `o` for discrete systems.
+# What's left is to create the Jacobian for higher iterates.
 
 # Discrete with periodic order
 function to_root_f(ds::DDS, p, o::Int) 
     u -> begin
         v = copy(u) # copy is free for StaticArrays
         for _ in 1:o
-            v = ds.f(v, p, 0.0)
+            v = ds.f(v, p, 0)
         end
         return v - u
     end

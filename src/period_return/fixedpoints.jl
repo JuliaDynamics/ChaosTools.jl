@@ -12,18 +12,18 @@ the fixed points are stable or not, are also returned.
 `fixedpoints` is valid for both discrete and continuous systems, but only for out of place
 format (see [`DynamicalSystem`](@ref)).
 
-Internally IntervalRootFinding.jl is used and as a result we are guaranteed to find all
-fixed points that exist in `box`, regardless of stability. Since IntervalRootFinding.jl
-returns an interval containing a unique fixed point, we return the midpoint of the
-interval as a fixed point. Naturally, limitations inherent to IntervalRootFinding.jl 
-apply here, e.g., if the dynamical rule is not continuous the method may not work.
-
 `box` is an appropriate `IntervalBox` from IntervalRootFinding.jl. 
 E.g. for a 3D system it would be something like 
 ```julia
 v, z = -5..5, -2..2   # 1D intervals
 box = v × v × z       # `\\times = ×`, or use `IntervalBox`
 ```
+
+Internally IntervalRootFinding.jl is used and as a result we are guaranteed to find all
+fixed points that exist in `box`, regardless of stability. Since IntervalRootFinding.jl
+returns an interval containing a unique fixed point, we return the midpoint of the
+interval as a fixed point. 
+Naturally, limitations inherent to IntervalRootFinding.jl apply here.
 
 See also [`periodicorbits`](@ref).
 

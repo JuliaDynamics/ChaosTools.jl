@@ -1,20 +1,6 @@
 using ChaosTools, DynamicalSystemsBase, Test
 
-ds = Systems.standardmap()
-x = 0.0..(2π - 100eps())
-box = x × x
 
-fp, eigs, stable = fixedpoints(ds, box)
-
-for (i, e) in enumerate(fp)
-    if isapprox(e, SVector(0,0); atol = 1e-8)
-        @test !stable[i]
-    elseif e ≈ SVector(π, 0)
-        @test stable[i]
-    else
-        @test false
-    end
-end
 
 println("\nTesting fixed points...")
 
@@ -35,8 +21,22 @@ println("\nTesting fixed points...")
         @test (henon_fp ≈ fp[1]) || (henon_fp ≈ fp[2])
     end
 
-    @testset "standard map order" begin
-
+    @testset "standard map" begin
+        ds = Systems.standardmap()
+        x = 0.0..(2π - 100eps())
+        box = x × x
+        
+        fp, eigs, stable = fixedpoints(ds, box)
+        
+        for (i, e) in enumerate(fp)
+            if isapprox(e, SVector(0,0); atol = 1e-8)
+                @test !stable[i]
+            elseif e ≈ SVector(π, 0)
+                @test stable[i]
+            else
+                @test false
+            end
+        end
     end
 
     @testset "Lorenz system" begin

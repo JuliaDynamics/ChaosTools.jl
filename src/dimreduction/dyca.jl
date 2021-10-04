@@ -33,6 +33,8 @@ used for dimensionality reduction.
 
 Return the eigenvalues, projection matrix, and reduced-dimension data
 (which are just `data*proj_mat`).
+## Keyword Arguments
+* norm_eigenvectors=false : if true, normalize the eigenvectors
 
 ## Description
 Dynamical Component Analysis (DyCA) is a method to detect projection vectors to reduce
@@ -63,8 +65,7 @@ is projected onto.
 [^Uhl2018]: B Seifert, K Korn, S Hartmann, C Uhl, *Dynamical Component Analysis (DYCA): Dimensionality Reduction for High-Dimensional Deterministic Time-Series*, 10.1109/mlsp.2018.8517024, 2018 IEEE 28th International Workshop on Machine Learning for Signal Processing (MLSP)
 """
 dyca(A::Dataset, e) = dyca(Matrix(A), e)
-function dyca(data, eig_thresold::AbstractFloat)
-
+function dyca(data, eig_thresold::AbstractFloat; norm_eigenvectors::Bool=false)
     derivative_data = matrix_gradient(data)  #get the derivative of the data
     time_length = size(data,1) #for time averaging
 
@@ -77,6 +78,7 @@ function dyca(data, eig_thresold::AbstractFloat)
 
     #solve the generalized eigenproblem
     eigenvalues, eigenvectors = eigen(C1*inv(C0)*transpose(C1),C2)
+    norm_eigenvectors && normalize_eigenvectors!(eigenvectors) 
     eigenvectors = eigenvectors[:, vec(eig_thresold .< abs.(eigenvalues) .<= 1.0)]
     if size(eigenvectors,2) > 0
         mul!(C3, inv(C1), C2)
@@ -85,4 +87,10 @@ function dyca(data, eig_thresold::AbstractFloat)
         throw(DomainError("No generalized eigenvalue fulfills threshold!"))
     end
      return eigenvalues, proj_mat, data*proj_mat
+end
+
+function normalize_eigenvectors!(eigenvectors)
+    for i=1:size(eigenvectors,2)
+        eigenvectors[:,i] = normalize(eigenvectors[:,i])
+    end
 end

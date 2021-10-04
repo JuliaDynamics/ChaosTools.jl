@@ -23,7 +23,8 @@ returns an interval containing a unique fixed point, we return the midpoint of t
 interval as the actual fixed point. 
 Naturally, limitations inherent to IntervalRootFinding.jl apply here.
 
-See also [`periodicorbits`](@ref).
+The output of `fixedpoints` can be used in the [BifurcationKit.jl](https://github.com/rveltz/BifurcationKit.jl)
+as a start of a continuation process. See also [`periodicorbits`](@ref).
 
 ## Keywords
 * `method = IntervalRootFinding.Krawczyk` configures the root finding method, 

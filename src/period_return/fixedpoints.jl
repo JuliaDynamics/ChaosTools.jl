@@ -9,8 +9,6 @@ that exist within the state space subset `box` for parameter configuration `p`.
 Fixed points are returned as a [`Dataset`](@ref).
 For convenience, a vector of the Jacobian eigenvalues of each fixed point, and whether 
 the fixed points are stable or not, are also returned.
-`fixedpoints` is valid for both discrete and continuous systems, but only for out of place
-format (see [`DynamicalSystem`](@ref)).
 
 `box` is an appropriate `IntervalBox` from IntervalRootFinding.jl. 
 E.g. for a 3D system it would be something like 
@@ -22,7 +20,7 @@ box = v × v × z       # `\\times = ×`, or use `IntervalBox`
 Internally IntervalRootFinding.jl is used and as a result we are guaranteed to find all
 fixed points that exist in `box`, regardless of stability. Since IntervalRootFinding.jl
 returns an interval containing a unique fixed point, we return the midpoint of the
-interval as a fixed point. 
+interval as the actual fixed point. 
 Naturally, limitations inherent to IntervalRootFinding.jl apply here.
 
 See also [`periodicorbits`](@ref).
@@ -36,7 +34,7 @@ function fixedpoints(ds::DynamicalSystem, box, p = ds.p;
         method = IntervalRootFinding.Krawczyk, o = nothing, tol = 1e-15
     )
     if DynamicalSystemsBase.isinplace(ds) 
-        error("At the moment `fixedpoints` works only for out-of-place dynamical systems.")
+        error("`fixedpoints` works only for out-of-place dynamical systems.")
     end
     # Find roots via IntervalRootFinding.jl
     f = to_root_f(ds, p, o)
@@ -63,9 +61,6 @@ function to_root_J(ds::DDS{IIP, S}, p, ::Nothing) where {IIP, S}
     return u -> ds.jacobian(u, p, 0) - c
 end
 
-# TODO: Estimate periodic orbits of period `o` for discrete systems.
-# What's left is to create the Jacobian for higher iterates.
-
 # Discrete with periodic order
 function to_root_f(ds::DDS, p, o::Int) 
     u -> begin
@@ -76,6 +71,8 @@ function to_root_f(ds::DDS, p, o::Int)
         return v - u
     end
 end
+# TODO: Estimate periodic orbits of period `o` for discrete systems.
+# What's left is to create the Jacobian for higher iterates.
 
 
 function roots_to_dataset(r, D)

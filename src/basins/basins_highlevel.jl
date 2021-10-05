@@ -30,9 +30,15 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
 [^Yorke1997]: H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations Ch. 7, Springer, New York, 1997
 
 ## Keyword Arguments
-* `Δt = 1`: Approximate time step of the integrator. It is recommended to use values such
+* `Δt`: Approximate time step of the integrator, which is `1` for discrete systems.
+  For continuous systems, it is recommended to use values such
   that one step will typically make the integrator move to a different cell of the
-  state space partitioning. 
+  state space partitioning. If this is not given (i.e., it is `nothing`, its default value),
+  then an automatic estimation of `Δt` is done using the grid and the dynamical system.
+  **Warning:** For ultra-fine grids, this can be even smaller than the internal step size
+  of the integrator, if the solver is adaptive. In such a case, we advise to pick
+  a non-adaptive solver and provide explicitly the argument `dt` in the `diffeq` keyword.
+  TODO: Make function for Δt easy to use and expose it.
   If `nothing` (default), automatic estimation.... TODO
 * `T` : Period of the stroboscopic map, in case of a continuous dynamical system with periodic
   time forcing. This argument is incompatible with `Δt`.
@@ -49,7 +55,7 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   This number can be increased for higher accuracy.
 * `mx_chk_fnd_att = 100` : Maximum check of unnumbered cell before considering we have an attractor.
   This number can be increased for higher accuracy.
-* `mx_chk_loc_att = 60` : Maximum check of consecutive cells marked as an attractor before considering
+* `mx_chk_loc_att = 100` : Maximum check of consecutive cells marked as an attractor before considering
   that we have all the available pieces of the attractor.
 * `mx_chk_lost` : Maximum check of iterations outside the defined grid before we consider the orbit
   lost outside. This number can be increased for higher accuracy. It defaults to `20` if no
@@ -127,14 +133,20 @@ function basins_of_attraction(grid, integ, Δt, T, idxs::SVector, complete_state
     complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
     get_projected_state = (integ) -> view(get_state(integ), idxs)
 
-    if isnothing(Δt) && isnothing(T)
+    fixed_solver = if haskey(kwargs, :diffeq) 
+        haskey(kwargs[:diffeq], :dt) && haskey(kwargs[:diffeq], :adaptive)
+    else
+        false
+    end
+
+    if isnothing(Δt) && isnothing(T) && !fixed_solver
         Δt = automatic_Δt_basins(integ, grid, complete_and_reinit!)
         @show Δt
     end
 
     if !isnothing(T)
         iter_f! = (integ) -> step!(integ, T, true)
-    elseif integ isa PoincareMap
+    elseif (integ isa PoincareMap) || fixed_solver
         iter_f! = step!
     else # generic case
         iter_f! = (integ) -> step!(integ, Δt) # we don't have to step _exactly_ `Δt` here

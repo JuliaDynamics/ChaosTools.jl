@@ -124,6 +124,9 @@ function basins_of_attraction(grid::Tuple, ds;
     fixed_solver = haskey(diffeq, :dt) && haskey(diffeq, :adaptive)
     if ds isa ContinuousDynamicalSystem && isnothing(Δt) && isnothing(T) && !fixed_solver
         Δt = automatic_Δt_basins(ds, grid; idxs, complete_state, diffeq)
+        if get(kwargs, :show_progress, false)
+            @info "Automatic Δt estimation yielded Δt = $(Δt)"
+        end
     end
     return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state, fixed_solver; kwargs...)
 end
@@ -134,7 +137,6 @@ function basins_of_attraction(
 
     complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
     get_projected_state = (integ) -> view(get_state(integ), idxs)
-    @show Δt
     MDI = DynamicalSystemsBase.MinimalDiscreteIntegrator
     if !isnothing(T)
         iter_f! = (integ) -> step!(integ, T, true)
@@ -162,14 +164,13 @@ cell and their ratio provides `Δt`.
 Keywords `idxs, complete_state, diffeq` are exactly as in [`basins_of_attraction`](@ref),
 and the keyword `N` is `5000` by default.
 
-Notice that `Δt` should not be too small. It is okay for [`basins_of_attraction`](@ref)
-if `Δt` is large! But if it is small the default values for all other keywords such 
+Notice that `Δt` should not be too small which happens typically if the grid resolution
+is high. It is okay for [`basins_of_attraction`](@ref) if the trajectory skips a few cells.
+But if `Δt` is too small the default values for all other keywords such 
 as `mx_chk_hit_bas` need to be increased drastically.
-Our recommendation is to provide a value directly to [`basins_of_attraction`](@ref)
-instead of using this automated version.
 
-Also, `Δt` that is smaller than the internal step size of the integrator will create
-a massive performance drop., if the solver is adaptive
+Also, `Δt` that is smaller than the internal step size of the integrator will cause
+a performance drop.
 """
 function automatic_Δt_basins(ds, grid;
         idxs = 1:length(grid), N = 5000, diffeq = NamedTuple(),

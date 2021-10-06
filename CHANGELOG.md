@@ -1,4 +1,5 @@
 # 2.5
+* New `fixedpoints` function that finds fixed points, and their stability, for either continuous or discrete dynamical systems.
 * Automatic `Δt` estimation for `basins_of_attraction`.
 
 # 2.4

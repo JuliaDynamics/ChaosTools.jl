@@ -1,3 +1,6 @@
+# 2.5
+* Automatic `Δt` estimation for `basins_of_attraction`.
+
 # 2.4
 * `linear_region` now detects a saturation regime also at the start of the curve y(x). Furthermore a keyword `sat` now decides what the saturation regime is.
 # 2.3

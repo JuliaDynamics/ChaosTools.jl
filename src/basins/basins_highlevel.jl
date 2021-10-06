@@ -1,4 +1,4 @@
-export draw_basin!, basins_of_attraction
+export draw_basin!, basins_of_attraction, automatic_Δt_basins
 
 
 """
@@ -31,15 +31,8 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
 
 ## Keyword Arguments
 * `Δt`: Approximate time step of the integrator, which is `1` for discrete systems.
-  For continuous systems, it is recommended to use values such
-  that one step will typically make the integrator move to a different cell of the
-  state space partitioning. If this is not given (i.e., it is `nothing`, its default value),
-  then an automatic estimation of `Δt` is done using the grid and the dynamical system.
-  **Warning:** For ultra-fine grids, this can be even smaller than the internal step size
-  of the integrator, if the solver is adaptive. In such a case, we advise to pick
-  a non-adaptive solver and provide explicitly the argument `dt` in the `diffeq` keyword.
-  TODO: Make function for Δt easy to use and expose it.
-  If `nothing` (default), automatic estimation.... TODO
+  For continuous systems, an automatic value is calculated using [`automatic_Δt_basins`](@ref).
+  See that function for more info.
 * `T` : Period of the stroboscopic map, in case of a continuous dynamical system with periodic
   time forcing. This argument is incompatible with `Δt`.
 * `idxs = 1:length(grid)`: This vector selects the variables of the system that will define the
@@ -168,6 +161,15 @@ cell and their ratio provides `Δt`.
 
 Keywords `idxs, complete_state, diffeq` are exactly as in [`basins_of_attraction`](@ref),
 and the keyword `N` is `5000` by default.
+
+Notice that `Δt` should not be too small. It is okay for [`basins_of_attraction`](@ref)
+if `Δt` is large! But if it is small the default values for all other keywords such 
+as `mx_chk_hit_bas` need to be increased drastically.
+Our recommendation is to provide a value directly to [`basins_of_attraction`](@ref)
+instead of using this automated version.
+
+Also, `Δt` that is smaller than the internal step size of the integrator will create
+a massive performance drop., if the solver is adaptive
 """
 function automatic_Δt_basins(ds, grid;
         idxs = 1:length(grid), N = 5000, diffeq = NamedTuple(),

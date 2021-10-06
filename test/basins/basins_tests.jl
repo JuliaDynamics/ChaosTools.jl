@@ -16,9 +16,9 @@ using OrdinaryDiffEq
 end
 
 @testset "Test basin stroboscopic map" begin
-    ds = Systems.duffing([0.1, 0.25]; ω = 1., f = 0.2, d = 0.15, β = -1)
+    ds = Systems.duffing([0.1, 0.25]; ω = 1.0, f = 0.2, d = 0.15, β = -1)
     xg = yg = range(-2.2,2.2,length=100)
-    T = 2π/1.
+    T = 2π/1.0
     basin,attractors = basins_of_attraction((xg,yg), ds;
     T, diffeq = (;alg=Tsit5()), show_progress = false)
     # pcolormesh(xg, yg, basin')

@@ -122,31 +122,30 @@ function basins_of_attraction(grid::Tuple, ds;
     @assert length(idxs) == length(grid)
     integ = ds isa PoincareMap ? ds : integrator(ds; diffeq...)
     idxs = SVector(idxs...)
-    return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state; kwargs...)
-end
 
-function basins_of_attraction(grid, integ, Δt, T, idxs::SVector, complete_state; kwargs...)
     D = length(get_state(integ))
     if complete_state isa AbstractVector && (length(complete_state) ≠ D-length(idxs))
         error("Vector `complete_state` must have length D-Dg!")
     end
+    # Check logic for automatic Δt computation:
+    fixed_solver = haskey(diffeq, :dt) && haskey(diffeq, :adaptive)
+    if ds isa ContinuousDynamicalSystem && isnothing(Δt) && isnothing(T) && !fixed_solver
+        Δt = automatic_Δt_basins(ds, grid; idxs, complete_state, diffeq)
+    end
+    return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state, fixed_solver; kwargs...)
+end
+
+function basins_of_attraction(
+        grid, integ, Δt, T, idxs::SVector, complete_state, fixed_solver; kwargs...
+    )
+
     complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
     get_projected_state = (integ) -> view(get_state(integ), idxs)
-
-    fixed_solver = if haskey(kwargs, :diffeq) 
-        haskey(kwargs[:diffeq], :dt) && haskey(kwargs[:diffeq], :adaptive)
-    else
-        false
-    end
-
-    if isnothing(Δt) && isnothing(T) && !fixed_solver
-        Δt = automatic_Δt_basins(integ, grid, complete_and_reinit!)
-        @show Δt
-    end
-
+    @show Δt
+    MDI = DynamicalSystemsBase.MinimalDiscreteIntegrator
     if !isnothing(T)
         iter_f! = (integ) -> step!(integ, T, true)
-    elseif (integ isa PoincareMap) || fixed_solver
+    elseif (integ isa PoincareMap) || (integ isa MDI) || fixed_solver
         iter_f! = step!
     else # generic case
         iter_f! = (integ) -> step!(integ, Δt) # we don't have to step _exactly_ `Δt` here
@@ -159,10 +158,28 @@ end
 
 # Estimate Δt
 using LinearAlgebra
-function automatic_Δt_basins(integ, grid, complete_and_reinit!, N = 1000)
-    if integ isa Union{PoincareMap, MinimalDiscreteIntegrator}
+
+"""
+    automatic_Δt_basins(ds, grid; kwargs...) → Δt
+Calculate an optimal `Δt` value for [`basins_of_attraction`](@ref).
+This is done by evaluating the dynamic rule `f` (vector field) at `N` randomly chosen
+points of the grid. The average `f` is then compared with the diagonal length of a grid
+cell and their ratio provides `Δt`.
+
+Keywords `idxs, complete_state, diffeq` are exactly as in [`basins_of_attraction`](@ref),
+and the keyword `N` is `5000` by default.
+"""
+function automatic_Δt_basins(ds, grid;
+        idxs = 1:length(grid), N = 5000, diffeq = NamedTuple(),
+        complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
+    )
+    
+    if ds isa Union{PoincareMap, DiscreteDynamicalSystem}
         return 1
     end
+    integ = integrator(ds; diffeq...)
+    complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
+
     steps = step.(grid)
     s = sqrt(sum(x^2 for x in steps)) # diagonal length of a cell
     indices = CartesianIndices(length.(grid))
@@ -179,5 +196,5 @@ function automatic_Δt_basins(integ, grid, complete_and_reinit!, N = 1000)
         end
         dudt += norm(deriv)
     end
-    return Δt = s*N/dudt
+    return Δt = 10*s*N/dudt
 end

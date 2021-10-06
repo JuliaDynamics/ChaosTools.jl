@@ -1,4 +1,4 @@
-export draw_basin!, basins_of_attraction
+export draw_basin!, basins_of_attraction, automatic_Δt_basins
 
 
 """
@@ -30,9 +30,9 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
 [^Yorke1997]: H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations Ch. 7, Springer, New York, 1997
 
 ## Keyword Arguments
-* `Δt = 1`: Approximate time step of the integrator. It is recommended to use values such
-  that one step will typically make the integrator move to a different cell of the
-  state space partitioning.
+* `Δt`: Approximate time step of the integrator, which is `1` for discrete systems.
+  For continuous systems, an automatic value is calculated using [`automatic_Δt_basins`](@ref).
+  See that function for more info.
 * `T` : Period of the stroboscopic map, in case of a continuous dynamical system with periodic
   time forcing. This argument is incompatible with `Δt`.
 * `idxs = 1:length(grid)`: This vector selects the variables of the system that will define the
@@ -48,7 +48,7 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   This number can be increased for higher accuracy.
 * `mx_chk_fnd_att = 100` : Maximum check of unnumbered cell before considering we have an attractor.
   This number can be increased for higher accuracy.
-* `mx_chk_loc_att = 60` : Maximum check of consecutive cells marked as an attractor before considering
+* `mx_chk_loc_att = 100` : Maximum check of consecutive cells marked as an attractor before considering
   that we have all the available pieces of the attractor.
 * `mx_chk_lost` : Maximum check of iterations outside the defined grid before we consider the orbit
   lost outside. This number can be increased for higher accuracy. It defaults to `20` if no
@@ -106,7 +106,7 @@ influence in some cases. This algorithm is usually slower than the method with t
 attractors on the grid.
 """
 function basins_of_attraction(grid::Tuple, ds;
-        Δt=1, T=0, idxs = 1:length(grid),
+        Δt=nothing, T=nothing, idxs = 1:length(grid),
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
         diffeq = NamedTuple(), kwargs...
         # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
@@ -115,61 +115,89 @@ function basins_of_attraction(grid::Tuple, ds;
     @assert length(idxs) == length(grid)
     integ = ds isa PoincareMap ? ds : integrator(ds; diffeq...)
     idxs = SVector(idxs...)
-    return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state; kwargs...)
-end
 
-function basins_of_attraction(grid, integ, Δt, T, idxs::SVector, complete_state; kwargs...)
     D = length(get_state(integ))
     if complete_state isa AbstractVector && (length(complete_state) ≠ D-length(idxs))
         error("Vector `complete_state` must have length D-Dg!")
     end
-    if T > 0
+    # Check logic for automatic Δt computation:
+    fixed_solver = haskey(diffeq, :dt) && haskey(diffeq, :adaptive)
+    if ds isa ContinuousDynamicalSystem && isnothing(Δt) && isnothing(T) && !fixed_solver
+        Δt = automatic_Δt_basins(ds, grid; idxs, complete_state, diffeq)
+        if get(kwargs, :show_progress, false)
+            @info "Automatic Δt estimation yielded Δt = $(Δt)"
+        end
+    end
+    return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state, fixed_solver; kwargs...)
+end
+
+function basins_of_attraction(
+        grid, integ, Δt, T, idxs::SVector, complete_state, fixed_solver; kwargs...
+    )
+
+    complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
+    get_projected_state = (integ) -> view(get_state(integ), idxs)
+    MDI = DynamicalSystemsBase.MinimalDiscreteIntegrator
+    if !isnothing(T)
         iter_f! = (integ) -> step!(integ, T, true)
-    elseif integ isa PoincareMap
+    elseif (integ isa PoincareMap) || (integ isa MDI) || fixed_solver
         iter_f! = step!
     else # generic case
         iter_f! = (integ) -> step!(integ, Δt) # we don't have to step _exactly_ `Δt` here
     end
-    complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
-    get_projected_state = (integ) -> view(get_state(integ), idxs)
     bsn_nfo = draw_basin!(
         grid, integ, iter_f!, complete_and_reinit!, get_projected_state; kwargs...
     )
     return bsn_nfo.basin, bsn_nfo.attractors
 end
 
+# Estimate Δt
+using LinearAlgebra
+
 """
-    CompleteAndReinit(complete_state, idxs, D)
-Helper struct that completes a state and reinitializes the integrator once called
-as a function with arguments `f(integ, y)` with `integ` the initialized dynamical
-system integrator and `y` the projected initial condition on the grid.
+    automatic_Δt_basins(ds, grid; kwargs...) → Δt
+Calculate an optimal `Δt` value for [`basins_of_attraction`](@ref).
+This is done by evaluating the dynamic rule `f` (vector field) at `N` randomly chosen
+points of the grid. The average `f` is then compared with the diagonal length of a grid
+cell and their ratio provides `Δt`.
+
+Keywords `idxs, complete_state, diffeq` are exactly as in [`basins_of_attraction`](@ref),
+and the keyword `N` is `5000` by default.
+
+Notice that `Δt` should not be too small which happens typically if the grid resolution
+is high. It is okay for [`basins_of_attraction`](@ref) if the trajectory skips a few cells.
+But if `Δt` is too small the default values for all other keywords such 
+as `mx_chk_hit_bas` need to be increased drastically.
+
+Also, `Δt` that is smaller than the internal step size of the integrator will cause
+a performance drop.
 """
-struct CompleteAndReinit{C, Y, R}
-    complete_state::C
-    u::Vector{Float64} # dummy variable for a state in full state space
-    idxs::SVector{Y, Int}
-    remidxs::R
-end
-function CompleteAndReinit(complete_state, idxs, D::Int)
-    remidxs = setdiff(1:D, idxs)
-    remidxs = isempty(remidxs) ? nothing : SVector(remidxs...)
-    u = zeros(D)
-    if complete_state isa AbstractVector
-        @assert eltype(complete_state) <: Number
+function automatic_Δt_basins(ds, grid;
+        idxs = 1:length(grid), N = 5000, diffeq = NamedTuple(),
+        complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
+    )
+    
+    if ds isa Union{PoincareMap, DiscreteDynamicalSystem}
+        return 1
     end
-    return CompleteAndReinit(complete_state, u, idxs, remidxs)
-end
-function (c::CompleteAndReinit{<: AbstractVector})(integ, y)
-    c.u[c.idxs] .= y
-    if !isnothing(c.remidxs)
-        c.u[c.remidxs] .= c.complete_state
+    integ = integrator(ds; diffeq...)
+    complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
+
+    steps = step.(grid)
+    s = sqrt(sum(x^2 for x in steps)) # diagonal length of a cell
+    indices = CartesianIndices(length.(grid))
+    random_points = [generate_ic_on_grid(grid, ind) for ind in rand(indices, N)]
+    dudt = 0.0
+    udummy = copy(integ.u)
+    for p in random_points
+        complete_and_reinit!(integ, p)
+        deriv = if integ.u isa SVector
+            integ.f(integ.u, integ.p, 0.0)
+        else
+            integ.f(udummy, integ.u, integ.p, 0.0)
+            udummy
+        end
+        dudt += norm(deriv)
     end
-    reinit!(integ, c.u)
-end
-function (c::CompleteAndReinit)(integ, y) # case where `complete_state` is a function
-    c.u[c.idxs] .= y
-    if !isnothing(c.remidxs)
-        c.u[c.remidxs] .= c.complete_state(y)
-    end
-    reinit!(integ, c.u)
+    return Δt = 10*s*N/dudt
 end

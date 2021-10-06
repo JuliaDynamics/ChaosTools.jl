@@ -1,5 +1,7 @@
 # 2.5
 * New `fixedpoints` function that finds fixed points, and their stability, for either continuous or discrete dynamical systems.
+* Automatic `Δt` estimation for `basins_of_attraction`.
+
 # 2.4
 * `linear_region` now detects a saturation regime also at the start of the curve y(x). Furthermore a keyword `sat` now decides what the saturation regime is.
 # 2.3

@@ -16,6 +16,7 @@ DEI = DEIntegrator
 include("orbitdiagrams/discrete_diagram.jl")
 include("orbitdiagrams/poincare.jl")
 
+include("basins/basins_reinit.jl")
 include("basins/basins_highlevel.jl")
 include("basins/basins_lowlevel.jl")
 include("basins/basins_utilities.jl")

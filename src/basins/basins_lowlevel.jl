@@ -91,14 +91,6 @@ function next_uncolored_cell(bsn_nfo, j, I)
     return I[1], true, length(bsn_nfo.basin)
 end
 
-@generated function generate_ic_on_grid(grid::NTuple{B, T}, ind) where {B, T}
-    gens = [:(grid[$k][ind[$k]]) for k=1:B]
-    quote
-        Base.@_inline_meta
-        @inbounds return SVector{$B, Float64}($(gens...))
-    end
-end
-
 
 function get_color_point!(bsn_nfo::BasinInfo, integ, y0; kwargs...)
     # This routine identifies the attractor using the previously defined basin.
@@ -136,7 +128,7 @@ and the trajectories staying outside the grid are coded with -1.
 """
 function _identify_basin_of_cell!(
         bsn_nfo::BasinInfo, n::CartesianIndex, u_full_state;
-        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_loc_att = 60,
+        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_loc_att = 100,
         horizon_limit = 1e6, ε = 1e-3,
         mx_chk_lost = isnothing(bsn_nfo.search_trees) ? 20 : 1000,
     )

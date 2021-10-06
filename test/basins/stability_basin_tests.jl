@@ -1,6 +1,6 @@
 using DynamicalSystems
 using Test
-# include("../../src/basins/basins_fractions.jl")
+include("../../src/basins/basins_fractions.jl")
 
 @testset "Basin Stability Pendulum" begin
     @inline @inbounds function damped_driven_pendulum(u, p, t)
@@ -45,26 +45,29 @@ using Test
 
     #---Running for supervised
     #prepare templates
-    y0 = [0.5 0; 2.7 0]' #each IC along a row
+    ic_templates = [0.5 0; 2.7 0]' #each IC along a row
     templates_labels = ["IC", "LC"]
 
-    S, class_labels = basin_fractions(ds, feature_extraction, ic_grid, "supervised"; T=Texec, Ttr=Ttr, Δt=Δt, clust_mod="supervised", y0=y0, templates_labels=templates_labels )
+    # println("Test No1. Supervised")
+    S, class_labels = basin_fractions(ds, feature_extraction, ic_grid, ic_templates; T=Texec, Ttr=Ttr, Δt=Δt)
     # S = (Dict(2 => 0.8452,1 => 0.1548)
     @test S[1] == 0.17
     @test S[2] == 0.83
 
-    #-- plot basins
-    # cmap = matplotlib.colors.ListedColormap(["red", "white"])
-    # fig = figure()
-    # scatter(ic_grid[1,:], ic_grid[2,:], c=class_labels, cmap=cmap)
-    # colorbar()
-    # savefig("pendulum-basins-colored-supervised.png")
-
-    S, class_labels = basin_fractions(ds, feature_extraction, ic_grid, "unsupervised"; T=Texec, Ttr=Ttr, Δt=Δt, clust_mod="supervised", y0=y0, templates_labels=templates_labels )
+    # println("Test No2. Unsupervised")
+    S, class_labels = basin_fractions(ds, feature_extraction, ic_grid, []; T=Texec, Ttr=Ttr, Δt=Δt)
     # S = (Dict(2 => 0.1548,1 => 0.8452)
     @test S[1] == 0.83
     @test S[2] == 0.17
 
+    #plot basins
+    # using PyPlot
+    # #make N = 10000 to replicate the paper
+    # cmap = matplotlib.colors.ListedColormap(["red", "white"])
+    # fig = figure()
+    # scatter(ic_grid[1,:], ic_grid[2,:], c=class_labels, cmap=cmap)
+    # colorbar()
+    # savefig("pendulum-basins-colored-unsupervised.png")
 end
 
 
@@ -92,8 +95,8 @@ end
 
     #---Running for supervised
     #templates
-    y0 = [0.21 0.02; 1.05 0.77; -0.67 0.02; -0.46 0.3; -0.43 0.12]'
-    S, class_labels = basin_fractions(ds, feature_extraction, ic_grid, "supervised"; T=Texec, Ttr=Ttr, Δt=Δt, clust_mod="supervised", y0=y0)
+    ic_templates = [0.21 0.02; 1.05 0.77; -0.67 0.02; -0.46 0.3; -0.43 0.12]'
+    S, class_labels = basin_fractions(ds, feature_extraction, ic_grid, ic_templates; T=Texec, Ttr=Ttr, Δt=Δt)
     # S = (Dict(4 => 0.0248,2 => 0.5086,3 => 0.028,5 => 0.2424,1 => 0.1962), [1, 2, 5, 2, 2, 1, 2, 1, 5, 5  …  2, 5, 1, 2, 2, 2, 2, 2, 1, 2])
 
     @test S[1] == 0.1962
@@ -103,7 +106,7 @@ end
     @test S[5] == 0.2424
 
     # println("Test No2. Unsupervised")
-    S, class_labels = basin_fractions(ds, feature_extraction, ic_grid, "unsupervised"; T=Texec, Ttr=Ttr, Δt=Δt, clust_mod="supervised", y0=y0)
+    S, class_labels = basin_fractions(ds, feature_extraction, ic_grid, []; T=Texec, Ttr=Ttr, Δt=Δt)
     # S = (Dict(4 => 0.028,2 => 0.2424,3 => 0.1962,5 => 0.0248,1 => 0.5086), [3, 1, 2, 1, 1, 3, 1, 3, 2, 2  …  1, 2, 3, 1, 1, 1, 1, 1, 3, 1])
 
     @test S[1] == 0.5086

@@ -45,7 +45,7 @@ end
     yg = range(-2,2,length=100)
     complete_state(y) = SVector(0.0, 0.0)
     basin, attractors = basins_of_attraction((xg,yg), ds;
-    idxs=1:2, complete_state, show_progress = false)
+    idxs=1:2, Δt = 1., complete_state, show_progress = false)
     # pcolormesh(xg,yg, basin')
     @test count(basin .== 1) == 3332
     @test count(basin .== 2) == 3332
@@ -53,7 +53,7 @@ end
     # Now test the zoom capability
     xg = yg = range(-2,-1.9,length=50)
     basins, att = basins_of_attraction((xg,yg), ds;
-    idxs = 1:2, complete_state, show_progress = false,
+    idxs = 1:2, Δt = 1., complete_state, show_progress = false,
     attractors = attractors, mx_chk_lost = 1000, ε = 1e-3)
     @test count(basins .== 2) == 407
     @test count(basins .== 3) == 737
@@ -63,7 +63,7 @@ end
     ds = Systems.lorenz84()
     xg=yg=range(-1.,2.,length=100)
     zg=range(-1.5,1.5,length=30)
-    bsn,att = basins_of_attraction((xg, yg, zg), ds; show_progress = false)
+    bsn,att = basins_of_attraction((xg, yg, zg), ds; Δt = 1., show_progress = false)
     @test length(size(bsn)) == 3
     for i in 1:size(bsn)[3]
         # While there are 4 attractors, because system is chaotic we might
@@ -83,7 +83,7 @@ end
     ds = Systems.lorenz_iip()
     xg = yg = range(-30.0, 30.0; length=10)
     zg = range(0, 50; length=10)
-    basin, attractors = basins_of_attraction((xg,yg,zg), ds; show_progress=false)
+    basin, attractors = basins_of_attraction((xg,yg,zg), ds; show_progress=false, mx_chk_fnd_att = 1000)
     @test length(attractors) == 1
     @test unique(basin) == [1]
 end

@@ -16,9 +16,9 @@ using OrdinaryDiffEq
 end
 
 @testset "Test basin stroboscopic map" begin
-    ds = Systems.duffing([0.1, 0.25]; ω = 1., f = 0.2, d = 0.15, β = -1)
+    ds = Systems.duffing([0.1, 0.25]; ω = 1.0, f = 0.2, d = 0.15, β = -1)
     xg = yg = range(-2.2,2.2,length=100)
-    T = 2π/1.
+    T = 2π/1.0
     basin,attractors = basins_of_attraction((xg,yg), ds;
     T, diffeq = (;alg=Tsit5()), show_progress = false)
     # pcolormesh(xg, yg, basin')
@@ -45,18 +45,19 @@ end
     yg = range(-2,2,length=100)
     complete_state(y) = SVector(0.0, 0.0)
     basin, attractors = basins_of_attraction((xg,yg), ds;
-    idxs=1:2, complete_state, show_progress = false)
-    # pcolormesh(xg,yg, basin')
-    @test count(basin .== 1) == 3332
-    @test count(basin .== 2) == 3332
+    idxs=1:2, complete_state, show_progress = false, mx_chk_hit_bas = 20, Δt = 0.5)
+    # pcolormesh(xg, yg, basin')
+    @test 3330 < count(basin .== 1) < 3340
+    @test 3330 < count(basin .== 2) < 3340
 
     # Now test the zoom capability
-    xg = yg = range(-2,-1.9,length=50)
-    basins, att = basins_of_attraction((xg,yg), ds;
-    idxs = 1:2, complete_state, show_progress = false,
-    attractors = attractors, mx_chk_lost = 1000, ε = 1e-3)
-    @test count(basins .== 2) == 407
-    @test count(basins .== 3) == 737
+    xg = yg = range(-2, -1.9, length = 50)
+    bas, att = basins_of_attraction((xg,yg), ds;
+    idxs = 1:2, complete_state, show_progress = false, mx_chk_hit_bas = 20,
+    attractors = attractors, mx_chk_lost = 1000, ε = 1e-3, Δt = 1.0)
+    # figure(); pcolormesh(xg, yg, bas')
+    @test count(bas .== 2) == 407
+    @test count(bas .== 3) == 737
 end
 
 @testset "3D basins" begin

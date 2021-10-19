@@ -1,6 +1,6 @@
 import IntervalRootFinding, LinearAlgebra
-using IntervalRootFinding: (..), (×)
-export fixedpoints, .., ×
+using IntervalRootFinding: (..), (×), IntervalBox, interval
+export fixedpoints, .., ×, IntervalBox, interval
 
 """
     fixedpoints(ds::DynamicalSystem, box, p = ds.p; kwargs...) → fp, eigs, stable
@@ -13,8 +13,8 @@ the fixed points are stable or not, are also returned.
 `box` is an appropriate `IntervalBox` from IntervalRootFinding.jl. 
 E.g. for a 3D system it would be something like 
 ```julia
-v, z = -5..5, -2..2   # 1D intervals
-box = v × v × z       # `\\times = ×`, or use `IntervalBox`
+v, z = -5..5, -2..2   # 1D intervals, can use `interval(-5, 5)` instead
+box = v × v × z       # `\\times = ×`, or use `IntervalBox(v, v, z)` instead
 ```
 
 Internally IntervalRootFinding.jl is used and as a result we are guaranteed to find all

@@ -22,6 +22,7 @@ include("basins/basins_utilities.jl")
 include("basins/uncertainty_exp.jl")
 include("basins/tipping.jl")
 include("basins/basins_fractions.jl")
+include("basins/sampler.jl")
 
 include("dimensions/linear_regions.jl")
 include("dimensions/generalized_dim.jl")

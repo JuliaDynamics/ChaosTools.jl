@@ -30,40 +30,43 @@ function basin_fractions(basins::AbstractArray)
     return fs
 end
 
-# `sampler` is a function without any arguments that generates random initial conditions
-# within a subset of the state space. You can use [`boxregion`](@ref) to create a `sampler`
-# on a state space box. #TODO: implement sampler as more efficient alternative to ic_grid.
 """
-function basin_fractions(ds::DynamicalSystem, feature_extraction::Function,
-    ic_grid::AbstractMatrix, ic_templates::AbstractMatrix=[]; kwargs...)
+    basin_fractions(ds::DynamicalSystem, feature_extraction::Function,
+    ics::Union{Dataset, Function}, ic_templates::Dataset=Dataset([0]); kwargs...)
 
-Compute the global stability of basins of attraction [^Menck2013] of the given dynamical
-system `ds` by integrating trajectories starting in a grid of initial conditions `ic_grid`,
-then classifying their respective steady-states by extracting features from the trajectories
-using the `feature_extraction` function and identifying clusters of features as an attractor
-[^Stender2021]. The function returns the stability of each basin, calculated as the fraction
-of initial conditions ending at each attractor, along with the labels given to each initial
-condition in the grid.
+    
+Compute the fraction of points inside a region of state space which go to each existing basin
+of attraction. This fraction is an estimate of the basin's global stability under some 
+conditions [^Menck2013]. They are calculated by integrating trajectories of the given 
+dynamical system `ds`, starting from initial conditions (ICs) given in `ics` and classifying 
+their respective steady-states using clustering algorithms. This clustering is done by
+by extracting features from the trajectories using the `feature_extraction` function and
+then identifying clusters of features as an attractor [^Stender2021].
+The function returns the fraction of initial conditions ending up at each identified attractor,
+ along with the labels given to each initial condition, if `ics` is a Dataset.
 
 The dynamical system `ds` can be either `DiscreteDynamicalSystem` or
-`ContinuousDynamicalSystem`. `ic_grid` contains the initial conditions in each
-column. Its size is thus the dimensionality of the system by the number of initial
-conditions provided. Different types of grids can be used, such as an evenly spaced grid, a
-uniform randomly spaced grid, or a gaussian distributed grid. A uniform, randomly spaced
-grid guarantees that the basin stability values calculated are proportional to the true
-basins' volume as the number of initial conditions goes to infinity. For nonuniform grids,
-the values indicate the probabilities for observing each specific steady-state.(see
-[^Stender2021] for more discussions). The `feature_extraction` function receives as input a
-trajectory `u`, time vector, and optional parameters, and returns a matrix containing the
-features extracted from u, with the j-th feature in the j-th column of the matrix.
-Finally, `ic_templates` contains in its columns the initial conditions for
+`ContinuousDynamicalSystem`. `ics` contains the initial conditions, and can either a `Dataset`
+of a `Function`. As a `Dataset`, `ics` already contains the initial conditions to be used,
+with each row being the IC for each trajectory. Starting from a Matrix `M`, `ics` can be
+generated as `ics = Dataset(M)`. As a `Function`, `ics()` generates an IC
+on the spot. See [`sampler`](@ref) for convenience functions to generate `ics()`. 
+Uniform, randomly spaced ICs guarantees that the basin fractions values calculated are 
+proportional to the true basins' volume as the number of initial conditions goes to infinity,
+and so are an estimate of the basin's global stability.
+For nonuniform ICs, the fractions simply indicate the probabilities for observing each specific 
+steady-state.(see [^Stender2021] for more discussions).
+
+The `feature_extraction` function receives as input a trajectory vector `u`, the time vector, and
+optional parameters, to return an array `Array{Float64, 1}` containing the features extracted from `u`.
+Finally, `ic_templates` is a `Dataset`, containing in its rows the initial conditions for
 the templates, to which the features are matched in the "supervised" clustering method.
 If not provided, the "unsupervised" clustering method is used.
 
 The output `S` is a dictionary whose keys are the labels given to each attractor, and the values
 are their respective global stability. The label `-1` is given to any initial condition whose
 attractor could not be identified. The `class_labels` output is an array of size `N`
-containing the label of each initial condition given in `ic_grid`.
+containing the label of each initial condition given in `ics`.
 
 
 ## Keyword arguments
@@ -73,27 +76,30 @@ containing the label of each initial condition given in `ic_grid`.
 * `Δt = 1` : Integration time step, Δt = 1/fs, fs being the sampling frequency used in the
   bSTAB paper
 * `diffeq = NamedTuple()` : other parameters for the solvers of DiffEqs
+* `num_samples` : Number of sample initial conditions to generate. Used only if `ics` is a
+`Function`.
+* `seed_sampling = 1` : The seed for the random number generator used in generating the initial
+conditions. Used only if `ics` is a `Function`.
 ### Feature extraction and classification
-* `clust_params = NamedTuple()` : other parameters for clustering method
-* `extract_params = NamedTuple()`  : other parameters for the feature_extraction function
+*`clust_method_norm=Euclidean()` : metric to be used in the clustering in the supervised
+    method; 
+* `extract_params = NamedTuple()`  : optional parameters for the `feature_extraction` function.
 * `clust_method_norm = "kNN"` : (supervised method only) which clusterization method to
     apply. If `"kNN"`, the first-neighbor clustering is used. If `"kNN_thresholded"`, a
     subsequent step is taken, which considers as unclassified (label `-1`) the features
     whose distance to the nearest template above the `clustering_threshold`.
-* `clustering_threshold = 0.0` : ("supervised" method, with `kNN_thresholded` only).
+* `clustering_threshold = 0.0` : ("supervised" method, with `kNN_thresholded` only). Maximum
+   allowed distance between a feature and the cluster center for it to be considered inside 
+    the cluster. Used when `clust_method = kNN_thresholded`;
 * `min_neighbors = 10` : (unsupervised method only) minimum number of neighbors
     (i.e. of similar features) each feature needs to have in order to be considered in a
-    cluster (fewer than this, it is labeled as an outlier,  id=-1). This is somewhat hard
+    cluster (fewer than this, it is labeled as an outlier,  id=-1). This number is somewhat hard
      to define, as it directly interferes with how many attractors the clustering finds.
      The authors use it equal to 10 always.
 
-## Available featurizers
-* lyapunov spectrum #TODO: future implementation?
-* statistical moments
-
 ## Description
 Let ``F(A)`` be the fraction of initial conditions in a region of state space
-``\\mathcal{S}``, given by `ic_grid`, which are in the basin of attraction of an attractor
+``\\mathcal{S}``, given by `ics`, which are in the basin of attraction of an attractor
 ``A``. `basin_fractions` estimates ``F`` for attractors in
 ``\\mathcal{S}`` by counting which initial conditions end up in which attractors. To do
 this, it evolves each trajectory `u` for `T` times past an initial transient `Ttr`, values
@@ -119,8 +125,9 @@ is not identified are labeled as `-1`. Otherwise, they are labeled starting from
 crescent order.
 
 These labels are then returned by the algorithm, along with the fraction ``F(A)`` for each
-label (attractor). The sampling error associated with this method is given by[^Stender2021] ``e = \\sqrt{F(A)(1-F(A))/N}``, with ``N`` denoting the number of initial conditions, if the uniform
-random sampling is used in `ic_grid`.
+label (attractor). The sampling error associated with this method is given by[^Stender2021]
+``e = \\sqrt{F(A)(1-F(A))/N}``, with ``N`` denoting the number of initial conditions, if the uniform
+random sampling is used in `ics`.
 
 
 [^Menck2013] : Menck, Heitzig, Marwan & Kurths. How basin stability complements the linear
@@ -130,14 +137,14 @@ stability paradigm. [Nature Physics, 9(2), 89–92](https://doi.org/10.1038/nphy
 stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
 function basin_fractions(ds::DynamicalSystem, feature_extraction::Function,
-    ic_grid::AbstractMatrix, ic_templates::AbstractArray=[]; kwargs...)
+    ics::Union{Dataset, Function}, ic_templates::Dataset=Dataset([0]); kwargs...)
 
-    feature_array = featurizer(ds, ic_grid,  feature_extraction; kwargs...)
+    feature_array = featurizer_allics(ds, ics,  feature_extraction; kwargs...)
 
-    if ic_templates == [] #unsupervised, no templates
+    if ic_templates == Dataset([0]) #unsupervised, no templates; #TODO:improve this hack?
         class_labels, class_errors = classify_solution(feature_array; kwargs...)
     else #supervised
-        feature_templates = featurizer(ds, ic_templates, feature_extraction; kwargs...)
+        feature_templates = featurizer_allics(ds, ic_templates, feature_extraction; kwargs...)
         class_labels, class_errors = classify_solution(feature_array, feature_templates; 
         kwargs...);
     end
@@ -149,15 +156,33 @@ end
 
 #----- INTEGRATION AND FEATURE EXTRACTION
 """
-`featurizer` receives the grid (matrix) of initial conditions and returns their extracted
- features in a matrix, with the j-th column containing the j-th feature. To do this, it
- calls the other `featurizer` method, made for just one array of ICs.
+`featurizer_allics` receives the pre-generated initial conditions `ics` in a `Dataset`
+and returns their extracted features in a matrix, with the j-th column containing the
+j-th feature. To do this, it  calls the other `featurizer` method, made for just one array of ICs.
+`ics` should contain each initial condition along its rows.
 """
-function featurizer(ds, ic_grid::AbstractMatrix, feature_extraction::Function;  kwargs...)
-    Nactual = size(ic_grid, 2) #number of actual ICs
-    feature_array = [Float64[] for i=1:Nactual]
-    for i = 1:Nactual #TODO: implement parallelization, if necessary
-        feature_array[i] = featurizer(ds, ic_grid[:,i], feature_extraction; kwargs...)
+function featurizer_allics(ds, ics::Dataset, feature_extraction::Function;  kwargs...)
+    num_samples = size(ics, 1) #number of actual ICs
+    feature_array = [Float64[] for i=1:num_samples]
+    for i = 1:num_samples #TODO: implement parallelization, if necessary
+        ic, _ = iterate(ics, i)
+        feature_array[i] = featurizer(ds, ic, feature_extraction; kwargs...)
+    end
+    return hcat(feature_array...)
+end
+
+"""
+`featurizer_allics` receives the sampler function to generate the initial conditions `ics`,
+generates them and returns their extracted features in a matrix, with the j-th column containing the
+j-th feature. To do this, it  calls the other `featurizer` method, made for just one array of ICs.
+"""
+function featurizer_allics(ds, ics::Function, feature_extraction::Function; num_samples, 
+    seed_sampling=1, kwargs...)
+    feature_array = [Float64[] for i=1:num_samples]
+    Random.seed!(seed_sampling)
+    for i = 1:num_samples #TODO: implement parallelization, if necessary
+        ic = ics()
+        feature_array[i] = featurizer(ds, ic, feature_extraction; kwargs...)
     end
     return hcat(feature_array...)
 end
@@ -168,7 +193,7 @@ end
 It integrates the initial condition, applies the `feature_extraction` function and returns
 its output. The type of the returned vector depends on `feature_extraction`'s output.
 """
-function featurizer(ds, u0::AbstractVector, feature_extraction; T=100, Ttr=0, Δt=1,
+function featurizer(ds, u0, feature_extraction; T=100, Ttr=0, Δt=1,
     extract_params=NamedTuple(), diffeq=NamedTuple(), kwargs...)
     u = trajectory(ds, T, u0; Ttr=Ttr, Δt=Δt, diffeq) #TODO: maybe starting an integrator
                     # and using re_init! is better
@@ -176,7 +201,6 @@ function featurizer(ds, u0::AbstractVector, feature_extraction; T=100, Ttr=0, Δ
     feature = feature_extraction(t, u, extract_params)
     return feature
 end
-
 
 #------ CLASSIFICATION OF FEATURES
 
@@ -265,8 +289,6 @@ end
 
 #TODO: Perhaps we can optimize the featurizers to use `reinit' instead of initializing an integrator
 # all the time by calling `trajectory``
-#TODO: implement usability for sampler method. For now, we are passing ic_grid directly to
-# the function, as done in the bSTAB algorithm.
 #TODO: maybe we should also return more info in basin_stability's output, like the
 #classification error, and the properties of each attractor (such its center, in the
 #unsupervised case). I fear maybe the user can confuse which attractor corresponds to

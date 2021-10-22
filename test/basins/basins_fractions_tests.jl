@@ -1,4 +1,3 @@
-using DynamicalSystems
 using Test
 using Random #to set seeds for ICs
 using Statistics

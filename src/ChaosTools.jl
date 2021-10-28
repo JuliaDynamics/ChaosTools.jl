@@ -16,6 +16,7 @@ DEI = DEIntegrator
 include("orbitdiagrams/discrete_diagram.jl")
 include("orbitdiagrams/poincare.jl")
 
+include("basins/basins_reinit.jl")
 include("basins/basins_highlevel.jl")
 include("basins/basins_lowlevel.jl")
 include("basins/basins_utilities.jl")
@@ -36,6 +37,7 @@ include("dimreduction/dyca.jl")
 include("period_return/periodic_points.jl")
 include("period_return/period.jl")
 include("period_return/transit_times_statistics.jl")
+include("period_return/fixedpoints.jl")
 
 include("chaosdetection/lyapunovs.jl")
 include("chaosdetection/gali.jl")

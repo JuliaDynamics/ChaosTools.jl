@@ -108,6 +108,13 @@ l1 = [x[1] for x in ls]
 @test 0.434 < l1[end] < 0.436
 end
 
+
+@testset "Lyapunov convergence, discrete" begin
+ds = Systems.logistic(; r=4.0)
+λs, t = ChaosTools.lyapunovspectrum_convergence(ds, 5000)
+@test 0.692 < λs[end] < 0.694
+end
+
 @testset "Local growth rates" begin
     # input arguments
     ds = Systems.henon()

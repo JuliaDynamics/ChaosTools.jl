@@ -41,7 +41,9 @@ See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_proba
   of the dynamical system state on each initial condition `u`, with `Dg` the dimension
   of the grid. It can be either a vector of length `D-Dg`, or a function `f(y)` that
   returns a vector of length `D-Dg` given the _projected_ initial condition on the grid `y`.
-* `diffeq...`: Keyword arguments propagated to [`integrator`](@ref).
+* `diffeq = NamedTuple()`: Keyword arguments propagated to [`integrator`](@ref). Only
+  useful for continuous systems. It is **strongly recommended** to choose high accuracy
+  solvers for this application, e.g. `diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)`.
 * `mx_chk_att = 2`: A parameter that sets the maximum checks of consecutives hits of an attractor
   before deciding the basin of the initial condition.
 * `mx_chk_hit_bas = 10` : Maximum check of consecutive visits of the same basin of attraction.

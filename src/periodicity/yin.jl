@@ -1,85 +1,108 @@
-using LinearAlgebra, StaticArrays
-
-################################################################################
-#                                YIN algorithm                                 #
-################################################################################
-
-# Fundamental frequency estimation. Based on the YIN alorgorithm
-# [1]: Patrice Guyot. (2018, April 19). Fast Python implementation of the Yin algorithm
-# (Version v1.1.1). Zenodo. http://doi.org/10.5281/zenodo.1220947
-# [2]: De Cheveigné, A., & Kawahara, H. (2002). YIN, a fundamental frequency estimator for
-# speech and music. The Journal of the Acoustical Society of America, 111(4), 1917-1930.
-
-
-
 """
-    differenceFunction_original(x, τmax)  
-Computes the difference function of `x`.
-This corresponds to equation (6) in [^1]:
-```math
-d_t(\\tau) = \\sum_{j=1}^W (x_j - x_{j+\\tau})^2
-```
-`x`: audio data
-`N` : length of data
-`τ_max`: integration window size
+    yin(sig::Vector, sr::Int; w_len::Int = 512, f_step::Int = 256, f0_min = 100, f0_max = 500,
+        harmonic_threshold = 0.1, 
+        difference_function::Function = difference_function_original) -> F0s, frame_times
 
-[^1]: De Cheveigné, A., & Kawahara, H. (2002). YIN, a fundamental frequency estimator for
-speech and music. The Journal of the Acoustical Society of America, 111(4), 1917-1930.
-"""
-function difference_function_original(x, N, τmax)
-    df = zeros(eltype(x), τmax)
-    for τ in 1:τmax-1
-        for j in 1:(N-τmax)
-            df[τ+1] += (x[j] - x[j + τ]) ^ 2
-        end
-    end
-    return df
-end
+Estimates the fundamental frequency (F0) of the signal `sig` using the YIN algorithm [^1].
+The signal `sig` is a vector of points uniformly sampled at a rate `sr`.  
 
-"""
-getPitch(
-    cumulative_mean_normalized_difference_functionf, τ_min, τ_max, harmonic_threshold=0.1
-)
 
-Return the fundamental period of a frame,
-based on the cumulative mean normalized difference function (CMNDF).
+## Keyword arguments
+* `w_len`: size of the analysis window [samples == number of points]
+* `f_step`: size of the lag between two consecutive frames [samples == number of points]
+* `f0_min`: Minimum fundamental frequency that can be detected [linear frequency]
+* `f0_max`: Maximum fundamental frequency that can be detected [linear frequency]
+* `harmonic_threshold`: Threshold of detection. The algorithm returns the first minimum of
+  the CMNDF function below this threshold.
+* `diffference_function`: The difference function to be used (by default
+  [`differenceFunction_original`](@ref)).
 
-## Arguments:
-* `cmndf`: cumulative mean normalized difference of the data
-* `τ_min`: minimum period
-* `τ_max`: maximum period
-* `harmonic_threshold`: harmonicity threshold to determine if it is necessary to compute pitch frequency
+## Description
+The YIN algorithm [^1] estimates the signal's fundamental frequency `F0` by basically
+looking for the period `τ0`  which minimizes the signal's autocorrelation. This
+autocorrelation is calculated for signal segments (frames), composed of two windows of
+length `w_len`. Each window is separated by a distance `τ`, and the idea is that the
+distance which minimizes the pairwise difference between each window is considered to be the
+fundamental period `τ0` of that frame.
 
-We define the CMNDF as follows:
+More precisely, the algorithm first computes the cumulative mean normalized difference
+function (MNDF) between two windows of a frame for several candidate periods `τ` ranging
+from `τ_min=sr/f0_max` to `τ_max=sr/f0_min`. The MNDF is defined as 
 ```math
 d_t^\\prime(\\tau) = \\begin{cases}
         1 & \\text{if} ~ \\tau=0 \\\\
         d_t(\\tau)/\\left[{(\\frac 1 \\tau) \\sum_{j=1}^{\\tau} d_{t}(j)}\\right] & \\text{otherwise}
         \\end{cases}
 ```
+where `d_t` is the difference function:
+```math
+d_t(\\tau) = \\sum_{j=1}^W (x_j - x_{j+\\tau})^2
+```
 
-Returns the fundamental period if there are values under the threshold, and 0 otherwise.
+It then refines the local minima of the MNDF using parabolic (quadratic) interpolation. This
+is done by taking each minima, along with their first neighbor points, and finding the
+minimum of the corresponding interpolated parabola. The MNDF minima are substituted by the
+interpolation minima. Finally, the algorithm chooses the minimum with the smallest period
+and with a corresponding MNDF below the `harmonic threshold`. If this doesn't exist, it
+chooses the period corresponding to the global minimum. It repeats this for frames starting
+at the first signal point, and separated by a distance `f_step` (frames can overlap), and
+returns the vector of frequencies `F0=sr/τ0` for each frame, along with the start times of
+each frame.
+
+As a note, the physical unit of the frequency is 1/[time], where [time] is decided by the
+sampling rate `sr`. If, for instance, the sampling rate is over seconds, then the frequency
+is in Hertz.
+
+[^1]: De Cheveigné, A., & Kawahara, H. (2002). YIN, a fundamental frequency estimator for
+speech and music. The Journal of the Acoustical Society of America, 111(4), 1917-1930.
 """
-function getPitch(cmndf, τ_min, τ_max, harmonic_threshold=0.1)
-    τ = τ_min + 1 #+1 necessary in translation to python; makes sense also if you consider that lag=0 occurs at τ=1
-    while τ < τ_max
-        if (cmndf[τ] < harmonic_threshold)
-            while ( (τ + 1 < τ_max) && (cmndf[τ + 1] < cmndf[τ]) )
-                τ += 1
-            end
-            return τ
-        end
-        τ += 1
+function yin(sig::Vector, sr::Int; w_len::Int = 512, f_step::Int = 256, f0_min = 100, 
+    f0_max = 500, harmonic_threshold = 0.1, 
+    difference_function::Function = difference_function_original)
+
+    τ_min = floor(Int64, sr / f0_max)
+    τ_max = floor(Int64, sr / f0_min)
+
+    frame_times = range(1, length(sig) - w_len - τ_max, step=f_step)  # time values for start of  each analysis window
+    # times = frame_times ./ eltype(sig)(sr)  
+
+    τ0s = zeros(Float64, length(frame_times))
+    F0s = zeros(Float64, length(frame_times))
+
+    for (i, t) in enumerate(frame_times)
+        frame = sig[ (t) : (t + τ_max+ w_len-1) ]
+        df = difference_function(frame, w_len, τ_max)
+        cmdf = cumulative_mean_normalized_difference_function(df)
+        y_refined, τ_refined, τ_indices = refine_local_minima(cmdf)
+        idx_localminimum = absolute_threshold(y_refined, τ_min, τ_max, harmonic_threshold)
+        τ0s[i] = τ_refined[idx_localminimum]
+        F0s[i] = sr / τ0s[i]
+
     end
-    return 0    # if unvoiced
+    return  F0s, frame_times
 end
 
+"""
+    difference_function_original(x, W, τmax) -> df
+Computes the difference function of `x`. `W` is the window size, and `τmax` is the maximum
+    period. This corresponds to equation (6) in [^1]:
+```math
+d_t(\\tau) = \\sum_{j=1}^W (x_j - x_{j+\\tau})^2
+```
+"""
+function difference_function_original(x, W, τmax)
+    df = zeros(eltype(x), τmax+1) #df corresponds to τ values from 0 to τ_max
+    for τ in 1:τmax
+        for j in 1:W
+            df[τ+1] += (x[j] - x[j + τ]) ^ 2 
+        end
+    end
+    return df
+end
 
- """
-Compute cumulative mean normalized difference function (CMND), returned in an Float64 array.
-This corresponds to equation (8) in [1]
-## Arguments:
-*df: difference function array
+"""
+Compute cumulative mean normalized difference function (CMND), starting from the difference
+    function `df`. This corresponds to equation (8) in [1]
 """
 function cumulative_mean_normalized_difference_function(df)
     N = length(df)
@@ -88,80 +111,65 @@ function cumulative_mean_normalized_difference_function(df)
 end
 
 """
-    yin(
-        sig, sr;
-        w_len = 512,
-        w_step = 256,
-        f0_min = 100,
-        f0_max = 500,
-        harmonic_threshold = 0.1,
-        diffference_function = differenceFunction_original
-    )
-
-Computes the Yin Algorithm.
-Returns fundamental frequency and harmonic rate.
-
-## Arguments
-* `sig`: Audio signal
-* `sr`: sampling rate
-
-## Keyword arguments
-* `w_len`: size of the analysis window (samples)
-* `w_step`: size of the lag between two consecutive windows (samples)
-* `f0_min`: Minimum fundamental frequency that can be detected (hertz)
-* `f0_max`: Maximum fundamental frequency that can be detected (hertz)
-* `harmonic_threshold`: Threshold of detection. The algorithm returns the first minimum of the CMND function below this treshold.
-* `diffference_function`: The difference function to be used (by default [`differenceFunction_original`](@ref)).
-
-## Returns:
-* `pitches`: vector of fundamental frequencies,
-* `harmonic_rates`: vector of harmonic rate values for each fundamental frequency value (confidence value)
-* `argmins`: minimums of the Cumulative Mean Normalized DifferenceFunction
-* `times`: list of time of each estimation
-
-## Citations
-[1]: Patrice Guyot. (2018, April 19). Fast Python implementation of the Yin algorithm
-(Version v1.1.1). Zenodo. http://doi.org/10.5281/zenodo.1220947
-[2]: De Cheveigné, A., & Kawahara, H. (2002). YIN, a fundamental frequency estimator for
-speech and music. The Journal of the Acoustical Society of America, 111(4), 1917-1930.
+Returns the refined local minima of `y`, along with their refined `x` value and the
+corresponding indices.  For each minimum, by the minimum of the parabola obtained by
+interpolated the minimum with its first neighbors. Also returns the indices of `y`
+(`x_nominal`) and the value `x` corresponding to each minima.
 """
-function yin(
-            sig, sr;
-            w_len = 512,
-            w_step = 256,
-            f0_min = 100,
-            f0_max = 500,
-            harmonic_threshold = 0.1,
-            difference_function = difference_function_original
-        )
+function refine_local_minima(y)
+    x_nominal = 0:length(y)-1 #nominal τ values: 0 to τ_max (cf. difference_function)
+    idxs_local_minima = local_minima(y)
+    if isempty(idxs_local_minima)
+         @warn "No local minima found for the cumulative mean difference function. Adjusting
+         the values of the minimum and maximum frequencies may fix this."
+    end
+    xv, yv = parabolic_interpolation(y, idxs_local_minima) #xv,yv are correction for the local minima
+    y_locmin_refined = yv
+    x_locmin_real= x_nominal[idxs_local_minima] .+ xv
+    x_locmin_nominal = x_nominal[idxs_local_minima]
+    return y_locmin_refined, x_locmin_real, x_locmin_nominal
+end
 
-    τ_min = floor(Int64, sr / f0_max)
-    τ_max = floor(Int64, sr / f0_min)
-
-    time_scale = range(1, length(sig) - w_len, step=w_step)  # time values for each analysis window
-    times = time_scale ./ eltype(sig)(sr)  
-
-    pitches = zeros(Float64,length(time_scale))
-    harmonic_rates = zeros(Float64,length(time_scale))
-    argmins = zeros(Float64, length(time_scale))
-
-    for (i, t) in enumerate(time_scale)
-        frame = sig[ (t) : (t + w_len-1) ]
-        #Compute YIN
-        df = difference_function(frame, w_len, τ_max)
-        cmdf = cumulative_mean_normalized_difference_function(df)
-        p = getPitch(cmdf, τ_min, τ_max, harmonic_threshold)
-
-        #Get results
-        if (argmin(cmdf) > τ_min)
-            argmins[i] = sr / argmin(cmdf)
-        end
-        if (p ≠ 0) # A pitch was found
-            pitches[i] = sr / p
-            harmonic_rates[i] = cmdf[p]
-        else # No pitch, but we compute a value of the harmonic rate
-            harmonic_rates[i] = minimum(cmdf)
+"""
+Applies the threshold step described in [^1]. It returns index (period) corresponding to the
+first minimum below the `harmonic_threshod`. If that doesn't exist, it regurns the index of the
+global minimum.
+"""
+function absolute_threshold(localminima, τ_min, τ_max, harmonic_threshold=0.1)
+    for (idx, localminimum) in enumerate(localminima)
+        if localminimum ≤ harmonic_threshold
+            return idx
         end
     end
-    return pitches, harmonic_rates, argmins, times
+    return argmin(localminima)  
+end
+
+"""
+Calculates the parabolic (quadratic) interpolation for all the indixes of `y` given in
+idxs_interpolate, and returns the coordinates of the respective parabola's minimum.
+Assumes space all adjacent x values of `y` is 1. 
+"""
+function parabolic_interpolation(y, idxs_interpolate)
+    #separate x into triplets [x1,x2,x3]. 
+    x1 = @view y[idxs_interpolate .- 1]
+    x2 = @view y[idxs_interpolate]
+    x3 = @view y[idxs_interpolate .+ 1]
+    #calculate the vertix coordinates (xv, yv) for each triplet
+    a = @. (x1 - 2x2 + x3)/2 
+    b = @. (x3 - x1) / 2
+    xv = @. -b/2a
+    yv = @. x2 - (b^2 /4a)
+    return xv, yv
+end
+
+"""
+Quickly written version for finding local minima by comparing first neighbors only.
+#TODO: More detailed implementations available in Peaks.jl or Iamges.jl, maybe this should
+be replaced by them.
+"""
+function local_minima(x)
+    x1 = @view x[1:end - 2]
+    x2 = @view x[2:end - 1]
+    x3 = @view x[3:end]
+    collect(1:length(x2))[x1 .> x2 .< x3] .+ 1
 end

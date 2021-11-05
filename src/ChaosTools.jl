@@ -38,6 +38,7 @@ include("period_return/periodic_points.jl")
 include("period_return/period.jl")
 include("period_return/transit_times_statistics.jl")
 include("period_return/fixedpoints.jl")
+include("period_return/yin.jl")
 
 include("chaosdetection/lyapunovs.jl")
 include("chaosdetection/gali.jl")

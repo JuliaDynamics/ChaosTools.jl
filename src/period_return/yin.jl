@@ -1,3 +1,5 @@
+export yin
+
 """
     yin(sig::Vector, sr::Int; w_len::Int = 512, f_step::Int = 256, f0_min = 100, f0_max = 500,
         harmonic_threshold = 0.1, 
@@ -66,7 +68,6 @@ function yin(sig::Vector, sr::Int; w_len::Int = 512, f_step::Int = 256, f0_min =
     frame_times = range(1, length(sig) - w_len - τ_max, step=f_step)  # time values for start of  each analysis window
     # times = frame_times ./ eltype(sig)(sr)  
 
-    τ0s = zeros(Float64, length(frame_times))
     F0s = zeros(Float64, length(frame_times))
 
     for (i, t) in enumerate(frame_times)
@@ -75,8 +76,8 @@ function yin(sig::Vector, sr::Int; w_len::Int = 512, f_step::Int = 256, f0_min =
         cmdf = cumulative_mean_normalized_difference_function(df)
         y_refined, τ_refined, τ_indices = refine_local_minima(cmdf)
         idx_localminimum = absolute_threshold(y_refined, τ_min, τ_max, harmonic_threshold)
-        τ0s[i] = τ_refined[idx_localminimum]
-        F0s[i] = sr / τ0s[i]
+        τ0 = τ_refined[idx_localminimum]
+        F0s[i] = sr / τ0
 
     end
     return  F0s, frame_times

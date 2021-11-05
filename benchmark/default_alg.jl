@@ -6,7 +6,7 @@ ds = Systems.lorenz()
 
 tim = time()
 
-lyapunovs(ds, 2000)
+lyapunovspectrum(ds, 2000)
 
 tim = time() - tim
 

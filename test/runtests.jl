@@ -1,21 +1,35 @@
+using ChaosTools
+using Test
+using DynamicalSystemsBase, DelayEmbeddings
+using StatsBase
+standardize = DelayEmbeddings.standardize
+
 ti = time()
+@testset "ChaosTools tests" begin
 
-# Continuous and discrete
-include("lyapunov_exponents.jl")
-include("gali_tests.jl")
-include("partially_predictable_tests.jl")
+include("basins/basins_tests.jl")
+include("basins/uncertainty_tests.jl")
+include("basins/tipping_points_tests.jl")
 
-# Continuous
-include("poincare_tests.jl")
+include("orbitdiagrams/orbitdiagram_tests.jl")
+include("orbitdiagrams/poincare_tests.jl")
 
-# Discrete
-include("orbitdiagram_tests.jl")
-include("periodicity_tests.jl")
+include("chaosdetection/lyapunov_exponents.jl")
+#include("chaosdetection/gali_tests.jl") # TODO: make those faster
+include("chaosdetection/partially_predictable_tests.jl")
+include("chaosdetection/01test.jl")
+#include("chaosdetection/expansionentropy_tests.jl")  # TODO: make those faster
 
-# Numeric
-include("entropy_dimension.jl")
+include("period_return/periodicity_tests.jl")
+include("period_return/period_tests.jl")
+# include("period_return/transit_time_tests.jl")
+
+include("dimensions/dims.jl")
+include("dimensions/correlationdim.jl")
 include("nlts_tests.jl")
-include("period_tests.jl")
+include("dyca_tests.jl") 
+
+end
 
 ti = time() - ti
 println("\nTest took total time of:")

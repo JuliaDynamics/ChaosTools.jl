@@ -3,32 +3,48 @@ Tools for the exploration of chaos and nonlinear dynamics
 """
 module ChaosTools
 
-using Reexport
-@reexport using DynamicalSystemsBase
+using DelayEmbeddings
+using Entropies
+using DynamicalSystemsBase
 
 using DynamicalSystemsBase: DS, DDS, CDS
 using DynamicalSystemsBase: MDI, TDI
 using DynamicalSystemsBase: stateeltype
-using DiffEqBase: AbstractODEIntegrator, u_modified!
-
-include("lyapunovs.jl")
+using DynamicalSystemsBase.DiffEqBase: AbstractODEIntegrator, u_modified!, DEIntegrator
+DEI = DEIntegrator
 
 include("orbitdiagrams/discrete_diagram.jl")
 include("orbitdiagrams/poincare.jl")
 
-include("dimensions/entropies.jl")
-include("dimensions/dims.jl")
+include("basins/basins_reinit.jl")
+include("basins/basins_highlevel.jl")
+include("basins/basins_lowlevel.jl")
+include("basins/basins_utilities.jl")
+include("basins/uncertainty_exp.jl")
+include("basins/tipping.jl")
 
-include("nlts.jl")
+include("dimensions/linear_regions.jl")
+include("dimensions/generalized_dim.jl")
+include("dimensions/correlationdim.jl")
+include("dimensions/correlation_fixedmass.jl")
+include("dimensions/molteno.jl")
+include("dimensions/kaplanyorke.jl")
+include("dimensions/takens_best_estimate.jl")
 
-include("periodicity/periodic_points.jl")
-include("periodicity/period.jl")
+include("dimreduction/broomhead_king.jl")
+include("dimreduction/dyca.jl")
 
-include("chaos_detection.jl")
+include("period_return/periodic_points.jl")
+include("period_return/period.jl")
+include("period_return/transit_times_statistics.jl")
+include("period_return/fixedpoints.jl")
 
-include("partially_predictable.jl")
+include("chaosdetection/lyapunovs.jl")
+include("chaosdetection/gali.jl")
+include("chaosdetection/expansionentropy.jl")
+include("chaosdetection/partially_predictable.jl")
+include("chaosdetection/testchaos01.jl")
 
-# Ugly methods that shouldn't exist:
-include("ugliness.jl")
+include("deprecations.jl")
 
 end # module

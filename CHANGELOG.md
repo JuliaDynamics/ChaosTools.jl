@@ -1,3 +1,125 @@
+# 2.5
+* New `fixedpoints` function that finds fixed points, and their stability, for either continuous or discrete dynamical systems.
+* Automatic `Δt` estimation for `basins_of_attraction`.
+
+# 2.4
+* `linear_region` now detects a saturation regime also at the start of the curve y(x). Furthermore a keyword `sat` now decides what the saturation regime is.
+# 2.3
+* Correlation sum functions now have a `show_progress = false` keyword. It shows a progress bar!
+* `linear_region` and `estimate_boxsizes` have `warning = true` keyword.
+* The `estimate_boxsizes` function now has keywords `autoexpand = true, we = w, ze = z`.
+
+# 2.2
+* Functions `estimate_r0_buenoorovio, estimate_r0_theiler` now return `r0, ε0` with `ε0` the minimum inter-point distance. This increases performance of other methods by reducing duplicate computations.
+* Fixed bug in `estimate_r0_buenoorovio` that didn't consider min pairwise distance = 0.
+* Exported the already implemented `estimate_r0_theiler`.
+* For accuracy improvement, the mean of maximal lengths along each dimension is used in `estimate_boxsizes`. Before it was the maximum of maxima.
+
+# 2.1
+* Various improvements to the boxed correlation sum method. Now it also uses an automatic prism dimension.
+
+# 2.0
+* The keyword `dt` that was used to denote a chunk of time in many functions that 
+  a `DynamicalSystem` has been changed to `Δt` due to conflicts with DifferentialEquations.jl solver options. This change is breaking and cannot be warned or deprecated. Functions affected: `lyapunov, lyapunovspectrum, gali, expansionentropy, orbitdiagram`
+* All deprecations have been removed, switch to previous stable version to see any.
+
+# 1.34
+* New option in `basins_of_attraction` that allows refining already found basins.
+
+# 1.33
+* `lyapunovspectrum` now has a progress meter option.
+
+# 1.32
+* New functions for examining the fractal nature of basin boundaries: `basins_fractal_dimension, basin_entropy, basins_fractal_test`.
+
+# 1.31
+* New, general function `basins_of_attraction` that replaces the existing `basins_2D` and `basins_general` and can produce arbitrary-dimensional basins of attraction.
+
+# 1.30
+* New function `local_growth_rates`
+* New function `match_attractors!`
+
+# 1.29
+* Performance improvements for basins of attraction
+* New function `uncertainty_exponent`
+* New function `basin_fractions`
+* New function `tipping_probabilities`
+
+# 1.28
+* New functions `basins_2D` and `basins_general` that efficiently compute basins of attraction on a plane!
+
+# 1.27
+* new function `correlationsum_fixedmass` implements a fixed mass algorithm for the correlationsum given by Grassberger in 1988.
+
+# 1.26
+* new function `dyca()` to perform Dynamical Component Analysis
+
+# 1.25
+* new function `poincaremap` for iterating over the Poincare map step by step.
+* `mean_return_times` has been improved for continuous systems and now also allows `diffeq...` keyword propagation. The keyword `m` is also deprecated in favor of `dmin`.
+
+# 1.24
+* Theiler window is now possible in `boxed_correlationsum`.
+
+# 1.23
+* Various improvements on the functionality of `estamte_boxsizes` and `linear_region`.
+
+# 1.22
+* Orbit diagrams now use the previous state at each new parameter, providing faster convergence to attractor for smaller `Ttr`. The previous option is still available by passing explicitly `u0 = get_state(ds)`.
+
+# 1.21
+* Using keyword `α` is deprecated in favor of `q` in all entropy-related discussions (`q` is more common in the literature).
+* Added `boxed_correlationsum` and `boxed_correlationdim` that distribute the data into boxes before calculating the correlationsum.
+* Added `estimate_r0_buenoorovio` to find the optimal boxsize for the former two functions.
+
+# 1.20
+* Keyword `u0` is now valid for `lyapunov`.
+
+# 1.19
+* A lot of functions have been deprecated in favor of the new syntax that uses Entropies.jl: `non0hist, binhist, genentropy`.
+* `information_dim, capacity_dim, boxcounting_dim` are deprecated.
+* Permutation entropy has been re-written from scratch to use the Entropies.jl version. This drops the (completely unnecessary) argument `interval`, however the old method is available as `ChaosTools.permentropy_old`. It will be removed completely in version 2.0.
+* `correlationsum` now features the keyword `q` to calculate the q-order correlationsum.
+* Add fractal dimension estimation method by Molteno et al `molteno_dim`.
+* `lyapunovs` is deprecated in favor of `lyapunovspectrum`.
+
+# 1.18
+* `poincaresos` function now also works with input `Dataset` (and does linear interpolation between points sandwiching the hyperplane)
+
+# 1.17
+* `transit_time_statistics` deprecated in favor of `exit_entry_times`.
+* Added `mean_return_times` function for discrete systems.
+* Added `mean_return_times` function for continuous systems.
+
+# 1.16
+* `takens_best_estimate` now returns three arguments, the estimate plus the upper and lower 95%-confidence limits.
+
+# 1.15
+* New function `transit_time_statistics` that allows computing return times and transit times to subsets of the state space. (Currently for discrete systems only)
+* Moved support to Julia 1.5+.
+
+# 1.14
+* `orbitdiagram` now allows only collecting states within user-provided limits.
+# 1.13
+* Takens' best estimate method for estimating the correlation dimension is available as `takens_best_estimate`.
+
+# 1.12
+* `binhist` method that returns data histogram and bin edges
+* further optimization of `correlationsum` for vector `εs`.
+
+# 1.11
+* Theiler's correction is now possible in estimating the correlation sum (as a result, `norm` is now a keyword).
+
+# 1.10
+* Added method for estimating correlation dimension (and as a pre-requisite, also the correlation sum) based on the method of Grassberger-Proccacia.
+* Added "kernel density nearest neighbor" estimator for probabilistic description of a dataset.
+
+# 1.9
+* The expansion entropy from Hunt and Ott (defining chaos 2015) is now included as `expansionentropy`! Thanks and welcome to our new contributor @yuxiliu1995 !
+
+# 1.8
+* new function `testchaos01` which implements the so called "0-1" test for chaos, that can test if a numeric timeseries is chaotic or not.
+
 # 1.7
 * New function `estimate_period` that attempts to estimate the period of a signal using the following methods:
   * The autocorrelation function (when it comes close to 1 again)
@@ -49,11 +171,11 @@ First major release.
 * It is now possible to choose which variables to save in both discrete and continuous orbit diagrams.
 * Added method to compute mutual information, from  A. Kraskov *et al.*, [Phys. Rev. E **69**, pp 066138 (2004)]
 * Added method in finding delay time that uses mutual information. At the moment this method is vastly inferior to all others both in speed and in actual results.
-* `lyapunovs` is 1 to 2 orders of magnitude faster.
+* `lyapunovspectrum` is 1 to 2 orders of magnitude faster.
 
 
 # 0.11
-* Changed `gali` call signature to be the same as `lyapunovs`.
+* Changed `gali` call signature to be the same as `lyapunovspectrum`.
 * Bugfixed 1D lyapunov computation
 * Bugfixed `set_deviations!` for continuous systems
 * Updated for `DynamicalSystemsBase` 0.10 (using `get_state` etc.)

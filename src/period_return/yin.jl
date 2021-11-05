@@ -3,7 +3,7 @@ export yin
 """
     yin(sig::Vector, sr::Int; w_len::Int = 512, f_step::Int = 256, f0_min = 100, f0_max = 500,
         harmonic_threshold = 0.1, 
-        difference_function::Function = difference_function_original) -> F0s, frame_times
+        difference_function::Function = difference_function_original, kwargs...) -> F0s, frame_times
 
 Estimates the fundamental frequency (F0) of the signal `sig` using the YIN algorithm [^1].
 The signal `sig` is a vector of points uniformly sampled at a rate `sr`.  
@@ -60,7 +60,7 @@ speech and music. The Journal of the Acoustical Society of America, 111(4), 1917
 """
 function yin(sig::Vector, sr::Int; w_len::Int = 512, f_step::Int = 256, f0_min = 100, 
     f0_max = 500, harmonic_threshold = 0.1, 
-    difference_function::Function = difference_function_original)
+    difference_function::Function = difference_function_original, kwargs...)
 
     τ_min = floor(Int64, sr / f0_max)
     τ_max = floor(Int64, sr / f0_min)

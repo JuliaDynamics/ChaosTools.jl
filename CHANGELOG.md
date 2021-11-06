@@ -1,3 +1,6 @@
+# 2.6
+* New `yin` function that applies the YIN algorithm to detect a signal's fundamental frequency. Also added it as a possible method in `estimate_period`.
+
 # 2.5
 * New `fixedpoints` function that finds fixed points, and their stability, for either continuous or discrete dynamical systems.
 * Automatic `Δt` estimation for `basins_of_attraction`.

@@ -20,7 +20,7 @@ The signal `sig` is a vector of points uniformly sampled at a rate `sr`.
   [`differenceFunction_original`](@ref)).
 
 ## Description
-The YIN algorithm [^1] estimates the signal's fundamental frequency `F0` by basically
+The YIN algorithm [^CheveigneYIN2002] estimates the signal's fundamental frequency `F0` by basically
 looking for the period `τ0`  which minimizes the signal's autocorrelation. This
 autocorrelation is calculated for signal segments (frames), composed of two windows of
 length `w_len`. Each window is separated by a distance `τ`, and the idea is that the
@@ -55,7 +55,7 @@ As a note, the physical unit of the frequency is 1/[time], where [time] is decid
 sampling rate `sr`. If, for instance, the sampling rate is over seconds, then the frequency
 is in Hertz.
 
-[^1]: De Cheveigné, A., & Kawahara, H. (2002). YIN, a fundamental frequency estimator for
+[^CheveigneYIN2002]: De Cheveigné, A., & Kawahara, H. (2002). YIN, a fundamental frequency estimator for
 speech and music. The Journal of the Acoustical Society of America, 111(4), 1917-1930.
 """
 function yin(sig::Vector, sr::Int; w_len::Int = 512, f_step::Int = 256, f0_min = 100, 

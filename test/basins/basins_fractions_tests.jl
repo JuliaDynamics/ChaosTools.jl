@@ -1,6 +1,8 @@
 using Test
 using Random #to set seeds for ICs
 using Statistics
+using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
+
 @testset "Basin Stability Pendulum" begin
     @inline @inbounds function damped_driven_pendulum(u, p, t)
         α, T, K = p

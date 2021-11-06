@@ -31,104 +31,96 @@ function basin_fractions(basins::AbstractArray)
 end
 
 """
-    basin_fractions(ds::DynamicalSystem, feature_extraction::Function,
-    ics::Union{Dataset, Function}, ic_templates::Dataset=Dataset([0]); kwargs...)
+    basin_fractions(
+        ds::DynamicalSystem, feature_extraction::Function,
+        ics::Union{Dataset, Function} [, attractors]; kwargs...
+    ) → fs
 
     
-Compute the fraction of points inside a region of state space which go to each existing basin
-of attraction. This fraction is an estimate of the basin's global stability under some 
-conditions [^Menck2013]. They are calculated by integrating trajectories of the given 
-dynamical system `ds`, starting from initial conditions (ICs) given in `ics` and classifying 
-their respective steady-states using clustering algorithms. This clustering is done by
-by extracting features from the trajectories using the `feature_extraction` function and
-then identifying clusters of features as an attractor [^Stender2021].
-The function returns the fraction of initial conditions ending up at each identified attractor,
- along with the labels given to each initial condition, if `ics` is a Dataset.
+Compute the state space fractions `fs` of the basins of attraction of the given dynamical system.
+This method works differently than the `basin_fractions(::Array)` method.
+It integrates initial conditions contained in `ics`, maps them to a vector of features using
+the `feature_extraction` function, and then clusters the vector of features to classify
+initial conditions to different attractors. 
+This approach is based on[^Stender2021], see the description below for more details.
 
-The dynamical system `ds` can be either `DiscreteDynamicalSystem` or
-`ContinuousDynamicalSystem`. `ics` contains the initial conditions, and can either a `Dataset`
-of a `Function`. As a `Dataset`, `ics` already contains the initial conditions to be used,
-with each row being the IC for each trajectory. Starting from a Matrix `M`, `ics` can be
-generated as `ics = Dataset(M)`. As a `Function`, `ics()` generates an IC
-on the spot. See [`sampler`](@ref) for convenience functions to generate `ics()`. 
-Uniform, randomly spaced ICs guarantees that the basin fractions values calculated are 
-proportional to the true basins' volume as the number of initial conditions goes to infinity,
-and so are an estimate of the basin's global stability.
-For nonuniform ICs, the fractions simply indicate the probabilities for observing each specific 
-steady-state.(see [^Stender2021] for more discussions).
+The `feature_extraction` is a function `f(A,t)` that takes as an input a dataset `A` 
+(the trajectory resulting from integrating an initial condition) and the time vector `t`.
+It returns a `Vector` of features, which must be real numbers.
+`ics` provides the initial conditions. If it is a `Dataset`, then the initional conditions
+contained in `ics` are integrated and are mapped to features. Instead, `ics` can be a 
+function that takes _no_ arguments `ics()` and returns a random initial condition when called.
+See [`sampler`](@ref) for convenience functions to generate `ics`.
+The optional argument `attractors` decides whether the supervised or unsupervised method
+will be used, see the description below for more details.
 
-The `feature_extraction` function receives as input a trajectory vector `u`, the time vector, and
-optional parameters, to return an array `Array{Float64, 1}` containing the features extracted from `u`.
-Finally, `ic_templates` is a `Dataset`, containing in its rows the initial conditions for
-the templates, to which the features are matched in the "supervised" clustering method.
-If not provided, the "unsupervised" clustering method is used.
-
-The output `S` is a dictionary whose keys are the labels given to each attractor, and the values
-are their respective global stability. The label `-1` is given to any initial condition whose
+The output `fs` is a dictionary whose keys are the labels given to each attractor, and the values
+are their respective fractions. The label `-1` is given to any initial condition whose
 attractor could not be identified. The `class_labels` output is an array of size `N`
 containing the label of each initial condition given in `ics`.
 
 
 ## Keyword arguments
 ### Integration
-* `T = 100` : total time for evolving initial conditions (after transient)
-* `Ttr = 0` : transient time to evolve initial conditions
-* `Δt = 1` : Integration time step, Δt = 1/fs, fs being the sampling frequency used in the
-  bSTAB paper
+* `T, Ttr, Δt` : Propagated to [`trajectory`](@ref) with `T=100, Ttr=100` as default. 
 * `diffeq = NamedTuple()` : other parameters for the solvers of DiffEqs
-* `num_samples` : Number of sample initial conditions to generate. Used only if `ics` is a
-`Function`.
+* `num_samples` : Number of sample initial conditions to generate in case `ics` is a function.
 * `seed_sampling = 1` : The seed for the random number generator used in generating the initial
 conditions. Used only if `ics` is a `Function`.
+
 ### Feature extraction and classification
-*`clust_method_norm=Euclidean()` : metric to be used in the clustering in the supervised
-    method; 
-* `extract_params = NamedTuple()`  : optional parameters for the `feature_extraction` function.
+* `clust_method_norm=Euclidean()` : metric to be used in the clustering.
+* `extract_params = NamedTuple()` : optional parameters for the `feature_extraction` function.
 * `clust_method_norm = "kNN"` : (supervised method only) which clusterization method to
-    apply. If `"kNN"`, the first-neighbor clustering is used. If `"kNN_thresholded"`, a
-    subsequent step is taken, which considers as unclassified (label `-1`) the features
-    whose distance to the nearest template above the `clustering_threshold`.
+  apply. If `"kNN"`, the first-neighbor clustering is used. If `"kNN_thresholded"`, a
+  subsequent step is taken, which considers as unclassified (label `-1`) the features
+  whose distance to the nearest template above the `clustering_threshold`.
 * `clustering_threshold = 0.0` : ("supervised" method, with `kNN_thresholded` only). Maximum
-   allowed distance between a feature and the cluster center for it to be considered inside 
-    the cluster. Used when `clust_method = kNN_thresholded`;
+  allowed distance between a feature and the cluster center for it to be considered inside 
+  the cluster. Used when `clust_method = kNN_thresholded`;
 * `min_neighbors = 10` : (unsupervised method only) minimum number of neighbors
-    (i.e. of similar features) each feature needs to have in order to be considered in a
-    cluster (fewer than this, it is labeled as an outlier,  id=-1). This number is somewhat hard
-     to define, as it directly interferes with how many attractors the clustering finds.
-     The authors use it equal to 10 always.
+  (i.e. of similar features) each feature needs to have in order to be considered in a
+  cluster (fewer than this, it is labeled as an outlier, id=-1). This number is somewhat hard
+  to define, as it directly interferes with how many attractors the clustering finds.
 
 ## Description
 Let ``F(A)`` be the fraction of initial conditions in a region of state space
-``\\mathcal{S}``, given by `ics`, which are in the basin of attraction of an attractor
+``\\mathcal{S}`` (represented by `ics`) which are in the basin of attraction of an attractor
 ``A``. `basin_fractions` estimates ``F`` for attractors in
-``\\mathcal{S}`` by counting which initial conditions end up in which attractors. To do
-this, it evolves each trajectory `u` for `T` times past an initial transient `Ttr`, values
-which have to be large enough to guarantee the trajectory ends up in its steady state. This
-steady state trajectory `u` is then transformed in a vector of features, extracted using the
-user-defined `feature_extraction` function. Each feature is a number useful in
-characterizing the trajectory and distinguishing it from trajectories in other attrators.
-For instance, a useful feature distinguishing a stable node from a stable limit cycle is the
-standard deviation of `u` (zero for the node, nonzero for the limit cycle). The vectors of
-features are then used to identify to which attractor each trajectory belongs (i.e. in which
-basin of attractor each initial condition is in). The algorithm presents two methods to do
-this. In the supervised method, the attractors are known to the user, which provides one
-initial condition for each attractor in the region. The algorithm then evolves these initial
-conditions, extracts their features, and uses them as templates representing the attrators.
-Each trajectory is considered to belong to the nearest template, which it finds using the
-first-neighbor clustering algorithm.
+``\\mathcal{S}`` by counting which initial conditions end up in which attractors.
 
-If the attractors are not as well-known, the alternative, unsupervised method, can be
-used. It maps the vectors of features to an attractor by analysing how the features are
-clustered in the feature space. Using the DBSCAN algorithm, it identifies these clusters
-of features, and considers each cluster to represent an attractor. Features whose attractor
-is not identified are labeled as `-1`. Otherwise, they are labeled starting from `1` in
-crescent order.
+The trajectory `X` of each initial condition is transformed in a vector of features, 
+extracted using the user-defined `feature_extraction` function. 
+Each feature is a number useful in *characterizing the attractor* and distinguishing it
+from other attrators. For instance, a useful feature distinguishing a stable node from a 
+stable limit cycle is the standard deviation of a dimension in `X` (zero for the node, 
+nonzero for the limit cycle). The vectors of features are then used to identify to which 
+attractor each trajectory belongs (i.e. in which basin of attractor each initial condition is in).
+The method thus relies on the user having at least some basic idea about what attractors
+to expect, in contrast to [`basins_of_attraction`](@ref).
+
+The algorithm of[^Stender2021] that we use has two methods to do this. 
+In the **supervised method**, the attractors are known to the user, who provides one
+initial condition for each attractor in ``\\mathcal{S}`` using the optional `attractors`
+argument. `attractors` then is a `Dataset` containing the initial conditions.
+The algorithm then evolves these initial conditions, extracts their features, and uses them
+as templates representing the attrators. Each trajectory is considered to belong to the
+nearest template, which is found using a first-neighbor clustering algorithm.
+
+If the attractors are not as well-known the **unsupervised method** should be used
+instead, which means that the user does not provide the optional `attractors` argument. 
+Here, the vectors of features of each initial condition are mapped to an attractor by
+analysing how the features are clustered in the feature space. Using the DBSCAN algorithm, 
+we identifies these clusters of features, and consider each cluster to represent an 
+attractor. Features whose attractor is not identified are labeled as `-1`.
+Otherwise, they are labeled starting from `1` in ascending order.
 
 These labels are then returned by the algorithm, along with the fraction ``F(A)`` for each
 label (attractor). The sampling error associated with this method is given by[^Stender2021]
-``e = \\sqrt{F(A)(1-F(A))/N}``, with ``N`` denoting the number of initial conditions, if the uniform
-random sampling is used in `ics`.
-
+``e = \\sqrt{F(A)(1-F(A))/N}``, with ``N`` denoting the number of initial conditions, if 
+uniform random sampling is used in `ics`.
+For nonuniform sampling, the fractions simply indicate the probabilities for observing each 
+specific attractor, see [^Stender2021] for more.
 
 [^Menck2013] : Menck, Heitzig, Marwan & Kurths. How basin stability complements the linear
 stability paradigm. [Nature Physics, 9(2), 89–92](https://doi.org/10.1038/nphys2516)
@@ -193,7 +185,7 @@ end
 It integrates the initial condition, applies the `feature_extraction` function and returns
 its output. The type of the returned vector depends on `feature_extraction`'s output.
 """
-function featurizer(ds, u0, feature_extraction; T=100, Ttr=0, Δt=1,
+function featurizer(ds, u0, feature_extraction; T=100, Ttr=100, Δt=1,
     extract_params=NamedTuple(), diffeq=NamedTuple(), kwargs...)
     u = trajectory(ds, T, u0; Ttr=Ttr, Δt=Δt, diffeq) #TODO: maybe starting an integrator
                     # and using re_init! is better

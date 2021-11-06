@@ -1,4 +1,4 @@
-using ChaosTools, Test, DelimitedFiles
+using ChaosTools, Test, DelayEmbeddings, DelimitedFiles
 
 @testset "exponential-chirp" begin 
 	file = "exponential-chirp-440-880-5.csv" #generated initially with y = librosa.chirp(440, 880, duration=5.0) 

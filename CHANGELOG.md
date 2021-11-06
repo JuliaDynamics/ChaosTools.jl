@@ -1,3 +1,6 @@
+# 2.6
+* New `yin` function that applies the YIN algorithm to detect a signal's fundamental frequency. Also added it as a possible method in `estimate_period`.
+
 #2.5.3
 * Updated `lyapunovspectrum_convergence` for continuous systems to be similar to `lyapunovspectrum`, with the more performant `_buffered_qr` and allowing passing a `DynamicalSystem` instead of the integrator directly.
 * Added `lyapunovspectrum_convergence` for discrete systems.

@@ -22,6 +22,7 @@ include("chaosdetection/01test.jl")
 
 include("period_return/periodicity_tests.jl")
 include("period_return/period_tests.jl")
+include("period_return/yin_tests.jl")
 # include("period_return/transit_time_tests.jl")
 
 include("dimensions/dims.jl")

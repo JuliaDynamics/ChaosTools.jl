@@ -88,7 +88,7 @@ function estimate_period(v, method, t = 0:length(v)-1; kwargs...)
                 elseif method == :yin 
                     sr = get(kwargs, :sr, 22050)
                     f0s, _ = yin(v, sr; kwargs...)
-                    sr/mean(f0s)
+                    1/mean(f0s)
                 end
             else
                 if method == :lombscargle || method == :ls

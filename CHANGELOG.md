@@ -136,7 +136,7 @@
       *How to test for partially predictable chaos*. [Scientific Reports **7**, (2017)](https://www.nature.com/articles/s41598-017-01083-x). Thanks and welcome to our new contributor @efosong ! Implemented with the function `predictability`.
 
 # 1.5
-* Updated everything to new DiffEqBase 5.0 and the new default integrator (`SimpleATsit5`)
+* Updated everything to new SciMLBase 5.0 and the new default integrator (`SimpleATsit5`)
 * Simplified low-level call signature for `poincaresos`.
 * Small documentation improvements throughout.
 

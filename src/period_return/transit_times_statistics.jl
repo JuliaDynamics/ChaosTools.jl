@@ -261,7 +261,7 @@ function exit_entry_times(ds::ContinuousDynamicalSystem, u0, εs, T;
     exits = [eT[] for _ in 1:length(εs)]
     entries = [eT[] for _ in 1:length(εs)]
 
-    # This callback fails, see https://github.com/SciML/SciMLBase.jl/issues/580
+    # This callback fails, see https://github.com/SciML/DiffEqBase.jl/issues/580
     # callbacks = ContinuousCallback[]
     # for i in eachindex(εs)
     #     crossing(u, t, integ) = ChaosTools.εdistance(u, u0, εs[i])

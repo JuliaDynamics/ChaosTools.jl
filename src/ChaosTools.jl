@@ -10,7 +10,7 @@ using DynamicalSystemsBase
 using DynamicalSystemsBase: DS, DDS, CDS
 using DynamicalSystemsBase: MDI, TDI
 using DynamicalSystemsBase: stateeltype
-using DynamicalSystemsBase.DiffEqBase: AbstractODEIntegrator, u_modified!, DEIntegrator
+using DynamicalSystemsBase.SciMLBase: AbstractODEIntegrator, u_modified!, DEIntegrator
 DEI = DEIntegrator
 
 include("orbitdiagrams/discrete_diagram.jl")

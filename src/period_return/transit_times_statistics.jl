@@ -246,7 +246,9 @@ end
 # Continuous
 ##########################################################################################
 using DynamicalSystemsBase.SciMLBase: ODEProblem, solve
-using DynamicalSystemsBase.SciMLBase: ContinuousCallback, CallbackSet
+# TODO: Notice that the callback methods are NOT used. They have problems
+# that I have not been able to solve yet.
+# using DynamicalSystemsBase.SciMLBase: ContinuousCallback, CallbackSet
 
 function exit_entry_times(ds::ContinuousDynamicalSystem, u0, εs, T;
         diffeq...

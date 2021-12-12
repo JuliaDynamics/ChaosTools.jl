@@ -286,7 +286,8 @@ See also [`lyapunovspectrum`](@ref), [`local_growth_rates`](@ref).
   of the system). This function can be used when you want to avoid
   the test state appearing in a region of the phase-space where it would have
   e.g. different energy or escape to infinity.
-* `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
+  * `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
+  `init` of DifferentialEquations.jl.
   See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
 
@@ -319,15 +320,20 @@ lyapunov(pinteg, T, Ttr, Δt, d0, ut, lt)
 [^Benettin1976]: G. Benettin *et al.*, Phys. Rev. A **14**, pp 2338 (1976)
 """
 function lyapunov(ds::DS, T;
-                  u0 = get_state(ds),
-                  Ttr = 0,
-                  d0=1e-9,
-                  upper_threshold = 1e-6,
-                  lower_threshold = 1e-12,
-                  inittest = inittest_default(dimension(ds)),
-                  Δt = 1,
-                  diffeq...
-                  )
+        u0 = get_state(ds),
+        Ttr = 0,
+        d0=1e-9,
+        upper_threshold = 1e-6,
+        lower_threshold = 1e-12,
+        inittest = inittest_default(dimension(ds)),
+        Δt = 1,
+        diffeq = NamedTuple(), kwargs...
+    )
+
+    if !isempty(kwargs)
+        @warn DIFFEQ_DEP_WARN
+        diffeq = NamedTuple(kwargs)
+    end
 
     ST = stateeltype(ds)
     lower_threshold ≤ d0 ≤ upper_threshold || throw(ArgumentError(
@@ -336,7 +342,7 @@ function lyapunov(ds::DS, T;
     if typeof(ds) <: DDS
         pinteg = parallel_integrator(ds, [deepcopy(u0), inittest(u0, d0)])
     else
-        pinteg = parallel_integrator(ds, [deepcopy(u0), inittest(u0, d0)]; diffeq...)
+        pinteg = parallel_integrator(ds, [deepcopy(u0), inittest(u0, d0)]; diffeq)
     end
     λ::ST = lyapunov(pinteg, T, Ttr, Δt, d0, upper_threshold, lower_threshold)
     return λ

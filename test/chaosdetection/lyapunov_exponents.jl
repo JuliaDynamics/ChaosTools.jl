@@ -56,7 +56,7 @@ for i in 1:8
             @test MLE[sysindx][1] < λ < MLE[sysindx][2]
             if i < 5
                 λ2 = lyapunov(ds, 2000; dt = 1.0, Ttr = 10.0,
-                abstol = 1e-9, alg = Tsit5())
+                diffeq = (abstol = 1e-9, alg = Tsit5()))
                 @test MLE[sysindx][1] < λ2 < MLE[sysindx][2]
             end
         end

@@ -286,7 +286,7 @@ See also [`lyapunovspectrum`](@ref), [`local_growth_rates`](@ref).
   of the system). This function can be used when you want to avoid
   the test state appearing in a region of the phase-space where it would have
   e.g. different energy or escape to infinity.
-  * `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
+* `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
   `init` of DifferentialEquations.jl.
   See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
@@ -458,18 +458,25 @@ The output of this function is sometimes referred as "Nonlinear Local Lyapunov E
   outputs a pertrubation vector (preferrably `SVector`) given the system, current initial
   condition `u` and the counter `j ∈ 1:S`. If not given, a random perturbation is
   generated with norm given by the keyword `e = 1e-6`.
-* `diffeq...`: Keywords propagated to the solvers of DifferentialEquations.jl.
+* `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
+  `init` of DifferentialEquations.jl.
+  See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 """
 function local_growth_rates(ds::DynamicalSystem, points;
         S = 100, Δt = 5, e = 1e-6,
         perturbation = (ds, u, j) -> _random_Q0(ds, u, j, e),
-        diffeq...
+        diffeq = NamedTuple(), kwargs...
     )
+
+    if !isempty(kwargs)
+        @warn DIFFEQ_DEP_WARN
+        diffeq = NamedTuple(kwargs)
+    end
+
     λlocal = zeros(length(points), S)
-    D = dimension(ds)
     Q0 = perturbation(ds, points[1], 1)
     states = [points[1], points[1] .+ Q0]
-    pinteg = parallel_integrator(ds, states; diffeq...)
+    pinteg = parallel_integrator(ds, states; diffeq)
 
     for (i, u) in enumerate(points)
         for j in 1:S
@@ -488,7 +495,7 @@ end
 
 function _random_Q0(ds, u, j, e)
     D, T = dimension(ds), eltype(ds)
-    Q0 = randn(Random.GLOBAL_RNG, SVector{D, eltype(ds)})
+    Q0 = randn(Random.GLOBAL_RNG, SVector{D, T})
     Q0 = e * Q0 / norm(Q0)
 end
 

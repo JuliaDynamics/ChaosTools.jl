@@ -73,17 +73,17 @@ end
         diffeq = Dict(:abstol=>1e-9, :reltol=>1e-9, :solver => Tsit5())
         @testset "regular" begin
             for k in [2,4]
-                g, t = gali(ds, tt, k; diff_eq_kwargs = diffeq, u0 = sp)
+                g, t = gali(ds, tt, k; diffeq, u0 = sp)
                 @test t[end] ≥ tt
             end
             for k in [2,4]
-                g, t = gali(ds, tt, k; diff_eq_kwargs = diffeq, u0 = qp)
+                g, t = gali(ds, tt, k; diffeq, u0 = qp)
                 @test t[end] ≥ tt
             end
         end
         @testset "chaotic" begin
             for k in [2,4]
-                g, t = gali(ds, tt, k; diff_eq_kwargs = diffeq, u0 = ch)
+                g, t = gali(ds, tt, k; diffeq, u0 = ch)
                 @test t[end] < tt
                 @test g[end] ≤ 1e-12
             end
@@ -107,17 +107,17 @@ end
         diffeq = Dict(:abstol=>1e-9, :reltol=>1e-9, :solver => Tsit5())
         @testset "regular" begin
             for k in [2,4]
-                g, t = gali(ds, tt, k; diff_eq_kwargs = diffeq, u0 = sp)
+                g, t = gali(ds, tt, k; diffeq, u0 = sp)
                 @test t[end] ≥ tt
             end
             for k in [2,4]
-                g, t = gali(ds, tt, k; diff_eq_kwargs = diffeq, u0 = qp)
+                g, t = gali(ds, tt, k; diffeq, u0 = qp)
                 @test t[end] ≥ tt
             end
         end
         @testset "chaotic" begin
             for k in [2,4]
-                g, t = gali(ds, tt, k; diff_eq_kwargs = diffeq, u0 = ch)
+                g, t = gali(ds, tt, k; diffeq, u0 = ch)
                 @test t[end] < tt
                 @test g[end] ≤ 1e-12
             end

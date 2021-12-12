@@ -30,7 +30,8 @@ See also [`lyapunov`](@ref), [`local_growth_rates`](@ref).
 * `Δt = 1` : Time of individual evolutions
   between successive orthonormalization steps. For continuous systems this is approximate.
 * `show_progress = false` : Display a progress bar of the process.
-* `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
+* `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
+  `init` of DifferentialEquations.jl.
   See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
 ## Description
@@ -70,14 +71,20 @@ lyapunovspectrum(ds::DS, N, k::Int = dimension(ds); kwargs...) =
 lyapunovspectrum(ds, N, orthonormal(dimension(ds), k); kwargs...)
 
 function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; 
-        Ttr::Real = 0, Δt::Real = 1, u0 = get_state(ds), show_progress = false, diffeq...
+        Ttr::Real = 0, Δt::Real = 1, u0 = get_state(ds), show_progress = false, 
+        diffeq = NamedTuple(), kwargs...
     ) where {IIP, S, D}
+
+    if !isempty(kwargs)
+        @warn DIFFEQ_DEP_WARN
+        diffeq = NamedTuple(kwargs)
+    end
 
     if typeof(ds) <: DDS
         @assert typeof(Ttr) == Int
         integ = tangent_integrator(ds, Q0; u0)
     else
-        integ = tangent_integrator(ds, Q0; u0, diffeq...)
+        integ = tangent_integrator(ds, Q0; u0, diffeq)
     end
     λ = lyapunovspectrum(integ, N, Δt, Ttr, show_progress)
     return λ

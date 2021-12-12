@@ -40,7 +40,7 @@ for i in 1:8
         λ = lyapunovspectrum(ds, 2000)
         if i < 5
             λ2 = lyapunovspectrum(ds, 2000; dt = 2.0, Ttr = 10.0,
-            abstol = 1e-9, alg = Tsit5())
+            diffeq = (abstol = 1e-9, alg = Tsit5()))
         else
             λ2 = lyapunovspectrum(ds, 1000; dt = 5, Ttr = 20)
         end

@@ -17,6 +17,7 @@ include("deprecations.jl")
 
 include("orbitdiagrams/discrete_diagram.jl")
 include("orbitdiagrams/poincare.jl")
+include("orbitdiagrams/produce_orbitdiagram.jl")
 
 include("basins/basins_reinit.jl")
 include("basins/basins_highlevel.jl")

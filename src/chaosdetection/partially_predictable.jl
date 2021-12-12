@@ -34,7 +34,8 @@ Typical values for `ν`, `C` and `chaos_type` are given in Table 2 of[^Wernecke2
    computed evaluation time is larger than `T_max`, stop at `T_max` instead.
 * `δ_range = 10.0 .^ (-9:-6)` : Range of initial condition perturbation distances
    to use to determine scaling `ν`.
-* `diffeq...` : Keyword arguments propagated into `init` of DifferentialEquations.jl.
+* `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
+  `init` of DifferentialEquations.jl.
   See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
 ## Description
@@ -63,16 +64,21 @@ It is operating in a different speed than e.g. [`lyapunov`](@ref).
 [^Wernecke2017]: Wernecke, H., Sándor, B. & Gros, C. *How to test for partially predictable chaos*. [Scientific Reports **7**, (2017)](https://www.nature.com/articles/s41598-017-01083-x).
 """
 function predictability(ds::DynamicalSystem;
-                        Ttr::Real = 200,
-                        T_sample::Real = 1e4,
-                        n_samples::Integer = 500,
-                        λ_max::Real = lyapunov(ds, 5000),
-                        d_tol::Real = 1e-3,
-                        T_multiplier::Real = 10,
-                        T_max::Real = Inf,
-                        δ_range::AbstractArray = 10.0 .^ (-9:-6),
-                        diffeq...
+        Ttr::Real = 200,
+        T_sample::Real = 1e4,
+        n_samples::Integer = 500,
+        λ_max::Real = lyapunov(ds, 5000),
+        d_tol::Real = 1e-3,
+        T_multiplier::Real = 10,
+        T_max::Real = Inf,
+        δ_range::AbstractArray = 10.0 .^ (-9:-6),
+        diffeq = NamedTuple(), kwargs...
     )
+
+    if !isempty(kwargs)
+        @warn DIFFEQ_DEP_WARN
+        diffeq = NamedTuple(kwargs)
+    end
 
     λ_max < 0 && return :REG, 1.0, 1.0
     # Internal Constants
@@ -80,7 +86,7 @@ function predictability(ds::DynamicalSystem;
     C_threshold = 0.5
 
     # Sample points from a single trajectory of the system
-    samples = sample_trajectory(ds, Ttr, T_sample, n_samples; diffeq...)
+    samples = sample_trajectory(ds, Ttr, T_sample, n_samples; diffeq)
 
     # Calculate the mean position and variance of the trajectory. ([1] pg. 5)
     # Using samples 'Monte Carlo' approach instead of direct integration
@@ -90,7 +96,7 @@ function predictability(ds::DynamicalSystem;
     # Calculate cross-distance scaling and correlation scaling
     distances = Float64[] # Mean distances at time T for different δ
     correlations = Float64[] # Cross-correlation at time T for different δ
-    p_integ = parallel_integrator(ds, samples[1:2]; diffeq...)
+    p_integ = parallel_integrator(ds, samples[1:2]; diffeq)
     for δ in δ_range
         # TODO: some kind of warning should be thrown for very large Tλ
         Tλ = log(d_tol/δ)/λ_max
@@ -144,33 +150,31 @@ end
 function sample_trajectory(ds::ContinuousDynamicalSystem,
                            Ttr::Real, T_sample::Real,
                            n_samples::Real;
-                           diffeq...)
+                           diffeq = NamedTuple())
     # Samples *approximately* `n_samples` points.
     β = T_sample/n_samples
     D_sample = Exponential(β)
-    sample_trajectory(ds, Ttr, T_sample, D_sample; diffeq...)
+    sample_trajectory(ds, Ttr, T_sample, D_sample; diffeq)
 end
 
 function sample_trajectory(ds::DiscreteDynamicalSystem,
                            Ttr::Real, T_sample::Real,
                            n_samples::Real;
-                           diffeq...)
+                           diffeq = NamedTuple())
     @assert n_samples < T_sample "discrete systems must satisfy n_samples < T_sample"
     # Samples *approximately* `n_samples` points.
     p = n_samples/T_sample
     D_sample = Geometric(p)
-    sample_trajectory(ds, Ttr, T_sample, D_sample; diffeq...)
+    sample_trajectory(ds, Ttr, T_sample, D_sample; diffeq)
 end
 
 function sample_trajectory(ds::DynamicalSystem,
                            Ttr::Real, T_sample::Real,
                            D_sample::UnivariateDistribution;
-                           diffeq...)
+                           diffeq = NamedTuple())
     # Simulate initial transient
-    integ = integrator(ds; diffeq...)
-    while integ.t < Ttr
-        step!(integ)
-    end
+    integ = integrator(ds; diffeq)
+    step!(integ, Ttr)
 
     # Time to the next sample is sampled from the distribution D_sample
     # e.g. Continuous systems: D_sample is Exponential distribution

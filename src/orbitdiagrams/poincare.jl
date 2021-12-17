@@ -85,22 +85,28 @@ See also [`produce_orbitdiagram`](@ref).
 * `warning = true` : Throw a warning if the Poincaré section was empty.
 * `rootkw = (xrtol = 1e-6, atol = 1e-6)` : A `NamedTuple` of keyword arguments
   passed to `find_zero` from [Roots.jl](https://github.com/JuliaMath/Roots.jl).
-* `diffeq...` : All other extra keyword arguments are propagated into `init`
-  of DifferentialEquations.jl. See [`trajectory`](@ref) for examples.
+* `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
+  `init` of DifferentialEquations.jl.
+  See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
 [^Tabor1989]: M. Tabor, *Chaos and Integrability in Nonlinear Dynamics: An Introduction*, §4.1, in pp. 118-126, New York: Wiley (1989)
 """
 function poincaresos(
 		ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
 	    direction = -1, Ttr::Real = 0.0, warning = true, idxs = 1:D, u0 = get_state(ds),
-	    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...
+	    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq = NamedTuple(), kwargs...
 	) where {IIP, S, D}
 
+    if !isempty(kwargs)
+        @warn DIFFEQ_DEP_WARN
+        diffeq = NamedTuple(kwargs)
+    end
+
     _check_plane(plane, D)
-    integ = integrator(ds, u0; diffeq...)
+    integ = integrator(ds, u0; diffeq)
     i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
     planecrossing = PlaneCrossing(plane, direction > 0)
-	Ttr != 0 && step!(integ, Ttr)
+	Ttr ≠ 0 && step!(integ, Ttr)
 	plane_distance = (t) -> planecrossing(integ(t))
 
 	data = _poincaresos(integ, plane_distance, planecrossing, tfinal+Ttr, i, rootkw)
@@ -226,11 +232,13 @@ next_state_on_psos = step!(pmap)
 function poincaremap(
 		ds::CDS{IIP, S, D}, plane, Tmax = 1e6;
 	    direction = -1, u0 = get_state(ds),
-	    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...
+	    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq = NamedTuple(), kwargs...
 	) where {IIP, S, D}
 
+    I STOPPED HERE
+
 	_check_plane(plane, D)
-    integ = integrator(ds, u0; diffeq...)
+    integ = integrator(ds, u0; diffeq)
 	planecrossing = PlaneCrossing(plane, direction > 0)
 	plane_distance = (t) -> planecrossing(integ(t))
     v = SVector{length(u0), eltype(u0)}(u0)

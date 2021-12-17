@@ -235,7 +235,10 @@ function poincaremap(
 	    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq = NamedTuple(), kwargs...
 	) where {IIP, S, D}
 
-    I STOPPED HERE
+    if !isempty(kwargs)
+        @warn DIFFEQ_DEP_WARN
+        diffeq = NamedTuple(kwargs)
+    end
 
 	_check_plane(plane, D)
     integ = integrator(ds, u0; diffeq)

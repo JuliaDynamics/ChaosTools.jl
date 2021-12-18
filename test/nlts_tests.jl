@@ -5,24 +5,6 @@ using ChaosTools.Distances: Cityblock, Euclidean
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
 println("\nTesting nonlinear timeseries analysis...")
-@testset "Lyapunov from data" begin
-    ds = Systems.henon()
-    data = trajectory(ds, 100000)
-    x = data[:, 1] # some "recorded" timeseries
-    ks = 1:20
-    @testset "meth = $meth" for meth in
-        [NeighborNumber(1), NeighborNumber(4), WithinRange(0.01)]
-        @testset "distance = $di" for di in [Euclidean(), Cityblock()]
-            for D in [2, 4]
-                R = embed(x, D, 1)
-                E = lyapunov_from_data(R, ks,
-                refstates = 1:1000, distance=di, ntype=meth)
-                λ = linear_region(ks, E)[2]
-                test_value(λ, 0.3, 0.5)
-            end
-        end
-    end
-end
 
 @testset "Broomhead-King" begin
     using Random

@@ -81,6 +81,20 @@ println("\nTesting poincare sections...")
     end
 end
 
+@testset "PoincareSOS of trajectory" begin
+    ds = Systems.lorenz()
+    tr = trajectory(ds, 1000.0; Ttr = 10.0)
+    psos = poincaresos(tr, (2, 0.0))
+    @test all(abs.(psos[:, 2]) .≤ 1e-15)
+    psos = poincaresos(tr, [0, 1.0, 0, 0])
+    @test all(abs.(psos[:, 2]) .≤ 1e-15)
+    psos = poincaresos(tr, [1.0, 1.0, 0, 0])
+    g = generalized_dim(psos; q = 0)
+    @test g ≤ 1
+end
+
+println("\nTesting producing continuous orbit diagrams...")
+
 @testset "Produce OD" begin
   @testset "Shinriki" begin
     ds = Systems.shinriki([-2, 0, 0.2])
@@ -107,16 +121,4 @@ end
     @test s == Set([-0.376, -1.2887])
 
   end
-end
-
-@testset "PoincareSOS of trajectory" begin
-    ds = Systems.lorenz()
-    tr = trajectory(ds, 1000.0; Ttr = 10.0)
-    psos = poincaresos(tr, (2, 0.0))
-    @test all(abs.(psos[:, 2]) .≤ 1e-15)
-    psos = poincaresos(tr, [0, 1.0, 0, 0])
-    @test all(abs.(psos[:, 2]) .≤ 1e-15)
-    psos = poincaresos(tr, [1.0, 1.0, 0, 0])
-    g = generalized_dim(psos; q = 0)
-    @test g ≤ 1
 end

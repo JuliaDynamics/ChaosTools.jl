@@ -9,7 +9,7 @@ using DelayEmbeddings #to get columns() and embed()
         # Initial conditions from `dyca()` paper
         eigenthresold = collect(0.10:0.01:0.995)
         ds = Systems.roessler(rand(3); a = 0.15, b = 0.2, c = 10);
-        ts = trajectory(ds, 1000.0, dt = 0.05);
+        ts = trajectory(ds, 1000.0, Δt = 0.05);
         for thresold in eigenthresold
             eigenvalues,_ = dyca(Matrix(ts),thresold)
             @test sum([round(i) for i in eigenvalues]) == 2.0

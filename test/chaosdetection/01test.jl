@@ -53,17 +53,17 @@ end
     cs = range(0.1, π/3-0.1, length = 50)
 
     @testset "stable" begin
-        tr = trajectory(ds, tt, sp; Δt, diffeq...)[:, 1]
+        tr = trajectory(ds, tt, sp; Δt, diffeq)[:, 1]
         @test !testchaos01(tr)
         @test !testchaos01(tr, cs)
     end
     @testset "quasiperidic" begin
-        tr = trajectory(ds, tt, qp; Δt, diffeq...)[:, 1]
+        tr = trajectory(ds, tt, qp; Δt, diffeq)[:, 1]
         @test !testchaos01(tr)
         @test !testchaos01(tr, cs)
     end
     @testset "chaotic" begin
-        tr = trajectory(ds, tt, ch; Δt, diffeq...)[:, 1]
+        tr = trajectory(ds, tt, ch; Δt, diffeq)[:, 1]
         @test testchaos01(tr, cs)
     end
 end

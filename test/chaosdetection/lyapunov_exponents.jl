@@ -1,5 +1,6 @@
 using ChaosTools
-using Test, StaticArrays
+using ChaosTools.DelayEmbeddings
+using Test, ChaosTools.StaticArrays
 using DynamicalSystemsBase: CDS, DDS
 using DynamicalSystemsBase.Systems: hoop, hoop_jac, hiip, hiip_jac
 using DynamicalSystemsBase.Systems: loop, loop_jac, liip, liip_jac
@@ -7,7 +8,7 @@ using OrdinaryDiffEq
 using Statistics
 
 println("\nTesting lyapunov exponents...")
-let
+@testset "Lyapunov exponents" begin
 u0 = [0, 10.0, 0]
 p = [10, 28, 8/3]
 u0h = ones(2)
@@ -19,7 +20,7 @@ PARAMS = [p, ph]
 MLE = [[0.75, 0.95], [0.41, 0.43]]
 SLE = [[-0.1, 0.1], [-1.63, -1.61]]
 
-@testset "Lyapunovs" begin
+@testset "Lyapunov spectrum" begin
 for i in 1:8
     @testset "combination $i" begin
         sysindx = i < 5 ? 1 : 2
@@ -39,10 +40,10 @@ for i in 1:8
 
         λ = lyapunovspectrum(ds, 2000)
         if i < 5
-            λ2 = lyapunovspectrum(ds, 2000; dt = 2.0, Ttr = 10.0,
+            λ2 = lyapunovspectrum(ds, 2000; Δt = 2.0, Ttr = 10.0,
             diffeq = (abstol = 1e-9, alg = Tsit5()))
         else
-            λ2 = lyapunovspectrum(ds, 1000; dt = 5, Ttr = 20)
+            λ2 = lyapunovspectrum(ds, 1000; Δt = 5, Ttr = 20)
         end
 
         @test MLE[sysindx][1] < λ[1] < MLE[sysindx][2]
@@ -55,7 +56,7 @@ for i in 1:8
             λ = lyapunov(ds, T)
             @test MLE[sysindx][1] < λ < MLE[sysindx][2]
             if i < 5
-                λ2 = lyapunov(ds, 2000; dt = 1.0, Ttr = 10.0,
+                λ2 = lyapunov(ds, 2000; Δt = 1.0, Ttr = 10.0,
                 diffeq = (abstol = 1e-9, alg = Tsit5()))
                 @test MLE[sysindx][1] < λ2 < MLE[sysindx][2]
             end

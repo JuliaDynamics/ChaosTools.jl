@@ -1,5 +1,4 @@
-using ChaosTools
-using Test, StaticArrays, OrdinaryDiffEq, LinearAlgebra
+using Test, ChaosTools.StaticArrays, OrdinaryDiffEq, LinearAlgebra
 
 println("\nTesting poincare sections...")
 
@@ -95,8 +94,7 @@ end
 
 println("\nTesting producing continuous orbit diagrams...")
 
-@testset "Produce OD" begin
-  @testset "Shinriki" begin
+@testset "Produce OD Shinriki" begin
     ds = Systems.shinriki([-2, 0, 0.2])
 
     pvalues = range(19,stop=22,length=11)
@@ -120,5 +118,4 @@ println("\nTesting producing continuous orbit diagrams...")
     @test length(s) == 2
     @test s == Set([-0.376, -1.2887])
 
-  end
 end

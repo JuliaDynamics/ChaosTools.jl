@@ -4,7 +4,7 @@ using Random
 
 ν_thresh_lower, ν_thresh_upper = 0.1, 0.9
 C_thresh_lower, C_thresh_upper = 0.15, 0.9
-
+diffeqmaxit = (maxiters = 1e9,)
 println("\nTesting Partially predictable chaos...")
 
 @testset "Predictability Lorenz" begin
@@ -12,7 +12,7 @@ println("\nTesting Partially predictable chaos...")
         Random.seed!(12)
         lz = Systems.lorenz(ρ=180.70)
         @time chaos_type, ν, C = predictability(lz;
-            λ_max = 1.22, maxiters=1e9, T_max = 1e3, n_samples = 100,
+            λ_max = 1.22, diffeq=diffeqmaxit, T_max = 1e3, n_samples = 100,
         )
         @test chaos_type == :SC
         @test ν < ν_thresh_lower
@@ -23,7 +23,7 @@ println("\nTesting Partially predictable chaos...")
         Random.seed!(12)
         lz = Systems.lorenz(ρ=180.78)
         @time chaos_type, ν, C = predictability(lz;
-            λ_max = 0.4, maxiters=1e9, n_samples = 100, T_max = 400
+            λ_max = 0.4, diffeq=diffeqmaxit, n_samples = 100, T_max = 400
         )
         @test chaos_type == :PPC
         @test ν < ν_thresh_lower
@@ -34,7 +34,7 @@ println("\nTesting Partially predictable chaos...")
         Random.seed!(12)
         lz = Systems.lorenz(ρ=180.95)
         @time chaos_type, ν, C = predictability(lz;
-            λ_max = 0.1, maxiters=1e9, n_samples = 100, T_max = 400
+            λ_max = 0.1, diffeq=diffeqmaxit, n_samples = 100, T_max = 400
         )
         @test chaos_type == :PPC
         @test ν < ν_thresh_lower
@@ -45,7 +45,7 @@ println("\nTesting Partially predictable chaos...")
         Random.seed!(12)
         lz = Systems.lorenz(ρ=181.10)
         @time chaos_type, ν, C = predictability(lz;
-            λ_max = 0.01, T_max = 400, n_samples = 100, maxiters=1e9
+            λ_max = 0.01, T_max = 400, n_samples = 100, diffeq=diffeqmaxit
         )
         @test chaos_type == :REG
         @test ν > ν_thresh_upper

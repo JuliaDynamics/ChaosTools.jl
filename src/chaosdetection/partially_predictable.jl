@@ -41,8 +41,7 @@ Typical values for `ν`, `C` and `chaos_type` are given in Table 2 of[^Wernecke2
 ## Description
 Samples points from a trajectory of the system to be used as initial conditions. Each of
 these initial conditions is randomly perturbed by a distance `δ`, and the trajectories for
-both the original and perturbed initial conditions are computed to the 'evaluation time'
-`T`.
+both the original and perturbed initial conditions are computed to the 'evaluation time' `T`.
 
 The average (over the samples) distance and cross-correlation coefficient
 of the state at time `T` is

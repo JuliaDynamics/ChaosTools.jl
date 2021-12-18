@@ -11,7 +11,7 @@ println("\nTesting nonlinear timeseries analysis...")
     Random.seed!(1234);
     ds = Systems.gissinger(ones(3)) # standard initial condition
 
-    data = trajectory(ds, 1000.0, dt = 0.05)
+    data = trajectory(ds, 1000.0; Δt = 0.05)
     x = data[1:end-1, 1]
     s = x .+ 0.01rand(length(x))
 

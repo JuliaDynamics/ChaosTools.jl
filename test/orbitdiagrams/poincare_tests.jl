@@ -91,9 +91,9 @@ end
     j = 2
     tf = 200.0
 
-    de = (abstol=1e-9, reltol = 1e-9)
+    diffeq = (abstol=1e-9, reltol = 1e-9)
     output = produce_orbitdiagram(ds, (j, 0.0), i, parameter, pvalues; tfinal = tf,
-    Ttr = 100.0, printparams = false, direction = +1, de...)
+    Ttr = 100.0, printparams = false, direction = +1, diffeq)
     @test length(output) == length(pvalues)
 
     v = round.(output[1], digits = 4)

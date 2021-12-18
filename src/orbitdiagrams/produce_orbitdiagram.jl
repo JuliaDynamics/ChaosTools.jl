@@ -1,7 +1,3 @@
-
-#####################################################################################
-#                            Produce Orbit Diagram                                  #
-#####################################################################################
 """
 ```julia
 produce_orbitdiagram(
@@ -21,7 +17,7 @@ Each entry are the points at each parameter value.
 ## Keyword Arguments
 * `printparams::Bool = false` : Whether to print the parameter used
   during computation in order to keep track of running time.
-* `direction, warning, Ttr, rootkw, diffeq...` :
+* `direction, warning, Ttr, rootkw, diffeq` :
   Propagated into [`poincaresos`](@ref).
 * `u0 = nothing` : Specify an initial state. If `nothing`, the previous state after each
   parameter is used to seed the new initial condition at the new parameter
@@ -44,14 +40,19 @@ function produce_orbitdiagram(
         ds::CDS{IIP, S, D}, plane, idxs, p_index, pvalues;
         tfinal::Real = 100.0, direction = -1, printparams = false, warning = true,
         Ttr = 0.0, u0 = nothing, rootkw = (xrtol = 1e-6, atol = 1e-6),
-        diffeq...
+        diffeq = NamedTuple(), kwargs...
     ) where {IIP, S, D}
+
+    if !isempty(kwargs)
+        @warn DIFFEQ_DEP_WARN
+        diffeq = NamedTuple(kwargs)
+    end
 
     i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
 
     _check_plane(plane, D)
     typeof(u0) <: Vector{<:AbstractVector} && @assert length(u0)==length(p)
-    integ = integrator(ds; diffeq...)
+    integ = integrator(ds; diffeq)
     planecrossing = PlaneCrossing(plane, direction > 0)
     p0 = ds.p[p_index]
     output = Vector{typeof(ds.u0[i])}[]

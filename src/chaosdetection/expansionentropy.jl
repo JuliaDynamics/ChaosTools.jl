@@ -32,7 +32,9 @@ multidimension box.
   This is `t0` of [1] and of the following notation.
 * `batches = 100` : Number of batches to run the calculation, see below.
 * `Δt = 1` : Integration step size.
-* `diffeq...` : Other keywords are propagated to the solvers of DifferentialEquations.jl.
+* `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
+  `init` of DifferentialEquations.jl.
+  See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
 ## Description
 `N` samples are initialized and propagated forwards in time (along with their tangent space).
@@ -116,7 +118,13 @@ Return `times, H` for one sample of `ds` (see [`expansionentropy`](@ref)).
 Accepts the same argumets as `expansionentropy`, besides `batches`.
 """
 function expansionentropy_sample(system::DynamicalSystem, sampler, restraining;
-    N=1000, steps=40, Δt=1, Ttr=0, diffeq...)
+    N=1000, steps=40, Δt=1, Ttr=0, diffeq = NamedTuple(), kwargs...)
+
+    if !isempty(kwargs)
+        @warn DIFFEQ_DEP_WARN
+        diffeq = NamedTuple(kwargs)
+    end
+
     D = dimension(system)
     M = zeros(steps)
     # M[t] will be Σᵢ G(Dfₜ₀,ₜ₀₊ₜ(xᵢ))
@@ -124,7 +132,7 @@ function expansionentropy_sample(system::DynamicalSystem, sampler, restraining;
 
     times = @. (system.t0+Ttr)+Δt*(1:steps)
     t_identity = SMatrix{D, D, Float64}(I)
-    t_integ = tangent_integrator(system)
+    t_integ = tangent_integrator(system; diffeq)
     Ttr > 0 && (u_integ = integrator(system))
 
     for i ∈ 1:N
@@ -194,6 +202,8 @@ Run [`expansionentropy_sample`](@ref) `batch` times, and return
 Accepts the same arguments as `expansionentropy`.
 """
 function expansionentropy_batch(system, sampler, restraining; batches=100, steps=40, kwargs...)
+    # TODO: It is a mistake that `expansionentropy_batch` doen't create an integrator that
+    # us just reinited inside `expansionentropy_sample`...
     means = fill(NaN, steps)
     stds = fill(NaN, steps)
     eesamples = zeros(batches, steps)
@@ -202,7 +212,9 @@ function expansionentropy_batch(system, sampler, restraining; batches=100, steps
     times = undef
     # Collect all the samples
     for k in 1:batches
-        times, eesamples[k, :] = expansionentropy_sample(system, sampler, restraining; steps=steps, kwargs...)
+        times, eesamples[k, :] = expansionentropy_sample(
+            system, sampler, restraining; steps, kwargs...
+        )
     end
 
     # Calculate the mean and standard deviations
@@ -210,7 +222,8 @@ function expansionentropy_batch(system, sampler, restraining; batches=100, steps
         entropysamples = filter(isfinite, @view eesamples[:, t])
         # remove -Inf entries, which indicate all samples failed to stay inside the given region.
         if length(entropysamples) ≤ 1
-        @warn "All (or all except one) samples have escaped the given region.  Consider increasing sample or batch number. Terminating at step = $(t)."
+        @warn "All (or all except one) samples have escaped the given region. "*
+        "Consider increasing sample or batch number. Terminating at step = $(t)."
             break
         end
         means[t] = mean(entropysamples)

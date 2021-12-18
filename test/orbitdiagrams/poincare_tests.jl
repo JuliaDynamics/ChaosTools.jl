@@ -1,5 +1,4 @@
-using ChaosTools
-using Test, StaticArrays, OrdinaryDiffEq, LinearAlgebra
+using Test, ChaosTools.StaticArrays, OrdinaryDiffEq, LinearAlgebra
 
 println("\nTesting poincare sections...")
 
@@ -81,8 +80,21 @@ println("\nTesting poincare sections...")
     end
 end
 
-@testset "Produce OD" begin
-  @testset "Shinriki" begin
+@testset "PoincareSOS of trajectory" begin
+    ds = Systems.lorenz()
+    tr = trajectory(ds, 1000.0; Ttr = 10.0)
+    psos = poincaresos(tr, (2, 0.0))
+    @test all(abs.(psos[:, 2]) .≤ 1e-15)
+    psos = poincaresos(tr, [0, 1.0, 0, 0])
+    @test all(abs.(psos[:, 2]) .≤ 1e-15)
+    psos = poincaresos(tr, [1.0, 1.0, 0, 0])
+    g = generalized_dim(psos; q = 0)
+    @test g ≤ 1
+end
+
+println("\nTesting producing continuous orbit diagrams...")
+
+@testset "Produce OD Shinriki" begin
     ds = Systems.shinriki([-2, 0, 0.2])
 
     pvalues = range(19,stop=22,length=11)
@@ -91,9 +103,9 @@ end
     j = 2
     tf = 200.0
 
-    de = (abstol=1e-9, reltol = 1e-9)
+    diffeq = (abstol=1e-9, reltol = 1e-9)
     output = produce_orbitdiagram(ds, (j, 0.0), i, parameter, pvalues; tfinal = tf,
-    Ttr = 100.0, printparams = false, direction = +1, de...)
+    Ttr = 100.0, printparams = false, direction = +1, diffeq)
     @test length(output) == length(pvalues)
 
     v = round.(output[1], digits = 4)
@@ -106,17 +118,4 @@ end
     @test length(s) == 2
     @test s == Set([-0.376, -1.2887])
 
-  end
-end
-
-@testset "PoincareSOS of trajectory" begin
-    ds = Systems.lorenz()
-    tr = trajectory(ds, 1000.0; Ttr = 10.0)
-    psos = poincaresos(tr, (2, 0.0))
-    @test all(abs.(psos[:, 2]) .≤ 1e-15)
-    psos = poincaresos(tr, [0, 1.0, 0, 0])
-    @test all(abs.(psos[:, 2]) .≤ 1e-15)
-    psos = poincaresos(tr, [1.0, 1.0, 0, 0])
-    g = generalized_dim(psos; q = 0)
-    @test g ≤ 1
 end

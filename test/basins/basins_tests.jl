@@ -4,6 +4,8 @@ using Test
 using LinearAlgebra
 using OrdinaryDiffEq
 
+println("\nTesting basins of attraction...")
+
 @testset "Basins tests" begin
 
 @testset "Discrete map" begin
@@ -30,7 +32,9 @@ end
 @testset "Test basin poincare map" begin
     ds = Systems.thomas_cyclical(b = 0.1665)
     xg = yg = range(-6.0, 6.0; length = 100)
-    pmap = poincaremap(ds, (3, 0.0), 1e6; rootkw = (xrtol = 1e-8, atol = 1e-8), reltol=1e-9)
+    pmap = poincaremap(ds, (3, 0.0), 1e6; 
+        rootkw = (xrtol = 1e-8, atol = 1e-8), diffeq=(reltol=1e-9,)
+    )
     basin,attractors = basins_of_attraction((xg,yg), pmap; show_progress = false)
     # pcolormesh(xg,yg, basin')
     @test length(attractors) == 3
@@ -63,7 +67,7 @@ end
     ds = Systems.lorenz84()
     xg=yg=range(-1.,2.,length=100)
     zg=range(-1.5,1.5,length=30)
-    bsn,att = basins_of_attraction((xg, yg, zg), ds; Δt = 1., show_progress = false)
+    bsn,att = basins_of_attraction((xg, yg, zg), ds; Δt = 1.0, show_progress = false)
     @test length(size(bsn)) == 3
     for i in 1:size(bsn)[3]
         # While there are 4 attractors, because system is chaotic we might

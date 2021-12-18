@@ -114,8 +114,9 @@ function basins_of_attraction(grid::Tuple, ds;
         # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
         # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
+
     @assert length(idxs) == length(grid)
-    integ = ds isa PoincareMap ? ds : integrator(ds; diffeq...)
+    integ = ds isa PoincareMap ? ds : integrator(ds; diffeq)
     idxs = SVector(idxs...)
 
     D = length(get_state(integ))

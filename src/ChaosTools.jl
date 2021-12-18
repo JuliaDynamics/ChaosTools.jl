@@ -13,8 +13,11 @@ using DynamicalSystemsBase: stateeltype
 using DynamicalSystemsBase.SciMLBase: AbstractODEIntegrator, u_modified!, DEIntegrator
 DEI = DEIntegrator
 
+include("deprecations.jl")
+
 include("orbitdiagrams/discrete_diagram.jl")
 include("orbitdiagrams/poincare.jl")
+include("orbitdiagrams/produce_orbitdiagram.jl")
 
 include("basins/basins_reinit.jl")
 include("basins/basins_highlevel.jl")
@@ -45,7 +48,5 @@ include("chaosdetection/gali.jl")
 include("chaosdetection/expansionentropy.jl")
 include("chaosdetection/partially_predictable.jl")
 include("chaosdetection/testchaos01.jl")
-
-include("deprecations.jl")
 
 end # module

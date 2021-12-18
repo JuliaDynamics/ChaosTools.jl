@@ -3,6 +3,7 @@ using Test
 using DynamicalSystemsBase, DelayEmbeddings
 using StatsBase
 standardize = DelayEmbeddings.standardize
+test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
 ti = time()
 @testset "ChaosTools tests" begin

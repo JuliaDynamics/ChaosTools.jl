@@ -2,6 +2,7 @@ using ChaosTools
 using Test
 using DynamicalSystemsBase #to get Systems
 using DelayEmbeddings #to get columns() and embed()
+
 @testset "DyCA Tests" begin
     println("Running dyca() tests...")
 

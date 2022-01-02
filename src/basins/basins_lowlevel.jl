@@ -31,9 +31,18 @@ function draw_basin!(
         grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function;
         show_progress = true, attractors = nothing, kwargs...,
     )
+
+    bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, complete_and_reinit!, get_projected_state; attractors)
+
+    basins_computation!(bsn_nfo, grid, integ, show_progress; kwargs...)
+
+    return bsn_nfo
+end
+
+# function for structure initialization.
+function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function; attractors = nothing)
     B = length(grid)
     D = length(get_state(integ)) # dimension of the full state space
-    complete = false
     trees = if isnothing(attractors)
         nothing
     else
@@ -57,7 +66,13 @@ function draw_basin!(
         trees
     )
     reset_basin_counters!(bsn_nfo)
+    return bsn_nfo
+end
+
+
+function basins_computation!(bsn_nfo::BasinInfo, grid::Tuple, integ, show_progress; kwargs...)
     I = CartesianIndices(bsn_nfo.basin)
+    complete = false
     j = 1
     progress = ProgressMeter.Progress(
         length(bsn_nfo.basin); desc = "Basins of attraction: ", dt = 1.0
@@ -77,8 +92,8 @@ function draw_basin!(
     ind = iseven.(bsn_nfo.basin)
     bsn_nfo.basin[ind] .+= 1
     bsn_nfo.basin .= (bsn_nfo.basin .- 1) .÷ 2
-    return bsn_nfo
 end
+
 
 function next_uncolored_cell(bsn_nfo, j, I)
     @inbounds for k in j:length(bsn_nfo.basin)

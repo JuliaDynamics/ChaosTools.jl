@@ -51,7 +51,7 @@ function draw_basin!(
         complete_and_reinit!,
         get_projected_state,
         :att_search,
-        2,3,0,1,0,
+        2,3,0,1,1,
         Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
         Vector{CartesianIndex{B}}(),
         trees

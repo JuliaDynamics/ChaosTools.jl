@@ -2,6 +2,7 @@ import ProgressMeter
 using Statistics: mean
 using SparseArrays
 
+# WARNING: THE TYPE HAVE CHANGED TO ABSTRACT ARRAY TO ALLOW Sparse Arrays
 mutable struct BasinInfo{B, IF, RF, UF, D, T, Q, K}
     basin::AbstractArray{Int16, B}
     grid_steps::SVector{B, Float64}

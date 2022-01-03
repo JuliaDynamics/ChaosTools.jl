@@ -110,7 +110,7 @@ attractors on the grid.
 function basins_of_attraction(grid::Tuple, ds;
         Δt=nothing, T=nothing, idxs = 1:length(grid),
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
-        diffeq = NamedTuple(), kwargs...
+        diffeq = NamedTuple(), tracking_mode = false, kwargs...
         # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
         # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
@@ -131,11 +131,11 @@ function basins_of_attraction(grid::Tuple, ds;
             @info "Automatic Δt estimation yielded Δt = $(Δt)"
         end
     end
-    return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state, fixed_solver; kwargs...)
+    return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state, fixed_solver, tracking_mode; kwargs...)
 end
 
 function basins_of_attraction(
-        grid, integ, Δt, T, idxs::SVector, complete_state, fixed_solver; kwargs...
+        grid, integ, Δt, T, idxs::SVector, complete_state, fixed_solver, tracking_mode; kwargs...
     )
 
     complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
@@ -148,10 +148,15 @@ function basins_of_attraction(
     else # generic case
         iter_f! = (integ) -> step!(integ, Δt) # we don't have to step _exactly_ `Δt` here
     end
-    bsn_nfo = draw_basin!(
+    if tracking_mode == true
+        bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, complete_and_reinit!, get_projected_state; sparse = true)
+        return bsn_nfo, integ
+    else
+        bsn_nfo = draw_basin!(
         grid, integ, iter_f!, complete_and_reinit!, get_projected_state; kwargs...
-    )
-    return bsn_nfo.basin, bsn_nfo.attractors
+        )
+        return bsn_nfo.basin, bsn_nfo.attractors
+    end
 end
 
 # Estimate Δt
@@ -169,7 +174,7 @@ and the keyword `N` is `5000` by default.
 
 Notice that `Δt` should not be too small which happens typically if the grid resolution
 is high. It is okay for [`basins_of_attraction`](@ref) if the trajectory skips a few cells.
-But if `Δt` is too small the default values for all other keywords such 
+But if `Δt` is too small the default values for all other keywords such
 as `mx_chk_hit_bas` need to be increased drastically.
 
 Also, `Δt` that is smaller than the internal step size of the integrator will cause
@@ -179,7 +184,7 @@ function automatic_Δt_basins(ds, grid;
         idxs = 1:length(grid), N = 5000, diffeq = NamedTuple(),
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
     )
-    
+
     if ds isa Union{PoincareMap, DiscreteDynamicalSystem}
         return 1
     end

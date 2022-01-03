@@ -1,8 +1,9 @@
 import ProgressMeter
 using Statistics: mean
+using SparseArrays
 
 mutable struct BasinInfo{B, IF, RF, UF, D, T, Q, K}
-    basin::Array{Int16, B}
+    basin::AbstractArray{Int16, B}
     grid_steps::SVector{B, Float64}
     grid_maxima::SVector{B, Float64}
     grid_minima::SVector{B, Float64}
@@ -31,16 +32,16 @@ function draw_basin!(
         grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function;
         show_progress = true, attractors = nothing, kwargs...,
     )
-
     bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, complete_and_reinit!, get_projected_state; attractors)
-
     basins_computation!(bsn_nfo, grid, integ, show_progress; kwargs...)
-
     return bsn_nfo
 end
 
 # function for structure initialization.
-function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function; attractors = nothing)
+function init_bsn_nfo(
+        grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function;
+        attractors = nothing, sparse = false
+    )
     B = length(grid)
     D = length(get_state(integ)) # dimension of the full state space
     trees = if isnothing(attractors)
@@ -52,7 +53,7 @@ function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, complete_and_reinit
     grid_maxima = maximum.(grid)
     grid_minima = minimum.(grid)
     bsn_nfo = BasinInfo(
-        zeros(Int16, map(length, grid)),
+        sparse ? spzeros(Int16, map(length, grid)...) : zeros(Int16, map(length, grid)),
         SVector{B, Float64}(grid_steps),
         SVector{B, Float64}(grid_maxima),
         SVector{B, Float64}(grid_minima),

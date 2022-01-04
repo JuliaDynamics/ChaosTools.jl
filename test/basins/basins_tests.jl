@@ -32,7 +32,7 @@ end
 @testset "Test basin poincare map" begin
     ds = Systems.thomas_cyclical(b = 0.1665)
     xg = yg = range(-6.0, 6.0; length = 100)
-    pmap = poincaremap(ds, (3, 0.0), 1e6; 
+    pmap = poincaremap(ds, (3, 0.0), 1e6;
         rootkw = (xrtol = 1e-8, atol = 1e-8), diffeq=(reltol=1e-9,)
     )
     basin,attractors = basins_of_attraction((xg,yg), pmap; show_progress = false)
@@ -111,5 +111,25 @@ end
 end
 
 
+@testset "tracking mode test" begin
+    res = 70
+    ds = Systems.henon_iip(zeros(2); a = 1.4, b = 0.3)
+    xg = yg = range(-2.,2.,length = res)
+    grid = (xg,yg)
+    bsn_nfo, integ = basins_of_attraction(grid, ds; tracking_mode = true)
+    # Test if basins are (almost) identical
+    I = CartesianIndices(bsn_nfo.basin)
+    for ind in I
+        y0 = ChaosTools.generate_ic_on_grid(grid, ind)
+        bsn_nfo.basin[ind] = ChaosTools.get_color_point!(bsn_nfo, integ, y0)
+    end
+    ind = iseven.(bsn_nfo.basin)
+    bsn_nfo.basin[ind] .+= 1
+    bsn_nfo.basin .= (bsn_nfo.basin .- 1) .÷ 2
+
+    basins, att = basins_of_attraction((xg,yg), ds; tracking_mode = false)
+
+    @test sum(basins .!= Matrix(bsn_nfo.basin)) < 5
+end
 
 end

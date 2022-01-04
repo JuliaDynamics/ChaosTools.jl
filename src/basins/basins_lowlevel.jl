@@ -13,7 +13,7 @@ mutable struct BasinInfo{B, IF, RF, UF, D, T, Q, K}
     get_projected_state::UF
     state::Symbol
     current_att_color::Int
-    visited_clr::Int
+    current_bas_color::Int
     consecutive_match::Int
     consecutive_lost::Int
     prev_clr::Int
@@ -62,7 +62,7 @@ function init_bsn_nfo(
         complete_and_reinit!,
         get_projected_state,
         :att_search,
-        2,4,0,1,0,
+        2,4,0,1,1,
         Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
         Vector{CartesianIndex{B}}(),
         trees
@@ -86,7 +86,7 @@ function basins_computation!(bsn_nfo::BasinInfo, grid::Tuple, integ, show_progre
         complete && break
         # Tentatively assign a color: odd is for basins, even for attractors.
         # First color is 2 for attractor and 3 for basins
-        bsn_nfo.basin[ind] = bsn_nfo.visited_clr
+        bsn_nfo.basin[ind] = bsn_nfo.current_bas_color
         y0 = generate_ic_on_grid(grid, ind)
         bsn_nfo.basin[ind] = get_color_point!(bsn_nfo, integ, y0; kwargs...)
     end
@@ -99,7 +99,7 @@ end
 
 function next_uncolored_cell(bsn_nfo, j, I)
     @inbounds for k in j:length(bsn_nfo.basin)
-        if bsn_nfo.basin[I[k]] == 0
+        if bsn_nfo.basin[I[k]] == 1
             j = k
             ind = I[k]
             return ind, false, j
@@ -174,7 +174,7 @@ function _identify_basin_of_cell!(
             # Wait if we hit the attractor a mx_chk_att times in a row just
             # to check if it is not a nearby trajectory
             hit_att = nxt_clr + 1
-            recolor_visited_cell!(bsn_nfo, bsn_nfo.visited_clr, 0)
+            recolor_visited_cell!(bsn_nfo, bsn_nfo.current_bas_color, 1)
             reset_basin_counters!(bsn_nfo)
             return hit_att
          end
@@ -183,12 +183,12 @@ function _identify_basin_of_cell!(
     end
 
     if bsn_nfo.state == :att_search
-        if nxt_clr == 0
+        if nxt_clr == 1
             # uncolored box, color it with current odd color and reset counter
-            bsn_nfo.basin[n] = bsn_nfo.visited_clr
+            bsn_nfo.basin[n] = bsn_nfo.current_bas_color
             push!(bsn_nfo.visited,n) # keep track of visited cells
             bsn_nfo.consecutive_match = 1
-        elseif nxt_clr == bsn_nfo.visited_clr
+        elseif nxt_clr == bsn_nfo.current_bas_color
             # hit a previously visited box with the current color, possible attractor?
             bsn_nfo.consecutive_match += 1
         end
@@ -204,7 +204,7 @@ function _identify_basin_of_cell!(
     end
 
     if bsn_nfo.state == :att_found
-        if nxt_clr == 0 || nxt_clr == bsn_nfo.visited_clr
+        if nxt_clr == 1 || nxt_clr == bsn_nfo.current_bas_color
             # Maybe chaotic attractor, perodic or long recursion.
             # Color this box as part of an attractor
             bsn_nfo.basin[n] = bsn_nfo.current_att_color
@@ -217,9 +217,9 @@ function _identify_basin_of_cell!(
         elseif iseven(nxt_clr) && bsn_nfo.consecutive_match >= mx_chk_loc_att
             # We have checked the presence of an attractor: tidy up everything
             # and get a new cell
-            recolor_visited_cell!(bsn_nfo, bsn_nfo.visited_clr, 0)
+            recolor_visited_cell!(bsn_nfo, bsn_nfo.current_bas_color, 1)
             # pick the next color for coloring the basin.
-            bsn_nfo.visited_clr += 2
+            bsn_nfo.current_bas_color += 2
             bsn_nfo.current_att_color += 2
             reset_basin_counters!(bsn_nfo)
             return nxt_clr + 1;
@@ -237,7 +237,7 @@ function _identify_basin_of_cell!(
             bsn_nfo.consecutive_match = 1
         end
         if  bsn_nfo.consecutive_match > mx_chk_hit_bas
-            recolor_visited_cell!(bsn_nfo, bsn_nfo.visited_clr, 0)
+            recolor_visited_cell!(bsn_nfo, bsn_nfo.current_bas_color, 1)
             reset_basin_counters!(bsn_nfo)
             return nxt_clr
         end
@@ -249,7 +249,7 @@ function _identify_basin_of_cell!(
         #grid_mid_point = (bsn_nfo.grid_maxima - bsn_nfo.grid_minima) ./2 + bsn_nfo.grid_minima
         bsn_nfo.consecutive_lost += 1
         if   bsn_nfo.consecutive_lost > mx_chk_lost || norm(u_full_state) > horizon_limit
-            recolor_visited_cell!(bsn_nfo, bsn_nfo.visited_clr, 0)
+            recolor_visited_cell!(bsn_nfo, bsn_nfo.current_bas_color, 1)
             reset_basin_counters!(bsn_nfo)
             # problematic IC : diverges or wanders outside the defined grid
             return -1
@@ -301,7 +301,7 @@ end
 function reset_basin_counters!(bsn_nfo::BasinInfo)
     bsn_nfo.consecutive_match = 0
     bsn_nfo.consecutive_lost = 0
-    bsn_nfo.prev_clr = 0
+    bsn_nfo.prev_clr = 1
     bsn_nfo.state = :att_search
 end
 
@@ -313,7 +313,7 @@ function check_next_state!(bsn_nfo, nxt_clr)
         return
     end
 
-    if nxt_clr == 0 || nxt_clr == bsn_nfo.visited_clr
+    if nxt_clr == 1 || nxt_clr == bsn_nfo.current_bas_color
         # uncolored box or previously visited box with the current color
         next_state = :att_search
     elseif iseven(nxt_clr)

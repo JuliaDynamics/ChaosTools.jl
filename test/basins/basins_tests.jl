@@ -116,20 +116,20 @@ end
     ds = Systems.henon_iip(zeros(2); a = 1.4, b = 0.3)
     xg = yg = range(-2.,2.,length = res)
     grid = (xg,yg)
-    bsn_nfo, integ = basins_of_attraction(grid, ds; tracking_mode = true)
+    bsn_nfo, integ = basins_of_attraction(grid, ds; ic_lab_mode = true)
     # Test if basins are (almost) identical
-    I = CartesianIndices(bsn_nfo.basin)
+    I = CartesianIndices(bsn_nfo.basins)
     for ind in I
         y0 = ChaosTools.generate_ic_on_grid(grid, ind)
-        bsn_nfo.basin[ind] = ChaosTools.get_color_point!(bsn_nfo, integ, y0)
+        bsn_nfo.basins[ind] = ChaosTools.get_label_ic!(bsn_nfo, integ, y0)
     end
-    ind = iseven.(bsn_nfo.basin)
-    bsn_nfo.basin[ind] .+= 1
-    bsn_nfo.basin .= (bsn_nfo.basin .- 1) .÷ 2
+    ind = iseven.(bsn_nfo.basins)
+    bsn_nfo.basins[ind] .+= 1
+    bsn_nfo.basins .= (bsn_nfo.basins .- 1) .÷ 2
 
-    basins, att = basins_of_attraction((xg,yg), ds; tracking_mode = false)
+    basins, att = basins_of_attraction((xg,yg), ds)
 
-    @test sum(basins .!= Matrix(bsn_nfo.basin)) < 5
+    @test sum(basins .!= Matrix(bsn_nfo.basins)) < 5
 end
 
 end

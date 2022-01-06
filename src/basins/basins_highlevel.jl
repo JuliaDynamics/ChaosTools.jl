@@ -1,4 +1,4 @@
-export draw_basin!, basins_of_attraction, automatic_Δt_basins
+export estimate_basins!, basins_of_attraction, automatic_Δt_basins
 
 
 """
@@ -110,7 +110,7 @@ attractors on the grid.
 function basins_of_attraction(grid::Tuple, ds;
         Δt=nothing, T=nothing, idxs = 1:length(grid),
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
-        diffeq = NamedTuple(), tracking_mode = false, kwargs...
+        diffeq = NamedTuple(), ic_lab_mode = false, kwargs...
         # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
         # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
@@ -131,11 +131,11 @@ function basins_of_attraction(grid::Tuple, ds;
             @info "Automatic Δt estimation yielded Δt = $(Δt)"
         end
     end
-    return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state, fixed_solver, tracking_mode; kwargs...)
+    return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state, fixed_solver, ic_lab_mode; kwargs...)
 end
 
 function basins_of_attraction(
-        grid, integ, Δt, T, idxs::SVector, complete_state, fixed_solver, tracking_mode; kwargs...
+        grid, integ, Δt, T, idxs::SVector, complete_state, fixed_solver, ic_lab_mode; kwargs...
     )
 
     complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
@@ -148,14 +148,14 @@ function basins_of_attraction(
     else # generic case
         iter_f! = (integ) -> step!(integ, Δt) # we don't have to step _exactly_ `Δt` here
     end
-    if tracking_mode == true
-        bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, complete_and_reinit!, get_projected_state; sparse = true)
+    if ic_lab_mode == true
+        bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, complete_and_reinit!, get_projected_state)
         return bsn_nfo, integ
     else
-        bsn_nfo = draw_basin!(
+        bsn_nfo = estimate_basins!(
         grid, integ, iter_f!, complete_and_reinit!, get_projected_state; kwargs...
         )
-        return bsn_nfo.basin, bsn_nfo.attractors
+        return bsn_nfo.basins, bsn_nfo.attractors
     end
 end
 

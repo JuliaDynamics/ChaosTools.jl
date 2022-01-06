@@ -1,4 +1,4 @@
-export estimate_basins!, basins_of_attraction, automatic_Δt_basins
+export estimate_basins!, basins_of_attraction, automatic_Δt_basins, ic_labelling, get_label_ic!
 
 
 """
@@ -208,4 +208,32 @@ function automatic_Δt_basins(ds, grid;
         dudt += norm(deriv)
     end
     return Δt = 10*s*N/dudt
+end
+
+
+
+
+
+
+
+"""
+    ic_labelling(grid::Tuple, ds::DynamicalSystem; kwargs...) -> bsn_nfo, integ
+This function returns a struture and an integrator that allows to match an inital condition to an
+attractor. The interface is the same as [`basins_of_attraction`](@ref).
+The initial condition `u0` is matched to an attractor with the function [`get_label_ic!`](@ref).
+Example:
+```
+ds = Systems.henon_iip(zeros(2); a = 1.4, b = 0.3)
+u0 = [1., 1.]
+xg = yg = range(-2.,2.,length = 100)
+bsn_nfo, integ = ic_labelling((xg,yg), ds)
+label = get_label_ic!(bsn_nfo, integ, u0)
+```
+"""
+function ic_labelling(grid::Tuple, ds;
+            Δt=nothing, T=nothing, idxs = 1:length(grid),
+            complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
+            diffeq = NamedTuple()
+        )
+        return basins_of_attraction(grid, ds; Δt, T, idxs, complete_state, diffeq, ic_lab_mode = true)
 end

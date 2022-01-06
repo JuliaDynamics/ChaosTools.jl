@@ -116,12 +116,13 @@ end
     ds = Systems.henon_iip(zeros(2); a = 1.4, b = 0.3)
     xg = yg = range(-2.,2.,length = res)
     grid = (xg,yg)
-    bsn_nfo, integ = basins_of_attraction(grid, ds; ic_lab_mode = true)
+    bsn_nfo, integ = ic_labelling(grid, ds)
+
     # Test if basins are (almost) identical
     I = CartesianIndices(bsn_nfo.basins)
     for ind in I
         y0 = ChaosTools.generate_ic_on_grid(grid, ind)
-        bsn_nfo.basins[ind] = ChaosTools.get_label_ic!(bsn_nfo, integ, y0)
+        bsn_nfo.basins[ind] = get_label_ic!(bsn_nfo, integ, y0)
     end
     ind = iseven.(bsn_nfo.basins)
     bsn_nfo.basins[ind] .+= 1

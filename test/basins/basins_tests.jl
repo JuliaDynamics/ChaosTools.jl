@@ -116,7 +116,7 @@ end
     ds = Systems.henon_iip(zeros(2); a = 1.4, b = 0.3)
     xg = yg = range(-2.,2.,length = res)
     grid = (xg,yg)
-    bsn_nfo, integ = ic_labelling(grid, ds)
+    bsn_nfo, integ = ic_labelling(ds; grid = grid)
 
     # Test if basins are (almost) identical
     I = CartesianIndices(bsn_nfo.basins)
@@ -130,9 +130,9 @@ end
     basins, att = basins_of_attraction((xg,yg), ds)
     @test sum(basins .!= Matrix(bsn_nfo.basins)) < 5
 
-    bsn_nfo, integ = ic_labelling(grid, ds; attractors = att)
+    bsn_nfo, integ = ic_labelling(ds; attractors = att)
     l1 = get_label_ic!(bsn_nfo, integ, [1., 1.])
-    @test l1 == 3    
+    @test l1 == 3
 end
 
 

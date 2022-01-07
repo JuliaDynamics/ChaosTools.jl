@@ -129,17 +129,12 @@ end
     bsn_nfo.basins .= (bsn_nfo.basins .- 1) .÷ 2
     basins, att = basins_of_attraction((xg,yg), ds)
     @test sum(basins .!= Matrix(bsn_nfo.basins)) < 5
+
+    bsn_nfo, integ = ic_labelling(grid, ds; attractors = att)
+    l1 = get_label_ic!(bsn_nfo, integ, [1., 1.])
+    @test l1 == 3    
 end
 
-@testset "labelling mode with attractors test" begin
-    res = 20
-    ds = Systems.henon_iip(zeros(2); a = 1.4, b = 0.3)
-    xg = yg = range(-2.,2.,length = res)
-    basins, att = basins_of_attraction((xg,yg), ds)
-    bsn_nfo, integ = ic_labelling(grid, ds, att)
-    l1 = get_label_ic!(bsn_nfo, integ, [1., 1.])
-    @test l1 == 3
-end
 
 
 end

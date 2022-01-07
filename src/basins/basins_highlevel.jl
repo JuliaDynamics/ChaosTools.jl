@@ -212,14 +212,11 @@ end
 
 
 
-
-
-
-
 """
     ic_labelling(grid::Tuple, ds::DynamicalSystem; kwargs...) -> bsn_nfo, integ
 This function returns a struture and an integrator that allows to match an inital condition to an
-attractor. The interface is the same as [`basins_of_attraction`](@ref).
+attractor. The interface is the same as [`basins_of_attraction`](@ref) and has the same keyword arguments
+except for the keywords controlling the basins estimation. 
 The initial condition `u0` is matched to an attractor with the function [`get_label_ic!`](@ref).
 Example:
 ```

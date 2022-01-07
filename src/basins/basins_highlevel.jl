@@ -149,7 +149,7 @@ function basins_of_attraction(
         iter_f! = (integ) -> step!(integ, Δt) # we don't have to step _exactly_ `Δt` here
     end
     if ic_lab_mode == true
-        bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, complete_and_reinit!, get_projected_state)
+        bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, complete_and_reinit!, get_projected_state; kwargs...)
         return bsn_nfo, integ
     else
         bsn_nfo = estimate_basins!(
@@ -230,10 +230,6 @@ bsn_nfo, integ = ic_labelling((xg,yg), ds)
 label = get_label_ic!(bsn_nfo, integ, u0)
 ```
 """
-function ic_labelling(grid::Tuple, ds;
-            Δt=nothing, T=nothing, idxs = 1:length(grid),
-            complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
-            diffeq = NamedTuple()
-        )
-        return basins_of_attraction(grid, ds; Δt, T, idxs, complete_state, diffeq, ic_lab_mode = true)
+function ic_labelling(grid::Tuple, ds; attractors = nothing, kwargs...)
+        return basins_of_attraction(grid, ds; ic_lab_mode = true, attractors, kwargs...)
 end

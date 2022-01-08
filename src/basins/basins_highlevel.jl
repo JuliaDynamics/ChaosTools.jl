@@ -213,11 +213,21 @@ end
 
 
 """
-    ic_labelling(grid::Tuple, ds::DynamicalSystem; kwargs...) -> bsn_nfo, integ
+    ic_labelling(ds; grid = nothing, attractors = nothing, kwargs...) -> bsn_nfo, integ
 This function returns a struture and an integrator that allows to match an inital condition to an
-attractor. The interface is the same as [`basins_of_attraction`](@ref) and has the same keyword arguments
-except for the keywords controlling the basins estimation.
+attractor. The function has two mode of operation: unsupervised with automatic detection of
+attractors and unsupervised when the attractors are known. In the first mode, a grid must be defined
+that contains the attractors. In the second the mode, a dictionnary that contains the attractors
+must be provided with the keyword argument `attractors`.
+
+## Keyword Arguments
+* `grid`:  tuple of ranges defining the grid of initial conditions.
+* `attractors`: a dictionary with keys corresponding to the number of the attractor.
+* `kwargs` : The interface is the same as [`basins_of_attraction`](@ref) and has the
+same keyword arguments except for the keywords controlling the basins estimation.
+
 The initial condition `u0` is matched to an attractor with the function [`get_label_ic!`](@ref).
+
 Example:
 ```
 ds = Systems.henon_iip(zeros(2); a = 1.4, b = 0.3)

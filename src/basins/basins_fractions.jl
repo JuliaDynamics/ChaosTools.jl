@@ -36,8 +36,7 @@ end
 
     
 Compute the fraction of points inside a region of state space which go to each existing basin
-of attraction. This fraction is an estimate of the basin's global stability under some 
-conditions [^Menck2013]. They are calculated by integrating trajectories of the given 
+of attraction. They are calculated by integrating trajectories of the given 
 dynamical system `ds`, starting from initial conditions (ICs) given in `ics` and classifying 
 their respective steady-states using clustering algorithms. This clustering is done by
 by extracting features from the trajectories using the `feature_extraction` function and

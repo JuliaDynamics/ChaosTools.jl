@@ -138,10 +138,10 @@ function _identify_basin_of_cell!(
 
     # search attractors directly
     if !isnothing(bsn_nfo.search_trees)
+        dist = [Inf]; neighborindex = [0];
         for (k, t) in bsn_nfo.search_trees # this is a `Dict`
-            dist = [Inf]; neighborindex = [0];
             Neighborhood.NearestNeighbors.knn_point!(t, u_full_state, false, dist, neighborindex, Neighborhood.alwaysfalse)
-            if dist < ε
+            if dist[1] < ε
                 nxt_clr = 2*k + 1
                 break
             end

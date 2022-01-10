@@ -133,7 +133,7 @@ and the trajectories staying outside the grid are coded with -1.
 function _identify_basin_of_cell!(
         bsn_nfo::BasinInfo, n::CartesianIndex, u_full_state;
         mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_loc_att = 100,
-        horizon_limit = 1e6, ε = 1e-3,
+        horizon_limit = 1e6, ε = 1e-5,
         mx_chk_lost = isnothing(bsn_nfo.search_trees) ? 20 : 1000,
     )
 
@@ -144,16 +144,10 @@ function _identify_basin_of_cell!(
     if !isnothing(bsn_nfo.search_trees)
         for (k, t) in bsn_nfo.search_trees # this is a `Dict`
             Neighborhood.NearestNeighbors.knn_point!(t, u_full_state, false, bsn_nfo.dist, bsn_nfo.neighborindex, Neighborhood.alwaysfalse)
-            #@show bsn_nfo.dist
             if bsn_nfo.dist[1] < ε
                 nxt_clr = 2*k + 1
                 break
             end
-            # idx = isearch(t, u_full_state, NeighborNumber(1))
-            # if norm(t.data[idx][1] - u_full_state) < ε
-            #     nxt_clr = 2*k + 1
-            #     break
-            # end
         end
     end
 

@@ -18,6 +18,8 @@ mutable struct BasinsInfo{B, IF, RF, UF, D, T, Q, K}
     attractors::Dict{Int16, Dataset{D, T}}
     visited::Q
     search_trees::K
+    dist::Vector{Float64}
+    neighborindex::Vector{Int64};
 end
 
 
@@ -63,7 +65,9 @@ function init_bsn_nfo(
         2,4,0,1,0,
         Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
         Vector{CartesianIndex{B}}(),
-        trees
+        trees,
+        [Inf],
+        [0]
     )
     reset_basins_counters!(bsn_nfo)
     return bsn_nfo
@@ -165,10 +169,10 @@ function _identify_basin_of_cell!(
     # search attractors directly
     if !isnothing(bsn_nfo.search_trees)
         for (k, t) in bsn_nfo.search_trees # this is a `Dict`
-            idx = isearch(t, u_full_state, NeighborNumber(1))
-            if norm(t.data[idx][1] - u_full_state) < ε
+            Neighborhood.NearestNeighbors.knn_point!(t, u_full_state, false, bsn_nfo.dist, bsn_nfo.neighborindex, Neighborhood.alwaysfalse)
+            if bsn_nfo.dist[1] < ε
                 nxt_clr = 2*k + 1
-                break
+                return nxt_clr
             end
         end
     end

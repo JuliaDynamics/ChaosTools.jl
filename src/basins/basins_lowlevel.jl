@@ -165,8 +165,8 @@ function _identify_basin_of_cell!(
     # search attractors directly
     if !isnothing(bsn_nfo.search_trees)
         for (k, t) in bsn_nfo.search_trees # this is a `Dict`
-            idxs = isearch(t, u_full_state, WithinRange(ε))
-            if !isempty(idxs)
+            idx = isearch(t, u_full_state, NeighborNumber(1))
+            if norm(t.data[idx][1] - u_full_state) < ε
                 nxt_clr = 2*k + 1
                 break
             end

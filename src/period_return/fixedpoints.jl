@@ -30,9 +30,10 @@ as a start of a continuation process. See also [`periodicorbits`](@ref).
 * `method = IntervalRootFinding.Krawczyk` configures the root finding method, 
   see the docs of IntervalRootFinding.jl for all posibilities.
 * `tol = 1e-15` is the root-finding tolerance.
+* `warn = true` throw a warning if no fixed points are found.
 """
 function fixedpoints(ds::DynamicalSystem, box, p = ds.p;
-        method = IntervalRootFinding.Krawczyk, o = nothing, tol = 1e-15
+        method = IntervalRootFinding.Krawczyk, o = nothing, tol = 1e-15, warn = true,
     )
     if DynamicalSystemsBase.isinplace(ds) 
         error("`fixedpoints` works only for out-of-place dynamical systems.")
@@ -42,7 +43,7 @@ function fixedpoints(ds::DynamicalSystem, box, p = ds.p;
     jac = to_root_J(ds, p, o)
     r = IntervalRootFinding.roots(f, jac, box, method, tol)
     D = dimension(ds)
-    fp::Dataset{D, Float64} = roots_to_dataset(r, D)
+    fp::Dataset{D, Float64} = roots_to_dataset(r, D, warn)
     # Find eigenvalues and stability
     eigs = Vector{Vector{Complex{Float64}}}(undef, length(fp))
     J = Array(jacobian(ds)) # `eigvals` doesn't work with StaticArrays.jl
@@ -76,12 +77,12 @@ end
 # What's left is to create the Jacobian for higher iterates.
 
 
-function roots_to_dataset(r, D)
-    if isempty(r)
+function roots_to_dataset(r, D, warn)
+    if isempty(r) && warn
         @warn "No fixed points found!"
         return Dataset{D, Float64}()
     end
-    if any(root.status != :unique for root in r)
+    if any(root.status != :unique for root in r) && warn
         @warn "Non-unique fixed points found!"
     end
     F = zeros(length(r), D)

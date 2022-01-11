@@ -14,9 +14,9 @@ mutable struct BasinsInfo{B, IF, RF, UF, D, T, Q, K}
     visited_cell::Int
     consecutive_match::Int
     consecutive_lost::Int
-    prev_lab::Int
+    prev_label::Int
     attractors::Dict{Int16, Dataset{D, T}}
-    visited::Q
+    visited_list::Q
     search_trees::K
     dist::Vector{Float64}
     neighborindex::Vector{Int64};
@@ -148,44 +148,44 @@ function _identify_basin_of_cell!(
     )
 
     #if n[1]==-1 means we are outside the grid
-    ic_lab = (n[1]==-1  || isnan(u_full_state[1])) ? -1 : bsn_nfo.basins[n]
+    ic_label = (n[1]==-1  || isnan(u_full_state[1])) ? -1 : bsn_nfo.basins[n]
 
     # search attractors directly
     if !isnothing(bsn_nfo.search_trees)
         for (k, t) in bsn_nfo.search_trees # this is a `Dict`
             Neighborhood.NearestNeighbors.knn_point!(t, u_full_state, false, bsn_nfo.dist, bsn_nfo.neighborindex, Neighborhood.alwaysfalse)
             if bsn_nfo.dist[1] < ε
-                ic_lab = 2*k + 1
-                return ic_lab
+                ic_label = 2*k + 1
+                return ic_label
             end
         end
     end
 
-    check_next_state!(bsn_nfo, ic_lab)
+    check_next_state!(bsn_nfo, ic_label)
 
     if bsn_nfo.state == :att_hit
-        if ic_lab == bsn_nfo.prev_lab
+        if ic_label == bsn_nfo.prev_label
              bsn_nfo.consecutive_match += 1
         end
         if bsn_nfo.consecutive_match ≥ mx_chk_att
             # Wait if we hit the attractor a mx_chk_att times in a row just
             # to check if it is not a nearby trajectory
-            hit_att = ic_lab + 1
+            hit_att = ic_label + 1
             relabel_visited_cell!(bsn_nfo, bsn_nfo.visited_cell, 0)
             reset_basins_counters!(bsn_nfo)
             return hit_att
          end
-         bsn_nfo.prev_lab = ic_lab
+         bsn_nfo.prev_label = ic_label
          return 0
     end
 
     if bsn_nfo.state == :att_search
-        if ic_lab == 0
+        if ic_label == 0
             # unlabeled box, label it with current odd label and reset counter
             bsn_nfo.basins[n] = bsn_nfo.visited_cell
-            push!(bsn_nfo.visited,n) # keep track of visited cells
+            push!(bsn_nfo.visited_list,n) # keep track of visited cells
             bsn_nfo.consecutive_match = 1
-        elseif ic_lab == bsn_nfo.visited_cell
+        elseif ic_label == bsn_nfo.visited_cell
             # hit a previously visited box with the current label, possible attractor?
             bsn_nfo.consecutive_match += 1
         end
@@ -196,22 +196,22 @@ function _identify_basin_of_cell!(
             bsn_nfo.state = :att_found
             bsn_nfo.consecutive_match = 1
         end
-        bsn_nfo.prev_lab = ic_lab
+        bsn_nfo.prev_label = ic_label
         return 0
     end
 
     if bsn_nfo.state == :att_found
-        if ic_lab == 0 || ic_lab == bsn_nfo.visited_cell
+        if ic_label == 0 || ic_label == bsn_nfo.visited_cell
             # Maybe chaotic attractor, perodic or long recursion.
             # label this box as part of an attractor
             bsn_nfo.basins[n] = bsn_nfo.current_att_label
             bsn_nfo.consecutive_match = 1
             store_attractor!(bsn_nfo, u_full_state)
-        elseif iseven(ic_lab) && (bsn_nfo.consecutive_match <  mx_chk_loc_att)
+        elseif iseven(ic_label) && (bsn_nfo.consecutive_match <  mx_chk_loc_att)
             # We make sure we hit the attractor another mx_chk_loc_att consecutive times
             # just to be sure that we have the complete attractor
             bsn_nfo.consecutive_match += 1
-        elseif iseven(ic_lab) && bsn_nfo.consecutive_match >= mx_chk_loc_att
+        elseif iseven(ic_label) && bsn_nfo.consecutive_match >= mx_chk_loc_att
             # We have checked the presence of an attractor: tidy up everything
             # and get a new cell
             relabel_visited_cell!(bsn_nfo, bsn_nfo.visited_cell, 0)
@@ -219,7 +219,7 @@ function _identify_basin_of_cell!(
             bsn_nfo.visited_cell += 2
             bsn_nfo.current_att_label += 2
             reset_basins_counters!(bsn_nfo)
-            return ic_lab + 1;
+            return ic_label + 1;
         end
         return 0
     end
@@ -228,7 +228,7 @@ function _identify_basin_of_cell!(
         # hit a labeled basin point of the wrong basin, happens all the time,
         # we check if it happens mx_chk_hit_bas times in a row or if it happens
         # N times along the trajectory whether to decide if it is another basin.
-        if bsn_nfo.prev_lab == ic_lab
+        if bsn_nfo.prev_label == ic_label
             bsn_nfo.consecutive_match += 1
         else
             bsn_nfo.consecutive_match = 1
@@ -236,9 +236,9 @@ function _identify_basin_of_cell!(
         if  bsn_nfo.consecutive_match > mx_chk_hit_bas
             relabel_visited_cell!(bsn_nfo, bsn_nfo.visited_cell, 0)
             reset_basins_counters!(bsn_nfo)
-            return ic_lab
+            return ic_label
         end
-        bsn_nfo.prev_lab = ic_lab
+        bsn_nfo.prev_label = ic_label
         return 0
     end
 
@@ -251,7 +251,7 @@ function _identify_basin_of_cell!(
             # problematic IC : diverges or wanders outside the defined grid
             return -1
         end
-        bsn_nfo.prev_lab = ic_lab
+        bsn_nfo.prev_label = ic_label
         return 0
     end
 end
@@ -269,11 +269,11 @@ function store_attractor!(bsn_nfo::BasinsInfo{B, IF, RF, UF, D, T, Q},
     end
 end
 
-function relabel_visited_cell!(bsn_nfo::BasinsInfo, old_lab, new_lab)
-    while !isempty(bsn_nfo.visited)
-        ind = pop!(bsn_nfo.visited)
-        if bsn_nfo.basins[ind] == old_lab
-            bsn_nfo.basins[ind] = new_lab
+function relabel_visited_cell!(bsn_nfo::BasinsInfo, old_label, new_label)
+    while !isempty(bsn_nfo.visited_list)
+        ind = pop!(bsn_nfo.visited_list)
+        if bsn_nfo.basins[ind] == old_label
+            bsn_nfo.basins[ind] = new_label
         end
     end
 end
@@ -298,11 +298,11 @@ end
 function reset_basins_counters!(bsn_nfo::BasinsInfo)
     bsn_nfo.consecutive_match = 0
     bsn_nfo.consecutive_lost = 0
-    bsn_nfo.prev_lab = 0
+    bsn_nfo.prev_label = 0
     bsn_nfo.state = :att_search
 end
 
-function check_next_state!(bsn_nfo, ic_lab)
+function check_next_state!(bsn_nfo, ic_label)
     next_state = :undef
     current_state = bsn_nfo.state
     if current_state == :att_found
@@ -310,18 +310,18 @@ function check_next_state!(bsn_nfo, ic_lab)
         return
     end
 
-    if ic_lab == 0 || ic_lab == bsn_nfo.visited_cell
+    if ic_label == 0 || ic_label == bsn_nfo.visited_cell
         # unlabeled box or previously visited box with the current label
         next_state = :att_search
-    elseif iseven(ic_lab)
+    elseif iseven(ic_label)
         # hit an attractor box
         next_state = :att_hit
-    elseif ic_lab == -1
+    elseif ic_label == -1
         # out of the grid we do not reset the counter of other state
         # since the trajectory can follow an attractor that spans outside the grid
         bsn_nfo.state = :lost
         return
-    elseif isodd(ic_lab)
+    elseif isodd(ic_label)
         # hit an basin box
         next_state = :bas_hit
     end

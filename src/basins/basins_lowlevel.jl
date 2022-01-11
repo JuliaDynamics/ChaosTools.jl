@@ -76,22 +76,10 @@ end
 
 function basins_computation!(bsn_nfo::BasinsInfo, grid::Tuple, integ, show_progress; kwargs...)
     I = CartesianIndices(bsn_nfo.basins)
-    # complete = false
-    # j = 1
     progress = ProgressMeter.Progress(
         length(bsn_nfo.basins); desc = "Basins of attraction: ", dt = 1.0
     )
 
-    # while !complete
-    #     ind, complete, j = next_unlabeled_cell(bsn_nfo, j, I)
-    #     show_progress && ProgressMeter.update!(progress, j)
-    #     complete && break
-    #     # Tentatively assign a label: odd is for basins, even for attractors.
-    #     # First label is 2 for attractor and 3 for basins
-    #     bsn_nfo.basins[ind] = bsn_nfo.visited_cell
-    #     y0 = generate_ic_on_grid(grid, ind)
-    #     bsn_nfo.basins[ind] = get_label_ic!(bsn_nfo, integ, y0; kwargs...)
-    # end
     for (k,ind) in enumerate(I)
         if bsn_nfo.basins[ind] == 0
             show_progress && ProgressMeter.update!(progress, k)
@@ -108,18 +96,6 @@ function basins_computation!(bsn_nfo::BasinsInfo, grid::Tuple, integ, show_progr
     bsn_nfo.basins[ind] .+= 1
     bsn_nfo.basins .= (bsn_nfo.basins .- 1) .÷ 2
     return bsn_nfo
-end
-
-
-function next_unlabeled_cell(bsn_nfo, j, I)
-    @inbounds for k in j:length(bsn_nfo.basins)
-        if bsn_nfo.basins[I[k]] == 0
-            j = k
-            ind = I[k]
-            return ind, false, j
-        end
-    end
-    return I[1], true, length(bsn_nfo.basins)
 end
 
 

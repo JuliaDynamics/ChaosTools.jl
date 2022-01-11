@@ -83,9 +83,6 @@ function basins_computation!(bsn_nfo::BasinsInfo, grid::Tuple, integ, show_progr
     for (k,ind) in enumerate(I)
         if bsn_nfo.basins[ind] == 0
             show_progress && ProgressMeter.update!(progress, k)
-            # Tentatively assign a label: odd is for basins, even for attractors.
-            # First label is 2 for attractor and 3 for basins
-            bsn_nfo.basins[ind] = bsn_nfo.visited_cell
             y0 = generate_ic_on_grid(grid, ind)
             bsn_nfo.basins[ind] = get_label_ic!(bsn_nfo, integ, y0; kwargs...)
         end

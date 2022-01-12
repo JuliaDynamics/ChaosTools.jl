@@ -29,7 +29,8 @@ include("period_return/yin_tests.jl")
 include("dimensions/dims.jl")
 include("dimensions/correlationdim.jl")
 include("nlts_tests.jl")
-include("dyca_tests.jl") 
+# include("dyca_tests.jl") # TODO: fix DyCa tests once and for 
+# all by using https://github.com/JuliaDynamics/JuliaDynamics/tree/master/timeseries
 
 end
 

@@ -1,5 +1,4 @@
 using Test
-using Random #to set seeds for ICs
 using Statistics
 using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
 

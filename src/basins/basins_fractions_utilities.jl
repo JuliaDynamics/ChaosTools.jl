@@ -31,13 +31,11 @@ end
 """
 Find the optimal radius ε of a point neighborhood for use in DBSCAN, in the unsupervised 
     `classify_solution`. It does so by finding the `ε` which maximizes the minimum silhouette
-    of the clus
-    #TODO: this seems a good method, but there may be better ones...
+    of the cluster.
 """
 function optimal_radius(features; min_neighbors)
     feat_ranges = maximum(features, dims=2)[:,1] .- minimum(features, dims=2)[:,1];
     ϵ_grid = range(minimum(feat_ranges)/200, minimum(feat_ranges), length=200)
-    #TODO: this hard-coded 200 is perhaps not ideal. Should we change it?
     k_grid = zeros(size(ϵ_grid)) #number of clusters
     s_grid = zeros(size(ϵ_grid)) #min silhouette values (which we want to maximize)
 
@@ -50,7 +48,6 @@ function optimal_radius(features; min_neighbors)
             sils = silhouettes(class_labels, dists) #values == 0 are due to boundary points
             s_grid[i] = minimum(sils[sils .!= 0.0]) #minimum silhouette value of core points
         else
-            #TODO: what should be done in this case?
             s_grid[i] = -2; #this would effecively ignore the single-cluster solution
         end
     end

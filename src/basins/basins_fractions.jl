@@ -3,7 +3,6 @@ using Statistics: mean
 using Neighborhood #for kNN
 using Distances
 using Clustering
-using Random
 using Distributions
 
 include("basins_fractions_utilities.jl")
@@ -62,11 +61,9 @@ containing the label of each initial condition given in `ics`.
 
 ## Keyword arguments
 ### Integration
-* `T, Ttr, Δt` : Propagated to [`trajectory`](@ref) with `T=100, Ttr=100` as default. 
+* `T, Ttr, Δt=1` : Propagated to [`trajectory`](@ref) with `T=100, Ttr=100` as default. 
 * `diffeq = NamedTuple()` : other parameters for the solvers of DiffEqs
 * `num_samples` : Number of sample initial conditions to generate in case `ics` is a function.
-* `seed_sampling = 1` : The seed for the random number generator used in generating the initial
-conditions. Used only if `ics` is a `Function`.
 
 ### Feature extraction and classification
 * `clust_method_norm=Euclidean()` : metric to be used in the clustering.
@@ -102,7 +99,8 @@ to expect, in contrast to [`basins_of_attraction`](@ref).
 The algorithm of[^Stender2021] that we use has two methods to do this. 
 In the **supervised method**, the attractors are known to the user, who provides one
 initial condition for each attractor in ``\\mathcal{S}`` using the optional `attractors`
-argument. `attractors` then is a `Dataset` containing the initial conditions.
+argument. `attractors` is a `Dataset` whose rows contain a single initial condition for
+each attractor.
 The algorithm then evolves these initial conditions, extracts their features, and uses them
 as templates representing the attrators. Each trajectory is considered to belong to the
 nearest template, which is found using a first-neighbor clustering algorithm.
@@ -129,20 +127,21 @@ stability paradigm. [Nature Physics, 9(2), 89–92](https://doi.org/10.1038/nphy
 stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
 function basin_fractions(ds::DynamicalSystem, feature_extraction::Function,
-    ics::Union{Dataset, Function}, ic_templates::Dataset=Dataset([0]); kwargs...)
+    ics::Union{Dataset, Function}, attractors_ic::Union{Dataset, Nothing}=nothing; kwargs...)
 
     feature_array = featurizer_allics(ds, ics,  feature_extraction; kwargs...)
 
-    if ic_templates == Dataset([0]) #unsupervised, no templates; #TODO:improve this hack?
+    if isnothing(attractors_ic) #unsupervised, no templates; 
         class_labels, class_errors = classify_solution(feature_array; kwargs...)
     else #supervised
-        feature_templates = featurizer_allics(ds, ic_templates, feature_extraction; kwargs...)
+        feature_templates = featurizer_allics(ds, attractors_ic, feature_extraction; kwargs...)
         class_labels, class_errors = classify_solution(feature_array, feature_templates; 
         kwargs...);
     end
 
-    S = basin_fractions(class_labels)
-    return S, class_labels
+    fs = basin_fractions(class_labels)
+    if typeof(ics) <: Dataset return fs, class_labels end
+    return fs #::Function ics
 end
 
 
@@ -169,9 +168,8 @@ generates them and returns their extracted features in a matrix, with the j-th c
 j-th feature. To do this, it  calls the other `featurizer` method, made for just one array of ICs.
 """
 function featurizer_allics(ds, ics::Function, feature_extraction::Function; num_samples, 
-    seed_sampling=1, kwargs...)
+    kwargs...)
     feature_array = [Float64[] for i=1:num_samples]
-    Random.seed!(seed_sampling)
     for i = 1:num_samples #TODO: implement parallelization, if necessary
         ic = ics()
         feature_array[i] = featurizer(ds, ic, feature_extraction; kwargs...)
@@ -276,17 +274,3 @@ function classify_solution(features; min_neighbors=10, kwargs...)
 
     return class_labels, class_errors
 end
-
-
-
-#TODO: Perhaps we can optimize the featurizers to use `reinit' instead of initializing an integrator
-# all the time by calling `trajectory``
-#TODO: maybe we should also return more info in basin_stability's output, like the
-#classification error, and the properties of each attractor (such its center, in the
-#unsupervised case). I fear maybe the user can confuse which attractor corresponds to
-#which ID
-#TODO: test clustering with another distance metric in the clusterings
-#TODO: implement for discrete systems. Will have to find a system to test also, since the
-#don't provide an example for them.
-#TODO: could allow the user to directly pass the templates features also, instead of
-#just their initial conditions

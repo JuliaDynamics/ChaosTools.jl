@@ -117,7 +117,7 @@ end
     @test 0.18 < fs[1] < 0.21
     @test 0.48 < fs[2] < 0.52
     @test 0.02 < fs[3] < 0.031
-    @test 0.01 < fs[4] < 0.03
+    @test 0.01 < fs[4] < 0.04
     @test 0.22 < fs[5] < 0.26
 
     fs = basin_fractions(ds, feature_extraction, ics_foo, attractors_ic; num_samples=N, T=Texec, Ttr=Ttr, Δt=Δt)
@@ -134,7 +134,7 @@ end
     @test 0.48 < fs[1] < 0.52 
     @test 0.22 < fs[2] < 0.26 
     @test 0.18 < fs[3] < 0.21
-    @test 0.02 < fs[4] < 0.031
+    @test 0.02 < fs[4] < 0.04
     @test 0.01 < fs[5] < 0.03 
 
     #plot basins

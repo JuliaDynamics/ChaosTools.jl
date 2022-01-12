@@ -11,8 +11,7 @@ using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
         return SVector{2}(du1, du2)
     end
 
-    function feature_extraction(t, y, extract_params=NamedTuple())
-        # Ttr = extract_params.Ttr;
+    function feature_extraction(t, y)
         Δ = abs(maximum(y[:, 2]) - mean(y[:,2])) #"spread" of vaqlues, how far max and mean are
         X = zeros(2)
         if(Δ < 0.01) #mean ~ max -> FP
@@ -89,8 +88,7 @@ end
     fs = 50
     Δt = 1/fs
     ds = Systems.duffing([0., 0.], f=0.2, ω=1, d=0.08, β=0.0)
-    function feature_extraction(t, y, extract_params=NamedTuple())
-        # % we will simply go for the mean and the std of the first state
+    function feature_extraction(t, y)
         X = [maximum(y[:,1]); std(y[:,1])]
         return X
     end

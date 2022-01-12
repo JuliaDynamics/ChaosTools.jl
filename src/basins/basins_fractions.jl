@@ -67,7 +67,6 @@ containing the label of each initial condition given in `ics`.
 
 ### Feature extraction and classification
 * `clust_method_norm=Euclidean()` : metric to be used in the clustering.
-* `extract_params = NamedTuple()` : optional parameters for the `feature_extraction` function.
 * `clust_method_norm = "kNN"` : (supervised method only) which clusterization method to
   apply. If `"kNN"`, the first-neighbor clustering is used. If `"kNN_thresholded"`, a
   subsequent step is taken, which considers as unclassified (label `-1`) the features
@@ -183,12 +182,11 @@ end
 It integrates the initial condition, applies the `feature_extraction` function and returns
 its output. The type of the returned vector depends on `feature_extraction`'s output.
 """
-function featurizer(ds, u0, feature_extraction; T=100, Ttr=100, Δt=1,
-    extract_params=NamedTuple(), diffeq=NamedTuple(), kwargs...)
+function featurizer(ds, u0, feature_extraction; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
     u = trajectory(ds, T, u0; Ttr=Ttr, Δt=Δt, diffeq) #TODO: maybe starting an integrator
                     # and using re_init! is better
     t = Ttr:Δt:T+Ttr
-    feature = feature_extraction(t, u, extract_params)
+    feature = feature_extraction(t, u)
     return feature
 end
 

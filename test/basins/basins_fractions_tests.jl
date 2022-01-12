@@ -54,8 +54,8 @@ using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
     # println("Test No. 1 Supervised, generated ics.")
     fs, class_labels = basin_fractions(ds, feature_extraction, ics, attractors_ic; T=Texec, Ttr=Ttr, Δt=Δt)
     # fs = (Dict(2 => 0.8452,1 => 0.1548)
-    @test 0.12 < fs[1] < 0.21
-    @test 0.79 < fs[2] < 0.88
+    @test 0.10 < fs[1] < 0.21
+    @test 0.79 < fs[2] < 0.90
 
 
     # println("Test No. 1 Supervised, generator ics.")
@@ -68,8 +68,8 @@ using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
     # println("Test No2. Unsupervised, generated ics.")
     fs, class_labels = basin_fractions(ds, feature_extraction, ics; T=Texec, Ttr=Ttr, Δt=Δt)
     # fs = (Dict(2 => 0.1548,1 => 0.8452)
-    @test 0.79 < fs[1] < 0.88
-    @test 0.12 < fs[2] < 0.21
+    @test 0.79 < fs[1] < 0.90
+    @test 0.10 < fs[2] < 0.21
     @test fs[1] + fs[2] == 1.0
 
     #plot basins

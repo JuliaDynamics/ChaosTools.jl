@@ -23,20 +23,6 @@ mutable struct BasinsInfo{B, IF, RF, UF, D, T, Q, K}
 end
 
 
-"""
-This is the low level function that creates & computes the basins of attraction, and is
-agnostic of the dynamical system. `integ` is an integrator, `iter_f!` a function that
-steps the integrator, `complete_and_reinit!` a function that re-inits the integrator
-at a new full state, given the state on the grid.
-"""
-function estimate_basins!(
-        grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function;
-        show_progress = true, attractors = nothing, kwargs...,
-    )
-    bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, complete_and_reinit!, get_projected_state; attractors)
-    basins_computation!(bsn_nfo, grid, integ, show_progress; kwargs...)
-    return bsn_nfo
-end
 
 # function for structure initialization.
 function init_bsn_nfo(
@@ -73,8 +59,19 @@ function init_bsn_nfo(
     return bsn_nfo
 end
 
+"""
+This is the low level function that creates & computes the basins of attraction, and is
+agnostic of the dynamical system. `integ` is an integrator, `iter_f!` a function that
+steps the integrator, `complete_and_reinit!` a function that re-inits the integrator
+at a new full state, given the state on the grid.
+"""
+function estimate_basins!(
+        grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function;
+        show_progress = true, attractors = nothing, kwargs...,
+    )
 
-function basins_computation!(bsn_nfo::BasinsInfo, grid::Tuple, integ, show_progress; kwargs...)
+    bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, complete_and_reinit!, get_projected_state; attractors = attractors)
+
     I = CartesianIndices(bsn_nfo.basins)
     progress = ProgressMeter.Progress(
         length(bsn_nfo.basins); desc = "Basins of attraction: ", dt = 1.0
@@ -159,6 +156,12 @@ function _identify_basin_of_cell!(
                 return ic_label
             end
         end
+        if norm(u_full_state) > horizon_limit
+            return -1
+        else
+            return 0
+        end
+        # THIS RETURN IS TO BE DISCUSSED: DESIGN CHOICE IF WE WANT THE FSM IN THE SECOND MODE
     end
 
     check_next_state!(bsn_nfo, ic_label)

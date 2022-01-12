@@ -149,6 +149,11 @@ function _identify_basin_of_cell!(
 
     # search attractors directly
     if !isnothing(bsn_nfo.search_trees)
+        bsn_nfo.consecutive_lost = (ic_label == -1 ? bsn_nfo.consecutive_lost + 1 : 0);
+        if norm(u_full_state) > horizon_limit || bsn_nfo.consecutive_lost > mx_chk_lost
+            return -1
+        end
+        # THIS RETURN IS TO BE DISCUSSED: DESIGN CHOICE IF WE WANT THE FSM IN THE SECOND MODE
         for (k, t) in bsn_nfo.search_trees # this is a `Dict`
             Neighborhood.NearestNeighbors.knn_point!(t, u_full_state, false, bsn_nfo.dist, bsn_nfo.neighborindex, Neighborhood.alwaysfalse)
             if bsn_nfo.dist[1] < ε
@@ -156,11 +161,7 @@ function _identify_basin_of_cell!(
                 return ic_label
             end
         end
-        if norm(u_full_state) > horizon_limit
-            return -1
-        else
-            return 0
-        end
+        return 0
         # THIS RETURN IS TO BE DISCUSSED: DESIGN CHOICE IF WE WANT THE FSM IN THE SECOND MODE
     end
 

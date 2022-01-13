@@ -557,6 +557,14 @@ If however the `Metric` is `Cityblock()`, calculate
 the absolute distance of *only the first elements* of the `m+k` and `n+k` points
 of `R` (distance ``d_F`` in ref.[^Skokos2016], useful when `R` comes from delay embedding).
 
+If the data values are very strongly discretized (e.g., integers or
+floating-point numbers with very small bits), the coarse quantization is likely
+to result in a zero distance between the two different points compared. If
+there is at least one pair of points with zero distance, the return value of
+`lyapunov_from_data` (the estimate of the maximum Lyapunov exponent) will be
+`-Inf`. If you want to avoid the artifact due to discretization, you can add
+noise to your data as follows: `data = data .+ 1e-15randn(length(data))`.
+
 [^Skokos2016]: Skokos, C. H. *et al.*, *Chaos Detection and Predictability* - Chapter 1 (section 1.3.2), Lecture Notes in Physics **915**, Springer (2016)
 
 [^Kantz1994]: Kantz, H., Phys. Lett. A **185**, pp 77–87 (1994)

@@ -13,19 +13,11 @@ using LinearAlgebra
 Perform a linear regression to find the best coefficients so that the curve:
 `z = a + b*x` has the least squared error with `y`.
 """
-function linreg(x::AbstractVector, y::AbstractVector)
-    # Least squares given
-    # Y = a + b*X
-    # where
-    # b = cov(X, Y)/var(X)
-    # a = mean(Y) - b*mean(X)
-    if size(x) != size(y)
-        throw(DimensionMismatch("x has size $(size(x)) and y has size $(size(y)), " *
-            "but these must be the same size"))
-    end
+function linreg(x, y)
     # Efficient linear regression formula from dmbates julia discourse post (nov 2019)
     # https://discourse.julialang.org/t/efficient-way-of-doing-linear-regression/31232/27?page=2
-    ldiv!(cholesky!(Symmetric([T(N) sum(x); zero(T) sum(abs2, x)], :U)), [sum(y), dot(x, y)])
+    (N = length(x)) == length(y) || throw(DimensionMismatch())
+    ldiv!(cholesky!(Symmetric([float(N) sum(x); 0.0 sum(abs2, x)], :U)), [sum(y), dot(x, y)])
 end
 
 slope(x, y) = linreg(x, y)[2]

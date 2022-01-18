@@ -7,12 +7,7 @@ export linear_region, linear_regions, estimate_boxsizes, linreg
 #####################################################################################
 # Functions and methods to deduce linear scaling regions
 #####################################################################################
-using Statistics
-using Statistics: covm, varm
-# The following function comes from a version in StatsBase that is now deleted
-# StatsBase is copyrighted under the MIT License with
-# Copyright (c) 2012-2016: Dahua Lin, Simon Byrne, Andreas Noack, Douglas Bates,
-# John Myles White, Simon Kornblith, and other contributors.
+using LinearAlgebra
 """
     linreg(x, y) -> a, b
 Perform a linear regression to find the best coefficients so that the curve:
@@ -28,13 +23,9 @@ function linreg(x::AbstractVector, y::AbstractVector)
         throw(DimensionMismatch("x has size $(size(x)) and y has size $(size(y)), " *
             "but these must be the same size"))
     end
-    mx = Statistics.mean(x)
-    my = Statistics.mean(y)
-    # don't need to worry about the scaling (n vs n - 1)
-    # since they cancel in the ratio
-    b = covm(x, mx, y, my)/varm(x, mx)
-    a = my - b*mx
-    return a, b
+    # Efficient linear regression formula from dmbates julia discourse post (nov 2019)
+    # https://discourse.julialang.org/t/efficient-way-of-doing-linear-regression/31232/27?page=2
+    ldiv!(cholesky!(Symmetric([T(N) sum(x); zero(T) sum(abs2, x)], :U)), [sum(y), dot(x, y)])
 end
 
 slope(x, y) = linreg(x, y)[2]

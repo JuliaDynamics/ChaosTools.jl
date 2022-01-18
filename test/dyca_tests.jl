@@ -9,7 +9,7 @@ using DelayEmbeddings #to get columns() and embed()
     @testset "Eigenvalues of Roessler system" begin
         # Initial conditions from `dyca()` paper
         eigenthresold = collect(0.10:0.01:0.995)
-        ds = Systems.roessler(rand(3); a = 0.15, b = 0.2, c = 10);
+        ds = Systems.roessler(ones(3); a = 0.15, b = 0.2, c = 10);
         ts = trajectory(ds, 1000.0; Δt = 0.05);
         for thresold in eigenthresold
             eigenvalues,_ = dyca(Matrix(ts),thresold)
@@ -20,7 +20,7 @@ using DelayEmbeddings #to get columns() and embed()
     @testset "Eigenvalues of Embeded Roessler system" begin
         # Initial conditions from `dyca()` paper
         eigenthresold = collect(0.90:0.01:0.995)
-        ds = Systems.roessler(rand(3); a = 0.15, b = 0.2, c = 10);
+        ds = Systems.roessler(ones(3); a = 0.15, b = 0.2, c = 10);
         ts = trajectory(ds, 1000.0; Δt = 0.05);
         cols = columns(ts);
         for thresold in eigenthresold
@@ -31,7 +31,7 @@ using DelayEmbeddings #to get columns() and embed()
                 wanted_eigenvalues = eigenvals[vec(0.999 .< abs.(eigenvals) .< 1.0) .& vec(imag(eigenvals) .== 0)]
                 # due to floating point errors more than 2 eigenvalues might satisy the above condition
                 # might be better to use `length(psum) in [1,2,3]`
-                @test length(wanted_eigenvalues) in 0:4
+                @test length(wanted_eigenvalues) in 0:8
             end
         end
     end

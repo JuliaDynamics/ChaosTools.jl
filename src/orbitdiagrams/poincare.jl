@@ -85,22 +85,28 @@ See also [`produce_orbitdiagram`](@ref).
 * `warning = true` : Throw a warning if the Poincaré section was empty.
 * `rootkw = (xrtol = 1e-6, atol = 1e-6)` : A `NamedTuple` of keyword arguments
   passed to `find_zero` from [Roots.jl](https://github.com/JuliaMath/Roots.jl).
-* `diffeq...` : All other extra keyword arguments are propagated into `init`
-  of DifferentialEquations.jl. See [`trajectory`](@ref) for examples.
+* `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
+  `init` of DifferentialEquations.jl.
+  See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
 [^Tabor1989]: M. Tabor, *Chaos and Integrability in Nonlinear Dynamics: An Introduction*, §4.1, in pp. 118-126, New York: Wiley (1989)
 """
 function poincaresos(
 		ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
 	    direction = -1, Ttr::Real = 0.0, warning = true, idxs = 1:D, u0 = get_state(ds),
-	    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...
+	    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq = NamedTuple(), kwargs...
 	) where {IIP, S, D}
 
+    if !isempty(kwargs)
+        @warn DIFFEQ_DEP_WARN
+        diffeq = NamedTuple(kwargs)
+    end
+
     _check_plane(plane, D)
-    integ = integrator(ds, u0; diffeq...)
+    integ = integrator(ds, u0; diffeq)
     i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
     planecrossing = PlaneCrossing(plane, direction > 0)
-	Ttr != 0 && step!(integ, Ttr)
+	Ttr ≠ 0 && step!(integ, Ttr)
 	plane_distance = (t) -> planecrossing(integ(t))
 
 	data = _poincaresos(integ, plane_distance, planecrossing, tfinal+Ttr, i, rootkw)
@@ -226,11 +232,16 @@ next_state_on_psos = step!(pmap)
 function poincaremap(
 		ds::CDS{IIP, S, D}, plane, Tmax = 1e6;
 	    direction = -1, u0 = get_state(ds),
-	    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq...
+	    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq = NamedTuple(), kwargs...
 	) where {IIP, S, D}
 
+    if !isempty(kwargs)
+        @warn DIFFEQ_DEP_WARN
+        diffeq = NamedTuple(kwargs)
+    end
+
 	_check_plane(plane, D)
-    integ = integrator(ds, u0; diffeq...)
+    integ = integrator(ds, u0; diffeq)
 	planecrossing = PlaneCrossing(plane, direction > 0)
 	plane_distance = (t) -> planecrossing(integ(t))
     v = SVector{length(u0), eltype(u0)}(u0)
@@ -272,87 +283,6 @@ function Base.show(io::IO, pmap::PoincareMap)
     println(io,  rpad(" rule f: ", 14),     DynamicalSystemsBase.eomstring(pmap.integ.f.f))
     println(io,  rpad(" hyperplane: ", 14),     pmap.planecrossing.plane)
 end
-
-
-#####################################################################################
-#                            Produce Orbit Diagram                                  #
-#####################################################################################
-"""
-```julia
-produce_orbitdiagram(
-	ds::ContinuousDynamicalSystem, plane, i::Int, p_index, pvalues; kwargs...
-)
-```
-Produce an orbit diagram (sometimes wrongly called bifurcation diagram)
-for the `i` variable(s) of the given continuous
-system by computing Poincaré surfaces of section using `plane`
-for the given parameter values (see [`poincaresos`](@ref)).
-
-`i` can be `Int` or `AbstractVector{Int}`.
-If `i` is `Int`, returns a vector of vectors. Else
-it returns a vector of vectors of vectors.
-Each entry are the points at each parameter value.
-
-## Keyword Arguments
-* `printparams::Bool = false` : Whether to print the parameter used
-  during computation in order to keep track of running time.
-* `direction, warning, Ttr, rootkw, diffeq...` :
-  Propagated into [`poincaresos`](@ref).
-* `u0 = nothing` : Specify an initial state. If `nothing`, the previous state after each
-  parameter is used to seed the new initial condition at the new parameter
-  (with the very first state being the system's state). This makes convergence to the
-  attractor faster, necessitating smaller `Ttr`. Otherwise `u0` can be a standard state,
-  or a vector of states, so that a specific state is used for each parameter.
-
-## Description
-For each parameter, a PSOS reduces the system from a flow to a map. This then allows
-the formal computation of an "orbit diagram" for the `i` variable
-of the system, just like it is done in [`orbitdiagram`](@ref).
-
-The parameter change is done as `p[p_index] = value` taking values from `pvalues`
-and thus you must use a parameter container that supports this
-(either `Array`, `LMArray`, dictionary or other).
-
-See also [`poincaresos`](@ref), [`orbitdiagram`](@ref).
-"""
-function produce_orbitdiagram(
-        ds::CDS{IIP, S, D}, plane, idxs, p_index, pvalues;
-        tfinal::Real = 100.0, direction = -1, printparams = false, warning = true,
-        Ttr = 0.0, u0 = nothing, rootkw = (xrtol = 1e-6, atol = 1e-6),
-        diffeq...
-    ) where {IIP, S, D}
-
-    i = typeof(idxs) <: Int ? idxs : SVector{length(idxs), Int}(idxs...)
-
-    _check_plane(plane, D)
-    typeof(u0) <: Vector{<:AbstractVector} && @assert length(u0)==length(p)
-    integ = integrator(ds; diffeq...)
-    planecrossing = PlaneCrossing(plane, direction > 0)
-    p0 = ds.p[p_index]
-    output = Vector{typeof(ds.u0[i])}[]
-	plane_distance = (t) -> planecrossing(integ(t))
-
-    for (n, p) in enumerate(pvalues)
-        integ.p[p_index] = p
-        printparams && println("parameter = $p")
-        if typeof(u0) <: Vector{<:AbstractVector}
-            st = u0[n]
-        elseif isnothing(u0)
-            st = integ.u
-        else
-            st = u0
-        end
-        reinit!(integ, st)
-		Ttr != 0 && step!(integ, Ttr)
-		data = _poincaresos(integ, plane_distance, planecrossing, tfinal+Ttr, i, rootkw)
-		push!(output, data)
-        warning && length(output[end]) == 0 && @warn "For parameter $p $PSOS_ERROR"
-    end
-    # Reset the parameter of the system:
-    ds.p[p_index] = p0
-    return output
-end
-
 
 #####################################################################################
 # Poincare Section for Datasets (trajectories)                                      #

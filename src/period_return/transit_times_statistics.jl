@@ -4,11 +4,9 @@ using Distances
 
 export exit_entry_times, transit_return, mean_return_times
 
-@deprecate transit_time_statistics entry_exit_times
-
 """
-    exit_entry_times(ds, u₀, εs, T; diffeq...) → exits, entries
-Collect exit and entry times for a ball/box centered at `u₀` with radii `εs` (see below),
+    exit_entry_times(ds, u₀, εs, T; diffeq = NamedTuple()) → exits, entries
+Collect exit and entry times for a ball or box centered at `u₀` with radii `εs` (see below),
 in the state space of the given discrete dynamical system (function not yet available
 for continuous systems).
 Return the exit and (re-)entry return times to the set(s), where each of these is a vector
@@ -61,14 +59,15 @@ each `ε`-related set is checked individually from start.
 
 Continuous systems allow for the following keywords:
 
-- `i=10` How many points to interpolate the trajectory in-between steps to find
+* `i=10` How many points to interpolate the trajectory in-between steps to find
   candidate crossing regions.
-- `dmin` If the trajectory is at least `dmin` distance away from `u0`,
+* `dmin` If the trajectory is at least `dmin` distance away from `u0`,
   the algorithm that checks for crossings of the `ε`-set is not initiated.
   By default obtains the a value 4 times as large as the radius of the maximum ε-set.
-- `diffeq...` All extra keywords are propagated to solvers of DifferentialEquations.jl,
-  see [`trajectory`](@ref). It is strongly recommended to use high accuracy keywords here,
-  e.g. `alg = Vern9(), reltol = 1e-12, abstol = 1e-12, maxiters = typemax(Int)`.
+* `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
+  `init` of DifferentialEquations.jl.
+  See [`trajectory`](@ref) for examples. Only valid for continuous systems.
+
 For continuous systems `T, i, dmin` can be vectors with same size as `εs`, to help increase
 accuracy of small `ε`.
 """
@@ -148,7 +147,7 @@ distance(u, u0, ε::Real) = euclidean(u, u0)
 ##########################################################################################
 # Discrete systems
 ##########################################################################################
-function exit_entry_times(ds::DiscreteDynamicalSystem, u0, εs, T; diffeq...)
+function exit_entry_times(ds::DiscreteDynamicalSystem, u0, εs, T; diffeq = NamedTuple())
     check_εs_sorting(εs, length(u0))
     integ = integrator(ds, u0)
     exit_entry_times(integ, u0, εs, T)
@@ -194,7 +193,7 @@ function update_entry_times!(entries, i, pre_outside, cur_outside, integ::MDI)
     end
 end
 
-function mean_return_times(ds::DiscreteDynamicalSystem, u0, εs, T; diffeq...)
+function mean_return_times(ds::DiscreteDynamicalSystem, u0, εs, T; diffeq = NamedTuple())
     check_εs_sorting(εs, length(u0))
     integ = integrator(ds, u0)
     mean_return_times(integ, u0, εs, T)
@@ -245,11 +244,13 @@ end
 ##########################################################################################
 # Continuous
 ##########################################################################################
-using DynamicalSystemsBase.DiffEqBase: ODEProblem, solve
-using DynamicalSystemsBase.DiffEqBase: ContinuousCallback, CallbackSet
+using DynamicalSystemsBase.SciMLBase: ODEProblem, solve
+# TODO: Notice that the callback methods are NOT used. They have problems
+# that I have not been able to solve yet.
+# using DynamicalSystemsBase.SciMLBase: ContinuousCallback, CallbackSet
 
 function exit_entry_times(ds::ContinuousDynamicalSystem, u0, εs, T;
-        diffeq...
+        diffeq = NamedTuple(),
     )
 
     error("Continuous system version is not yet ready.")
@@ -299,8 +300,13 @@ function _default_dmin(εs)
 end
 
 function mean_return_times(ds::ContinuousDynamicalSystem, u0, εs, T;
-        i=10, dmin=_default_dmin(εs), diffeq...
+        i=10, dmin=_default_dmin(εs), diffeq = NamedTuple(), kwargs...
     )
+    if !isempty(kwargs)
+        @warn DIFFEQ_DEP_WARN
+        diffeq = NamedTuple(kwargs)
+    end
+
     # This warning would be useful if the callback methods worked
     # if !haskey(diffeq, :alg) || diffeq[:alg] == DynamicalSystemsBase.DEFAULT_SOLVER
     #     error(
@@ -308,14 +314,11 @@ function mean_return_times(ds::ContinuousDynamicalSystem, u0, εs, T;
     #     "For example `using OrdinaryDiffEq: Tsit5; mean_return_times(...; alg = Tsit5())`."
     #     )
     # end
-    if haskey(diffeq, :m)
-        @warn "Keyword `m` is removed in favor of `dmin`."
-    end
 
     eT = eltype(ds.t0)
     check_εs_sorting(εs, length(u0))
     c = zeros(Int, length(εs)); τ = zeros(eT, length(εs))
-    integ = integrator(ds, u0; diffeq...)
+    integ = integrator(ds, u0; diffeq)
     for j ∈ 1:length(εs)
         reinit!(integ)
         t = T isa AbstractVector ? T[j] : T

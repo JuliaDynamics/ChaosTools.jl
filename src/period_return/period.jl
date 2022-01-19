@@ -37,6 +37,13 @@ These methods are faster, but some are error-prone.
   default setting, this method will fail if there less than 10 periods in the
   signal). The keyword `ϵ = 0.2` (`\\epsilon`) means that `1-ϵ` counts as "1" for the AC.
 
+* `:yin` : The YIN algorithm. An autocorrelation-based method to estimate the fundamental
+period of the signal. See the original paper [^CheveigneYIN2002] or the implementation 
+[`yin`](@ref).
+
+[^CheveigneYIN2002]: De Cheveigné, A., & Kawahara, H. (2002). YIN, a fundamental frequency estimator for
+speech and music. The Journal of the Acoustical Society of America, 111(4), 1917-1930.
+
 ## Methods not requiring evenly sampled data
 
 These methods tend to be slow, but versatile and low-error.
@@ -53,7 +60,7 @@ These methods tend to be slow, but versatile and low-error.
   average difference between zero crossings as the period.  This is a naïve
   implementation, with only linear interpolation; however, it's useful as a
   sanity check.  The keyword `line` controls where the "crossing point" is.
-  It deffaults to `mean(v)`.
+  It defaults to `mean(v)`.
 
 For more information on the periodogram methods, see the documentation of
 DSP.jl and LombScargle.jl.
@@ -61,7 +68,7 @@ DSP.jl and LombScargle.jl.
 function estimate_period(v, method, t = 0:length(v)-1; kwargs...)
     @assert length(v) == length(t)
 
-    even_methods  = (:periodogram, :pg, :multitaper, :mt, :autocorrelation, :ac)
+    even_methods  = (:periodogram, :pg, :multitaper, :mt, :autocorrelation, :ac, :yin)
     other_methods = (:lombscargle, :ls, :zerocrossing, :zc)
     if method ∉ even_methods && method ∉ other_methods
         error("Unknown method (`$method`) given to `estimate_period`.")
@@ -78,6 +85,10 @@ function estimate_period(v, method, t = 0:length(v)-1; kwargs...)
                     _mt_period(v, t; kwargs...)
                 elseif method == :autocorrelation || method == :ac
                     _ac_period(v, t; kwargs...)
+                elseif method == :yin 
+                    sr = get(kwargs, :sr, 22050)
+                    f0s, _ = yin(v, sr; kwargs...)
+                    1/mean(f0s)
                 end
             else
                 if method == :lombscargle || method == :ls

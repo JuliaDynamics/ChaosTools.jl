@@ -1,11 +1,4 @@
-using ChaosTools, Test
-using OrdinaryDiffEq
-
-lo = Systems.logistic(r = 3.5)
-reg = trajectory(lo, 10000; Ttr = 1000)
-set_parameter!(lo, 1, 3.97)
-cha = trajectory(lo, 10000)
-testchaos01(cha)
+using ChaosTools, Test, DynamicalSystemsBase
 
 println("\nTesting 0-1 chaos test...")
 @testset "testchaos01" begin
@@ -49,21 +42,21 @@ end
     tt = 3000
     Δt = 0.8 # <- very important!
     ds = Systems.henonheiles()
-    diffeq = Dict(:Ttr => 10, :abstol=>1e-9, :reltol=>1e-9, :solver => Vern9())
+    diffeq = Dict(:Ttr => 10, :abstol=>1e-12, :reltol=>1e-12)
     cs = range(0.1, π/3-0.1, length = 50)
 
     @testset "stable" begin
-        tr = trajectory(ds, tt, sp; Δt, diffeq...)[:, 1]
+        tr = trajectory(ds, tt, sp; Δt, diffeq)[:, 1]
         @test !testchaos01(tr)
         @test !testchaos01(tr, cs)
     end
     @testset "quasiperidic" begin
-        tr = trajectory(ds, tt, qp; Δt, diffeq...)[:, 1]
+        tr = trajectory(ds, tt, qp; Δt, diffeq)[:, 1]
         @test !testchaos01(tr)
         @test !testchaos01(tr, cs)
     end
     @testset "chaotic" begin
-        tr = trajectory(ds, tt, ch; Δt, diffeq...)[:, 1]
+        tr = trajectory(ds, tt, ch; Δt, diffeq)[:, 1]
         @test testchaos01(tr, cs)
     end
 end

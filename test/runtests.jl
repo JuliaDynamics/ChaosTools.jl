@@ -3,6 +3,7 @@ using Test
 using DynamicalSystemsBase, DelayEmbeddings
 using StatsBase
 standardize = DelayEmbeddings.standardize
+test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 
 ti = time()
 @testset "ChaosTools tests" begin
@@ -23,12 +24,13 @@ include("chaosdetection/01test.jl")
 
 include("period_return/periodicity_tests.jl")
 include("period_return/period_tests.jl")
+include("period_return/yin_tests.jl")
 # include("period_return/transit_time_tests.jl")
 
 include("dimensions/dims.jl")
 include("dimensions/correlationdim.jl")
 include("nlts_tests.jl")
-# include("dyca_tests.jl") # TODO: dyca method is incomplete/did not pass tests properly
+include("dyca_tests.jl")
 
 end
 

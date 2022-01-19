@@ -4,7 +4,9 @@ println("\nTesting expansion entropy...")
 @testset "Expansion entropy" begin
 
 @testset "maximalexpansion" begin
-@test ChaosTools.maximalexpansion([1. 0. 0. 0. 2.; 0. 0. 3. 0. 0.; 0. 0. 0. 0. 0.; 0. 2. 0. 0. 0.]) ≈ 3.0 * 2.23606797749979 * 2.0
+@test ChaosTools.maximalexpansion(
+    [1. 0. 0. 0. 2.; 0. 0. 3. 0. 0.; 0. 0. 0. 0. 0.; 0. 2. 0. 0. 0.]
+    ) ≈ 3.0 * 2.23606797749979 * 2.0
 @test ChaosTools.maximalexpansion([1 0; 0 1]) == 1
 end
 
@@ -40,14 +42,14 @@ end
     cat_gen() = [rand(), rand()]
     cat_inside(x) = true
 
-    _, cat_meanlist, _ = expansionentropy_batch(cat, cat_gen, cat_inside; batches=100, N=100, steps=30, dt=1)
+    _, cat_meanlist, _ = expansionentropy_batch(cat, cat_gen, cat_inside; batches=100, N=100, steps=30, Δt=1)
 
     exact_ee = log( 1/2 * (3 + sqrt(5)))
     for i in 1:length(cat_meanlist)
         @test abs(cat_meanlist[i]/i - exact_ee) < 1e-6
     end
 
-    ee = expansionentropy(cat, cat_gen, cat_inside; batches=100, N=100, steps=30, dt=1)
+    ee = expansionentropy(cat, cat_gen, cat_inside; batches=100, N=100, steps=30, Δt=1)
     @test ee ≈ exact_ee
 end
 
@@ -55,19 +57,19 @@ end
     lor = DynamicalSystemsBase.Systems.lorenz()
     lor_gen() = [rand()*40-20, rand()*60-30, rand()*50]
     lor_isinside(x) = -20 < x[1] < 20 && -30 < x[2] < 30 && 0 < x[3] < 50
-    ee = expansionentropy(lor, lor_gen, lor_isinside; batches=100, N=100, steps=40, dt=1.0)
+    ee = expansionentropy(lor, lor_gen, lor_isinside; batches=100, N=100, steps=40, Δt=1.0)
 
     @test abs(ee - 0.9) < 0.07
 end
 
 @testset "continuous regular (henon)" begin
     hh = Systems.henonheiles([0.0, 0.1, 0.5, 0.0])
-    tr = trajectory(hh, 100.0, dt = 0.1, Ttr=200)
+    tr = trajectory(hh, 100.0, Δt = 0.1, Ttr=200)
     x, y, z, w = columns(tr)
     gen, restr = boxregion(map(minimum, columns(tr)), map(maximum, columns(tr)))
 
     t, m, s = expansionentropy_batch(hh, gen, restr;
-              batches=1000, N=100, steps=40, dt=0.1, Ttr=1.0)
+              batches=1000, N=100, steps=40, Δt=0.1, Ttr=1.0)
     @test all(m[10:20] .< 0.01)
 end
 end

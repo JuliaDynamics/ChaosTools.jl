@@ -5,10 +5,10 @@ using Test
 @testset "Tipping points" begin
     xg = yg = range(-4, 4, length = 100)
     ds = Systems.magnetic_pendulum(d=0.2, α=0.2, ω=0.8, N=3)
-    basins_before, = basins_of_attraction((xg, yg), ds; idxs=1:2, 
+    basins_before, = basins_of_attraction((xg, yg), ds; Δt = 1., idxs=1:2,
     diffeq=(;:reltol => 1e-9), show_progress = false)
     ds = Systems.magnetic_pendulum(d=0.2, α=0.2, ω=0.8, N=3, γs = [1.0, 1.0, 0.05])
-    basins_after, = basins_of_attraction((xg, yg), ds; idxs = 1:2, 
+    basins_after, = basins_of_attraction((xg, yg), ds; Δt = 1., idxs = 1:2,
     diffeq=(;:reltol => 1e-9), show_progress = false)
     @testset "Basin fractions" begin
         fs = basin_fractions(basins_before)

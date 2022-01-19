@@ -10,12 +10,16 @@ using DynamicalSystemsBase
 using DynamicalSystemsBase: DS, DDS, CDS
 using DynamicalSystemsBase: MDI, TDI
 using DynamicalSystemsBase: stateeltype
-using DynamicalSystemsBase.DiffEqBase: AbstractODEIntegrator, u_modified!, DEIntegrator
+using DynamicalSystemsBase.SciMLBase: AbstractODEIntegrator, u_modified!, DEIntegrator
 DEI = DEIntegrator
+
+include("deprecations.jl")
 
 include("orbitdiagrams/discrete_diagram.jl")
 include("orbitdiagrams/poincare.jl")
+include("orbitdiagrams/produce_orbitdiagram.jl")
 
+include("basins/basins_reinit.jl")
 include("basins/basins_highlevel.jl")
 include("basins/basins_lowlevel.jl")
 include("basins/basins_utilities.jl")
@@ -38,13 +42,13 @@ include("dimreduction/dyca.jl")
 include("period_return/periodic_points.jl")
 include("period_return/period.jl")
 include("period_return/transit_times_statistics.jl")
+include("period_return/fixedpoints.jl")
+include("period_return/yin.jl")
 
 include("chaosdetection/lyapunovs.jl")
 include("chaosdetection/gali.jl")
 include("chaosdetection/expansionentropy.jl")
 include("chaosdetection/partially_predictable.jl")
 include("chaosdetection/testchaos01.jl")
-
-include("deprecations.jl")
 
 end # module

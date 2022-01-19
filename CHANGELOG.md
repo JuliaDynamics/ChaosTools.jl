@@ -1,3 +1,14 @@
+# 2.6
+* New `yin` function that applies the YIN algorithm to detect a signal's fundamental frequency. Also added it as a possible method in `estimate_period`.
+
+#2.5.3
+* Updated `lyapunovspectrum_convergence` for continuous systems to be similar to `lyapunovspectrum`, with the more performant `_buffered_qr` and allowing passing a `DynamicalSystem` instead of the integrator directly.
+* Added `lyapunovspectrum_convergence` for discrete systems.
+
+# 2.5
+* New `fixedpoints` function that finds fixed points, and their stability, for either continuous or discrete dynamical systems.
+* Automatic `Δt` estimation for `basins_of_attraction`.
+
 # 2.4
 * `linear_region` now detects a saturation regime also at the start of the curve y(x). Furthermore a keyword `sat` now decides what the saturation regime is.
 # 2.3
@@ -125,7 +136,7 @@
       *How to test for partially predictable chaos*. [Scientific Reports **7**, (2017)](https://www.nature.com/articles/s41598-017-01083-x). Thanks and welcome to our new contributor @efosong ! Implemented with the function `predictability`.
 
 # 1.5
-* Updated everything to new DiffEqBase 5.0 and the new default integrator (`SimpleATsit5`)
+* Updated everything to new SciMLBase 5.0 and the new default integrator (`SimpleATsit5`)
 * Simplified low-level call signature for `poincaresos`.
 * Small documentation improvements throughout.
 

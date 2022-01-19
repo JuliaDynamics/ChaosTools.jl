@@ -1,4 +1,4 @@
-using ChaosTools, Test, Statistics
+using ChaosTools, Test, Statistics, DynamicalSystemsBase
 
 println("\nTesting transit time statistics...")
 @testset "Transit time statistics" begin
@@ -119,7 +119,6 @@ end
 #
 @testset "Continuous Roessler" begin
 # %%
-using ChaosTools, DynamicalSystemsBase
 # using OrdinaryDiffEq: Tsit5
 alg = DynamicalSystemsBase.DEFAULT_SOLVER
 
@@ -172,13 +171,13 @@ avg_period = 6.0
 # We aaaalso know (by zooming in the plot) that the innermost ball is recurred exactly twice,
 # however one of the two crossings is grazing and thus likely to not be spotted by the
 # algorithm
-τ, c = mean_return_times(ro, u0, εs, 3avg_period; alg, i=20)
+τ, c = mean_return_times(ro, u0, εs, 3avg_period; diffeq = (alg = alg,), i=20)
 @test c[1] == 1
 @test c[2] == c[3] == 0
 @test 2avg_period < τ[1] < 3avg_period
 @test issorted(c; rev=true)
 
-τ, c = mean_return_times(ro, u0, εs, 5000.0; alg, i=20)
+τ, c = mean_return_times(ro, u0, εs, 5000.0; diffeq = (alg = alg,), i=20)
 @test all(τ .> avg_period/2)
 @test 0 < c[3] ≤ 2
 @test issorted(c; rev=true)
@@ -201,7 +200,7 @@ is = range(10; step = 4, length = 7)
     SVector(0.1, 0.1, 0.5),
     SVector(0.1, 0.1, 0.05),
 ]
-τ2, c2 = mean_return_times(ro, u0, εs, 5000.0; alg, i=20)
+τ2, c2 = mean_return_times(ro, u0, εs, 5000.0; diffeq = (alg = alg,), i=20)
 
 @test τ2[1] < τ[2]
 

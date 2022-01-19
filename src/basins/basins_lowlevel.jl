@@ -18,6 +18,8 @@ mutable struct BasinInfo{B, IF, RF, UF, D, T, Q, K}
     attractors::Dict{Int16, Dataset{D, T}}
     visited::Q
     search_trees::K
+    dist::Vector{Float64}
+    neighborindex::Vector{Int64};
 end
 
 
@@ -54,7 +56,9 @@ function draw_basin!(
         2,4,0,1,1,
         Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
         Vector{CartesianIndex{B}}(),
-        trees
+        trees,
+        [Inf],
+        [0]
     )
     reset_basin_counters!(bsn_nfo)
     I = CartesianIndices(bsn_nfo.basin)
@@ -89,14 +93,6 @@ function next_uncolored_cell(bsn_nfo, j, I)
         end
     end
     return I[1], true, length(bsn_nfo.basin)
-end
-
-@generated function generate_ic_on_grid(grid::NTuple{B, T}, ind) where {B, T}
-    gens = [:(grid[$k][ind[$k]]) for k=1:B]
-    quote
-        Base.@_inline_meta
-        @inbounds return SVector{$B, Float64}($(gens...))
-    end
 end
 
 
@@ -136,7 +132,7 @@ and the trajectories staying outside the grid are coded with -1.
 """
 function _identify_basin_of_cell!(
         bsn_nfo::BasinInfo, n::CartesianIndex, u_full_state;
-        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100,
+        mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_loc_att = 100,
         horizon_limit = 1e6, ε = 1e-3,
         mx_chk_lost = isnothing(bsn_nfo.search_trees) ? 20 : 1000,
     )
@@ -147,10 +143,10 @@ function _identify_basin_of_cell!(
     # search attractors directly
     if !isnothing(bsn_nfo.search_trees)
         for (k, t) in bsn_nfo.search_trees # this is a `Dict`
-            idxs = isearch(t, u_full_state, WithinRange(ε))
-            if !isempty(idxs)
+            Neighborhood.NearestNeighbors.knn_point!(t, u_full_state, false, bsn_nfo.dist, bsn_nfo.neighborindex, Neighborhood.alwaysfalse)
+            if bsn_nfo.dist[1] < ε
                 nxt_clr = 2*k + 1
-                break
+                return nxt_clr
             end
         end
     end
@@ -201,11 +197,11 @@ function _identify_basin_of_cell!(
             bsn_nfo.basin[n] = bsn_nfo.current_att_color
             bsn_nfo.consecutive_match = 1
             store_attractor!(bsn_nfo, u_full_state)
-        elseif iseven(nxt_clr) && (bsn_nfo.consecutive_match <  mx_chk_fnd_att)
-            # We make sure we hit the attractor another mx_chk_fnd_att consecutive times
+        elseif iseven(nxt_clr) && (bsn_nfo.consecutive_match <  mx_chk_loc_att)
+            # We make sure we hit the attractor another mx_chk_loc_att consecutive times
             # just to be sure that we have the complete attractor
             bsn_nfo.consecutive_match += 1
-        elseif iseven(nxt_clr) && bsn_nfo.consecutive_match >= mx_chk_fnd_att
+        elseif iseven(nxt_clr) && bsn_nfo.consecutive_match >= mx_chk_loc_att
             # We have checked the presence of an attractor: tidy up everything
             # and get a new cell
             recolor_visited_cell!(bsn_nfo, bsn_nfo.current_bas_color, 1)

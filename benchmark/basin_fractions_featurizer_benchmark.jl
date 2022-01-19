@@ -43,7 +43,7 @@ function featurizer_allics_threads(ds, ics::Dataset, feature_extraction::Functio
         ic, _ = iterate(ics, i)
         feature_array[i] = featurizer(ds, ic, feature_extraction; kwargs...)
     end
-    return hcat(feature_array...)
+    return reduce(hcat, feature_array)
 end
 
 
@@ -61,7 +61,7 @@ function featurizer_allics_ensemble(ds, ics::Dataset, feature_extraction::Functi
 
     feature_array = [feature_extraction(sim.t, sim.u) for sim in sims]
 
-    return hcat(feature_array...)
+    return reduce(hcat, feature_array)
 end
 
 @btime features_threads = featurizer_allics_threads(ds, ics, feature_extraction, T=T, Ttr=Ttr, Δt=Δt)

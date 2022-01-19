@@ -19,8 +19,8 @@ Ttr = 200
 
 
 #region of interest 
-# N = 1000; 
-N = 50000; 
+N = 1000;
+# N = 50000; 
 min_limits = [-1,-1,-1,-1]; 
 max_limits = [1,1,1,1]; 
 sampling_method = "uniform"; 
@@ -28,9 +28,15 @@ sampling_method = "uniform";
 s = ChaosTools.sampler(min_bounds=min_limits, max_bounds=max_limits, method=sampling_method)
 ics = Dataset([s() for i=1:N])
 
-
-function featurizer(ds, u0, feature_extraction; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
+# Definition based on just looping over `trajectory`
+function featurizer(ds::DynamicalSystem, u0::AbstractVector, feature_extraction; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
     u = trajectory(ds, T, u0; Ttr=Ttr, Δt=Δt, diffeq) 
+    t = Ttr:Δt:T+Ttr
+    feature = feature_extraction(t, u)
+    return feature
+end
+function featurizer(ds::DynamicalSystem, integ::SciMLBase.DEIntegrator, feature_extraction; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
+    u = trajectory(ds, integ, T, Δt, Ttr, nothing) 
     t = Ttr:Δt:T+Ttr
     feature = feature_extraction(t, u)
     return feature
@@ -38,16 +44,33 @@ end
 
 function featurizer_allics_threads(ds, ics::Dataset, feature_extraction::Function;  kwargs...)
     num_samples = size(ics, 1) #number of actual ICs
-    feature_array = [Float64[] for i=1:num_samples]
-    @Threads.threads for i = 1:num_samples 
+    feature_array = Vector{Vector{Float64}}(undef, num_samples)
+    Threads.@threads for i = 1:num_samples 
         ic, _ = iterate(ics, i)
         feature_array[i] = featurizer(ds, ic, feature_extraction; kwargs...)
     end
     return reduce(hcat, feature_array)
 end
 
+# Definition based on looping over pre-initialized integrators
+function featurizer_allics_threads_integrators(ds, ics::Dataset, feature_extraction::Function;  kwargs...)
+    num_samples = size(ics, 1) #number of actual ICs
+    feature_array = Vector{Vector{Float64}}(undef, num_samples)
+    # TODO: Add DiffEq here
+    integrators = [integrator(ds) for i in 1:Threads.nthreads()]
+    _featurizer_allics_threads_integrators!(feature_array, integrators, ds, ics::Dataset, feature_extraction::Function;  kwargs...)
+end # need a function barrier here because the integrator vector isn't type stable
+function _featurizer_allics_threads_integrators!(feature_array, integrators, ds, ics::Dataset, feature_extraction::Function;  kwargs...)
+    Threads.@threads for i = 1:length(feature_array) 
+        j = Threads.threadid()
+        integ = integrators[j]
+        reinit!(integ, ics[i])
+        feature_array[i] = featurizer(ds, integ, feature_extraction; kwargs...)
+    end
+    return reduce(hcat, feature_array)
+end
 
-
+# Definition based on `EnsembleProblem` from DiffEq.
 function featurizer_allics_ensemble(ds, ics::Dataset, feature_extraction::Function; T=100, Ttr=50, 
     Δt=1, diffeq=NamedTuple(), EnsembleAlgorithm=EnsembleDistributed(), kwargs...)
     solver = DynamicalSystemsBase._get_solver(diffeq)
@@ -64,9 +87,11 @@ function featurizer_allics_ensemble(ds, ics::Dataset, feature_extraction::Functi
     return reduce(hcat, feature_array)
 end
 
+# %% Benchmark
 @btime features_threads = featurizer_allics_threads(ds, ics, feature_extraction, T=T, Ttr=Ttr, Δt=Δt)
-@btime features_ensemble_distributed = featurizer_allics_ensemble(ds, ics, feature_extraction, T=T, Ttr=Ttr, Δt=Δt, EnsembleAlgorithm=EnsembleDistributed())
+@btime features_threads_integrators = featurizer_allics_threads_integrators(ds, ics, feature_extraction, T=T, Ttr=Ttr, Δt=Δt)
 @btime features_ensemble_threads = featurizer_allics_ensemble(ds, ics, feature_extraction, T=T, Ttr=Ttr, Δt=Δt, EnsembleAlgorithm=EnsembleThreads())
+@btime features_ensemble_distributed = featurizer_allics_ensemble(ds, ics, feature_extraction, T=T, Ttr=Ttr, Δt=Δt, EnsembleAlgorithm=EnsembleDistributed())
 
 # all(features_threads .- features_ensemble_distributed .< 1e-4) #true
 

@@ -1,9 +1,9 @@
 # export JULIA_NUM_THREADS=25
 using Statistics, BenchmarkTools
 using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
-using Distributed, DifferentialEquations
+using Distributed, OrdinaryDiffEq
 addprocs(25)
-@everywhere using DifferentialEquations, DynamicalSystemsBase
+@everywhere using OrdinaryDiffEq, DynamicalSystemsBase
 
 #Magnetic pendulum (3 attractors)
 function feature_extraction(t, y)

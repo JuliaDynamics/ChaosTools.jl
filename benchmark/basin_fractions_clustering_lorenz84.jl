@@ -24,7 +24,7 @@ s = ChaosTools.sampler(min_bounds=min_limits, max_bounds=max_limits, method=samp
 ics = Dataset([s() for i=1:N])
 
 
-fs, class_labels = @benchmark basin_fractions(ds, feature_extraction, ics; T=T, Ttr=Ttr, Δt=Δt)
+fs, class_labels = @benchmark basin_fractions_clustering(ds, feature_extraction, ics; T=T, Ttr=Ttr, Δt=Δt)
 
 
 #--- Lorenz 84 (3 attractors)
@@ -48,6 +48,6 @@ sampling_method = "uniform";
 
 s = ChaosTools.sampler(min_bounds=min_limits, max_bounds=max_limits, method=sampling_method)
 ics = Dataset([s() for i=1:N])
-fs, class_labels = basin_fractions(ds, feature_extraction, ics; T=T, Ttr=Ttr, Δt=Δt)
+fs, class_labels = basin_fractions_clustering(ds, feature_extraction, ics; T=T, Ttr=Ttr, Δt=Δt)
 
 

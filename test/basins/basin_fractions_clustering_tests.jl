@@ -70,8 +70,8 @@ using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
     @test 0.10 < fs[2] < 0.21
     @test fs[1] + fs[2] == 1.0
 
-    #plot basins
-    using PyPlot
+    # plot basins
+    # using PyPlot
     #make N = 10000 to replicate the paper
     # cmap = matplotlib.colors.ListedColormap(["red", "white"])
     # fig = figure()

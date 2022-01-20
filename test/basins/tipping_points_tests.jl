@@ -11,10 +11,10 @@ using Test
     basins_after, = basins_of_attraction((xg, yg), ds; Δt = 1., idxs = 1:2,
     diffeq=(;:reltol => 1e-9), show_progress = false)
     @testset "Basin fractions" begin
-        fs = basin_fractions_clustering(basins_before)
+        fs = basin_fractions(basins_before)
         @test sum(values(fs)) ≈ 1
         @test all(0.32 .≤ values(fs) .≤ 0.34)
-        fs_after = basin_fractions_clustering(basins_after)
+        fs_after = basin_fractions(basins_after)
         @test length(fs_after) == 2
     end
     @testset "tipping probabilities" begin

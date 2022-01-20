@@ -1,4 +1,4 @@
-export basin_fractions_clustering
+export basin_fractions_clustering, basin_fractions
 using Statistics: mean
 using Neighborhood #for kNN
 using Distances, Clustering, Distributions
@@ -16,7 +16,7 @@ attraction, and specifically how it changes when a parameter is changed.
 [^Menck2013] : Menck, Heitzig, Marwan & Kurths. How basin stability complements the linear
 stability paradigm. [Nature Physics, 9(2), 89–92](https://doi.org/10.1038/nphys2516)
 """
-function basin_fractions_clustering(basins::AbstractArray)
+function basin_fractions(basins::AbstractArray)
     fs = Dict{eltype(basins), Float64}()
     ids = unique(basins)
     N = length(basins)
@@ -137,7 +137,7 @@ function basin_fractions_clustering(ds::DynamicalSystem, feature_extraction::Fun
         kwargs...);
     end
 
-    fs = basin_fractions_clustering(class_labels)
+    fs = basin_fractions(class_labels)
     if typeof(ics) <: Dataset return fs, class_labels end
     return fs #::Function ics
 end

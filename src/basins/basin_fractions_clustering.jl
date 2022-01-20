@@ -1,10 +1,8 @@
 export basin_fractions_clustering
 using Statistics: mean
 using Neighborhood #for kNN
-using Distances
-using Clustering
-using Distributions
-
+using Distances, Clustering, Distributions
+using ProgressMeter
 include("basin_fractions_clustering_utilities.jl")
 """
     basin_fractions_clustering(basins::Array) → fs::Dict
@@ -32,7 +30,7 @@ end
 """
     basin_fractions_clustering(
         ds::DynamicalSystem, feature_extraction::Function,
-        ics::Union{Dataset, Function} [, attractors]; kwargs...
+        ics::Union{Dataset, Function} [, attractors_ic]; kwargs...
     ) → fs
 
     
@@ -64,6 +62,7 @@ containing the label of each initial condition given in `ics`.
 * `T, Ttr, Δt=1` : Propagated to [`trajectory`](@ref) with `T=100, Ttr=100` as default. 
 * `diffeq = NamedTuple()` : other parameters for the solvers of DiffEqs
 * `num_samples` : Number of sample initial conditions to generate in case `ics` is a function.
+* `show_progress = false` : Display a progress bar of the process.
 
 ### Feature extraction and classification
 * `clust_method_norm=Euclidean()` : metric to be used in the clustering.
@@ -151,12 +150,17 @@ and returns their extracted features in a matrix, with the j-th column containin
 j-th feature. To do this, it  calls the other `featurizer` method, made for just one array of ICs.
 `ics` should contain each initial condition along its rows.
 """
-function featurizer_allics(ds, ics::Dataset, feature_extraction::Function;  kwargs...)
+function featurizer_allics(ds, ics::Dataset, feature_extraction::Function; show_progress=false,
+    kwargs...)
     num_samples = size(ics, 1) #number of actual ICs
     feature_array = Vector{Vector{Float64}}(undef, num_samples)
+    if show_progress
+        progress = ProgressMeter.Progress(num_samples; desc = "Integrating trajectories:")
+    end
     Threads.@threads for i = 1:num_samples 
         ic = ics[i]
         feature_array[i] = featurizer(ds, ic, feature_extraction; kwargs...)
+        show_progress && next!(progress)
     end
     return reduce(hcat, feature_array)
 end
@@ -167,11 +171,15 @@ generates them and returns their extracted features in a matrix, with the j-th c
 j-th feature. To do this, it  calls the other `featurizer` method, made for just one array of ICs.
 """
 function featurizer_allics(ds, ics::Function, feature_extraction::Function; num_samples, 
-    kwargs...)
-    feature_array = [Float64[] for i=1:num_samples]
+    show_progress=false, kwargs...)
+    feature_array = Vector{Vector{Float64}}(undef, num_samples)
+    if show_progress
+        progress = ProgressMeter.Progress(num_samples; desc = "Integrating trajectories:")
+    end
     Threads.@threads for i = 1:num_samples 
         ic = ics()
         feature_array[i] = featurizer(ds, ic, feature_extraction; kwargs...)
+        show_progress && next!(progress)
     end
     return reduce(hcat, feature_array)
 end

@@ -50,7 +50,7 @@ using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
     attractors_ic = Dataset([0.5 0; 2.7 0]) #each IC along a row
 
     # println("Test No. 1 Supervised, generated ics.")
-    fs, class_labels = basin_fractions_clustering(ds, feature_extraction, ics, attractors_ic; T=Texec, Ttr=Ttr, Δt=Δt)
+    fs, class_labels = basin_fractions_clustering(ds, feature_extraction, ics, attractors_ic; T=Texec, Ttr=Ttr, Δt=Δt, show_progress=true)
     # fs = (Dict(2 => 0.8452,1 => 0.1548)
     @test 0.10 < fs[1] < 0.21
     @test 0.79 < fs[2] < 0.90
@@ -71,11 +71,11 @@ using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
     @test fs[1] + fs[2] == 1.0
 
     #plot basins
-    # using PyPlot
-    # #make N = 10000 to replicate the paper
+    using PyPlot
+    #make N = 10000 to replicate the paper
     # cmap = matplotlib.colors.ListedColormap(["red", "white"])
     # fig = figure()
-    # scatter(ic_grid[1,:], ic_grid[2,:], c=class_labels, cmap=cmap)
+    # scatter(ics[:,1], ics[:,2], c=class_labels, cmap=cmap)
     # colorbar()
     # savefig("pendulum-basins-colored-unsupervised.png")
 end
@@ -137,7 +137,7 @@ end
     #plot basins
     # cmap = matplotlib.colors.ListedColormap(["red", "gray", "orange", "cyan", "blue"])
     # fig = figure()
-    # scatter(ic_grid[1,:], ic_grid[2,:], c=class_labels, cmap=cmap)
+    # scatter(ics[:,1], ics[:,2], c=class_labels, cmap=cmap)
     # gca().set_aspect("equal")
     # colorbar()
     # savefig("duffing-basins-colored-unsupervised.png")

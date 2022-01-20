@@ -5,7 +5,7 @@ using Distances
 using Clustering
 using Distributions
 
-include("basins_fractions_utilities.jl")
+include("basin_fractions_clustering_utilities.jl")
 """
     basin_fractions_clustering(basins::Array) → fs::Dict
 Calculate the state space fraction of the basins of attraction encoded in `basins`. The elements of
@@ -153,7 +153,7 @@ j-th feature. To do this, it  calls the other `featurizer` method, made for just
 """
 function featurizer_allics(ds, ics::Dataset, feature_extraction::Function;  kwargs...)
     num_samples = size(ics, 1) #number of actual ICs
-    feature_array = [Float64[] for i=1:num_samples]
+    feature_array = Vector{Vector{Float64}}(undef, num_samples)
     Threads.@threads for i = 1:num_samples 
         ic = ics[i]
         feature_array[i] = featurizer(ds, ic, feature_extraction; kwargs...)
@@ -183,7 +183,7 @@ It integrates the initial condition, applies the `feature_extraction` function a
 its output. The type of the returned vector depends on `feature_extraction`'s output.
 """
 function featurizer(ds, u0, feature_extraction; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
-    u = trajectory(ds, T, u0; Ttr=Ttr, Δt=Δt, diffeq) 
+    u = trajectory(ds, T, u0; Ttr=Ttr, Δt=Δt, diffeq=diffeq) 
     t = Ttr:Δt:T+Ttr
     feature = feature_extraction(t, u)
     return feature

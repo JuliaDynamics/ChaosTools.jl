@@ -48,7 +48,7 @@ It returns a `Vector` of features, which must be real numbers.
 contained in `ics` are integrated and are mapped to features. Instead, `ics` can be a 
 function that takes _no_ arguments `ics()` and returns a random initial condition when called.
 See [`sampler`](@ref) for convenience functions to generate `ics`.
-The optional argument `attractors` decides whether the supervised or unsupervised method
+The optional argument `attractors_ic` decides whether the supervised or unsupervised method
 will be used, see the description below for more details.
 
 The output `fs` is a dictionary whose keys are the labels given to each attractor, and the values
@@ -117,6 +117,11 @@ label (attractor). The sampling error associated with this method is given by[^S
 uniform random sampling is used in `ics`.
 For nonuniform sampling, the fractions simply indicate the probabilities for observing each 
 specific attractor, see [^Stender2021] for more.
+
+## Parallelization note
+The trajectories in this method can be integrated in parallel using `@Threads`.
+To enable this, simply define the environment variable `JULIA_NUM_THREADS` equal to the
+number of threads you want to use.
 
 [^Menck2013] : Menck, Heitzig, Marwan & Kurths. How basin stability complements the linear
 stability paradigm. [Nature Physics, 9(2), 89–92](https://doi.org/10.1038/nphys2516)

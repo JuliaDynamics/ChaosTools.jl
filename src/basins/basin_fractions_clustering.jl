@@ -191,7 +191,7 @@ It integrates the initial condition, applies the `feature_extraction` function a
 its output. The type of the returned vector depends on `feature_extraction`'s output.
 """
 function featurizer(ds, u0, feature_extraction; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
-    u = trajectory(ds, T, u0; Ttr=Ttr, Δt=Δt, diffeq=diffeq) 
+    u = trajectory(ds, T, u0; Ttr, Δt, diffeq) 
     t = Ttr:Δt:T+Ttr
     feature = feature_extraction(t, u)
     return feature

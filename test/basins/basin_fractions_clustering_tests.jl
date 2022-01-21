@@ -50,21 +50,21 @@ using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
     attractors_ic = Dataset([0.5 0; 2.7 0]) #each IC along a row
 
     # println("Test No. 1 Supervised, generated ics.")
-    fs, class_labels = basin_fractions_clustering(ds, feature_extraction, ics, attractors_ic; T=Texec, Ttr=Ttr, Δt=Δt, show_progress=true)
+    fs, class_labels = basin_fractions_clustering(ds, feature_extraction, ics, attractors_ic; T=Texec, Ttr, Δt, show_progress=true)
     # fs = (Dict(2 => 0.8452,1 => 0.1548)
     @test 0.10 < fs[1] < 0.21
     @test 0.79 < fs[2] < 0.90
 
 
     # println("Test No. 1 Supervised, generator ics.")
-    fs = basin_fractions_clustering(ds, feature_extraction, ics_foo, attractors_ic; num_samples=N, T=Texec, Ttr=Ttr, Δt=Δt)
+    fs = basin_fractions_clustering(ds, feature_extraction, ics_foo, attractors_ic; num_samples=N, T=Texec, Ttr, Δt)
     # fs = (Dict(2 => 0.8452,1 => 0.1548)
     @test 0.12 < fs[1] < 0.21
     @test 0.79 < fs[2] < 0.88
 
 
     # println("Test No2. Unsupervised, generated ics.")
-    fs, class_labels = basin_fractions_clustering(ds, feature_extraction, ics; T=Texec, Ttr=Ttr, Δt=Δt)
+    fs, class_labels = basin_fractions_clustering(ds, feature_extraction, ics; T=Texec, Ttr, Δt)
     # fs = (Dict(2 => 0.1548,1 => 0.8452)
     @test 0.79 < fs[1] < 0.90
     @test 0.10 < fs[2] < 0.21
@@ -107,7 +107,7 @@ end
     #---Running for supervised
     #templates
     attractors_ic = Dataset([0.21 0.02; 1.05 0.77; -0.67 0.02; -0.46 0.3; -0.43 0.12])
-    fs, class_labels = basin_fractions_clustering(ds, feature_extraction, ics, attractors_ic; T=Texec, Ttr=Ttr, Δt=Δt)
+    fs, class_labels = basin_fractions_clustering(ds, feature_extraction, ics, attractors_ic; T=Texec, Ttr, Δt)
     #original result: fs = (Dict(4 => 0.0248,2 => 0.5086,3 => 0.028,5 => 0.2424,1 => 0.1962), [1, 2, 5, 2, 2, 1, 2, 1, 5, 5  …  2, 5, 1, 2, 2, 2, 2, 2, 1, 2])
 
     #The results depend on the (random) sampling of the ics, so results may very on subsequent tests. I am not sure how much, though.
@@ -117,7 +117,7 @@ end
     @test 0.01 < fs[4] < 0.04
     @test 0.22 < fs[5] < 0.26
 
-    fs = basin_fractions_clustering(ds, feature_extraction, ics_foo, attractors_ic; num_samples=N, T=Texec, Ttr=Ttr, Δt=Δt)
+    fs = basin_fractions_clustering(ds, feature_extraction, ics_foo, attractors_ic; num_samples=N, T=Texec, Ttr, Δt)
     @test 0.18 < fs[1] < 0.21
     @test 0.48 < fs[2] < 0.52
     @test 0.02 < fs[3] < 0.031
@@ -125,7 +125,7 @@ end
     @test 0.22 < fs[5] < 0.26
 
 
-    fs, class_labels = basin_fractions_clustering(ds, feature_extraction, ics; T=Texec, Ttr=Ttr, Δt=Δt)
+    fs, class_labels = basin_fractions_clustering(ds, feature_extraction, ics; T=Texec, Ttr, Δt)
     #original result: fs = (Dict(4 => 0.028,2 => 0.2424,3 => 0.1962,5 => 0.0248,1 => 0.5086), [3, 1, 2, 1, 1, 3, 1, 3, 2, 2  …  1, 2, 3, 1, 1, 1, 1, 1, 3, 1])
 
     @test 0.48 < fs[1] < 0.52 

@@ -38,13 +38,13 @@ unsupervised (default) to supervised, see description below.
 
 ### Feature extraction and classification
 * `clust_method_norm=Euclidean()`: metric to be used in the clustering.
-* `clust_method_norm = "kNN"`: (supervised method only) which clusterization method to
+* `clust_method = "kNN"`: (supervised method only) which clusterization method to
   apply. If `"kNN"`, the first-neighbor clustering is used. If `"kNN_thresholded"`, a
   subsequent step is taken, which considers as unclassified (label `-1`) the features
   whose distance to the nearest template above the `clustering_threshold`.
-* `clustering_threshold = 0.0`: ("supervised" method, with `kNN_thresholded` only). Maximum
-  allowed distance between a feature and the cluster center for it to be considered inside 
-  the cluster. Used when `clust_method = kNN_thresholded`;
+* `clustering_threshold = 0.0`: Maximum allowed distance between a feature and the 
+  cluster center for it to be considered inside the cluster.
+  Only used when `clust_method = "kNN_thresholded"`.
 * `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors
   (i.e. of similar features) each feature needs to have in order to be considered in a
   cluster (fewer than this, it is labeled as an outlier, id=-1). This number is somewhat hard
@@ -71,7 +71,7 @@ as templates representing the attrators. Each trajectory is considered to belong
 nearest template, which is found using a first-neighbor clustering algorithm.
 
 If the attractors are not as well-known the **unsupervised method** should be used
-instead, which means that the user does not provide the optional `attractors` argument. 
+instead, which means that the user does not provide the optional `attractors_ic` argument. 
 Here, the vectors of features of each initial condition are mapped to an attractor by
 analysing how the features are clustered in the feature space. Using the DBSCAN algorithm, 
 we identify these clusters of features, and consider each cluster to represent an 

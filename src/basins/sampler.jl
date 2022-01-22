@@ -26,16 +26,24 @@ function sphereregion(r, dim, center=zeros(length(dim)))
 end
 
 """
-Convenience sampler function for generating random points inside a region. Returns a 
-    generator for the points. The region can be:
-        * a box, with edges `min_bounds` and `max_bounds`. The sampling of the points inside
-        this box is according to `method`, which can be either 
-        `"uniform"` (implemented in `expansionentropy.jl`) or `"multgauss"`.
-    * a sphere, of `spheredims` dimensions, radius `radius` and centered on `center`.
-    
+    statespace_sampler(rng = Random.default_rng(); kwargs...) → sampler, restraining
+Convenience function that creates two functions. `sampler` is a 0-argument function
+that generates random points inside a state space region defined by the keywords.
+`restraining` is a 1-argument function that decides returns `true` if the given 
+state space point is inside that region.
+
+The regions can be:
+* **Rectangular box**, with edges `min_bounds` and `max_bounds`.
+  The sampling of the points inside the box is decided by the keyword `method` which can
+  be either `"uniform"` (see also [`expansionentropy`](@ref)) or `"multgauss"`.
+* **Sphere**, of `spheredims` dimensions, radius `radius` and centered on `center`.
 """
-function sampler(; min_bounds::Vector=[], max_bounds::Vector=[], method="uniform", radius::Number=-1, spheredims::Int=0, center=zeros(spheredims), seed=1)
-    Random.seed!(seed)
+function statespace_sampler(rng = Random.default_rng(); 
+        min_bounds=[], max_bounds=[], method="uniform", 
+        radius::Number=-1,
+        spheredims::Int=0, center=zeros(spheredims),
+    )
+
     if min_bounds ≠ [] && max_bounds != []
         if method == "uniform" gen, _ = boxregion(min_bounds, max_bounds)
         elseif method == "multgauss" gen = boxregion_multgauss(min_bounds, max_bounds)
@@ -44,7 +52,7 @@ function sampler(; min_bounds::Vector=[], max_bounds::Vector=[], method="uniform
     elseif radius ≥ 0 && spheredims ≥ 1
         gen = sphereregion(radius, spheredims, center)
     else
-        @error("No method found.")
+        @error("Incorrect keyword specification.")
     end
     return gen 
 end

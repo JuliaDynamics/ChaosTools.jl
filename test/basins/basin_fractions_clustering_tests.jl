@@ -2,7 +2,7 @@ using Test
 using Statistics
 using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
 
-@testset "Basin Stability Pendulum" begin
+@testset "Basin Fractions Clustering Pendulum" begin
     @inline @inbounds function damped_driven_pendulum(u, p, t)
         α, T, K = p
         du1 = u[2]
@@ -81,7 +81,7 @@ using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
 end
 
 
-@testset "Basin Stability Duffing" begin
+@testset "Basin Fractions Clustering Duffing" begin
     Texec = 100
     Ttr = 900
     fs = 50

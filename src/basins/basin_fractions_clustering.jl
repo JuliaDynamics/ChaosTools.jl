@@ -17,7 +17,7 @@ system using the random sampling & clustering method of [^Stender2021].
 and the corresponding time vector `t` and returns a vector `Vector{<:Real}` of features
 describing the trajectory. Initial conditions are sampled from `ics`, which can either
 be a `Dataset` of initial conditions, or a 0-argument function `ics()` that spits out
-random initial conditions.
+random initial conditions. See [`statespace_sampler`](@ref) to generate such functions.
 
 The output `fs` is a dictionary whose keys are the labels given to each attractor, and the 
 values are their respective fractions. The label `-1` is given to any initial condition

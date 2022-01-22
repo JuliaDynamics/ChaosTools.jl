@@ -26,8 +26,8 @@ end
 
 # function for structure initialization.
 function init_bsn_nfo(
-        grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function;
-        attractors = nothing
+        grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, 
+        get_projected_state::Function, attractors = nothing
     )
     B = length(grid)
     D = length(get_state(integ)) # dimension of the full state space

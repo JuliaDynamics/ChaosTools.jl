@@ -110,20 +110,11 @@ attractors on the grid.
 function basins_of_attraction(grid::Tuple, ds;
         Δt=nothing, T=nothing, idxs = 1:length(grid),
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
-        diffeq = NamedTuple(), ic_lab_mode = false, kwargs...
+        diffeq = NamedTuple(), attractors = nothing, kwargs...
         # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
         # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
 
-    @assert length(idxs) == length(grid)
-    integ = ds isa PoincareMap ? ds : integrator(ds; diffeq)
-    idxs = SVector(idxs...)
-
-    D = length(get_state(integ))
-    if complete_state isa AbstractVector && (length(complete_state) ≠ D-length(idxs))
-        error("Vector `complete_state` must have length D-Dg!")
-    end
-    # Check logic for automatic Δt computation:
     fixed_solver = haskey(diffeq, :dt) && haskey(diffeq, :adaptive)
     if ds isa ContinuousDynamicalSystem && isnothing(Δt) && isnothing(T) && !fixed_solver
         Δt = automatic_Δt_basins(ds, grid; idxs, complete_state, diffeq)
@@ -131,12 +122,23 @@ function basins_of_attraction(grid::Tuple, ds;
             @info "Automatic Δt estimation yielded Δt = $(Δt)"
         end
     end
-    return basins_of_attraction(grid, integ, Δt, T, idxs, complete_state, fixed_solver, ic_lab_mode; kwargs...)
+
+    bsn_nfo, integ = basininfo_and_integ(ds, attractors, grid, Δt, T, idxs, complete_state, diffeq, fixed_solver)
+    return estimate_basins!(bsn_nfo, integ; kwargs...)
 end
 
-function basins_of_attraction(
-        grid, integ, Δt, T, idxs::SVector, complete_state, fixed_solver, ic_lab_mode; kwargs...
+function basininfo_and_integ(
+        ds, attractors, grid, Δt, T, idxs, complete_state, diffeq, fixed_solver=false
     )
+
+    @assert length(idxs) == length(grid)
+    integ = ds isa PoincareMap ? ds : integrator(ds; diffeq)
+    D = length(get_state(integ))
+    if complete_state isa AbstractVector && (length(complete_state) ≠ D-length(idxs))
+        error("Vector `complete_state` must have length D-Dg!")
+    end
+
+    idxs = SVector(idxs...)
 
     complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
     get_projected_state = (integ) -> view(get_state(integ), idxs)
@@ -148,16 +150,13 @@ function basins_of_attraction(
     else # generic case
         iter_f! = (integ) -> step!(integ, Δt) # we don't have to step _exactly_ `Δt` here
     end
-    if ic_lab_mode == true
-        bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, complete_and_reinit!, get_projected_state; kwargs...)
-        return bsn_nfo, integ
-    else
-        bsn_nfo = estimate_basins!(
-        grid, integ, iter_f!, complete_and_reinit!, get_projected_state; kwargs...
-        )
-        return bsn_nfo.basins, bsn_nfo.attractors
-    end
+    bsn_nfo = init_bsn_nfo(
+        grid, integ, iter_f!, complete_and_reinit!, 
+        get_projected_state, attractors
+    )
+    return bsn_nfo, integ
 end
+
 
 # Estimate Δt
 using LinearAlgebra

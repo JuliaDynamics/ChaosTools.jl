@@ -77,28 +77,6 @@ function expansionentropy(system, sampler, restraining; kwargs...)
     return slope
 end
 
-"""
-    boxregion(as, bs) -> sampler, restraining
-
-Define a box in ``\\mathbb{R}^d`` with edges the `as` and `bs` and then
-return two functions: `sampler`, which generates a random initial condition in that box
-and `restraining` that returns `true` if a given state is in the box.
-"""
-function boxregion(as, bs)
-    @assert length(as) == length(bs) > 0
-    gen() = [rand()*(bs[i]-as[i]) + as[i] for i in 1:length(as)]
-    restraining(x) = all(as .< x .< bs)
-    return gen, restraining
-end
-
-# Specialized 1-d version
-function boxregion(a::Real, b::Real)
-    a, b = extrema((a, b))
-    gen() = rand()*(b-a) + a
-    restraining = x -> a < x < b
-    return gen, restraining
-end
-
 #####################################################################################
 # Actual implementation of expansion entropy
 #####################################################################################

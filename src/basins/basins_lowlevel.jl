@@ -60,18 +60,14 @@ function init_bsn_nfo(
 end
 
 """
-This is the low level function that creates & computes the basins of attraction, and is
-agnostic of the dynamical system. `integ` is an integrator, `iter_f!` a function that
-steps the integrator, `complete_and_reinit!` a function that re-inits the integrator
-at a new full state, given the state on the grid.
+This is the low level function that computes the basins of attraction, 
+given the already initialized `BasinInfo` object and the integrator.
 """
 function estimate_basins!(
-        grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, get_projected_state::Function;
-        show_progress = true, attractors = nothing, kwargs...,
+        bsn_nfo::BasinInfo, integ;
+        show_progress = true, kwargs...,
     )
-
-    bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, complete_and_reinit!, get_projected_state; attractors = attractors)
-
+    grid = bsn_nfo.grid
     I = CartesianIndices(bsn_nfo.basins)
     progress = ProgressMeter.Progress(
         length(bsn_nfo.basins); desc = "Basins of attraction: ", dt = 1.0

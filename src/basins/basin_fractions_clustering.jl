@@ -7,19 +7,21 @@ include("basin_fractions_clustering_utilities.jl")
 
 """
     basin_fractions_clustering(
-        ds::DynamicalSystem, feature_extraction::Function,
+        ds::DynamicalSystem, featurizer::Function,
         ics::Union{Dataset, Function} [, attractors_ic]; kwargs...
     ) → fs
 
     
-Compute the state space fractions `fs` of the basins of attraction of the given dynamical system.
+Compute the state space fractions `fs` of the basins of attraction of the given dynamical
+system using the random sampling & clustering method of [^Stender2021].
+
 This method works differently than the `basin_fractions_clustering(::Array)` method.
 It integrates initial conditions contained in `ics`, maps them to a vector of features using
-the `feature_extraction` function, and then clusters the vector of features to classify
+the `featurizer` function, and then clusters the vector of features to classify
 initial conditions to different attractors. 
 This approach is based on[^Stender2021], see the description below for more details.
 
-The `feature_extraction` is a function `f(A,t)` that takes as an input a dataset `A` 
+The `featurizer` is a function `f(A,t)` that takes as an input a dataset `A` 
 (the trajectory resulting from integrating an initial condition) and the time vector `t`.
 It returns a `Vector` of features, which must be real numbers.
 `ics` provides the initial conditions. If it is a `Dataset`, then the initional conditions
@@ -63,7 +65,7 @@ Let ``F(A)`` be the fraction of initial conditions in a region of state space
 ``\\mathcal{S}`` by counting which initial conditions end up in which attractors.
 
 The trajectory `X` of each initial condition is transformed in a vector of features, 
-extracted using the user-defined `feature_extraction` function. 
+extracted using the user-defined `featurizer` function. 
 Each feature is a number useful in *characterizing the attractor* and distinguishing it
 from other attrators. For instance, a useful feature distinguishing a stable node from a 
 stable limit cycle is the standard deviation of a dimension in `X` (zero for the node, 
@@ -107,15 +109,15 @@ stability paradigm. [Nature Physics, 9(2), 89–92](https://doi.org/10.1038/nphy
 [^Stender2021] : Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
 stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
-function basin_fractions_clustering(ds::DynamicalSystem, feature_extraction::Function,
+function basin_fractions_clustering(ds::DynamicalSystem, featurizer::Function,
     ics::Union{Dataset, Function}, attractors_ic::Union{Dataset, Nothing}=nothing; kwargs...)
 
-    feature_array = featurizer_allics(ds, ics,  feature_extraction; kwargs...)
+    feature_array = extract_features_allics(ds, ics,  featurizer; kwargs...)
 
     if isnothing(attractors_ic) #unsupervised, no templates; 
         class_labels, class_errors = classify_solution(feature_array; kwargs...)
     else #supervised
-        feature_templates = featurizer_allics(ds, attractors_ic, feature_extraction; kwargs...)
+        feature_templates = extract_features_allics(ds, attractors_ic, featurizer; kwargs...)
         class_labels, class_errors = classify_solution(feature_array, feature_templates; 
         kwargs...);
     end
@@ -128,12 +130,12 @@ end
 
 #----- INTEGRATION AND FEATURE EXTRACTION
 """
-`featurizer_allics` receives the pre-generated initial conditions `ics` in a `Dataset`
+`extract_features_allics` receives the pre-generated initial conditions `ics` in a `Dataset`
 and returns their extracted features in a matrix, with the j-th column containing the
-j-th feature. To do this, it  calls the other `featurizer` method, made for just one array of ICs.
+j-th feature. To do this, it  calls the other `extract_features` method, made for just one array of ICs.
 `ics` should contain each initial condition along its rows.
 """
-function featurizer_allics(ds, ics::Dataset, feature_extraction::Function; show_progress=false,
+function extract_features_allics(ds, ics::Dataset, featurizer::Function; show_progress=false,
     kwargs...)
     num_samples = size(ics, 1) #number of actual ICs
     feature_array = Vector{Vector{Float64}}(undef, num_samples)
@@ -142,18 +144,18 @@ function featurizer_allics(ds, ics::Dataset, feature_extraction::Function; show_
     end
     Threads.@threads for i = 1:num_samples 
         ic = ics[i]
-        feature_array[i] = featurizer(ds, ic, feature_extraction; kwargs...)
+        feature_array[i] = extract_features(ds, ic, featurizer; kwargs...)
         show_progress && next!(progress)
     end
     return reduce(hcat, feature_array)
 end
 
 """
-`featurizer_allics` receives the sampler function to generate the initial conditions `ics`,
+`extract_features_allics` receives the sampler function to generate the initial conditions `ics`,
 generates them and returns their extracted features in a matrix, with the j-th column containing the
-j-th feature. To do this, it  calls the other `featurizer` method, made for just one array of ICs.
+j-th feature. To do this, it  calls the other `extract_features` method, made for just one array of ICs.
 """
-function featurizer_allics(ds, ics::Function, feature_extraction::Function; num_samples, 
+function extract_features_allics(ds, ics::Function, featurizer::Function; num_samples, 
     show_progress=false, kwargs...)
     feature_array = Vector{Vector{Float64}}(undef, num_samples)
     if show_progress
@@ -161,7 +163,7 @@ function featurizer_allics(ds, ics::Function, feature_extraction::Function; num_
     end
     Threads.@threads for i = 1:num_samples 
         ic = ics()
-        feature_array[i] = featurizer(ds, ic, feature_extraction; kwargs...)
+        feature_array[i] = extract_features(ds, ic, featurizer; kwargs...)
         show_progress && next!(progress)
     end
     return reduce(hcat, feature_array)
@@ -169,14 +171,14 @@ end
 
 
 """
-`featurizer` receives an initial condition and returns its extracted features in a vector.
-It integrates the initial condition, applies the `feature_extraction` function and returns
-its output. The type of the returned vector depends on `feature_extraction`'s output.
+`extract_features` receives an initial condition and returns its extracted features in a vector.
+It integrates the initial condition, applies the `featurizer` function and returns
+its output. The type of the returned vector depends on `featurizer`'s output.
 """
-function featurizer(ds, u0, feature_extraction; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
+function extract_features(ds, u0, featurizer; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
     u = trajectory(ds, T, u0; Ttr, Δt, diffeq) 
     t = Ttr:Δt:T+Ttr
-    feature = feature_extraction(t, u)
+    feature = featurizer(t, u)
     return feature
 end
 

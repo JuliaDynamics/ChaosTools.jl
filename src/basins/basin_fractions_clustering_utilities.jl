@@ -1,7 +1,7 @@
 # ---- utilities for classify_solution
 
 """
-Util function for classify_solution. It returns the size of all the DBSCAN clusters and the
+Util function for `classify_solution`. It returns the size of all the DBSCAN clusters and the
 assignment vector, in whch the i-th component is the cluster index of the i-th feature
 """
 function cluster_props(clusters, data; include_boundary=true)
@@ -18,8 +18,9 @@ function cluster_props(clusters, data; include_boundary=true)
     end
     return assign
 end
+
 """
-Util function for classify_solution. Calculates the clusters' (DbscanCluster) size and sorts
+Util function for `classify_solution`. Calculates the clusters' (DbscanCluster) size and sorts
 them according in decrescent order according to the size.
 """
 function sort_clusters_calc_size(clusters)

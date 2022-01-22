@@ -23,8 +23,38 @@ mutable struct BasinsInfo{B, IF, RF, UF, D, T, Q, K}
 end
 
 
+function basininfo_and_integ(
+        ds, attractors, grid, Δt, T, idxs, complete_state, diffeq, fixed_solver=false
+    )
 
-# function for structure initialization.
+    @assert length(idxs) == length(grid)
+    integ = ds isa PoincareMap ? ds : integrator(ds; diffeq)
+    D = length(get_state(integ))
+    if complete_state isa AbstractVector && (length(complete_state) ≠ D-length(idxs))
+        error("Vector `complete_state` must have length D-Dg!")
+    end
+
+    idxs = SVector(idxs...)
+
+    complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
+    get_projected_state = (integ) -> view(get_state(integ), idxs)
+    MDI = DynamicalSystemsBase.MinimalDiscreteIntegrator
+    if !isnothing(T)
+        iter_f! = (integ) -> step!(integ, T, true)
+    elseif (integ isa PoincareMap) || (integ isa MDI) || fixed_solver
+        iter_f! = step!
+    else # generic case
+        iter_f! = (integ) -> step!(integ, Δt) # we don't have to step _exactly_ `Δt` here
+    end
+    bsn_nfo = init_bsn_nfo(
+        grid, integ, iter_f!, complete_and_reinit!, 
+        get_projected_state, attractors
+    )
+    return bsn_nfo, integ
+end
+
+
+
 function init_bsn_nfo(
         grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, 
         get_projected_state::Function, attractors = nothing

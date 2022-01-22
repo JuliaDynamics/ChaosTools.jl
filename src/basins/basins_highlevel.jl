@@ -115,15 +115,7 @@ function basins_of_attraction(grid::Tuple, ds;
         # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
 
-    fixed_solver = haskey(diffeq, :dt) && haskey(diffeq, :adaptive)
-    if ds isa ContinuousDynamicalSystem && isnothing(Δt) && isnothing(T) && !fixed_solver
-        Δt = automatic_Δt_basins(ds, grid; idxs, complete_state, diffeq)
-        if get(kwargs, :show_progress, true)
-            @info "Automatic Δt estimation yielded Δt = $(Δt)"
-        end
-    end
-
-    bsn_nfo, integ = basininfo_and_integ(ds, attractors, grid, Δt, T, idxs, complete_state, diffeq, fixed_solver)
+    bsn_nfo, integ = basininfo_and_integ(ds, attractors, grid, Δt, T, idxs, complete_state, diffeq)
     bsn_nfo = estimate_basins!(bsn_nfo, integ; kwargs...)
     return bsn_nfo.basin, bsn_nfo.attractors
 end

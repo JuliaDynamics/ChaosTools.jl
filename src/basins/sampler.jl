@@ -21,16 +21,16 @@ function statespace_sampler(rng = Random.GLOBAL_RNG;
     )
 
     if min_bounds ≠ [] && max_bounds != []
-        if method == "uniform" gen, _ = boxregion(min_bounds, max_bounds, rng)
-        elseif method == "multgauss" gen, _ = boxregion_multgauss(min_bounds, max_bounds, rng)
+        if method == "uniform" gen, isinside = boxregion(min_bounds, max_bounds, rng)
+        elseif method == "multgauss" gen, isinside = boxregion_multgauss(min_bounds, max_bounds, rng)
         else @error("Unsupported boxregion sampling method")
         end
     elseif radius ≥ 0 && spheredims ≥ 1
-        gen, _ = sphereregion(radius, spheredims, center, rng)
+        gen, isinside = sphereregion(radius, spheredims, center, rng)
     else
         @error("Incorrect keyword specification.")
     end
-    return gen 
+    return gen, isinside
 end
 
 

@@ -33,8 +33,8 @@ unsupervised (default) to supervised, see description below.
 ## Keyword arguments
 ### Integration
 * `T=100, Ttr=100, Δt=1, diffeq=NamedTuple()`: Propagated to [`trajectory`](@ref). 
-* `num_samples`: Number of sample initial conditions to generate in case `ics` is a function.
-* `show_progress = false`: Display a progress bar of the process.
+* `N=1000`: Number of sample initial conditions to generate in case `ics` is a function.
+* `show_progress = true`: Display a progress bar of the process.
 
 ### Feature extraction and classification
 * `clust_method_norm=Euclidean()`: metric to be used in the clustering.
@@ -111,14 +111,14 @@ and returns their extracted features in a matrix, with the j-th column containin
 j-th feature. To do this, it  calls the other `extract_features` method, made for just one array of ICs.
 `ics` should contain each initial condition along its rows.
 """
-function extract_features_allics(ds, ics::Dataset, featurizer::Function; show_progress=false,
+function extract_features_allics(ds, ics::Dataset, featurizer::Function; show_progress=true,
     kwargs...)
-    num_samples = size(ics, 1) #number of actual ICs
-    feature_array = Vector{Vector{Float64}}(undef, num_samples)
+    N = size(ics, 1) #number of actual ICs
+    feature_array = Vector{Vector{Float64}}(undef, N)
     if show_progress
-        progress = ProgressMeter.Progress(num_samples; desc = "Integrating trajectories:")
+        progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:")
     end
-    Threads.@threads for i = 1:num_samples 
+    Threads.@threads for i = 1:N 
         ic = ics[i]
         feature_array[i] = extract_features(ds, ic, featurizer; kwargs...)
         show_progress && next!(progress)
@@ -131,13 +131,13 @@ end
 generates them and returns their extracted features in a matrix, with the j-th column containing the
 j-th feature. To do this, it  calls the other `extract_features` method, made for just one array of ICs.
 """
-function extract_features_allics(ds, ics::Function, featurizer::Function; num_samples, 
-    show_progress=false, kwargs...)
-    feature_array = Vector{Vector{Float64}}(undef, num_samples)
+function extract_features_allics(ds, ics::Function, featurizer::Function; N = 1000,
+    show_progress=true, kwargs...)
+    feature_array = Vector{Vector{Float64}}(undef, N)
     if show_progress
-        progress = ProgressMeter.Progress(num_samples; desc = "Integrating trajectories:")
+        progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:")
     end
-    Threads.@threads for i = 1:num_samples 
+    Threads.@threads for i = 1:N 
         ic = ics()
         feature_array[i] = extract_features(ds, ic, featurizer; kwargs...)
         show_progress && next!(progress)

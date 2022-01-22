@@ -8,39 +8,29 @@ using ProgressMeter
     basin_fractions_clustering(
         ds::DynamicalSystem, featurizer::Function,
         ics::Union{Dataset, Function} [, attractors_ic]; kwargs...
-    ) → fs
+    ) → fs  OR  (fs, labels)
 
 Compute the state space fractions `fs` of the basins of attraction of the given dynamical
 system using the random sampling & clustering method of [^Stender2021].
 
-This method works differently than the `basin_fractions_clustering(::Array)` method.
-It integrates initial conditions contained in `ics`, maps them to a vector of features using
-the `featurizer` function, and then clusters the vector of features to classify
-initial conditions to different attractors. 
-This approach is based on[^Stender2021], see the description below for more details.
+`featurizer` is a function that takes as an input an integrated trajectory `A::Dataset`
+and the corresponding time vector `t` and returns a vector `Vector{<:Real}` of features
+describing the trajectory. Initial conditions are sampled from `ics`, which can either
+be a `Dataset` of initial conditions, or a 0-argument function `ics()` that spits out
+random initial conditions.
 
-The `featurizer` is a function `f(A,t)` that takes as an input a dataset `A` 
-(the trajectory resulting from integrating an initial condition) and the time vector `t`.
-It returns a `Vector` of features, which must be real numbers.
-`ics` provides the initial conditions. If it is a `Dataset`, then the initional conditions
-contained in `ics` are integrated and are mapped to features. Instead, `ics` can be a 
-function that takes _no_ arguments `ics()` and returns a random initial condition when called.
-See [`sampler`](@ref) for convenience functions to generate `ics`.
-The optional argument `attractors_ic` decides whether the supervised or unsupervised method
-will be used, see the description below for more details.
+The output `fs` is a dictionary whose keys are the labels given to each attractor, and the 
+values are their respective fractions. The label `-1` is given to any initial condition
+whose attractor did not match any of the clusters, see description below.
 
-The output `fs` is a dictionary whose keys are the labels given to each attractor, and the values
-are their respective fractions. The label `-1` is given to any initial condition whose
-attractor could not be identified. The `class_labels` output is an array of size `N`
-containing the label of each initial condition given in `ics`.
-
+If `ics` is a `Dataset`, besides `fs` the `labels` of each initial condition are also
+returned.
 
 ## Keyword arguments
 ### Integration
-* `T, Ttr, Δt=1` : Propagated to [`trajectory`](@ref) with `T=100, Ttr=100` as default. 
-* `diffeq = NamedTuple()` : other parameters for the solvers of DiffEqs
-* `num_samples` : Number of sample initial conditions to generate in case `ics` is a function.
-* `show_progress = false` : Display a progress bar of the process.
+* `T=100, Ttr=100, Δt=1, diffeq=NamedTuple()`: Propagated to [`trajectory`](@ref). 
+* `num_samples`: Number of sample initial conditions to generate in case `ics` is a function.
+* `show_progress = false`: Display a progress bar of the process.
 
 ### Feature extraction and classification
 * `clust_method_norm=Euclidean()` : metric to be used in the clustering.
@@ -176,6 +166,6 @@ its output. The type of the returned vector depends on `featurizer`'s output.
 function extract_features(ds, u0, featurizer; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
     u = trajectory(ds, T, u0; Ttr, Δt, diffeq) 
     t = Ttr:Δt:T+Ttr
-    feature = featurizer(t, u)
+    feature = featurizer(u, t)
     return feature
 end

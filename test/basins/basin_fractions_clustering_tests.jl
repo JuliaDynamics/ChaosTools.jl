@@ -39,7 +39,7 @@ using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
     max_limits = [π  + asin(T/K), 10]; # must be of length dof
     sampling_method = "uniform"; # sampling strategy / probability density
 
-    s = ChaosTools.sampler(min_bounds=min_limits, max_bounds=max_limits, method=sampling_method)
+    s, _ = statespace_sampler(min_bounds=min_limits, max_bounds=max_limits, method=sampling_method)
     ics_foo = s
     ics = [s() for i=1:N]
     ics = Dataset(ics)
@@ -98,7 +98,7 @@ end
     max_limits = [1.0, 1.0]; # must be of length <props.model.dof>
     sampling_method = "uniform"; # sampling strategy / probability density
 
-    s = sampler(min_bounds=min_limits, max_bounds=max_limits, method=sampling_method)
+    s, _ = statespace_sampler(min_bounds=min_limits, max_bounds=max_limits, method=sampling_method)
     ics_foo = s
     ics = [s() for i=1:N]
     ics = Dataset(ics)

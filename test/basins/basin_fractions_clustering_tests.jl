@@ -54,8 +54,8 @@ using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
     # println("Test No. 1 Supervised, generated ics.")
     fs, class_labels = basin_fractions_clustering(ds, featurizer, ics, attractors_ic; show_progress = true, T=Texec, Ttr, Δt)
     # fs = (Dict(2 => 0.8452,1 => 0.1548)
-    @test 0.10 < fs[1] < 0.21
-    @test 0.79 < fs[2] < 0.90
+    @test 0.10 < fs[1] < 0.22
+    @test 0.75 < fs[2] < 0.90
 
 
     # println("Test No. 1 Supervised, generator ics.")
@@ -69,7 +69,7 @@ using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
     fs, class_labels = basin_fractions_clustering(ds, featurizer, ics; show_progress = false, T=Texec, Ttr, Δt)
     # fs = (Dict(2 => 0.1548,1 => 0.8452)
     @test 0.75 < fs[1] < 0.90
-    @test 0.10 < fs[2] < 0.21
+    @test 0.10 < fs[2] < 0.25
     @test fs[1] + fs[2] ≈ 1.0
 
     # plot basins

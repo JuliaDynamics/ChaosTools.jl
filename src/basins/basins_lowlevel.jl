@@ -115,6 +115,8 @@ function estimate_basins!(
     ind = iseven.(bsn_nfo.basins)
     bsn_nfo.basins[ind] .+= 1
     bsn_nfo.basins .= (bsn_nfo.basins .- 1) .÷ 2
+
+    # TODO: I fucked up! Where are the attractors????
     return bsn_nfo
 end
 

@@ -26,6 +26,10 @@ whose attractor did not match any of the clusters, see description below.
 If `ics` is a `Dataset`, besides `fs` the `labels` of each initial condition are also
 returned.
 
+The _optional_ argument `attractors_ic`, if given, must be a `Dataset` of initial conditions
+each leading to a different attractor. Giving this argument switches the method from
+unsupervised (default) to supervised, see description below.
+
 ## Keyword arguments
 ### Integration
 * `T=100, Ttr=100, Δt=1, diffeq=NamedTuple()`: Propagated to [`trajectory`](@ref). 
@@ -33,15 +37,15 @@ returned.
 * `show_progress = false`: Display a progress bar of the process.
 
 ### Feature extraction and classification
-* `clust_method_norm=Euclidean()` : metric to be used in the clustering.
-* `clust_method_norm = "kNN"` : (supervised method only) which clusterization method to
+* `clust_method_norm=Euclidean()`: metric to be used in the clustering.
+* `clust_method_norm = "kNN"`: (supervised method only) which clusterization method to
   apply. If `"kNN"`, the first-neighbor clustering is used. If `"kNN_thresholded"`, a
   subsequent step is taken, which considers as unclassified (label `-1`) the features
   whose distance to the nearest template above the `clustering_threshold`.
-* `clustering_threshold = 0.0` : ("supervised" method, with `kNN_thresholded` only). Maximum
+* `clustering_threshold = 0.0`: ("supervised" method, with `kNN_thresholded` only). Maximum
   allowed distance between a feature and the cluster center for it to be considered inside 
   the cluster. Used when `clust_method = kNN_thresholded`;
-* `min_neighbors = 10` : (unsupervised method only) minimum number of neighbors
+* `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors
   (i.e. of similar features) each feature needs to have in order to be considered in a
   cluster (fewer than this, it is labeled as an outlier, id=-1). This number is somewhat hard
   to define, as it directly interferes with how many attractors the clustering finds.
@@ -52,21 +56,16 @@ Let ``F(A)`` be the fraction of initial conditions in a region of state space
 ``A``. `basin_fractions_clustering` estimates ``F`` for attractors in
 ``\\mathcal{S}`` by counting which initial conditions end up in which attractors.
 
-The trajectory `X` of each initial condition is transformed in a vector of features, 
-extracted using the user-defined `featurizer` function. 
+The trajectory `X` of each initial condition is transformed into a vector of features. 
 Each feature is a number useful in *characterizing the attractor* and distinguishing it
-from other attrators. For instance, a useful feature distinguishing a stable node from a 
-stable limit cycle is the standard deviation of a dimension in `X` (zero for the node, 
-nonzero for the limit cycle). The vectors of features are then used to identify to which 
-attractor each trajectory belongs (i.e. in which basin of attractor each initial condition is in).
+from other attrators. The vectors of features are then used to identify to which attractor
+each trajectory belongs (i.e. in which basin of attractor each initial condition is in).
 The method thus relies on the user having at least some basic idea about what attractors
-to expect, in contrast to [`basins_of_attraction`](@ref).
+to expect in order to pick the right features, in contrast to [`basins_of_attraction`](@ref).
 
 The algorithm of[^Stender2021] that we use has two methods to do this. 
 In the **supervised method**, the attractors are known to the user, who provides one
-initial condition for each attractor in ``\\mathcal{S}`` using the optional `attractors`
-argument. `attractors` is a `Dataset` whose rows contain a single initial condition for
-each attractor.
+initial condition for each attractor using the optional `attractors_ic`.
 The algorithm then evolves these initial conditions, extracts their features, and uses them
 as templates representing the attrators. Each trajectory is considered to belong to the
 nearest template, which is found using a first-neighbor clustering algorithm.
@@ -75,24 +74,13 @@ If the attractors are not as well-known the **unsupervised method** should be us
 instead, which means that the user does not provide the optional `attractors` argument. 
 Here, the vectors of features of each initial condition are mapped to an attractor by
 analysing how the features are clustered in the feature space. Using the DBSCAN algorithm, 
-we identifies these clusters of features, and consider each cluster to represent an 
+we identify these clusters of features, and consider each cluster to represent an 
 attractor. Features whose attractor is not identified are labeled as `-1`.
 Otherwise, they are labeled starting from `1` in ascending order.
 
-These labels are then returned by the algorithm, along with the fraction ``F(A)`` for each
-label (attractor). The sampling error associated with this method is given by[^Stender2021]
-``e = \\sqrt{F(A)(1-F(A))/N}``, with ``N`` denoting the number of initial conditions, if 
-uniform random sampling is used in `ics`.
-For nonuniform sampling, the fractions simply indicate the probabilities for observing each 
-specific attractor, see [^Stender2021] for more.
-
 ## Parallelization note
-The trajectories in this method can be integrated in parallel using `@Threads`.
-To enable this, simply define the environment variable `JULIA_NUM_THREADS` equal to the
-number of threads you want to use.
-
-[^Menck2013] : Menck, Heitzig, Marwan & Kurths. How basin stability complements the linear
-stability paradigm. [Nature Physics, 9(2), 89–92](https://doi.org/10.1038/nphys2516)
+The trajectories in this method are integrated in parallel using `Threads`.
+To enable this, simply start Julia with the number of threads you want to use.
 
 [^Stender2021] : Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
 stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)

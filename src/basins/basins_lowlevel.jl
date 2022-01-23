@@ -56,7 +56,7 @@ function basininfo_and_integ(
         iter_f! = (integ) -> step!(integ, Δt) # we don't have to step _exactly_ `Δt` here
     end
     bsn_nfo = init_bsn_nfo(
-        grid, integ, iter_f!, complete_and_reinit!, 
+        grid, integ, iter_f!, complete_and_reinit!,
         get_projected_state, attractors
     )
     return bsn_nfo, integ
@@ -65,7 +65,7 @@ end
 
 
 function init_bsn_nfo(
-        grid::Tuple, integ, iter_f!::Function, complete_and_reinit!, 
+        grid::Tuple, integ, iter_f!::Function, complete_and_reinit!,
         get_projected_state::Function, attractors = nothing
     )
     B = length(grid)
@@ -99,14 +99,14 @@ function init_bsn_nfo(
 end
 
 """
-This is the low level function that computes the basins of attraction, 
-given the already initialized `BasinInfo` object and the integrator.
+This is the low level function that computes the basins of attraction,
+given the already initialized `BasinsInfo` object and the integrator.
 """
 function estimate_basins!(
-        bsn_nfo::BasinInfo, integ;
+        grid::Tuple,
+        bsn_nfo::BasinsInfo, integ;
         show_progress = true, kwargs...,
     )
-    grid = bsn_nfo.grid
     I = CartesianIndices(bsn_nfo.basins)
     progress = ProgressMeter.Progress(
         length(bsn_nfo.basins); desc = "Basins of attraction: ", dt = 1.0

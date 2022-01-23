@@ -1,4 +1,4 @@
-export estimate_basins!, basins_of_attraction, automatic_Δt_basins, ic_labelling, get_label_ic!
+export basins_of_attraction, automatic_Δt_basins, AttractorMapper
 
 
 """
@@ -116,8 +116,8 @@ function basins_of_attraction(grid::Tuple, ds;
     )
 
     bsn_nfo, integ = basininfo_and_integ(ds, attractors, grid, Δt, T, idxs, complete_state, diffeq)
-    bsn_nfo = estimate_basins!(bsn_nfo, integ; kwargs...)
-    return bsn_nfo.basin, bsn_nfo.attractors
+    bsn_nfo = estimate_basins!(grid, bsn_nfo, integ; kwargs...)
+    return bsn_nfo.basins, bsn_nfo.attractors
 end
 
 
@@ -170,5 +170,3 @@ function automatic_Δt_basins(ds, grid;
     end
     return Δt = 10*s*N/dudt
 end
-
-

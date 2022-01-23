@@ -116,23 +116,20 @@ end
     ds = Systems.henon_iip(zeros(2); a = 1.4, b = 0.3)
     xg = yg = range(-2.,2.,length = res)
     grid = (xg,yg)
-    bsn_nfo, integ = ic_labelling(ds; grid = grid)
-
+    mapper = AttractorMapper(ds; grid = grid)
+    bsn = zeros(length(xg),length(yg))
     # Test if basins are (almost) identical
-    I = CartesianIndices(bsn_nfo.basins)
+    I = CartesianIndices(bsn)
     for ind in I
         y0 = ChaosTools.generate_ic_on_grid(grid, ind)
-        bsn_nfo.basins[ind] = get_label_ic!(bsn_nfo, integ, y0)
+        bsn[ind] = mapper(y0)
     end
-    ind = iseven.(bsn_nfo.basins)
-    bsn_nfo.basins[ind] .+= 1
-    bsn_nfo.basins .= (bsn_nfo.basins .- 1) .÷ 2
     basins, att = basins_of_attraction((xg,yg), ds)
-    @test sum(basins .!= Matrix(bsn_nfo.basins)) < 5
+    @test sum(basins .!= bsn) < 5
 
-    bsn_nfo, integ = ic_labelling(ds; attractors = att)
-    l1 = get_label_ic!(bsn_nfo, integ, [1., 1.])
-    @test l1 == 3
+    mapper = AttractorMapper(ds; attractors = att)
+    l1 = mapper(bsn_nfo)
+    @test l1 == 1
 end
 
 

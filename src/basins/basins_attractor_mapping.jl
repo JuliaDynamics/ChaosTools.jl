@@ -7,13 +7,13 @@ label::Int = mapper(u0)
 ```
 and this will return the label of the attractor `u0` converges at.
 
-`AttractorMapper` identifies attractors via recurrences. 
+`AttractorMapper` identifies attractors via recurrences.
 It has the same keywords as [`basins_of_attraction`](@ref),
 so see there for how attractors are identified and what keywords you can use.
 **One of keywords `grid` or `attractors` is mandatory for `AttractorMapper`.**
 
 `AttractorMapper` has two modes of operation: **unsupervised**, with automatic detection of
-attractors and **unsupervised**, where the attractors are known.
+attractors and **supervised**, where the attractors are known.
 Both modes are in fact the same process that occurs in [`basins_of_attraction`](@ref),
 depending on whether the `attractors` keyword is given or not.
 """
@@ -43,5 +43,6 @@ function AttractorMapper(ds;
 end
 
 function (mapper::AttractorMapper)(u0; kwargs...)
-    return get_label_ic!(mapper.bsn_nfo, mapper.integ, u0; mapper.kwargs...)
+    lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0; mapper.kwargs...)
+    return iseven(lab) ? (lab ÷ 2) : (lab - 1) ÷ 2 
 end

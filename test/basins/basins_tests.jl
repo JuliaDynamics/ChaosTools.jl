@@ -87,7 +87,7 @@ end
     ds = Systems.lorenz_iip()
     xg = yg = range(-30.0, 30.0; length=10)
     zg = range(0, 50; length=10)
-    basin, attractors = basins_of_attraction((xg,yg,zg), ds; show_progress=false, mx_chk_fnd_att = 1000)
+    basin, attractors = basins_of_attraction((xg,yg,zg), ds; show_progress = false, mx_chk_fnd_att = 1000)
     @test length(attractors) == 1
     @test unique(basin) == [1]
 end
@@ -128,7 +128,7 @@ end
     @test sum(basins .!= bsn) < 5
 
     mapper = AttractorMapper(ds; attractors = att)
-    l1 = mapper(bsn_nfo)
+    l1 = mapper([1, 1])
     @test l1 == 1
 end
 

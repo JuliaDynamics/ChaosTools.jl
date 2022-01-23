@@ -25,17 +25,19 @@ end
 
 function AttractorMapper(ds;
         # Notice that all of these are the same keywords as in `basins_of_attraction`
-        grid = nothing, attractors = nothing,
+        grid = 0, attractors = nothing,
         Δt=nothing, T=nothing, idxs = 1:length(grid),
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
         diffeq = NamedTuple(), kwargs...
     )
-    if isnothing(grid) && isnothing(attractors)
+    if (grid == 0) && isnothing(attractors)
         @error "At least one of `grid` of `attractor` must be provided."
     end
-    if isnothing(grid)
+    if grid == 0
         # dummy grid for initialization if the second mode is used
         grid = ntuple(x -> range(-1, 1,step = 0.1), length(ds.u0))
+        idxs = 1:length(grid)
+        complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
     end
 
     bsn_nfo, integ = basininfo_and_integ(ds, attractors, grid, Δt, T, idxs, complete_state, diffeq)
@@ -44,5 +46,5 @@ end
 
 function (mapper::AttractorMapper)(u0; kwargs...)
     lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0; mapper.kwargs...)
-    return iseven(lab) ? (lab ÷ 2) : (lab - 1) ÷ 2 
+    return iseven(lab) ? (lab ÷ 2) : (lab - 1) ÷ 2
 end

@@ -114,7 +114,7 @@ function basins_of_attraction(grid::Tuple, ds;
         # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
         # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
-
+    idxs = SVector(idxs...)
     bsn_nfo, integ = basininfo_and_integ(ds, attractors, grid, Δt, T, idxs, complete_state, diffeq)
     bsn_nfo = estimate_basins!(grid, bsn_nfo, integ; kwargs...)
     return bsn_nfo.basins, bsn_nfo.attractors

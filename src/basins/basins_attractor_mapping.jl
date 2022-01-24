@@ -25,22 +25,25 @@ end
 
 function AttractorMapper(ds;
         # Notice that all of these are the same keywords as in `basins_of_attraction`
-        grid = 0, attractors = nothing,
-        Δt=nothing, T=nothing, idxs = 1:length(grid),
-        complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
+        grid = nothing, attractors = nothing,
+        Δt=nothing, T=nothing, idxs = nothing,
+        complete_state = nothing,
         diffeq = NamedTuple(), kwargs...
     )
-    if (grid == 0) && isnothing(attractors)
+    if isnothing(grid) && isnothing(attractors)
         @error "At least one of `grid` of `attractor` must be provided."
     end
-    if grid == 0
+    if isnothing(grid)
         # dummy grid for initialization if the second mode is used
         grid = ntuple(x -> range(-1, 1,step = 0.1), length(ds.u0))
+    end
+    if isnothing(idxs)
         idxs = 1:length(grid)
+    end
+    if isnothing(complete_state)
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
     end
-
-    bsn_nfo, integ = basininfo_and_integ(ds, attractors, grid, Δt, T, idxs, complete_state, diffeq)
+    bsn_nfo, integ = basininfo_and_integ(ds, attractors, grid, Δt, T, SVector(idxs...), complete_state, diffeq)
     return AttractorMapper(bsn_nfo, integ, kwargs)
 end
 

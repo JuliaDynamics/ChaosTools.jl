@@ -17,7 +17,7 @@ The signal `sig` is a vector of points uniformly sampled at a rate `sr`.
 * `harmonic_threshold`: Threshold of detection. The algorithm returns the first minimum of
   the CMNDF function below this threshold.
 * `diffference_function`: The difference function to be used (by default
-  [`differenceFunction_original`](@ref)).
+  [`ChaosTools.difference_function_original`](@ref)).
 
 ## Description
 The YIN algorithm [^CheveigneYIN2002] estimates the signal's fundamental frequency `F0` by basically

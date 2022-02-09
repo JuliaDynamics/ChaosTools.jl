@@ -148,7 +148,7 @@ function automatic_Δt_basins(ds, grid;
     if ds isa Union{PoincareMap, DiscreteDynamicalSystem}
         return 1
     end
-    integ = integrator(ds; diffeq...)
+    integ = integrator(ds; diffeq)
     complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
 
     steps = step.(grid)

@@ -30,9 +30,7 @@ function basininfo_and_integ(
     fixed_solver = haskey(diffeq, :dt) && haskey(diffeq, :adaptive)
     if ds isa ContinuousDynamicalSystem && isnothing(Δt) && isnothing(T) && !fixed_solver
         Δt = automatic_Δt_basins(ds, grid; idxs, complete_state, diffeq)
-        #if get(kwargs, :show_progress, true)
-            @info "Automatic Δt estimation yielded Δt = $(Δt)"
-        #end
+        @info "Automatic Δt estimation yielded Δt = $(Δt)"
     end
 
 

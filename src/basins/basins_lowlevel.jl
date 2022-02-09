@@ -123,7 +123,6 @@ function estimate_basins!(
     bsn_nfo.basins[ind] .+= 1
     bsn_nfo.basins .= (bsn_nfo.basins .- 1) .÷ 2
 
-    # TODO: I fucked up! Where are the attractors????
     return bsn_nfo
 end
 
@@ -188,7 +187,6 @@ function _identify_basin_of_cell!(
         if norm(u_full_state) > horizon_limit || bsn_nfo.consecutive_lost > mx_chk_lost
             return -1
         end
-        # THIS RETURN IS TO BE DISCUSSED: DESIGN CHOICE IF WE WANT THE FSM IN THE SECOND MODE
         for (k, t) in bsn_nfo.search_trees # this is a `Dict`
             Neighborhood.NearestNeighbors.knn_point!(t, u_full_state, false, bsn_nfo.dist, bsn_nfo.neighborindex, Neighborhood.alwaysfalse)
             if bsn_nfo.dist[1] < ε
@@ -197,7 +195,6 @@ function _identify_basin_of_cell!(
             end
         end
         return 0
-        # THIS RETURN IS TO BE DISCUSSED: DESIGN CHOICE IF WE WANT THE FSM IN THE SECOND MODE
     end
 
     check_next_state!(bsn_nfo, ic_label)

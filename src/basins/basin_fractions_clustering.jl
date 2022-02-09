@@ -104,13 +104,6 @@ function basin_fractions_clustering(ds::DynamicalSystem, featurizer::Function,
 end
 
 
-#----- INTEGRATION AND FEATURE EXTRACTION
-"""
-`extract_features_allics` receives the pre-generated initial conditions `ics` in a `Dataset`
-and returns their extracted features in a matrix, with the j-th column containing the
-j-th feature. To do this, it  calls the other `extract_features` method, made for just one array of ICs.
-`ics` should contain each initial condition along its rows.
-"""
 function extract_features_allics(ds, ics::Union{Dataset, Function}, featurizer::Function; show_progress = true,
     N = 1000, kwargs...)
 
@@ -121,15 +114,15 @@ function extract_features_allics(ds, ics::Union{Dataset, Function}, featurizer::
         progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:")
     end
     Threads.@threads for i = 1:N
-        ic = _get_next_ic(ics,i)
+        ic = _get_ic(ics,i)
         feature_array[i] = extract_features(ds, ic, featurizer; kwargs...)
         show_progress && next!(progress)
     end
     return reduce(hcat, feature_array)
 end
 
-_get_next_ic(ics::Function, i) = ics()
-_get_next_ic(ics::Dataset, i) = ics[i]
+_get_ic(ics::Function, i) = ics()
+_get_ic(ics::Dataset, i) = ics[i]
 
 
 """

@@ -52,21 +52,21 @@ using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
     attractors_ic = Dataset([0.5 0; 2.7 0]) #each IC along a row
 
     # println("Test No. 1 Supervised, generated ics.")
-    fs, class_labels = basin_fractions_clustering(ds, featurizer, ics, attractors_ic; show_progress = true, T=Texec, Ttr, Δt)
+    fs, class_labels = basin_fractions_clustering(ds, featurizer, ics, attractors_ic; show_progress = false, T = Texec, Ttr, Δt)
     # fs = (Dict(2 => 0.8452,1 => 0.1548)
     @test 0.10 < fs[1] < 0.22
     @test 0.75 < fs[2] < 0.90
 
 
     # println("Test No. 1 Supervised, generator ics.")
-    fs = basin_fractions_clustering(ds, featurizer, ics_foo, attractors_ic; show_progress = false, N=N, T=Texec, Ttr, Δt)
+    fs = basin_fractions_clustering(ds, featurizer, ics_foo, attractors_ic; show_progress = false, N = N, T = Texec, Ttr, Δt)
     # fs = (Dict(2 => 0.8452,1 => 0.1548)
     @test 0.10 < fs[1] < 0.25
     @test 0.76 < fs[2] < 0.88
 
 
     # println("Test No2. Unsupervised, generated ics.")
-    fs, class_labels = basin_fractions_clustering(ds, featurizer, ics; show_progress = false, T=Texec, Ttr, Δt)
+    fs, class_labels = basin_fractions_clustering(ds, featurizer, ics; show_progress = false, T = Texec, Ttr, Δt)
     # fs = (Dict(2 => 0.1548,1 => 0.8452)
     @test 0.75 < fs[1] < 0.90
     @test 0.10 < fs[2] < 0.25
@@ -110,7 +110,7 @@ end
     #---Running for supervised
     #templates
     attractors_ic = Dataset([0.21 0.02; 1.05 0.77; -0.67 0.02; -0.46 0.3; -0.43 0.12])
-    fs, class_labels = basin_fractions_clustering(ds, featurizer, ics, attractors_ic; show_progress = true, T=Texec, Ttr, Δt)
+    fs, class_labels = basin_fractions_clustering(ds, featurizer, ics, attractors_ic; show_progress = false, T=Texec, Ttr, Δt)
     #original result: fs = (Dict(4 => 0.0248,2 => 0.5086,3 => 0.028,5 => 0.2424,1 => 0.1962), [1, 2, 5, 2, 2, 1, 2, 1, 5, 5  …  2, 5, 1, 2, 2, 2, 2, 2, 1, 2])
     @test fs[5] == 0.252
     @test fs[4] == 0.023

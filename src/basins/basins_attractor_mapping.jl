@@ -1,28 +1,9 @@
-"""
-    AttractorMapper(ds::DynamicalSystem, args...; kwargs...) → mapper
-Subtypes of `AttractorMapper` are structures that map initial conditions of `ds` to 
-attractors. Currently available mapping methods:
-* [`AttractorsViaRecurrences`](@ref)
-* [`AttractorsViaProximity`](@ref)
-
-`AttractorMapper` subtypes can always be used directly with [`basin_fractions`](@ref).
-
-In addition, some mappers can be called as a function of an initial condition:
-```julia
-label = mapper(u0)
-```
-and this will on the fly compute and return the label of the attractor `u0` converges at.
-The mappers that can do this are:
-* [`AttractorsViaRecurrences`](@ref)
-* [`AttractorsViaProximity`](@ref)
-"""
 struct AttractorMapperFAFAFAF{B<:BasinsInfo, I, K}
     bsn_nfo::B
     integ::I
     kwargs::K
 end
 
-abstract type AttractorMapper end
 
 """
     AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict; kwargs...)
@@ -30,14 +11,12 @@ Map initial conditions to attractors based on whether the trajectory reaches `ε
 close to any of the user-provided `attractors`. They have to be in a form of a dictionary
 mapping attractor labels to `Dataset`s containing the attractors.
 
-The process works identically as "Refining basins of attraction" of 
-[`basins_of_attraction`](@ref).
+The state of the system gets stepped, and at each step the minimum distance to all
+attractors is computed. If any of these distances is `≤ ε`, then the label of the nearest
+attractor is returned. 
 
 Because in this method all possible attractors are already known to the user,
 the method can also be called _supervised_.
-
-**Warning:** This method will never terminate if the trajectory converges to an attractor
-that is _not_ in `attractors`.
 
 ## Keywords
 * `Δt = 1`: Step size for `ds`.
@@ -54,6 +33,7 @@ struct AttractorsViaProximity{DS, D, T} <: AttractorMapper
     Δt::T
     mx_chk_lost::Int
     horizon_limit::T
+    lost_count::Ref{Int}
 end
 function AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict; 
         ε=1e-3, Δt=1, mx_chk_lost=1000, horizon_limit=1e6

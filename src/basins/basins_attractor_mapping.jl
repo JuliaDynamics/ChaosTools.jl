@@ -1,66 +1,114 @@
 """
-    AttractorMapper(ds, mapping_method; kwargs...) → mapper
-Initialize a structure that maps initial conditions of `ds` to attractors,
-using the given `mapping_method`.
-
-Currently available mapping methods:
+    AttractorMapper(ds::DynamicalSystem, args...; kwargs...) → mapper
+Subtypes of `AttractorMapper` are structures that map initial conditions of `ds` to 
+attractors. Currently available mapping methods:
 * [`AttractorsViaRecurrences`](@ref)
 * [`AttractorsViaProximity`](@ref)
 
-`AttractorMapper` can always be used directly with [`basin_fractions`](@ref).
+`AttractorMapper` subtypes can always be used directly with [`basin_fractions`](@ref).
 
 In addition, some mappers can be called as a function of an initial condition:
 ```julia
-label::Int = mapper(u0)
+label = mapper(u0)
 ```
-and this will on the fly comput and return the label of the attractor `u0` converges at.
+and this will on the fly compute and return the label of the attractor `u0` converges at.
 The mappers that can do this are:
 * [`AttractorsViaRecurrences`](@ref)
 * [`AttractorsViaProximity`](@ref)
 """
-struct AttractorMapper{B<:BasinsInfo, I, K}
+struct AttractorMapperFAFAFAF{B<:BasinsInfo, I, K}
     bsn_nfo::B
     integ::I
     kwargs::K
 end
 
-abstract type AttractorMappingMethod end
+abstract type AttractorMapper end
 
 """
-    AttractorsViaProximity(attractors::Dataset, ε = 1e-3)
+    AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict; kwargs...)
 Map initial conditions to attractors based on whether the trajectory reaches `ε`-distance
-close to any of the user-provided `attractors`.
+close to any of the user-provided `attractors`. They have to be in a form of a dictionary
+mapping attractor labels to `Dataset`s containing the attractors.
 
 The process works identically as "Refining basins of attraction" of 
-[`basins_of_attraction`](@ref). 
+[`basins_of_attraction`](@ref).
 
 Because in this method all possible attractors are already known to the user,
-the method can also be called **supervised**.
+the method can also be called _supervised_.
+
+**Warning:** This method will never terminate if the trajectory converges to an attractor
+that is _not_ in `attractors`.
+
+## Keywords
+* `Δt = 1`: Step size for `ds`.
+* `horizon_limit = 1e6`: If `norm(get_state(ds))` exceeds this number, it is assumed
+  that the trajectory diverged (gets labelled as `-1`).
+* `mx_chk_lost = 1000`: If the integrator has been stepped this many times without
+  coming `ε`-near to any attractor,  it is assumed
+  that the trajectory diverged (gets labelled as `-1`).
 """
-struct AttractorsViaProximity <: AttractorMappingMethod
-    attractors::A
+struct AttractorsViaProximity{DS, D, T} <: AttractorMapper
+    ds::DS
+    attractors::Dict{Int16, Dataset{D, T}}
     ε::Float64
+    Δt::T
+    mx_chk_lost::Int
+    horizon_limit::T
+end
+function AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict; 
+        ε=1e-3, Δt=1, mx_chk_lost=1000, horizon_limit=1e6
+    )
+    @assert dimension(ds) == dimension(first(attractors))
+    return AttractorsViaProximity(ds, attractors, ε, Δt, horizon_limit)
 end
 
+function FAFAFA()
+    if isnothing(grid) && isnothing(attractors)
+        @error "At least one of `grid` of `attractor` must be provided."
+    end
+    if isnothing(grid)
+        # dummy grid for initialization if the second mode is used
+        grid = ntuple(x -> range(-1, 1,step = 0.1), length(ds.u0))
+    end
+    if isnothing(idxs)
+        idxs = 1:length(grid)
+    end
+    if isnothing(complete_state)
+        complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
+    end
+    bsn_nfo, integ = basininfo_and_integ(ds, attractors, grid, Δt, T, SVector(idxs...), complete_state, diffeq)
+    return AttractorMapper(bsn_nfo, integ, kwargs)
+end
+
+
+
+# TODO: At the moment this is not useful. BUT, when we add the sparse matrices,
+# this will really be fundamentally different than the `basins_of_attraction`.
 """
-    AttractorsViaRecurrences(args...)
+    AttractorsViaRecurrences(ds::DynaicalSystem, grid::Tuple; kwargs...)
 Map initial conditions to attractors by identifying attractors on the fly based on
 recurrences in the state space, as outlined by[^Datseris2022] and the 
 [`basins_of_attraction`](@ref) function.
 
+This attractor mapper method is exactly the [`basins_of_attraction`](@ref) function
+but operating on-the-fly instead, and hence has exactly the same keywords
+and `grid` structure.
+
 [^Datseris2022]: G. Datseris and A. Wagemakers, [Chaos 32, 023104 (2022)]( https://doi.org/10.1063/5.0076568)
 """
-struct AttractorsViaRecurrences <: AttractorMappingMethod
-    field
+struct AttractorsViaRecurrences{DS, B<:BasinsInfo, I, K} <: AttractorMapper
+    ds::DS
+    bsn_nfo::B
+    integ::I
+    kwargs::K
 end
 
 
 
-function AttractorMapper(ds;
+function AttractorsViaRecurrences(ds, grid;
         # Notice that all of these are the same keywords as in `basins_of_attraction`
-        grid = nothing, attractors = nothing,
-        Δt=nothing, T=nothing, idxs = nothing,
-        complete_state = nothing,
+        Δt=nothing, T=nothing, idxs = 1:length(grid),
+        complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
         diffeq = NamedTuple(), kwargs...
     )
     if isnothing(grid) && isnothing(attractors)
@@ -80,9 +128,8 @@ function AttractorMapper(ds;
     return AttractorMapper(bsn_nfo, integ, kwargs)
 end
 
-# TODO: Notice, currently this code assumes that all versions of `AttractorMapper`
-# use the low level code of `basins_of_attraction`.
-function (mapper::AttractorMapper)(u0; kwargs...)
-    lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0; mapper.kwargs...)
+
+function (mapper::AttractorMapper)(u0)
+    lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0)
     return iseven(lab) ? (lab ÷ 2) : (lab - 1) ÷ 2
 end

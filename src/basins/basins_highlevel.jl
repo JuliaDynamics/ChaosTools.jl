@@ -4,8 +4,8 @@ export basins_of_attraction, automatic_Δt_basins, AttractorMapper
 """
     basins_of_attraction(grid::Tuple, ds::DynamicalSystem; kwargs...) -> basins, attractors
 Compute an estimate of the basins of attraction of a dynamical system `ds` on
-a partitioning of the state space given by `grid`. The method has been
-inspired by the 2D grid approach developed by Nusse & Yorke [^Yorke1997].
+a partitioning of the state space given by `grid`. 
+This function implements the method developed by Datseris & Wagemakers [^Datseris2022].
 It works _without_ knowledge of where attractors are; it identifies them automatically.
 
 The dynamical system can be:
@@ -27,7 +27,7 @@ Notice that for some attractors this list may be incomplete.
 
 See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_probabilities`](@ref).
 
-[^Yorke1997]: H. E. Nusse and J. A. Yorke, Dynamics: numerical explorations Ch. 7, Springer, New York, 1997
+[^Datseris2022]: G. Datseris and A. Wagemakers, [Chaos 32, 023104 (2022)]( https://doi.org/10.1063/5.0076568)
 
 ## Keyword Arguments
 * `Δt`: Approximate time step of the integrator, which is `1` for discrete systems.

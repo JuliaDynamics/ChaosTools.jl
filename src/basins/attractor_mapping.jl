@@ -18,4 +18,23 @@ The mappers that can do this are:
 """
 abstract type AttractorMapper end
 
-# TODO: Generic method for `basin_fractions` here
+# Generic method for `basin_fractions` here
+function basin_fractions(mapper::AttractorMapper, ics::Union{Dataset, Function};
+        show_progress = true, N = 1000
+    )
+    N = (typeof(ics) <: Function)  ? N : size(ics, 1) # number of actual ICs
+    if show_progress
+        progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:")
+    end
+    fs = Dict{Int, Float64}()
+    Threads.@threads for i = 1:N
+        ic = _get_ic(ics, i)
+        label = mapper(ic)
+        fs[label] += 1
+        show_progress && next!(progress)
+    end
+    return Dict(k => v/N for (k, v) in fs)
+end
+
+_get_ic(ics::Function, i) = ics()
+_get_ic(ics::Dataset, i) = ics[i]

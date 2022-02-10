@@ -39,7 +39,7 @@ If `εs` is a vector, `C_q` is calculated for each `ε ∈ εs`.
 If also `q=2`, we attempt to do further optimizations are done, if the allocation
 a matrix of size `N×N` is possible
 
-See [`grassberger`](@ref) for more. See also [`takens_best_estimate`](@ref).
+See [`grassberger_dim`](@ref) for more. See also [`takens_best_estimate`](@ref).
 
 [^Grassberger]: Peter Grassberger (2007) [Grassberger-Procaccia algorithm. Scholarpedia, 2(5):3043.](http://dx.doi.org/10.4249/scholarpedia.3043)
 

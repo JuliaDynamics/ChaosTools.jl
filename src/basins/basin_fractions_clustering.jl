@@ -103,16 +103,8 @@ end
 function basin_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
         show_progress = true, N = 1000
     )
-
     feature_array = extract_features(mapper, ics; show_progress, N)
-    if isnothing(mapper.attractors_ic) #unsupervised
-        class_labels = classify_features(feature_array; kwargs...)
-    else #supervised
-        feature_templates = extract_features(mapper, mapper.attractors_ic; show_progress=false)
-        class_labels = classify_features(feature_array, feature_templates;
-        kwargs...);
-    end
-
+    class_labels = classify_features(feature_array, mapper)
     fs = basin_fractions(class_labels) # Vanilla fractions method with Array input
     return typeof(ics) <: AbstractDataset ? (fs, class_labels) : fs
 end
@@ -147,25 +139,24 @@ end
 #####################################################################################
 function classify_features(features, mapper::AttractorsViaFeaturizing)
     if !isnothing(mapper.attractors_ic)
-        classify_features_distances(features, mapper.attractors_ic,
-        mapper.clust_method, mapper.clust_method_norm, mapper.clustering_threshold)
+        classify_features_distances(features, mapper)
     else
         classify_features_clustering(features, mapper.min_neighbors)
     end
 end
 
 # Supervised method: closest attractor template in feature space
-function classify_features_distances(features, templates, 
-        clust_method, clust_method_norm, clustering_threshold
-    )
+function classify_features_distances(features, mapper)
 
-    if clust_method == "kNN" || clust_method == "kNN_thresholded"
-        template_tree = searchstructure(KDTree, templates, clust_method_norm)
+    templates = extract_features(mapper, mapper.attractors_ic; show_progress=false)
+
+    if mapper.clust_method == "kNN" || mapper.clust_method == "kNN_thresholded"
+        template_tree = searchstructure(KDTree, templates, mapper.clust_method_norm)
         class_labels, class_errors = bulksearch(template_tree, features, NeighborNumber(1))
         class_labels = reduce(vcat, class_labels) # make it a vector
-        if clust_method == "kNN_thresholded" # Make label -1 if error bigger than threshold
+        if mapper.clust_method == "kNN_thresholded" # Make label -1 if error bigger than threshold
             class_errors = reduce(vcat, class_errors)
-            class_labels[class_errors .≥ clustering_threshold] .= -1
+            class_labels[class_errors .≥ mapper.clustering_threshold] .= -1
         end
     else
         error("Incorrect clustering mode.")

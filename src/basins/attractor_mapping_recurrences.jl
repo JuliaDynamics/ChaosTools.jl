@@ -19,10 +19,9 @@ and `grid` structure.
 
 [^Datseris2022]: G. Datseris and A. Wagemakers, [Chaos 32, 023104 (2022)]( https://doi.org/10.1063/5.0076568)
 """
-struct AttractorsViaRecurrences{DS, B<:BasinsInfo, I, K} <: AttractorMapper
-    ds::DS
-    bsn_nfo::B
+struct AttractorsViaRecurrences{I, B<:BasinsInfo} <: AttractorMapper
     integ::I
+    bsn_nfo::B
     kwargs::K
 end
 
@@ -34,25 +33,16 @@ function AttractorsViaRecurrences(ds, grid;
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
         diffeq = NamedTuple(), kwargs...
     )
-    if isnothing(grid) && isnothing(attractors)
-        @error "At least one of `grid` of `attractor` must be provided."
-    end
-    if isnothing(grid)
-        # dummy grid for initialization if the second mode is used
-        grid = ntuple(x -> range(-1, 1,step = 0.1), length(ds.u0))
-    end
-    if isnothing(idxs)
-        idxs = 1:length(grid)
-    end
     if isnothing(complete_state)
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
     end
     bsn_nfo, integ = basininfo_and_integ(ds, attractors, grid, Δt, T, SVector(idxs...), complete_state, diffeq)
-    return AttractorMapper(bsn_nfo, integ, kwargs)
+    return AttractorMapper(integ, bsn_nfo, kwargs)
 end
 
-
-function (mapper::AttractorMapper)(u0)
+function (mapper::AttractorsViaRecurrences)(u0)
+    # Low level code of `basins_of_attraction` function
     lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0)
+    # Transform to integers indexing from odd-even indexing
     return iseven(lab) ? (lab ÷ 2) : (lab - 1) ÷ 2
 end

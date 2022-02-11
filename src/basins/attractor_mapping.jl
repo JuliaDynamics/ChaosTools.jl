@@ -29,7 +29,8 @@ system by sampling initial conditions from `ics`, mapping them to attractors usi
 (which contains a reference to a `ds::DynamicalSystem`), and then simply taking the 
 ratios of how many initial conditions ended up to each attractor.
 
-The output `fs` is a dictionary whose keys are the labels given to each attractor, and the
+The output `fs` is a dictionary whose keys are the labels given to each attractor 
+(always integers enumerating the different attractors), and the
 values are their respective fractions. The label `-1` is given to any initial condition
 where `mapper` could not match to an attractor (this depends on the `mapper` type).
 See [`AttractorMapper`](@ref) for all possible `mapper` types.
@@ -41,7 +42,7 @@ If `ics` is a `Dataset` then besides `fs` the `labels` of each initial condition
 returned.
 
 ## Keyword arguments
-* `N=1000`: Number of random initial conditions to generate in case `ics` is a function.
+* `N = 1000`: Number of random initial conditions to generate in case `ics` is a function.
 * `show_progress = true`: Display a progress bar of the process.
 """
 function basin_fractions(mapper::AttractorMapper, ics::Union{AbstractDataset, Function};

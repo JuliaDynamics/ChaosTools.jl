@@ -121,10 +121,6 @@ function extract_features_allics(ds, ics::Union{Dataset, Function}, featurizer::
     return reduce(hcat, feature_array)
 end
 
-_get_ic(ics::Function, i) = ics()
-_get_ic(ics::Dataset, i) = ics[i]
-
-
 """
 `extract_features` receives an initial condition and returns its extracted features in a vector.
 It integrates the initial condition, applies the `featurizer` function and returns

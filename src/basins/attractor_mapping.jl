@@ -4,6 +4,7 @@ Subtypes of `AttractorMapper` are structures that map initial conditions of `ds`
 attractors. Currently available mapping methods:
 * [`AttractorsViaProximity`](@ref)
 * [`AttractorsViaRecurrences`](@ref)
+* [`AttractorsViaFeaturizing`](@ref)
 
 `AttractorMapper` subtypes can always be used directly with [`basin_fractions`](@ref).
 
@@ -23,7 +24,7 @@ abstract type AttractorMapper end
 """
     basin_fractions(mapper::AttractorMapper, ics::Union{Dataset, Function}; kwargs...)
 
-Compute the state space fractions `fs` of the basins of attraction of the given dynamical
+Approximate the state space fractions `fs` of the basins of attraction of the given dynamical
 system by sampling initial conditions from `ics`, mapping them to attractors using `mapper`
 (which contains a reference to a `ds::DynamicalSystem`), and then simply taking the 
 ratios of how many initial conditions ended up to each attractor.
@@ -33,37 +34,37 @@ values are their respective fractions. The label `-1` is given to any initial co
 which did not match any of the known attractors of `mapper`. See [`AttractorMapper`](@ref)
 for all possible `mapper` types.
 
-If `ics` is a `Dataset`, besides `fs` the `labels` of each initial condition are also
+Initial conditions are sampled from `ics`, which can either
+be a `Dataset` of initial conditions, or a 0-argument function `ics()` that spits out
+random initial conditions. See [`statespace_sampler`](@ref) to generate such functions.
+If `ics` is a `Dataset` then besides `fs` the `labels` of each initial condition are also
 returned.
 
 ## Keyword arguments
-* `N=1000`: Number of sample initial conditions to generate in case `ics` is a function.
+* `N=1000`: Number of random initial conditions to generate in case `ics` is a function.
 * `show_progress = true`: Display a progress bar of the process.
-
-## Parallelization note
-The trajectories in this method are integrated in parallel using `Threads`.
-To enable this, simply start Julia with the number of threads you want to use.
-
-[^Stender2021] : Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
-stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
 function basin_fractions(mapper::AttractorMapper, ics::Union{AbstractDataset, Function};
         show_progress = true, N = 1000
     )
-    N = (ics isa Function) ? N : size(ics, 1) # number of actual ICs
+    used_dataset = ics isa AbstractDataset
+    N = used_dataset ? size(ics, 1) : N
     if show_progress
         progress=ProgressMeter.Progress(N; desc="Mapping initial conditions to attractors:")
     end
     fs = Dict{Int, Float64}()
+    used_dataset && (labels = Vector{Int}(undef, N))
     # TODO: If we want to parallelize this, then we need to initialize as many
     # mappers as threads. Use a `threading` keyword and `deepcopy(mapper)`
     for i ∈ 1:N
         ic = _get_ic(ics, i)
         label = mapper(ic)
         fs[label] = get(fs, label, 0) + 1
+        used_dataset && (labels[i] = label)
         show_progress && next!(progress)
     end
-    return Dict(k => v/N for (k, v) in fs)
+    ffs = Dict(k => v/N for (k, v) in fs)
+    return used_dataset ? (ffs, labels) : ffs
 end
 
 _get_ic(ics::Function, i) = ics()

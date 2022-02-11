@@ -1,6 +1,5 @@
 export basins_of_attraction, automatic_Δt_basins, AttractorMapper
 
-
 """
     basins_of_attraction(grid::Tuple, ds::DynamicalSystem; kwargs...) -> basins, attractors
 Compute an estimate of the basins of attraction of a dynamical system `ds` on

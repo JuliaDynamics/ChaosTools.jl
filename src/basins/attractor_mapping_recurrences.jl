@@ -17,9 +17,9 @@ This attractor mapper method is exactly the [`basins_of_attraction`](@ref) funct
 but operating on-the-fly instead, and hence has exactly the same keywords
 and `grid` structure.
 
-[^Datseris2022]: G. Datseris and A. Wagemakers, [Chaos 32, 023104 (2022)]( https://doi.org/10.1063/5.0076568)
+[^Datseris2022]: G. Datseris and A. Wagemakers, [Chaos 32, 023104 (2022)](https://doi.org/10.1063/5.0076568)
 """
-struct AttractorsViaRecurrences{I, B<:BasinsInfo} <: AttractorMapper
+struct AttractorsViaRecurrences{I, B<:BasinsInfo, K} <: AttractorMapper
     integ::I
     bsn_nfo::B
     kwargs::K

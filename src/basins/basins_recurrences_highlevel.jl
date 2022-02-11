@@ -27,7 +27,7 @@ Notice that for some attractors this list may be incomplete.
 
 See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_probabilities`](@ref).
 
-[^Datseris2022]: G. Datseris and A. Wagemakers, [Chaos 32, 023104 (2022)]( https://doi.org/10.1063/5.0076568)
+[^Datseris2022]: G. Datseris and A. Wagemakers, [Chaos 32, 023104 (2022)](https://doi.org/10.1063/5.0076568)
 
 ## Keyword Arguments
 * `Δt`: Approximate time step of the integrator, which is `1` for discrete systems.

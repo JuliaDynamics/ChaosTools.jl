@@ -12,7 +12,8 @@ Because in this method all possible attractors are already known to the user,
 the method can also be called _supervised_.
 
 ## Keywords
-* `Δt = 1`: Time covered by each step (only valid for continuous systems).
+* `Ttr = 0`: Transient time to first evolve the system for before checking for proximity.
+* `Δt = 1`: Integration step time (only valid for continuous systems).
 * `horizon_limit = 1e6`: If `norm(get_state(ds))` exceeds this number, it is assumed
   that the trajectory diverged (gets labelled as `-1`).
 * `mx_chk_lost = 1000`: If the integrator has been stepped this many times without
@@ -27,6 +28,7 @@ struct AttractorsViaProximity{I, F, D, T, K} <: AttractorMapper
     attractors::Dict{Int16, Dataset{D, T}}
     ε::Float64
     Δt::T
+    Ttr::T
     mx_chk_lost::Int
     horizon_limit::T
     search_trees::K
@@ -34,7 +36,7 @@ struct AttractorsViaProximity{I, F, D, T, K} <: AttractorMapper
     idx::Vector{Int}
 end
 function AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict; 
-        ε=1e-3, Δt=1, mx_chk_lost=1000, horizon_limit=1e6, diffeq = NamedTuple()
+        ε=1e-3, Δt=1, Ttr=0, mx_chk_lost=1000, horizon_limit=1e6, diffeq = NamedTuple()
     )
     @assert dimension(ds) == dimension(first(attractors))
     search_trees = Dict(k => KDTree(att.data, Euclidean()) for (k, att) in attractors)
@@ -53,13 +55,14 @@ function AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict;
 
     return AttractorsViaProximity(
         integ, iter_f!, attractors, 
-        ε, Δt, mx_chk_lost, horizon_limit, 
+        ε, Δt, Ttr, mx_chk_lost, horizon_limit, 
         search_trees, [Inf], [0],
     )
 end
 
 function (mapper::AttractorsViaProximity)(u0)
     reinit!(mapper.integ, u0)
+    mapper.Ttr > 0 && mapper.step!(mapper.integ, mapper.Ttr)
     lost_count = 0
     while lost_count < mapper.mx_ch_lost
         mapper.step!(mapper.integ)

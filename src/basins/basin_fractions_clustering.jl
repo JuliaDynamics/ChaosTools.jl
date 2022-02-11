@@ -4,6 +4,39 @@ using Neighborhood #for kNN
 using Distances, Clustering, Distributions
 using ProgressMeter
 
+
+#####################################################################################
+# AttractorMapper API
+#####################################################################################
+struct AttractorsViaFeaturizing{DS<:DynamicalSystem, T, F, A, D, M} <: AttractorMapper
+    ds::DS
+    t::T
+    featurizer::F
+    attractors_ic::A
+    diffeq::K
+    clust_method_norm::M
+    clust_method::String
+    clustering_threshold::Float64
+    min_neighbors::Int
+end
+
+function AttractorsViaFeaturizing(ds::DynamicalSystem, featurizer::Function, 
+        attractors_ic::Union{Dataset, Nothing}=nothing; T=100, Ttr=100,Δt=1,
+        clust_method_norm=Euclidean(), clust_method = "kNN",
+        clustering_threshold = 0.0, min_neighbors = 10,
+    )
+    t = Ttr:Δt:T+Ttr
+    return AttractorsViaFeaturizing(
+        ds, t, featurizer, attractors_ic, diffeq,
+        clust_method_norm, clust_method, clustering_threshold, min_neighbors
+    )
+end
+
+
+#####################################################################################
+# Clustering classification low level code
+#####################################################################################
+
 """
     basin_fractions_clustering(
         ds::DynamicalSystem, featurizer::Function,
@@ -88,7 +121,7 @@ stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-
 function basin_fractions_clustering(ds::DynamicalSystem, featurizer::Function,
     ics::Union{Dataset, Function}, attractors_ic::Union{Dataset, Nothing}=nothing; kwargs...)
 
-    feature_array = extract_features_allics(ds, ics,  featurizer; kwargs...)
+    feature_array = extract_features_allics(ds, ics, featurizer; kwargs...)
 
     if isnothing(attractors_ic) #unsupervised, no templates;
         class_labels, class_errors = classify_solution(feature_array; kwargs...)

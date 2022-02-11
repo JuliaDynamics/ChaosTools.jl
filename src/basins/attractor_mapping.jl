@@ -31,8 +31,8 @@ ratios of how many initial conditions ended up to each attractor.
 
 The output `fs` is a dictionary whose keys are the labels given to each attractor, and the
 values are their respective fractions. The label `-1` is given to any initial condition
-which did not match any of the known attractors of `mapper`. See [`AttractorMapper`](@ref)
-for all possible `mapper` types.
+where `mapper` could not match to an attractor (this depends on the `mapper` type).
+See [`AttractorMapper`](@ref) for all possible `mapper` types.
 
 Initial conditions are sampled from `ics`, which can either
 be a `Dataset` of initial conditions, or a 0-argument function `ics()` that spits out

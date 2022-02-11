@@ -36,13 +36,15 @@ function AttractorsViaRecurrences(ds, grid;
     if isnothing(complete_state)
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
     end
-    bsn_nfo, integ = basininfo_and_integ(ds, attractors, grid, Δt, T, SVector(idxs...), complete_state, diffeq)
+    bsn_nfo, integ = basininfo_and_integ(
+        ds, attractors, grid, Δt, T, SVector(idxs...), complete_state, diffeq
+    )
     return AttractorMapper(integ, bsn_nfo, kwargs)
 end
 
 function (mapper::AttractorsViaRecurrences)(u0)
     # Low level code of `basins_of_attraction` function
-    lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0)
+    lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0; mapper.kwargs...)
     # Transform to integers indexing from odd-even indexing
     return iseven(lab) ? (lab ÷ 2) : (lab - 1) ÷ 2
 end

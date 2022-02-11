@@ -31,7 +31,7 @@ function basin_fractions(mapper::AttractorMapper, ics::Union{Dataset, Function};
     Threads.@threads for i = 1:N
         ic = _get_ic(ics, i)
         label = mapper(ic)
-        fs[label] += 1
+        fs[label] = get(fs, 1, 0) + 1
         show_progress && next!(progress)
     end
     return Dict(k => v/N for (k, v) in fs)

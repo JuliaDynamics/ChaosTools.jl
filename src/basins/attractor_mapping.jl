@@ -18,11 +18,12 @@ The mappers that can do this are:
 """
 abstract type AttractorMapper end
 
-# Generic method for `basin_fractions` here
+# Generic method for `basin_fractions` here.
+# It works for all mappers that define the function-like-object behavior
 function basin_fractions(mapper::AttractorMapper, ics::Union{Dataset, Function};
         show_progress = true, N = 1000
     )
-    N = (typeof(ics) <: Function)  ? N : size(ics, 1) # number of actual ICs
+    N = (ics isa Function)  ? N : size(ics, 1) # number of actual ICs
     if show_progress
         progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:")
     end

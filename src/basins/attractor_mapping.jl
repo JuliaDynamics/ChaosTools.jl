@@ -1,3 +1,8 @@
+export AttractorMapper,
+    AttractorsViaRecurrences,
+    AttractorsViaProximity,
+    AttractorsViaFeaturizing
+
 """
     AttractorMapper(ds::DynamicalSystem, args...; kwargs...) → mapper
 Subtypes of `AttractorMapper` are structures that map initial conditions of `ds` to 
@@ -7,7 +12,6 @@ attractors. Currently available mapping methods:
 * [`AttractorsViaFeaturizing`](@ref)
 
 `AttractorMapper` subtypes can always be used directly with [`basin_fractions`](@ref).
-
 In addition, some mappers can be called as a function of an initial condition:
 ```julia
 label = mapper(u0)
@@ -24,22 +28,25 @@ abstract type AttractorMapper end
 """
     basin_fractions(mapper::AttractorMapper, ics::Union{Dataset, Function}; kwargs...)
 
-Approximate the state space fractions `fs` of the basins of attraction of the given dynamical
-system by sampling initial conditions from `ics`, mapping them to attractors using `mapper`
+Approximate the state space fractions `fs` of the basins of attraction of a dynamical
+stystem by mapping initial conditions to attractors using `mapper`
 (which contains a reference to a `ds::DynamicalSystem`), and then simply taking the 
 ratios of how many initial conditions ended up to each attractor.
+
+Initial conditions to use are defined by `ics`. It can be:
+* a `Dataset` of initial conditions, in which case all are used.
+* a 0-argument function `ics()` that spits out random initial conditions.
+  Then `N` random initial conditions are chose.
+  See [`statespace_sampler`](@ref) to generate such functions.
+
+If `ics` is a `Dataset` then besides `fs` the `labels` of each initial condition are also
+returned.
 
 The output `fs` is a dictionary whose keys are the labels given to each attractor 
 (always integers enumerating the different attractors), and the
 values are their respective fractions. The label `-1` is given to any initial condition
 where `mapper` could not match to an attractor (this depends on the `mapper` type).
 See [`AttractorMapper`](@ref) for all possible `mapper` types.
-
-Initial conditions are sampled from `ics`, which can either
-be a `Dataset` of initial conditions, or a 0-argument function `ics()` that spits out
-random initial conditions. See [`statespace_sampler`](@ref) to generate such functions.
-If `ics` is a `Dataset` then besides `fs` the `labels` of each initial condition are also
-returned.
 
 ## Keyword arguments
 * `N = 1000`: Number of random initial conditions to generate in case `ics` is a function.

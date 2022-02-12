@@ -111,27 +111,4 @@ end
 end
 
 
-@testset "labelling mode test" begin
-    res = 70
-    ds = Systems.henon_iip(zeros(2); a = 1.4, b = 0.3)
-    xg = yg = range(-2.,2.,length = res)
-    grid = (xg,yg)
-    mapper = AttractorMapper(ds; grid = grid)
-    bsn = zeros(length(xg),length(yg))
-    # Test if basins are (almost) identical
-    I = CartesianIndices(bsn)
-    for ind in I
-        y0 = ChaosTools.generate_ic_on_grid(grid, ind)
-        bsn[ind] = mapper(y0)
-    end
-    basins, att = basins_of_attraction((xg,yg), ds)
-    @test sum(basins .!= bsn) < 5
-
-    mapper = AttractorMapper(ds; attractors = att)
-    l1 = mapper([1, 1])
-    @test l1 == 1
-end
-
-
-
 end

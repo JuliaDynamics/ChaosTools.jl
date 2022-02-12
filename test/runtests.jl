@@ -8,6 +8,7 @@ test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 ti = time()
 @testset "ChaosTools tests" begin
 
+include("basins/attractor_mapping_tests.jl")
 include("basins/basins_tests.jl")
 include("basins/uncertainty_tests.jl")
 include("basins/tipping_points_tests.jl")

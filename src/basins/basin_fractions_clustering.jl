@@ -8,7 +8,7 @@ using ProgressMeter
 #####################################################################################
 # AttractorMapper API
 #####################################################################################
-struct AttractorsViaFeaturizing{DS<:DynamicalSystem, T, F, A, D, M} <: AttractorMapper
+struct AttractorsViaFeaturizing{DS<:DynamicalSystem, T, F, A, K, M} <: AttractorMapper
     ds::DS
     Ttr::T
     Δt::T

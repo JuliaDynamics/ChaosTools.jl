@@ -37,9 +37,9 @@ function AttractorsViaRecurrences(ds, grid;
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
     end
     bsn_nfo, integ = basininfo_and_integ(
-        ds, attractors, grid, Δt, T, SVector(idxs...), complete_state, diffeq
+        ds, nothing, grid, Δt, T, SVector(idxs...), complete_state, diffeq
     )
-    return AttractorMapper(integ, bsn_nfo, kwargs)
+    return AttractorsViaRecurrences(integ, bsn_nfo, kwargs)
 end
 
 function (mapper::AttractorsViaRecurrences)(u0)

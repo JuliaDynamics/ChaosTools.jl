@@ -21,10 +21,10 @@ include("orbitdiagrams/produce_orbitdiagram.jl")
 
 include("basins/attractor_mapping.jl")
 include("basins/attractor_mapping_proximity.jl")
+include("basins/basins_recurrences_lowlevel.jl")
 include("basins/attractor_mapping_recurrences.jl")
 include("basins/basins_reinit.jl") # TODO: This file goes to `ProjectedSystem`
 include("basins/basins_recurrences_highlevel.jl")
-include("basins/basins_recurrences_lowlevel.jl")
 include("basins/basins_utilities.jl")
 include("basins/fractality_of_basins.jl")
 include("basins/tipping.jl")

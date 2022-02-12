@@ -35,5 +35,10 @@ using Random
         @test sum(values(fs)) == 1
     end
 
+    @tesetset "Proximity method" begin
+        A = trajectory(ds, 1000; Ttr = 100)
+
+    end
+
 end
 end

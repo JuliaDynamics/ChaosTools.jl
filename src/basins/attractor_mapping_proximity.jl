@@ -14,7 +14,8 @@ the method can also be called _supervised_.
 ## Keywords
 * `Ttr = 0`: Transient time to first evolve the system for before checking for proximity.
 * `Δt = 1`: Integration step time (only valid for continuous systems).
-* `horizon_limit = 1e6`: If `norm(get_state(ds))` exceeds this number, it is assumed
+* `horizon_limit = 1e3`: If the maximum distance of the trajectory from any of the given
+  attractors exceeds this limit, it is assumed
   that the trajectory diverged (gets labelled as `-1`).
 * `mx_chk_lost = 1000`: If the integrator has been stepped this many times without
   coming `ε`-near to any attractor,  it is assumed
@@ -34,9 +35,10 @@ struct AttractorsViaProximity{I, F, D, T, K} <: AttractorMapper
     search_trees::K
     dist::Vector{Float64}
     idx::Vector{Int}
+    maxdist::Float64
 end
 function AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict; 
-        ε=1e-3, Δt=1, Ttr=0, mx_chk_lost=1000, horizon_limit=1e6, diffeq = NamedTuple()
+        ε=1e-3, Δt=1, Ttr=0, mx_chk_lost=1000, horizon_limit=1e3, diffeq = NamedTuple()
     )
     @assert dimension(ds) == dimension(first(attractors))
     search_trees = Dict(k => KDTree(att.data, Euclidean()) for (k, att) in attractors)
@@ -62,22 +64,24 @@ end
 
 function (mapper::AttractorsViaProximity)(u0)
     reinit!(mapper.integ, u0)
+    mapper.maxdist = 0
     mapper.Ttr > 0 && mapper.step!(mapper.integ, mapper.Ttr)
     lost_count = 0
     while lost_count < mapper.mx_ch_lost
         mapper.step!(mapper.integ)
         lost_count += 1
+        lost_count > mx_chk_lost && return -1
         u = get_state(integ)
-        if lost_count > mx_chk_lost || norm(u) > horizon_limit
-            return -1
-        end
-        for (k, t) in mapper.search_trees # this is a `Dict`
+        for (k, tree) in mapper.search_trees # this is a `Dict`
             Neighborhood.NearestNeighbors.knn_point!(
-                t, u, false, mapper.dist, mapper.idx, Neighborhood.alwaysfalse
+                tree, u, false, mapper.dist, mapper.idx, Neighborhood.alwaysfalse
             )
             if mapper.dist[1] < ε
                 return k
+            elseif mapper.maxdist < mapper.dist[1]
+                mapper.maxdist = mapper.dist[1]
             end
         end
+        mapper.maxdist > horizon_limit && return -1
     end
 end

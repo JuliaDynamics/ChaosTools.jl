@@ -17,11 +17,7 @@ using Random
     min_bounds = minimum.(grid), max_bounds = maximum.(grid))
     ics = Dataset([sampler() for i in 1:1000])
 
-    @testset "Recurrences method" begin
-        mapper = AttractorsViaRecurrences(ds, grid)
-        @test 1  == mapper(u1)
-        @test -1 == mapper(u2)
-
+    function henon_fractions_test(mapper)
         fs = basin_fractions(mapper, sampler)
         @test 0.1 < fs[1] < 0.9
         @test 0.1 < fs[-1] < 0.9
@@ -35,9 +31,21 @@ using Random
         @test sum(values(fs)) == 1
     end
 
-    @tesetset "Proximity method" begin
-        A = trajectory(ds, 1000; Ttr = 100)
 
+    @testset "Recurrences method" begin
+        mapper = AttractorsViaRecurrences(ds, grid)
+        @test 1  == mapper(u1)
+        @test -1 == mapper(u2)
+        henon_fractions_test(mapper)
+    end
+
+    @tesetset "Proximity method" begin
+        A = trajectory(ds, 1000, u1; Ttr = 100)
+        attractors = Dict(1 => A)
+        mapper = AttractorsViaProximity(ds, attractors; Ttr = 100)
+        @test 1  == mapper(u1)
+        @test -1 == mapper(u2)
+        henon_fractions_test(mapper)
     end
 
 end

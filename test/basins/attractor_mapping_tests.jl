@@ -51,21 +51,66 @@ using Statistics
     end
 
     @testset "Featurizing" begin
-        # Featurizing is hard in the Henon map
         function henon_featurizer(A, t)
             x = [mean(A[:, 1]), mean(A[:, 2])]
             return any(isinf, x) ? [200.0, 200.0] : x
         end
         @testset "unsupervised" begin
         mapper = AttractorsViaFeaturizing(ds, henon_featurizer; Ttr = 100)
+        # Notice that unsupervised clustering cannot support "divergence to infinity",
+        # which it identifies as another attractor (in fact, the first one).
         henon_fractions_test(mapper; k = [2, 1])
         end
         @testset "supervised" begin
         mapper = AttractorsViaFeaturizing(ds, henon_featurizer;
         Ttr = 100, attractors_ic = Dataset([u1]), clustering_threshold = 20.0)
-        henon_fractions_test(mapper; k = [1, -1])
+        henon_fractions_test(mapper)
         end
     end
+
+@testset "Lorenz-84 system" begin
+    F = 6.886
+    G = 1.347
+    a = 0.255
+    b = 4.0
+    ds = Systems.lorenz84(; F, G, a, b)
+    u1 = [2.0, 1, 0] # periodic
+    u2 = [-2.0, 1, 0] # chaotic
+    u3 = [0, 1.5, 1.0] # fixed point
+
+    M = 150
+    xg = range(-3, 3; length = M)
+    yg = range(-3, 3; length = M)
+    zg = range(-3, 3; length = M)
+    grid = (xg, yg, zg)
+    sampler, = statespace_sampler(Random.MersenneTwister(1234); 
+    min_bounds = minimum.(grid), max_bounds = maximum.(grid))
+    ics = Dataset([sampler() for i in 1:1000])
+    
+    function lorenz84_fractions_test(mapper; k = [1, -1])
+        fs = basin_fractions(mapper, sampler; show_progress = false)
+        @test length(fs) == 3
+        for i in 1:3; @test 0 < fs[i] < 1; end
+        @test sum(values(fs)) == 1
+
+        # Deterministic test, should be tested with exact accuracy
+        fs, labels = basin_fractions(mapper, ics; show_progress = false)
+        @test sort!(unique(labels)) == [1,2,3]
+        @test fs[1] == 0.217
+        @test fs[2] == 0.206
+        @test fs[3] == 0.577
+    end
+
+    @testset "Recurrences" begin
+        mapper = AttractorsViaRecurrences(ds, grid; 
+        Δt = 0.2, mx_chk_fnd_att = 200, mx_chk_loc_att = 200)
+        @test 1 == mapper(u1)
+        @test 2 == mapper(u2)
+        @test 3 == mapper(u3)
+        lorenz84_fractions_test(mapper)
+    end
+
+end
 
 end
 end

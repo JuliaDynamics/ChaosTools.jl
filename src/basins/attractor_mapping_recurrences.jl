@@ -31,7 +31,7 @@ function AttractorsViaRecurrences(ds, grid;
         # Notice that all of these are the same keywords as in `basins_of_attraction`
         Δt=nothing, T=nothing, idxs = 1:length(grid),
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
-        diffeq = NamedTuple(), kwargs...
+        diffeq = NamedTuple(), show_progress = true, kwargs...
     )
     if isnothing(complete_state)
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))

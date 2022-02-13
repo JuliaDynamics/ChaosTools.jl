@@ -77,8 +77,9 @@ using Statistics
     u1 = [2.0, 1, 0] # periodic
     u2 = [-2.0, 1, 0] # chaotic
     u3 = [0, 1.5, 1.0] # fixed point
+    diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)
 
-    M = 150
+    M = 200
     xg = range(-3, 3; length = M)
     yg = range(-3, 3; length = M)
     zg = range(-3, 3; length = M)
@@ -96,14 +97,14 @@ using Statistics
         # Deterministic test, should be tested with exact accuracy
         fs, labels = basin_fractions(mapper, ics; show_progress = false)
         @test sort!(unique(labels)) == [1,2,3]
-        @test fs[1] == 0.217
-        @test fs[2] == 0.206
-        @test fs[3] == 0.577
+        @test fs[1] == 0.223
+        @test fs[2] == 0.191
+        @test fs[3] == 0.586
     end
 
     @testset "Recurrences" begin
         mapper = AttractorsViaRecurrences(ds, grid; 
-        Δt = 0.2, mx_chk_fnd_att = 400, mx_chk_loc_att = 400)
+        Δt = 0.2, mx_chk_fnd_att = 400, mx_chk_loc_att = 400, diffeq)
         @test 1 == mapper(u1)
         @test 2 == mapper(u2)
         @test 3 == mapper(u3)
@@ -112,8 +113,10 @@ using Statistics
     
     @testset "Proximity" begin
         udict = (1 => u1, 2 => u2, 3 => u3)
-        attractors = Dict(k => trajectory(ds, 100, v; Ttr=100, Δt = 0.01) for (k,v) in udict)
-        mapper = AttractorsViaProximity(ds, attractors; Ttr = 1000, ε=0.001)
+        attractors = Dict(
+            k => trajectory(ds, 100, v; Ttr=100, Δt = 0.01, diffeq) for (k,v) in udict
+        )
+        mapper = AttractorsViaProximity(ds, attractors; Ttr = 1000, ε=0.001, diffeq)
         @test 1 == mapper(u1)
         @test 2 == mapper(u2)
         @test 3 == mapper(u3)

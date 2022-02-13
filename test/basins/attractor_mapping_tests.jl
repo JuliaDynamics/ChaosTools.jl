@@ -103,7 +103,17 @@ using Statistics
 
     @testset "Recurrences" begin
         mapper = AttractorsViaRecurrences(ds, grid; 
-        Δt = 0.2, mx_chk_fnd_att = 200, mx_chk_loc_att = 200)
+        Δt = 0.2, mx_chk_fnd_att = 400, mx_chk_loc_att = 400)
+        @test 1 == mapper(u1)
+        @test 2 == mapper(u2)
+        @test 3 == mapper(u3)
+        lorenz84_fractions_test(mapper)
+    end
+    
+    @testset "Proximity" begin
+        udict = (1 => u1, 2 => u2, 3 => u3)
+        attractors = Dict(k => trajectory(ds, 100, v; Ttr=100, Δt = 0.01) for (k,v) in udict)
+        mapper = AttractorsViaProximity(ds, attractors; Ttr = 1000, ε=0.001)
         @test 1 == mapper(u1)
         @test 2 == mapper(u2)
         @test 3 == mapper(u3)

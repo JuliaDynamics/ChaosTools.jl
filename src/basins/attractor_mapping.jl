@@ -76,4 +76,4 @@ function basin_fractions(mapper::AttractorMapper, ics::Union{AbstractDataset, Fu
 end
 
 _get_ic(ics::Function, i) = ics()
-_get_ic(ics::Dataset, i) = ics[i]
+_get_ic(ics::AbstractDataset, i) = ics[i]

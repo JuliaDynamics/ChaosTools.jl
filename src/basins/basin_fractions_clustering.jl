@@ -24,10 +24,7 @@ end
 
 
 """
-    AttractorsViaFeaturizing(
-        ds::DynamicalSystem, featurizer::Function,
-        ics::Union{Dataset, Function} [, attractors_ic]; kwargs...
-    ) → mapper
+    AttractorsViaFeaturizing(ds::DynamicalSystem, featurizer::Function; kwargs...) → mapper
 
 Initialize a `mapper` to be used with [`basin_fractions`](@ref) that maps initial conditions
 to attractors using the featurizing and clustering method of[^Stender2021].
@@ -44,17 +41,19 @@ unsupervised (default) to supervised, see description below.
 * `T=100, Ttr=100, Δt=1, diffeq=NamedTuple()`: Propagated to [`trajectory`](@ref).
 
 ### Feature extraction and classification
+* `attractors_ic = nothing` Enables supervised version, see below. 
 * `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors
   (i.e. of similar features) each feature needs to have in order to be considered in a
   cluster (fewer than this, it is labeled as an outlier, `-1`).
 * `clust_method_norm=Euclidean()`: metric to be used in the clustering.
-* `clust_method = "kNN"`: (supervised method only) which clusterization method to
-  apply. If `"kNN"`, the first-neighbor clustering is used. If `"kNN_thresholded"`, a
-  subsequent step is taken, which considers as unclassified (label `-1`) the features
-  whose distance to the nearest template above the `clustering_threshold`.
 * `clustering_threshold = 0.0`: Maximum allowed distance between a feature and the
   cluster center for it to be considered inside the cluster.
   Only used when `clust_method = "kNN_thresholded"`.
+* `clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN"`: 
+  (supervised method only) which clusterization method to
+  apply. If `"kNN"`, the first-neighbor clustering is used. If `"kNN_thresholded"`, a
+  subsequent step is taken, which considers as unclassified (label `-1`) the features
+  whose distance to the nearest template is above the `clustering_threshold`.
 
 ## Description
 The trajectory `X` of each initial condition is transformed into a vector of features.
@@ -65,22 +64,22 @@ each trajectory belongs (i.e. in which basin of attractor each initial condition
 The method thus relies on the user having at least some basic idea about what attractors
 to expect in order to pick the right features, in contrast to [`AttractorsViaRecurrences`](@ref).
 
-The algorithm of[^Stender2021] that we use has two methods to do this.
-If the attractors are not known a-priori the **unsupervised method** should be used.
+The algorithm of[^Stender2021] that we use has two versions to do this.
+If the attractors are not known a-priori the **unsupervised versions** should be used.
 Here, the vectors of features of each initial condition are mapped to an attractor by
 analysing how the features are clustered in the feature space. Using the DBSCAN algorithm,
 we identify these clusters of features, and consider each cluster to represent an
 attractor. Features whose attractor is not identified are labeled as `-1`.
 
-In the **supervised method**, the attractors are known to the user, who provides one
-initial condition for each attractor using the optional `attractors_ic` argument.
+In the **supervised version**, the attractors are known to the user, who provides one
+initial condition for each attractor using the `attractors_ic` keyword.
 The algorithm then evolves these initial conditions, extracts their features, and uses them
 as templates representing the attrators. Each trajectory is considered to belong to the
 nearest template (based on the distance in feature space).
-Notice that the functionality of this method is similar to [`AttractorsViaProximity`](@ref).
+Notice that the functionality of this version is similar to [`AttractorsViaProximity`](@ref).
 Generally speaking, the [`AttractorsViaProximity`](@ref) is superior. However, if the
 dynamical system has extremely high-dimensionality, there may be reasons to use the
-supervised method of this featurizing algorithm.
+supervised method of this featurizing algorithm instead.
 
 ## Parallelization note
 The trajectories in this method are integrated in parallel using `Threads`.
@@ -89,10 +88,11 @@ To enable this, simply start Julia with the number of threads you want to use.
 [^Stender2021]: Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
 stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
-function AttractorsViaFeaturizing(ds::DynamicalSystem, featurizer::Function, 
-        attractors_ic::Union{Dataset, Nothing}=nothing; T=100, Ttr=100,Δt=1,
-        clust_method_norm=Euclidean(), clust_method = "kNN",
-        clustering_threshold = 0.0, min_neighbors = 10,
+function AttractorsViaFeaturizing(ds::DynamicalSystem, featurizer::Function;
+        attractors_ic::Union{AbstractDataset, Nothing}=nothing, T=100, Ttr=100,Δt=1,
+        clust_method_norm=Euclidean(), 
+        clustering_threshold = 0.0, min_neighbors = 10, diffeq = NamedTuple(),
+        clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN",
     )
     return AttractorsViaFeaturizing(
         ds, Ttr, Δt, T, featurizer, attractors_ic, diffeq,
@@ -104,12 +104,12 @@ function basin_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDa
         show_progress = true, N = 1000
     )
     feature_array = extract_features(mapper, ics; show_progress, N)
-    class_labels = classify_features(feature_array, mapper)
+    class_labels, = classify_features(feature_array, mapper)
     fs = basin_fractions(class_labels) # Vanilla fractions method with Array input
     return typeof(ics) <: AbstractDataset ? (fs, class_labels) : fs
 end
 
-function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{Dataset, Function};
+function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
     show_progress = true, N = 1000)
 
     N = (typeof(ics) <: Function)  ? N : size(ics, 1) #number of actual ICs
@@ -118,7 +118,7 @@ function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{Dataset, 
     if show_progress
         progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:")
     end
-    Threads.@threads for i = 1:N
+    for i = 1:N
         ic = _get_ic(ics,i)
         feature_array[i] = extract_features(mapper, ic)
         show_progress && ProgressMeter.next!(progress)
@@ -126,7 +126,7 @@ function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{Dataset, 
     return reduce(hcat, feature_array) # Convert to Matrix from Vector{Vector}
 end
 
-function extract_features(mapper::AttractorsViaFeaturizing, u0::AbstractVector)
+function extract_features(mapper::AttractorsViaFeaturizing, u0::AbstractVector{<:Real})
     u = trajectory(mapper.ds, mapper.total, u0; 
     Ttr=mapper.Ttr, Δt=mapper.Δt, diffeq=mapper.diffeq)
     t = (mapper.Ttr):(mapper.Δt):(mapper.total+mapper.Ttr)
@@ -161,7 +161,7 @@ function classify_features_distances(features, mapper)
     else
         error("Incorrect clustering mode.")
     end
-    return class_labels
+    return class_labels, class_errors
 end
 
 # Unsupervised method: clustering in feature space

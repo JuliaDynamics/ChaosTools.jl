@@ -37,7 +37,8 @@ struct AttractorsViaProximity{I, AK, D, T, N, K} <: AttractorMapper
     maxdist::Float64
 end
 function AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict; 
-        ε=1e-3, Δt=1, Ttr=100, mx_chk_lost=1000, horizon_limit=1e3, diffeq = NamedTuple()
+        ε=1e-3, Δt=1, Ttr=100, mx_chk_lost=1000, horizon_limit=1e3, diffeq = NamedTuple(),
+        warnε = false
     )
     @assert dimension(ds) == dimension(first(attractors)[2])
     search_trees = Dict(k => KDTree(att.data, Euclidean()) for (k, att) in attractors)
@@ -48,11 +49,31 @@ function AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict;
     # themselves
     integ = integrator(ds; diffeq)
 
-    return AttractorsViaProximity(
+    mapper = AttractorsViaProximity(
         integ, attractors,
-        ε, Δt, Ttr, mx_chk_lost, horizon_limit,
+        ε, Δt, eltype(Δt)(Ttr), mx_chk_lost, horizon_limit,
         search_trees, [Inf], [0], 0.0,
     )
+    
+    # Minimum distance between attractors
+    if warnε && length(attractors) > 1
+        minε = Inf
+        for (k, A) in attractors
+            for (m, tree) in search_trees
+                k == m && continue
+                for p in A # iterate over all points of attractor
+                    Neighborhood.NearestNeighbors.knn_point!(
+                        tree, p, false, mapper.dist, mapper.idx, Neighborhood.alwaysfalse
+                    )
+                    mapper.dist[1] < minε && (minε = mapper.dist[1])
+                end
+            end
+        end
+        println("Distance given is: $(ε)")
+        println("Minimum distance between attractros is: $(minε)")
+    end
+
+    return mapper
 end
 
 function (mapper::AttractorsViaProximity)(u0)
@@ -72,9 +93,9 @@ function (mapper::AttractorsViaProximity)(u0)
                 return k
             elseif maxdist < mapper.dist[1]
                 maxdist = mapper.dist[1]
+                maxdist > mapper.horizon_limit && return -1
             end
         end
-        maxdist > mapper.horizon_limit && return -1
     end
     return -1
 end

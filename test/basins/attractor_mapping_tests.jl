@@ -116,7 +116,7 @@ using Statistics
         attractors = Dict(
             k => trajectory(ds, 100, v; Ttr=100, Δt = 0.01, diffeq) for (k,v) in udict
         )
-        mapper = AttractorsViaProximity(ds, attractors; Ttr = 1000, ε=0.001, diffeq)
+        mapper = AttractorsViaProximity(ds, attractors; Ttr=1000, ε=0.01, Δt=0.1, diffeq)
         @test 1 == mapper(u1)
         @test 2 == mapper(u2)
         @test 3 == mapper(u3)

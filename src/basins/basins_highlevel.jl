@@ -1,4 +1,4 @@
-export draw_basin!, basins_of_attraction, automatic_Δt_basins, stroboscopicmap
+export draw_basin!, basins_of_attraction, automatic_Δt_basins, stroboscopicmap, projectedsystem
 
 
 """
@@ -246,4 +246,59 @@ function Base.show(io::IO, smap::StroboscopicMap)
     println(io, "Iterator of the Stroboscopic map")
     println(io,  rpad(" rule f: ", 14),     DynamicalSystemsBase.eomstring(smap.integ.f.f))
     println(io,  rpad(" Period: ", 14),     smap.T)
+end
+
+
+
+function projectedsystem(ds::CDS{IIP, S, D}, Δt = nothing;  u0 = get_state(ds),
+	idxs = 1:length(get_state(ds)), complete_state = zeros(eltype(get_state(ds)), 0),
+	diffeq = NamedTuple(), kwargs...
+	) where {IIP, S, D}
+
+    if !isempty(kwargs)
+        @warn DIFFEQ_DEP_WARN
+        diffeq = NamedTuple(kwargs)
+    end
+
+	if isnothing(Δt)
+		@warn "Δt must be defined, taking Δt=0.01 as default"
+		Δt = 0.01
+	end
+
+	Ds = length(get_state(ds))
+    if complete_state isa AbstractVector && (length(complete_state) ≠ Ds-length(idxs))
+        error("Vector `complete_state` must have length D-Dg!")
+    end
+
+	idxs = SVector(idxs...)
+	complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(ds)))
+    get_projected_state = (ds) -> view(get_state(ds), idxs)
+	integ = integrator(ds, u0; diffeq)
+
+	return ProjectedSystem(integ, Δt, complete_and_reinit!, get_projected_state)
+end
+
+mutable struct ProjectedSystem{I, T, F, G}
+	integ::I
+	Δt::T
+	complete_and_reinit!::F
+	get_projected_state::G
+end
+
+function DynamicalSystemsBase.step!(psys::ProjectedSystem)
+	step!(psys.integ, psys.Δt)
+	return psys.get_projected_state(psys.integ)
+end
+function DynamicalSystemsBase.reinit!(psys::ProjectedSystem, u0)
+	psys.complete_and_reinit!(psys.integ, u0)
+	return
+end
+function DynamicalSystemsBase.get_state(psys::ProjectedSystem)
+	return psys.get_projected_state(psys.integ)
+end
+
+function Base.show(io::IO, psys::ProjectedSystem)
+    println(io, "Iterator of the Projected System")
+    println(io,  rpad(" rule f: ", 14),     DynamicalSystemsBase.eomstring(psys.integ.f.f))
+    #println(io,  rpad(" Period: ", 14),     psys.T)
 end

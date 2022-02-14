@@ -1,4 +1,4 @@
-export draw_basin!, basins_of_attraction, automatic_Δt_basins
+export draw_basin!, basins_of_attraction, automatic_Δt_basins, stroboscopicmap
 
 
 """
@@ -169,7 +169,7 @@ and the keyword `N` is `5000` by default.
 
 Notice that `Δt` should not be too small which happens typically if the grid resolution
 is high. It is okay for [`basins_of_attraction`](@ref) if the trajectory skips a few cells.
-But if `Δt` is too small the default values for all other keywords such 
+But if `Δt` is too small the default values for all other keywords such
 as `mx_chk_hit_bas` need to be increased drastically.
 
 Also, `Δt` that is smaller than the internal step size of the integrator will cause
@@ -179,7 +179,7 @@ function automatic_Δt_basins(ds, grid;
         idxs = 1:length(grid), N = 5000, diffeq = NamedTuple(),
         complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
     )
-    
+
     if ds isa Union{PoincareMap, DiscreteDynamicalSystem}
         return 1
     end
@@ -203,4 +203,47 @@ function automatic_Δt_basins(ds, grid;
         dudt += norm(deriv)
     end
     return Δt = 10*s*N/dudt
+end
+
+
+
+function stroboscopicmap(ds::CDS{IIP, S, D}, T = nothing; u0 = get_state(ds),
+	diffeq = NamedTuple(), kwargs...
+	) where {IIP, S, D}
+
+    if !isempty(kwargs)
+        @warn DIFFEQ_DEP_WARN
+        diffeq = NamedTuple(kwargs)
+    end
+
+	if isnothing(T)
+		@warn "T must be defined, taking T=1 as default"
+		T =1
+	end
+
+	integ = integrator(ds, u0; diffeq)
+	return StroboscopicMap(integ, T)
+end
+
+mutable struct StroboscopicMap{I, F}
+	integ::I
+	T::F
+end
+
+function DynamicalSystemsBase.step!(smap::StroboscopicMap)
+	step!(smap.integ, smap.T, true)
+	return smap.integ.u
+end
+function DynamicalSystemsBase.reinit!(smap::StroboscopicMap, u0)
+	reinit!(smap.integ, u0)
+	return
+end
+function DynamicalSystemsBase.get_state(smap::StroboscopicMap)
+	return smap.integ.u
+end
+
+function Base.show(io::IO, smap::StroboscopicMap)
+    println(io, "Iterator of the Stroboscopic map")
+    println(io,  rpad(" rule f: ", 14),     DynamicalSystemsBase.eomstring(smap.integ.f.f))
+    println(io,  rpad(" Period: ", 14),     smap.T)
 end

@@ -7,31 +7,12 @@ export correlationsum, grassberger_dim, boxed_correlationsum,
 estimate_r0_buenoorovio, data_boxing, autoprismdim, estimate_r0_theiler
 
 """
-    correlationsum(X, ε::Real; w = 0, norm = Euclidean(), q = 2) → C_q(ε)
+    correlationsum(X, ε; w = 0, norm = Euclidean(), q = 2) → C_q(ε)
 Calculate the `q`-order correlation sum of `X` (`Dataset` or timeseries)
 for a given radius `ε` and `norm`. They keyword `show_progress = false` can be used
 to display a progress bar for large `X`.
 
 The function [`boxed_correlationsum`](@ref) is faster and should be preferred over this one.
-
-## Description
-The correlation sum is done using the formula:
-```math
-C_2(\\epsilon) = \\frac{2}{(N-w)(N-w-1)}\\sum_{i=1}^{N}\\sum_{j=1+w+i}^{N} B(||X_i - X_j|| < \\epsilon)
-```
-for `q=2` and
-```math
-C_q(\\epsilon) = \\left[\\frac{1}{\\alpha} \\sum_{i=w+1}^{N-w}\\left[\\sum_{j:|i-j| > w} B(||X_i - X_j|| < \\epsilon)\\right]^{q-1}\\right]^{1/(q-1)}
-```
-where
-```math
-\\alpha = (N-2w)(N-2w-1)^{(q-1)}
-```
-for `q≠2`, where ``N`` is its length and ``B`` gives 1 if the argument is
-`true`. `w` is the [Theiler window](@ref). If `ε` is a vector its values have to be
-ordered. See the article of Grassberger for the general definition [^Grassberger2007] and the book "Nonlinear Time Series Analysis" [^Kantz2003], Ch. 6, for
-a discussion around `w` and choosing best values and Ch. 11.3 for the
-explicit definition of the q-order correlationsum.
 
     correlationsum(X, εs::AbstractVector; w, norm, q) → C_q(ε)
 
@@ -41,11 +22,42 @@ a matrix of size `N×N` is possible
 
 See [`grassberger_dim`](@ref) for more. See also [`takens_best_estimate`](@ref).
 
-[^Grassberger]: Peter Grassberger (2007) [Grassberger-Procaccia algorithm. Scholarpedia, 2(5):3043.](http://dx.doi.org/10.4249/scholarpedia.3043)
+## Description
+The correlation sum is defined as follows for `q=2`:
+```math
+C_2(\\epsilon) = \\frac{2}{(N-w)(N-w-1)}\\sum_{i=1}^{N}\\sum_{j=1+w+i}^{N} 
+B(||X_i - X_j|| < \\epsilon)
+```
+for as follows for `q≠2`
+```math
+C_q(\\epsilon) = \\left[\\frac{1}{\\alpha} \\sum_{i=w+1}^{N-w}
+\\left[\\sum_{j:|i-j| > w} B(||X_i - X_j|| < \\epsilon)\\right]^{q-1}\\right]^{1/(q-1)}
+```
+where
+```math
+\\alpha = (N-2w)(N-2w-1)^{(q-1)}
+```
+with ``N`` the length of `X` and ``B`` gives 1 if its argument is
+`true`. `w` is the [Theiler window](@ref). 
+See the article of Grassberger for the general definition [^Grassberger2007] and 
+the book "Nonlinear Time Series Analysis" [^Kantz2003], Ch. 6, for
+a discussion around choosing best values for `w`, and Ch. 11.3 for the
+explicit definition of the q-order correlationsum.
 
-[^Kantz]: Kantz, H., & Schreiber, T. (2003). [More about invariant quantities. In Nonlinear Time Series Analysis (pp. 197-233). Cambridge: Cambridge University Press.](https://doi:10.1017/CBO9780511755798.013)
+Notice that our definition further exponentiates ``C_q`` with ``1/(q-1)``, so that
+one can always compute the q-order generalized dimension as the slope of the
+log-log plot of ``C_q`` vs. ``\\varepsilon``.
+
+[^Grassberger2007]: 
+    Peter Grassberger (2007) [Grassberger-Procaccia algorithm. Scholarpedia, 
+    2(5):3043.](http://dx.doi.org/10.4249/scholarpedia.3043)
+
+[^Kantz2003]: 
+    Kantz, H., & Schreiber, T. (2003). [Nonlinear Time Series Analysis, 
+    Cambridge University Press.](https://doi.org/10.1017/CBO9780511755798)
 """
 function correlationsum(X, ε; q = 2, norm = Euclidean(), w = 0, show_progress = false)
+    q ≤ 1 && @warn "The correlation sum is ill-defined for q ≤ 1."
     if q == 2
         correlationsum_2(X, ε, norm, w, show_progress)
     else
@@ -93,7 +105,7 @@ end
 
 # Optimized version
 function correlationsum_2(X, εs::AbstractVector, norm, w, show_progress)
-    @assert issorted(εs) "Sorted εs required for optimized version."
+    @assert issorted(εs) "Sorted `ε` required for optimized version."
     d = try
         distancematrix(X, norm)
     catch err

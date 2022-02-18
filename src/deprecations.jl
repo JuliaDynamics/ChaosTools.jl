@@ -9,3 +9,5 @@ explicit keyword `diffeq` instead.
 
 
 # Don't export `boxregion` from `sampler.jl`
+
+# Delete `grassberger_dim`.

@@ -12,15 +12,13 @@ Calculate the `q`-order correlation sum of `X` (`Dataset` or timeseries)
 for a given radius `ε` and `norm`. They keyword `show_progress = true` can be used
 to display a progress bar for large `X`.
 
-The function [`boxed_correlationsum`](@ref) is faster and should be preferred over this one.
-
     correlationsum(X, εs::AbstractVector; w, norm, q) → C_q(ε)
 
-If `εs` is a vector, `C_q` is calculated for each `ε ∈ εs`.
-If also `q=2`, we attempt to do further optimizations are done, if the allocation
-a matrix of size `N×N` is possible
+If `εs` is a vector, `C_q` is calculated for each `ε ∈ εs` more efficiently.
+If also `q=2`, we attempt to do further optimizations, if the allocation
+a matrix of size `N×N` is possible.
 
-See [`grassberger_dim`](@ref) for more. See also [`takens_best_estimate`](@ref).
+The function [`boxed_correlationsum`](@ref) is faster and should be preferred over this one.
 
 ## Description
 The correlation sum is defined as follows for `q=2`:
@@ -44,9 +42,8 @@ the book "Nonlinear Time Series Analysis" [^Kantz2003], Ch. 6, for
 a discussion around choosing best values for `w`, and Ch. 11.3 for the
 explicit definition of the q-order correlationsum.
 
-Notice that our definition further exponentiates ``C_q`` with ``1/(q-1)``, so that
-one can always compute the q-order generalized dimension as the slope of the
-log-log plot of ``C_q`` vs. ``\\varepsilon``.
+The scaling of ``\\log C_q`` versus ``\\log \\epsilon`` approximates the q-order
+generalized (Rényi) dimension.
 
 [^Grassberger2007]: 
     Peter Grassberger (2007) [Grassberger-Procaccia algorithm. Scholarpedia, 
@@ -213,6 +210,7 @@ See also [`takens_best_estimate`](@ref).
     data. Physical Review A, 34](https://doi.org/10.1103/PhysRevA.34.2427)
 """
 function grassberger_dim(data::AbstractDataset, εs = estimate_boxsizes(data); kwargs...)
+    @warn "`grassberger_dim` is deprecated and will be removed in future versions."
     cm = correlationsum(data, εs; kwargs...)
     return linear_region(log.(εs), log.(cm))[2]
 end

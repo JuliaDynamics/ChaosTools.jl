@@ -28,16 +28,9 @@ where `` \\Psi(j) = \\frac{\\text{d} \\log Γ(j)}{\\text{d} j}
 function correlationsum_fixedmass(data, max_j; metric = Euclidean(), M = length(data), w = 0)
     N = length(data)
     @assert M ≤ N
-    # Transform the data into a tree.
     tree = searchstructure(KDTree, data, metric)
-    # Calculate all nearest neighbours up to max_j.
-    _, distances =
-        bulksearch(
-            tree,
-            N == M ? data.data : data[view(randperm(N), 1:M)],
-            NeighborNumber(max_j),
-            Theiler(w),
-        )
+    searchdata = N == M ? data : view(data, view(randperm(N), 1:M))
+    _, distances = bulksearch(tree, searchdata, NeighborNumber(max_j), Theiler(w))
     # The epsilons define the left side of the equation
     ys = [digamma(j) - log(N) for j in 1:max_j]
     # Holds the mean value of the logarithms of the distances.

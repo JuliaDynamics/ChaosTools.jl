@@ -16,8 +16,8 @@ The implementation here is due to to [^Grassberger1988], which defines
 \\Delta \\times \\overline{\\log r^{(j)}} \\sim Ψ(j) - \\log N
 ```
 where `` \\Psi(j) = \\frac{\\text{d} \\log Γ(j)}{\\text{d} j}
-``, `rs` = ``\\overline{\\log r^{(j)}}`` and `ys` = ``\\Psi(j) - \\log N``
-(``N`` is the length of the data).
+`` is the digamma function, `rs` = ``\\overline{\\log r^{(j)}}`` and 
+`ys` = ``\\Psi(j) - \\log N`` (``N`` is the length of the data).
 
 ``\\Delta`` can be computed by using `linear_region(rs, ys)`.
 

@@ -3,7 +3,7 @@ import ProgressMeter
 # Original correlation sum
 #######################################################################################
 using Distances, Roots
-export correlationsum, grassberger_dim, boxed_correlationsum,
+export correlationsum, boxed_correlationsum,
 estimate_r0_buenoorovio, data_boxing, autoprismdim, estimate_r0_theiler
 
 """
@@ -58,7 +58,7 @@ function correlationsum(X, ε; q = 2, norm = Euclidean(), w = 0, show_progress =
     if q == 2
         correlationsum_2(X, ε, norm, w, show_progress)
     else
-        correlationsum_q(X, ε, q, norm, w, show_progress)
+        correlationsum_q(X, ε, eltype(X)(q), norm, w, show_progress)
     end
 end
 
@@ -79,7 +79,6 @@ end
 
 function correlationsum_q(X, ε::Real, q, norm, w, show_progress)
     N, C = length(X), zero(eltype(X))
-    normalisation = (N-2w)*(N-2w-one(eltype(X)))^(q-1)
     if show_progress
         progress = ProgressMeter.Progress(length(1+w:N-w); desc="Correlation sum: ", dt=1)
     end
@@ -97,10 +96,13 @@ function correlationsum_q(X, ε::Real, q, norm, w, show_progress)
         C += C_current^(q - 1)
         show_progress && ProgressMeter.next!(progress)
     end
+    normalisation = (N-2w)*(N-2w-1)^(q-1)
     return (C / normalisation) ^ (1 / (q-1))
 end
 
-# Optimized version
+#######################################################################################
+# Optimized versions (vector ε)
+#######################################################################################
 function correlationsum_2(X, εs::AbstractVector, norm, w, show_progress)
     @assert issorted(εs) "Sorted `ε` required for optimized version."
     d = try
@@ -109,9 +111,9 @@ function correlationsum_2(X, εs::AbstractVector, norm, w, show_progress)
         @warn "Couldn't create distance matrix ($(typeof(err))). Using slower algorithm..."
         return [correlationsum_2(X, ε, norm, w, show_progress) for ε in εs]
     end
-    return correlationsum_2_fb(X, εs, d, w, show_progress) # function barrier
+    return correlationsum_2_optimized(X, εs, d, w, show_progress) # function barrier
 end
-function correlationsum_2_fb(X, εs, d, w, show_progress)
+function correlationsum_2_optimized(X, εs, d, w, show_progress)
     Cs = zeros(eltype(X), length(εs))
     N = length(X)
     factor = 2/((N-w)*(N-1-w))
@@ -183,34 +185,4 @@ function distancematrix(X, norm = Euclidean())
         end
     end
     return d
-end
-
-"""
-    grassberger_dim(data, εs = estimate_boxsizes(data); kwargs...) → D_C
-Use the method of Grassberger and Proccacia[^Grassberger1983], and the correction by
-Theiler[^Theiler1986], to estimate the correlation dimension `D_C` of the given `data`.
-
-This function does something extremely simple:
-```julia
-cm = correlationsum(data, εs; kwargs...)
-return linear_region(log.(sizes), log(cm))[2]
-```
-i.e. it calculates [`correlationsum`](@ref) for various radii and then tries to find
-a linear region in the plot of the log of the correlation sum versus log(ε).
-See [`generalized_dim`](@ref) for a more thorough explanation.
-
-See also [`takens_best_estimate`](@ref).
-
-[^Grassberger1983]: 
-    Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)
-    ](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.50.346)
-
-[^Theiler1986]: 
-    Theiler, [Spurious dimension from correlation algorithms applied to limited time-series
-    data. Physical Review A, 34](https://doi.org/10.1103/PhysRevA.34.2427)
-"""
-function grassberger_dim(data::AbstractDataset, εs = estimate_boxsizes(data); kwargs...)
-    @warn "`grassberger_dim` is deprecated and will be removed in future versions."
-    cm = correlationsum(data, εs; kwargs...)
-    return linear_region(log.(εs), log.(cm))[2]
 end

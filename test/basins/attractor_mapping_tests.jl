@@ -44,7 +44,7 @@ using Statistics
     @testset "Proximity" begin
         A = trajectory(ds, 1000, u1; Ttr = 100)
         attractors = Dict(1 => A)
-        mapper = AttractorsViaProximity(ds, attractors; Ttr = 100)
+        mapper = AttractorsViaProximity(ds, attractors, 1e-3; Ttr = 100)
         @test 1  == mapper(u1)
         @test -1 == mapper(u2)
         henon_fractions_test(mapper)
@@ -88,7 +88,7 @@ using Statistics
     min_bounds = minimum.(grid), max_bounds = maximum.(grid))
     ics = Dataset([sampler() for i in 1:1000])
 
-    function lorenz84_fractions_test(mapper; k = [1, -1])
+    function lorenz84_fractions_test(mapper)
         fs = basin_fractions(mapper, sampler; show_progress = false)
         @test length(fs) == 3
         for i in 1:3; @test 0 < fs[i] < 1; end
@@ -106,21 +106,25 @@ using Statistics
     # fractions. This needs to be resolved. I am using fairly high accuracy in all versions.
     # Which one gives the "correct" results?
 
-    @testset "Recurrences" begin
-        mapper = AttractorsViaRecurrences(ds, grid;
-        Δt = 0.2, mx_chk_fnd_att = 400, mx_chk_loc_att = 400, diffeq)
+    @testset "Proximity" begin
+        udict = (1 => u1, 2 => u2, 3 => u3)
+        attractors = Dict(
+            k => trajectory(ds, 100, v; Ttr=100, Δt = 0.01, diffeq) for (k,v) in udict
+        )
+
+        # Compute minimum distance between attractors
+        mapper = AttractorsViaProximity(ds, attractors; Ttr=1000, Δt=0.1, diffeq)
         @test 1 == mapper(u1)
         @test 2 == mapper(u2)
         @test 3 == mapper(u3)
         lorenz84_fractions_test(mapper)
     end
 
-    @testset "Proximity" begin
-        udict = (1 => u1, 2 => u2, 3 => u3)
-        attractors = Dict(
-            k => trajectory(ds, 100, v; Ttr=100, Δt = 0.01, diffeq) for (k,v) in udict
+    @testset "Recurrences" begin
+        mapper = AttractorsViaRecurrences(ds, grid;
+            Δt = 0.2, mx_chk_fnd_att = 400, mx_chk_loc_att = 400,
+            mx_chk_bas_hit = 200, diffeq
         )
-        mapper = AttractorsViaProximity(ds, attractors; Ttr=1000, ε=0.01, Δt=0.1, diffeq)
         @test 1 == mapper(u1)
         @test 2 == mapper(u2)
         @test 3 == mapper(u3)

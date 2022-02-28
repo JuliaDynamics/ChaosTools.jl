@@ -1,14 +1,18 @@
+# TODO: This should work for arbitrary integrators (including projected stuff)
+
 """
-    AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict; kwargs...)
+    AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict [, ε]; kwargs...)
 Map initial conditions to attractors based on whether the trajectory reaches `ε`-distance
 close to any of the user-provided `attractors`. They have to be in a form of a dictionary
 mapping attractor labels to `Dataset`s containing the attractors.
 
-The state of the system gets stepped, and at each step the minimum distance to all
+The system gets stepped, and at each step the minimum distance to all
 attractors is computed. If any of these distances is `< ε`, then the label of the nearest
-attractor is returned.
+attractor is returned. If an `ε::Real` is not provided by the user, a value is computed
+automatically as half of the minimum distance between all attractors.
+This operation can be expensive for large attractor datasets.
 
-Because in this method all possible attractors are already known to the user,
+Because in this method the attractors are already known to the user,
 the method can also be called _supervised_.
 
 ## Keywords
@@ -36,9 +40,8 @@ struct AttractorsViaProximity{I, AK, D, T, N, K} <: AttractorMapper
     idx::Vector{Int}
     maxdist::Float64
 end
-function AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict; 
-        ε=1e-3, Δt=1, Ttr=100, mx_chk_lost=1000, horizon_limit=1e3, diffeq = NamedTuple(),
-        warnε = false
+function AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict, ε = nothing;
+        Δt=1, Ttr=100, mx_chk_lost=1000, horizon_limit=1e3, diffeq = NamedTuple(),
     )
     @assert dimension(ds) == dimension(first(attractors)[2])
     search_trees = Dict(k => KDTree(att.data, Euclidean()) for (k, att) in attractors)
@@ -49,29 +52,34 @@ function AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict;
     # themselves
     integ = integrator(ds; diffeq)
 
-    mapper = AttractorsViaProximity(
-        integ, attractors,
-        ε, Δt, eltype(Δt)(Ttr), mx_chk_lost, horizon_limit,
-        search_trees, [Inf], [0], 0.0,
-    )
-    
     # Minimum distance between attractors
-    if warnε && length(attractors) > 1
+    if isnothing(ε)
+        @info("Computing minimum distance between attractos...")
+        dist, idx = [Inf], [0]
         minε = Inf
         for (k, A) in attractors
             for (m, tree) in search_trees
                 k == m && continue
                 for p in A # iterate over all points of attractor
                     Neighborhood.NearestNeighbors.knn_point!(
-                        tree, p, false, mapper.dist, mapper.idx, Neighborhood.alwaysfalse
+                        tree, p, false, dist, idx, Neighborhood.alwaysfalse
                     )
-                    mapper.dist[1] < minε && (minε = mapper.dist[1])
+                    dist[1] < minε && (minε = dist[1])
                 end
             end
         end
-        println("Distance given is: $(ε)")
-        println("Minimum distance between attractros is: $(minε)")
+        @info("Minimum distance between attractos computed: $(minε)")
+        d = minε/2
+    else
+        @assert ε isa Real
+        d = ε
     end
+
+    mapper = AttractorsViaProximity(
+        integ, attractors,
+        d, Δt, eltype(Δt)(Ttr), mx_chk_lost, horizon_limit,
+        search_trees, [Inf], [0], 0.0,
+    )
 
     return mapper
 end

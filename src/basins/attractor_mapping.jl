@@ -5,7 +5,7 @@ export AttractorMapper,
 
 """
     AttractorMapper(ds::DynamicalSystem, args...; kwargs...) → mapper
-Subtypes of `AttractorMapper` are structures that map initial conditions of `ds` to 
+Subtypes of `AttractorMapper` are structures that map initial conditions of `ds` to
 attractors. Currently available mapping methods:
 * [`AttractorsViaProximity`](@ref)
 * [`AttractorsViaRecurrences`](@ref)
@@ -30,8 +30,8 @@ abstract type AttractorMapper end
 
 Approximate the state space fractions `fs` of the basins of attraction of a dynamical
 stystem by mapping initial conditions to attractors using `mapper`
-(which contains a reference to a `ds::DynamicalSystem`), and then simply taking the 
-ratios of how many initial conditions ended up to each attractor.
+(which contains a reference to a `ds::DynamicalSystem`), and then simply taking the
+ratios of how many initial conditions ended up at each attractor.
 
 Initial conditions to use are defined by `ics`. It can be:
 * a `Dataset` of initial conditions, in which case all are used.
@@ -42,7 +42,7 @@ Initial conditions to use are defined by `ics`. It can be:
 If `ics` is a `Dataset` then besides `fs` the `labels` of each initial condition are also
 returned.
 
-The output `fs` is a dictionary whose keys are the labels given to each attractor 
+The output `fs` is a dictionary whose keys are the labels given to each attractor
 (always integers enumerating the different attractors), and the
 values are their respective fractions. The label `-1` is given to any initial condition
 where `mapper` could not match to an attractor (this depends on the `mapper` type).

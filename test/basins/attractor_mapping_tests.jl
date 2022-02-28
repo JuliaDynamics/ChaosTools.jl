@@ -15,7 +15,7 @@ using Statistics
     ds = Systems.henon(zeros(2); a = 1.4, b = 0.3)
     xg = yg = range(-2.0, 2.0; length=100)
     grid = (xg, yg)
-    sampler, = statespace_sampler(Random.MersenneTwister(1234); 
+    sampler, = statespace_sampler(Random.MersenneTwister(1234);
     min_bounds = minimum.(grid), max_bounds = maximum.(grid))
     ics = Dataset([sampler() for i in 1:1000])
 
@@ -84,10 +84,10 @@ using Statistics
     yg = range(-3, 3; length = M)
     zg = range(-3, 3; length = M)
     grid = (xg, yg, zg)
-    sampler, = statespace_sampler(Random.MersenneTwister(1234); 
+    sampler, = statespace_sampler(Random.MersenneTwister(1234);
     min_bounds = minimum.(grid), max_bounds = maximum.(grid))
     ics = Dataset([sampler() for i in 1:1000])
-    
+
     function lorenz84_fractions_test(mapper; k = [1, -1])
         fs = basin_fractions(mapper, sampler; show_progress = false)
         @test length(fs) == 3
@@ -102,15 +102,19 @@ using Statistics
         @test fs[3] == 0.586
     end
 
+    # TODO: At the moment, mapping via recurrences or proximity gives DIFFERENT
+    # fractions. This needs to be resolved. I am using fairly high accuracy in all versions.
+    # Which one gives the "correct" results?
+
     @testset "Recurrences" begin
-        mapper = AttractorsViaRecurrences(ds, grid; 
+        mapper = AttractorsViaRecurrences(ds, grid;
         Δt = 0.2, mx_chk_fnd_att = 400, mx_chk_loc_att = 400, diffeq)
         @test 1 == mapper(u1)
         @test 2 == mapper(u2)
         @test 3 == mapper(u3)
         lorenz84_fractions_test(mapper)
     end
-    
+
     @testset "Proximity" begin
         udict = (1 => u1, 2 => u2, 3 => u3)
         attractors = Dict(

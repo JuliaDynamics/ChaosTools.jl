@@ -97,9 +97,7 @@ using Statistics
         # Deterministic test, should be tested with exact accuracy
         fs, labels = basin_fractions(mapper, ics; show_progress = false)
         @test sort!(unique(labels)) == [1,2,3]
-        @test fs[1] == 0.223
-        @test fs[2] == 0.191
-        @test fs[3] == 0.586
+        @test sort!([fs[i] for i in 1:3]) == [0.165, 0.193, 0.642]
     end
 
     # TODO: At the moment, mapping via recurrences or proximity gives DIFFERENT
@@ -123,7 +121,7 @@ using Statistics
     @testset "Recurrences" begin
         mapper = AttractorsViaRecurrences(ds, grid;
             Δt = 0.2, mx_chk_fnd_att = 400, mx_chk_loc_att = 400,
-            mx_chk_att = 10, diffeq
+            mx_chk_att = 20, diffeq
         )
         @test 1 == mapper(u1)
         @test 2 == mapper(u2)

@@ -97,7 +97,7 @@ using Statistics
         # Deterministic test, should be tested with exact accuracy
         fs, labels = basin_fractions(mapper, ics; show_progress = false)
         @test sort!(unique(labels)) == [1,2,3]
-        @test sort!([fs[i] for i in 1:3]) == [0.165, 0.193, 0.642]
+        @test sort!(round.([fs[i] for i in 1:3]; digits=2)) == round.([0.165, 0.193, 0.642];  digits=2)
     end
 
     # TODO: At the moment, mapping via recurrences or proximity gives DIFFERENT

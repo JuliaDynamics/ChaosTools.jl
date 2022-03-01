@@ -123,7 +123,7 @@ using Statistics
     @testset "Recurrences" begin
         mapper = AttractorsViaRecurrences(ds, grid;
             Δt = 0.2, mx_chk_fnd_att = 400, mx_chk_loc_att = 400,
-            mx_chk_bas_hit = 200, diffeq
+            mx_chk_att = 10, diffeq
         )
         @test 1 == mapper(u1)
         @test 2 == mapper(u2)

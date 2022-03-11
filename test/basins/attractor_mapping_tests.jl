@@ -88,26 +88,38 @@ using Statistics
     min_bounds = minimum.(grid), max_bounds = maximum.(grid))
     ics = Dataset([sampler() for i in 1:1000])
 
-    function lorenz84_fractions_test(mapper)
+    function lorenz84_fractions_test(mapper; e = 1e-2, known = false)
         fs = basin_fractions(mapper, sampler; show_progress = false)
         @test length(fs) == 3
         for i in 1:3; @test 0 < fs[i] < 1; end
         @test sum(values(fs)) == 1
 
-        # Deterministic test, should be tested with exact accuracy
+        # Deterministic test with known initial conditions. Must be strict.
         fs, labels = basin_fractions(mapper, ics; show_progress = false)
         @test sort!(unique(labels)) == [1,2,3]
-        @test sort!(round.([fs[i] for i in 1:3]; digits=2)) == round.([0.165, 0.193, 0.642];  digits=2)
-    end
+        found_fs = sort(collect(values(fs)))
 
-    # TODO: At the moment, mapping via recurrences or proximity gives DIFFERENT
-    # fractions. This needs to be resolved. I am using fairly high accuracy in all versions.
-    # Which one gives the "correct" results?
+        # Expected fractions come from the Proximity version, which should
+        # give the most correct numbers
+        expected_fs_raw = Dict(2 => 0.165, 3 => 0.642, 1 => 0.193)
+        expected_fs = sort!(collect(values(expected_fs_raw)))
+
+        errors = abs.(expected_fs .- found_fs)
+        for er in errors
+            @test er .≤ e
+        end
+
+        if known # also test whether the attractor index is correct
+            for i in 1:3
+                @test abs(fs[i] - expected_fs_raw[i]) ≤ e
+            end
+        end
+    end
 
     @testset "Proximity" begin
         udict = (1 => u1, 2 => u2, 3 => u3)
         attractors = Dict(
-            k => trajectory(ds, 100, v; Ttr=100, Δt = 0.01, diffeq) for (k,v) in udict
+            k => trajectory(ds, 400, v; Ttr=100, Δt = 0.01, diffeq) for (k,v) in udict
         )
 
         # Compute minimum distance between attractors
@@ -115,7 +127,7 @@ using Statistics
         @test 1 == mapper(u1)
         @test 2 == mapper(u2)
         @test 3 == mapper(u3)
-        lorenz84_fractions_test(mapper)
+        lorenz84_fractions_test(mapper; e = 1e-15, known = true)
     end
 
     @testset "Recurrences" begin
@@ -126,7 +138,31 @@ using Statistics
         @test 1 == mapper(u1)
         @test 2 == mapper(u2)
         @test 3 == mapper(u3)
-        lorenz84_fractions_test(mapper)
+        lorenz84_fractions_test(mapper; e = 1e-3)
+    end
+
+    @testset "Featurizing" begin
+        function lorenz84_featurizer(A, t)
+            x1 = ChaosTools.Entropies.genentropy(Dataset(A[:, 2:3]), 0.1)
+            mini, maxi = minmaxima(A)
+            x2 = maxi[1] - mini[1]
+            x3 = maxi[3] - mini[3]
+            return [x1, x2, x3]
+        end
+
+        @testset "unsupervised" begin
+            # Unfortunately, the unsupervised version is straight-out incapable of
+            # actually finding the attractors. Half the time it coalesces the periodic
+            # and chaotic attractors, and often it attribes -1 to some initial conditions.
+            mapper = AttractorsViaFeaturizing(ds, lorenz84_featurizer;
+            T = 100, Δt = 0.1, min_neighbors = 1)
+            # lorenz84_fractions_test(mapper; e = 1e-2)
+        end
+        @testset "supervised" begin
+            mapper = AttractorsViaFeaturizing(ds, lorenz84_featurizer;
+            T = 100, Δt = 0.1, attractors_ic = Dataset([u1, u2, u3]))
+            lorenz84_fractions_test(mapper; known = true, e = 1e-2)
+        end
     end
 
 end

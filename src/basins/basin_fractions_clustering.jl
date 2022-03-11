@@ -31,7 +31,7 @@ to attractors using the featurizing and clustering method of[^Stender2021].
 
 `featurizer` is a function that takes as an input an integrated trajectory `A::Dataset`
 and the corresponding time vector `t` and returns a `Vector{<:Real}` of features
-describing the trajectory. 
+describing the trajectory.
 The _optional_ argument `attractors_ic`, if given, must be a `Dataset` of initial conditions
 each leading to a different attractor. Giving this argument switches the method from
 unsupervised (default) to supervised, see description below.
@@ -41,7 +41,7 @@ unsupervised (default) to supervised, see description below.
 * `T=100, Ttr=100, Δt=1, diffeq=NamedTuple()`: Propagated to [`trajectory`](@ref).
 
 ### Feature extraction and classification
-* `attractors_ic = nothing` Enables supervised version, see below. 
+* `attractors_ic = nothing` Enables supervised version, see below.
 * `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors
   (i.e. of similar features) each feature needs to have in order to be considered in a
   cluster (fewer than this, it is labeled as an outlier, `-1`).
@@ -49,7 +49,7 @@ unsupervised (default) to supervised, see description below.
 * `clustering_threshold = 0.0`: Maximum allowed distance between a feature and the
   cluster center for it to be considered inside the cluster.
   Only used when `clust_method = "kNN_thresholded"`.
-* `clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN"`: 
+* `clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN"`:
   (supervised method only) which clusterization method to
   apply. If `"kNN"`, the first-neighbor clustering is used. If `"kNN_thresholded"`, a
   subsequent step is taken, which considers as unclassified (label `-1`) the features
@@ -58,7 +58,10 @@ unsupervised (default) to supervised, see description below.
 ## Description
 The trajectory `X` of each initial condition is transformed into a vector of features.
 Each feature is a number useful in _characterizing the attractor_ the initial condition
-ends up at, and distinguishing it from other attrators.
+ends up at, and distinguishing it from other attrators. Example features are the mean or
+standard deviation of one of the of the timeseries of the trajectory,
+the entropy of the first two dimensions, the fractal dimension of `X`,
+or anything else you may fancy.
 The vectors of features are then used to identify to which attractor
 each trajectory belongs (i.e. in which basin of attractor each initial condition is in).
 The method thus relies on the user having at least some basic idea about what attractors
@@ -89,11 +92,14 @@ To enable this, simply start Julia with the number of threads you want to use.
 stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
 function AttractorsViaFeaturizing(ds::DynamicalSystem, featurizer::Function;
-        attractors_ic::Union{AbstractDataset, Nothing}=nothing, T=100, Ttr=100,Δt=1,
-        clust_method_norm=Euclidean(), 
+        attractors_ic::Union{AbstractDataset, Nothing}=nothing, T=100, Ttr=100, Δt=1,
+        clust_method_norm=Euclidean(),
         clustering_threshold = 0.0, min_neighbors = 10, diffeq = NamedTuple(),
         clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN",
     )
+    if ds isa ContinuousDynamicalSystem
+        T, Ttr, Δt = float.((T, Ttr, Δt))
+    end
     return AttractorsViaFeaturizing(
         ds, Ttr, Δt, T, featurizer, attractors_ic, diffeq,
         clust_method_norm, clust_method, clustering_threshold, min_neighbors
@@ -127,7 +133,7 @@ function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
 end
 
 function extract_features(mapper::AttractorsViaFeaturizing, u0::AbstractVector{<:Real})
-    u = trajectory(mapper.ds, mapper.total, u0; 
+    u = trajectory(mapper.ds, mapper.total, u0;
     Ttr=mapper.Ttr, Δt=mapper.Δt, diffeq=mapper.diffeq)
     t = (mapper.Ttr):(mapper.Δt):(mapper.total+mapper.Ttr)
     feature = mapper.featurizer(u, t)
@@ -169,7 +175,7 @@ function classify_features_clustering(features, min_neighbors)
     ϵ_optimal = optimal_radius(features, min_neighbors)
     # Now recalculate the final clustering with the optimal ϵ
     clusters = Clustering.dbscan(features, ϵ_optimal; min_neighbors)
-    clusters, sizes = sort_clusters_calc_size(clusters) 
+    clusters, sizes = sort_clusters_calc_size(clusters)
     class_labels = cluster_props(clusters, features; include_boundary=false)
     # number of real clusters (size above minimum points);
     # this is also the number of "templates"
@@ -209,7 +215,7 @@ function cluster_props(clusters, data; include_boundary=true)
 end
 
 """
-Util function for `classify_features`. Calculates the clusters' (DbscanCluster) size 
+Util function for `classify_features`. Calculates the clusters' (DbscanCluster) size
 and sorts them in decreasing order according to the size.
 """
 function sort_clusters_calc_size(clusters)
@@ -219,7 +225,7 @@ function sort_clusters_calc_size(clusters)
 end
 
 """
-Find the optimal radius ε of a point neighborhood for use in DBSCAN, in the unsupervised 
+Find the optimal radius ε of a point neighborhood for use in DBSCAN, in the unsupervised
 `classify_features`. It does so by finding the `ε` which maximizes the minimum silhouette
 of the cluster.
 """

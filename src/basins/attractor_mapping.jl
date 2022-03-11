@@ -36,7 +36,7 @@ ratios of how many initial conditions ended up at each attractor.
 Initial conditions to use are defined by `ics`. It can be:
 * a `Dataset` of initial conditions, in which case all are used.
 * a 0-argument function `ics()` that spits out random initial conditions.
-  Then `N` random initial conditions are chose.
+  Then `N` random initial conditions are chosen.
   See [`statespace_sampler`](@ref) to generate such functions.
 
 If `ics` is a `Dataset` then besides `fs` the `labels` of each initial condition are also

@@ -35,7 +35,7 @@ using Statistics
 
 
     @testset "Recurrences" begin
-        mapper = AttractorsViaRecurrences(ds, grid)
+        mapper = AttractorsViaRecurrences(ds, grid; show_progress = false)
         @test 1  == mapper(u1)
         @test -1 == mapper(u2)
         henon_fractions_test(mapper)
@@ -133,7 +133,7 @@ using Statistics
     @testset "Recurrences" begin
         mapper = AttractorsViaRecurrences(ds, grid;
             Δt = 0.2, mx_chk_fnd_att = 400, mx_chk_loc_att = 400,
-            mx_chk_att = 20, diffeq
+            mx_chk_att = 20, diffeq, show_progress = false
         )
         @test 1 == mapper(u1)
         @test 2 == mapper(u2)

@@ -116,7 +116,8 @@ function estimate_basins!(
         if bsn_nfo.basins[ind] == 0
             show_progress && ProgressMeter.update!(progress, k)
             y0 = generate_ic_on_grid(grid, ind)
-            bsn_nfo.basins[ind] = get_label_ic!(bsn_nfo, integ, y0; kwargs...)
+            bsn_nfo.basins[ind] =
+            get_label_ic!(bsn_nfo, integ, y0; show_progress, kwargs...)
         end
     end
 
@@ -158,10 +159,10 @@ end
 Main procedure. Directly implements the algorithm of Datseris & Wagemakers 2021,
 see the flowchart (Figure 2).
 
-The basins and attractors are coded in the array with odd numbers for the basins and even numbers
-for the attractors. The attractor `2n` has the corresponding basin `2n+1`. This codification
-is changed when the basins and attractors are returned to the user. Diverging trajectories
-and the trajectories staying outside the grid are coded with -1.
+The basins and attractors are coded in the array with odd numbers for the basins and
+even numbers for the attractors. The attractor `2n` has the corresponding basin `2n+1`.
+This codification is changed when the basins and attractors are returned to the user.
+Diverging trajectories and the trajectories staying outside the grid are coded with -1.
 
 The label `1` (initial value) outlined in the paper is `0` here instead.
 """
@@ -170,6 +171,7 @@ function _identify_basin_of_cell!(
         mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_loc_att = 100,
         horizon_limit = 1e6, ε = 1e-3,
         mx_chk_lost = isnothing(bsn_nfo.search_trees) ? 20 : 1000,
+        show_progress = true, # show_progress only used when finding new attractor.
     )
 
     #if n[1]==-1 means we are outside the grid
@@ -182,7 +184,10 @@ function _identify_basin_of_cell!(
             return -1
         end
         for (k, t) in bsn_nfo.search_trees # this is a `Dict`
-            Neighborhood.NearestNeighbors.knn_point!(t, u_full_state, false, bsn_nfo.dist, bsn_nfo.neighborindex, Neighborhood.alwaysfalse)
+            Neighborhood.NearestNeighbors.knn_point!(
+                t, u_full_state, false, bsn_nfo.dist,
+                bsn_nfo.neighborindex, Neighborhood.alwaysfalse
+            )
             if bsn_nfo.dist[1] < ε
                 ic_label = 2*k + 1
                 return ic_label
@@ -222,7 +227,7 @@ function _identify_basin_of_cell!(
 
         if bsn_nfo.consecutive_match >= mx_chk_fnd_att
             bsn_nfo.basins[n] = bsn_nfo.current_att_label
-            store_attractor!(bsn_nfo, u_full_state)
+            store_attractor!(bsn_nfo, u_full_state, show_progress)
             bsn_nfo.state = :att_found
             bsn_nfo.consecutive_match = 1
         end
@@ -236,7 +241,7 @@ function _identify_basin_of_cell!(
             # label this box as part of an attractor
             bsn_nfo.basins[n] = bsn_nfo.current_att_label
             bsn_nfo.consecutive_match = 1
-            store_attractor!(bsn_nfo, u_full_state)
+            store_attractor!(bsn_nfo, u_full_state, show_progress)
         elseif iseven(ic_label) && (bsn_nfo.consecutive_match <  mx_chk_loc_att)
             # We make sure we hit the attractor another mx_chk_loc_att consecutive times
             # just to be sure that we have the complete attractor
@@ -273,7 +278,6 @@ function _identify_basin_of_cell!(
     end
 
     if bsn_nfo.state == :lost
-        #grid_mid_point = (bsn_nfo.grid_maxima - bsn_nfo.grid_minima) ./2 + bsn_nfo.grid_minima
         bsn_nfo.consecutive_lost += 1
         if   bsn_nfo.consecutive_lost > mx_chk_lost || norm(u_full_state) > horizon_limit
             relabel_visited_cell!(bsn_nfo, bsn_nfo.visited_cell, 0)
@@ -287,7 +291,7 @@ function _identify_basin_of_cell!(
 end
 
 function store_attractor!(bsn_nfo::BasinsInfo{B, IF, RF, UF, D, T, Q},
-    u_full_state) where {B, IF, RF, UF, D, T, Q}
+    u_full_state, show_progress = true) where {B, IF, RF, UF, D, T, Q}
     # bsn_nfo.current_att_label is the number of the attractor multiplied by two
     attractor_id = bsn_nfo.current_att_label ÷ 2
     V = SVector{D, T}
@@ -296,6 +300,9 @@ function store_attractor!(bsn_nfo::BasinsInfo{B, IF, RF, UF, D, T, Q},
     else
         # initialize container for new attractor
         bsn_nfo.attractors[attractor_id] = Dataset([V(u_full_state)])
+        if show_progress
+            @info "AttractorsViaRecurrences found new attractor with id: $(attractor_id)"
+        end
     end
 end
 

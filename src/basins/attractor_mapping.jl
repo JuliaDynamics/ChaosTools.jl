@@ -77,3 +77,13 @@ end
 
 _get_ic(ics::Function, i) = ics()
 _get_ic(ics::AbstractDataset, i) = ics[i]
+
+# Generic pretty printing
+function generic_mapper_print(io, mapper)
+    ps = 14
+    text = "$(nameof(typeof(mapper)))"
+    println(io, text)
+    println(io, rpad(" rule f: ", ps), get_rule_for_print(mapper))
+    return ps
+end
+Base.show(io::IO, mapper::AttractorMapper) = generic_mapper_print(io, mapper)

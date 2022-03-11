@@ -21,7 +21,18 @@ struct AttractorsViaFeaturizing{DS<:DynamicalSystem, T, F, A, K, M} <: Attractor
     clustering_threshold::Float64
     min_neighbors::Int
 end
+DynamicalSystemsBase.get_rule_for_print(m::AttractorsViaFeaturizing) =
+get_rule_for_print(m.ds)
 
+function Base.show(io::IO, mapper::AttractorsViaFeaturizing)
+    ps = generic_mapper_print(io, mapper)
+    println(io, rpad(" featurizer: ", ps), DynamicalSystemsBase.eomstring(mapper.featurizer))
+    println(io, rpad(" Ttr: ", ps), mapper.Ttr)
+    println(io, rpad(" Δt: ", ps), mapper.Δt)
+    println(io, rpad(" T: ", ps), mapper.total)
+    println(io, rpad(" supervised: ", ps), !isnothing(mapper.attractors_ic))
+    return
+end
 
 """
     AttractorsViaFeaturizing(ds::DynamicalSystem, featurizer::Function; kwargs...) → mapper

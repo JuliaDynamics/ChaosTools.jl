@@ -97,8 +97,10 @@ function init_bsn_nfo(
 end
 
 """
-This is the low level function that computes the basins of attraction,
+This is the low level function that computes the full basins of attraction,
 given the already initialized `BasinsInfo` object and the integrator.
+It simply loops over the `get_label_ic!` function, that maps initial conditions
+to attractors.
 """
 function estimate_basins!(
         grid::Tuple,

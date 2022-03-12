@@ -4,14 +4,57 @@
 # TODO: Move here the docstring of `basins_of_attraction`. THere, say that
 # the "supervised" version actually just uses `AttractorsViaProximity`.
 """
-    AttractorsViaRecurrences(ds::DynaicalSystem, grid::Tuple; kwargs...)
+    AttractorsViaRecurrences(ds::GeneralizedDynamicalSystem, grid::Tuple; kwargs...)
 Map initial conditions to attractors by identifying attractors on the fly based on
-recurrences in the state space, as outlined by[^Datseris2022] and the
-[`basins_of_attraction`](@ref) function.
+recurrences in the state space, as outlined by[^Datseris2022]. Works for any case
+encapsulated by [`GeneralizedDynamicalSystem`](@ref).
 
-This attractor mapper method is exactly the [`basins_of_attraction`](@ref) function
-but operating on-the-fly instead, and hence has exactly the same keywords
-and `grid` structure.
+`grid` is a tuple of ranges partitioning the state space so that a finite state
+machine can operate on top of it. For example
+`grid = (xg, yg)` where `xg = yg = range(-5, 5; length = 100)` for a two-dimensional
+system. The grid has to be the same dimensionality as the state space, use a
+[`projected_integrator`](@ref) if you want to search for attractors in a lower
+dimensional space.
+
+## Keyword Arguments
+* `Δt`: Approximate time step of the integrator, which is `1` for discrete systems.
+  For continuous systems, an automatic value is calculated using
+  [`automatic_Δt_basins`](@ref). See that function for more info.
+* `diffeq = NamedTuple()`: Keyword arguments propagated to [`integrator`](@ref). Only
+  useful for continuous systems. It is **strongly recommended** to choose high accuracy
+  solvers for this application, e.g. `diffeq = (alg=Vern9(), reltol=1e-9, abstol=1e-9)`.
+* `mx_chk_att = 2`: A parameter that sets the maximum checks of consecutives hits of
+  an attractor before deciding the basin of the initial condition.
+* `mx_chk_hit_bas = 10` : Maximum check of consecutive visits of the same basin of
+  attraction. This number can be increased for higher accuracy.
+* `mx_chk_fnd_att = 100` : Maximum check of unnumbered cell before considering we have
+  an attractor. This number can be increased for higher accuracy.
+* `mx_chk_loc_att = 100` : Maximum check of consecutive cells marked as an attractor
+  before considering that we have all the available pieces of the attractor.
+* `mx_chk_lost = 20` : Maximum check of iterations outside the defined grid before we
+  consider the orbit lost outside. This number can be increased for higher accuracy.
+* `horizon_limit = 1e6` : If the norm of the integrator state reaches this
+  limit we consider that the orbit diverges.
+
+## Description
+An initial condition given to an instance of `AttractorsViaRecurrences` is iterated
+based on the integrator corresponding to `ds`. A finite state machine (FSM) follows the
+trajectory in the state space, and constantly maps it to the given `grid`. An array,
+internally called "basins", stores the state of the FSM on the grid, according to the
+indexing system described in [^Datseris2022]. As the system is integrated more and more,
+the information of the "basins" becomes richer and richer with more identified attractors
+or with grid cells that belong to basins of already found attractors.
+
+The iteration of a given initial condition continues until one of the following happens:
+1. The trajectory hits `mx_chk_fnd_att` times in a row grid cells previously visited:
+   it is considered that an attractor is found and is labelled with a new number.
+1. The trajectory hits an already numbered known attractor `mx_chk_att` consecutive times:
+   the initial condition is numbered with the corresponding number.
+1. The trajectory hits a known basin `mx_chk_hit_bas` times in a row: the initial condition
+   belongs to that basin and is numbered accordingly.
+1. The trajectory spends `mx_chk_lost` steps outside the defined grid or the norm
+   of the integrator state becomes > than `horizon_limit`: the initial
+   condition is set to -1.
 
 [^Datseris2022]:
     G. Datseris and A. Wagemakers,
@@ -53,6 +96,9 @@ end
 #####################################################################################
 # TODO: the functionality of proximty must be completely removed from `BasinsInfo`.
 # A loop calling `AttractorsViaProximity` will be called in `basins_of_attraction`.
+
+# TODO: Decide, for projected system, do we save the "full state" attractor,
+# or the projected version...?
 mutable struct BasinsInfo{B, IF, RF, UF, D, T, Q, K}
     basins::Array{Int16, B}
     grid_steps::SVector{B, Float64}
@@ -69,7 +115,7 @@ mutable struct BasinsInfo{B, IF, RF, UF, D, T, Q, K}
     visited_list::Q
     search_trees::K
     dist::Vector{Float64}
-    neighborindex::Vector{Int64};
+    neighborindex::Vector{Int64}
 end
 
 function basininfo_and_integ(ds::GeneralizedDynamicalSystem, attractors, grid, Δt, diffeq)

@@ -123,42 +123,40 @@ function basins_of_attraction(grid::Tuple, ds;
 end
 
 
-
-using LinearAlgebra
-
+import ProgressMeter
+using Statistics: mean
 
 """
-    automatic_Δt_basins(integ, grid; N = 5000) → Δt
-Calculate an optimal `Δt` value for [`basins_of_attraction`](@ref).
-This is done by evaluating the dynamic rule `f` (vector field) at `N` randomly chosen
-points of the grid. The average `f` is then compared with the diagonal length of a grid
-cell and their ratio provides `Δt`.
-
-Notice that `Δt` should not be too small which happens typically if the grid resolution
-is high. It is okay for [`basins_of_attraction`](@ref) if the trajectory skips a few cells.
-But if `Δt` is too small the default values for all other keywords such
-as `mx_chk_hit_bas` need to be increased drastically.
-
-Also, `Δt` that is smaller than the internal step size of the integrator will cause
-a performance drop.
+This is the low level function that computes the full basins of attraction,
+given the already initialized `BasinsInfo` object and the integrator.
+It simply loops over the `get_label_ic!` function, that maps initial conditions
+to attractors.
 """
-function automatic_Δt_basins(integ, grid; N = 5000)
-    steps = step.(grid)
-    s = sqrt(sum(x^2 for x in steps)) # diagonal length of a cell
-    indices = CartesianIndices(length.(grid))
-    random_points = [generate_ic_on_grid(grid, ind) for ind in rand(indices, N)]
-    dudt = 0.0
-    udummy = copy(get_state(integ))
-    for p in random_points
-        reinit!(integ, p)
-        # TODO:  Fix this
-        deriv = if get_state(integ) isa SVector
-            integ.f(integ.u, integ.p, 0.0)
-        else
-            integ.f(udummy, integ.u, integ.p, 0.0)
-            udummy
+function estimate_basins!(
+        grid::Tuple,
+        bsn_nfo::BasinsInfo, integ;
+        show_progress = true, kwargs...,
+    )
+    I = CartesianIndices(bsn_nfo.basins)
+    progress = ProgressMeter.Progress(
+        length(bsn_nfo.basins); desc = "Basins of attraction: ", dt = 1.0
+    )
+
+    for (k,ind) in enumerate(I)
+        if bsn_nfo.basins[ind] == 0
+            show_progress && ProgressMeter.update!(progress, k)
+            y0 = generate_ic_on_grid(grid, ind)
+            bsn_nfo.basins[ind] =
+            get_label_ic!(bsn_nfo, integ, y0; show_progress, kwargs...)
         end
-        dudt += norm(deriv)
     end
-    return Δt = 10*s*N/dudt
+
+    # remove attractors and rescale from 1 to max number of attractors
+    ind = iseven.(bsn_nfo.basins)
+    bsn_nfo.basins[ind] .+= 1
+    bsn_nfo.basins .= (bsn_nfo.basins .- 1) .÷ 2
+
+    return bsn_nfo
 end
+
+

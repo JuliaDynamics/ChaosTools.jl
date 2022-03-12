@@ -40,7 +40,7 @@ struct AttractorsViaProximity{I, AK, D, T, N, K} <: AttractorMapper
     idx::Vector{Int}
     maxdist::Float64
 end
-function AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict, ε = nothing;
+function AttractorsViaProximity(ds, attractors::Dict, ε = nothing;
         Δt=1, Ttr=100, mx_chk_lost=1000, horizon_limit=1e3, diffeq = NamedTuple(),
     )
     @assert dimension(ds) == dimension(first(attractors)[2])

@@ -3,20 +3,18 @@ export basins_of_attraction, automatic_Δt_basins, AttractorMapper
 """
     basins_of_attraction(grid::Tuple, ds::DynamicalSystem; kwargs...) -> basins, attractors
 Compute an estimate of the basins of attraction of a dynamical system `ds` on
-a partitioning of the state space given by `grid`. 
+a partitioning of the state space given by `grid`.
 This function implements the method developed by Datseris & Wagemakers [^Datseris2022].
 It works _without_ knowledge of where attractors are; it identifies them automatically.
 
-The dynamical system can be:
-* An actual `DiscreteDynamicalSystem` or `ContinuousDynamicalSystem`.
-* A Poincaré map of `ContinuousDynamicalSystem`: [`poincaremap`](@ref).
-* A stroboscopic map, i.e. a periodically forced `ContinuousDynamicalSystem` (see examples
-  for this particular application).
+The dynamical system an actual `DynamicalSystem`, or any
+of the [Available integrators](@ref), such as e.g., a [`stroboscopicmap`](@ref).
 
 `grid` is a tuple of ranges defining the grid of initial conditions, for example
-`grid = (xg, yg)` where `xg = yg = range(-5, 5; length = 100)`. The grid is not necessarilly
-of the same dimension as the state space, attractors can be found in lower dimensional
-projections.
+`grid = (xg, yg)` where `xg = yg = range(-5, 5; length = 100)`.
+The grid has to be the same dimensionality as the state space, use a
+[`projected_integrator`](@ref) if you want to search for attractors in a lower
+dimensional space.
 
 The output `basins` is an integer-valued array on the `grid`, with its entries labelling
 which basin of attraction the given grid point belongs to.
@@ -113,6 +111,12 @@ function basins_of_attraction(grid::Tuple, ds;
         # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
         # these keywords are actually expanded in `_identify_basin_of_cell!`
     )
+
+    # TODO: Here we add a lot of deprecations if:
+    # - grid is not correct dimension as `ds`
+    # - T is not nothing
+    # - complete_state is not nothing
+
     bsn_nfo, integ = basininfo_and_integ(ds, attractors, grid, Δt, T, SVector(idxs...), complete_state, diffeq)
     bsn_nfo = estimate_basins!(grid, bsn_nfo, integ; kwargs...)
     return bsn_nfo.basins, bsn_nfo.attractors
@@ -121,15 +125,14 @@ end
 
 
 using LinearAlgebra
+
+
 """
-    automatic_Δt_basins(ds, grid; kwargs...) → Δt
+    automatic_Δt_basins(integ, grid; N = 5000) → Δt
 Calculate an optimal `Δt` value for [`basins_of_attraction`](@ref).
 This is done by evaluating the dynamic rule `f` (vector field) at `N` randomly chosen
 points of the grid. The average `f` is then compared with the diagonal length of a grid
 cell and their ratio provides `Δt`.
-
-Keywords `idxs, complete_state, diffeq` are exactly as in [`basins_of_attraction`](@ref),
-and the keyword `N` is `5000` by default.
 
 Notice that `Δt` should not be too small which happens typically if the grid resolution
 is high. It is okay for [`basins_of_attraction`](@ref) if the trajectory skips a few cells.
@@ -139,26 +142,17 @@ as `mx_chk_hit_bas` need to be increased drastically.
 Also, `Δt` that is smaller than the internal step size of the integrator will cause
 a performance drop.
 """
-function automatic_Δt_basins(ds, grid;
-        idxs = 1:length(grid), N = 5000, diffeq = NamedTuple(),
-        complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
-    )
-
-    if ds isa Union{PoincareMap, DiscreteDynamicalSystem}
-        return 1
-    end
-    integ = integrator(ds; diffeq)
-    complete_and_reinit! = CompleteAndReinit(complete_state, idxs, length(get_state(integ)))
-
+function automatic_Δt_basins(integ, grid; N = 5000)
     steps = step.(grid)
     s = sqrt(sum(x^2 for x in steps)) # diagonal length of a cell
     indices = CartesianIndices(length.(grid))
     random_points = [generate_ic_on_grid(grid, ind) for ind in rand(indices, N)]
     dudt = 0.0
-    udummy = copy(integ.u)
+    udummy = copy(get_state(integ))
     for p in random_points
-        complete_and_reinit!(integ, p)
-        deriv = if integ.u isa SVector
+        reinit!(integ, p)
+        # TODO:  Fix this
+        deriv = if get_state(integ) isa SVector
             integ.f(integ.u, integ.p, 0.0)
         else
             integ.f(udummy, integ.u, integ.p, 0.0)

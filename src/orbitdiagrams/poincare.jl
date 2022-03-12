@@ -248,7 +248,7 @@ function poincaremap(
 	return PoincareMap(integ, plane_distance, planecrossing, Tmax, rootkw, v)
 end
 
-mutable struct PoincareMap{I, F, P, R, V}
+mutable struct PoincareMap{I, F, P, R, V} <: GeneralizedDynamicalSystem
 	integ::I
 	f::F
  	planecrossing::P

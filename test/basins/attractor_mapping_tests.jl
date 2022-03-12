@@ -9,7 +9,7 @@ using Statistics
 
 @testset "AttractorMappers" begin
 
-@testset "Henon map" begin
+@testset "Henon map: discrete & divergence" begin
     u1 = [0.0, 0.0] # converges to attractor
     u2 = [0, 2.0]   # diverges to inf
     ds = Systems.henon(zeros(2); a = 1.4, b = 0.3)
@@ -67,8 +67,9 @@ using Statistics
         henon_fractions_test(mapper)
         end
     end
+end
 
-@testset "Lorenz-84 system" begin
+@testset "Lorenz-84 system: interlaced close-by" begin
     F = 6.886
     G = 1.347
     a = 0.255
@@ -167,5 +168,67 @@ using Statistics
 
 end
 
+@testset "Duffing oscillator: stroboscopic map" begin
+    ds = Systems.duffing([0.1, 0.25]; ω = 1.0, f = 0.2, d = 0.15, β = -1)
+    xg = yg = range(-2.2,2.2,length=100)
+    grid = (xg, yg)
+    sampler, = statespace_sampler(Random.MersenneTwister(1234);
+        min_bounds = minimum.(grid), max_bounds = maximum.(grid))
+    diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)
+    ics = Dataset([sampler() for i in 1:1000])
+    T = 2π/1.0
+    smap = stroboscopicmap(ds, T; diffeq)
+    u1 = [-0.8, 0]
+    u2 = [1.8, 0]
+
+    function duffing_fractions_test(mapper; e = 1e-2)
+        fs = basin_fractions(mapper, sampler; show_progress = false)
+        @test length(fs) == 2
+        for i in 1:2; @test 0.4 < fs[i] < 0.6; end
+        @test sum(values(fs)) == 1
+
+        # Deterministic test with known initial conditions. Must be strict.
+        fs, labels = basin_fractions(mapper, ics; show_progress = false)
+        @test sort!(unique(labels)) == [1,2]
+        found_fs = sort(collect(values(fs)))
+
+        # Expected fractions come from the Proximity version, which should
+        # give the most correct numbers
+        expected_fs_raw = Dict(2 => 0.504, 1 => 0.496)
+        expected_fs = sort!(collect(values(expected_fs_raw)))
+
+        errors = abs.(expected_fs .- found_fs)
+        for er in errors
+            @test er .≤ e
+        end
+    end
+
+    @testset "Proximity" begin
+        udict = (1 => u1, 2 => u2)
+        attractors = Dict(
+            k => trajectory(smap, 5, v; Ttr=100, ) for (k,v) in udict
+        )
+
+        # Compute minimum distance between attractors
+        mapper = AttractorsViaProximity(smap, attractors; Ttr=1000)
+        @test 1 == mapper(u1)
+        @test 2 == mapper(u2)
+        duffing_fractions_test(mapper; e = 1e-15)
+    end
+
+    @testset "Recurrences" begin
+        mapper = AttractorsViaRecurrences(smap, grid; show_progress = false)
+        @test 1 == mapper(u1)
+        @test 2 == mapper(u2)
+        lorenz84_fractions_test(mapper; e = 1e-3)
+    end
+
+
+
 end
+
+
+# TODO: Tests for stroboscopic map (forced duffing), projected system (magnetic)
+# and poincare map (thomas cyclical)
+
 end

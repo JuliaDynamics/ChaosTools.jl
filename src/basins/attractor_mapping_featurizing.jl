@@ -1,6 +1,6 @@
 export basin_fractions_clustering, basin_fractions
 using Statistics: mean
-using Neighborhood #for kNN
+using Neighborhood
 using Distances, Clustering, Distributions
 using ProgressMeter
 
@@ -38,14 +38,11 @@ end
     AttractorsViaFeaturizing(ds::DynamicalSystem, featurizer::Function; kwargs...) → mapper
 
 Initialize a `mapper` to be used with [`basin_fractions`](@ref) that maps initial conditions
-to attractors using the featurizing and clustering method of[^Stender2021].
+to attractors using the featurizing and clustering method of [^Stender2021].
 
 `featurizer` is a function that takes as an input an integrated trajectory `A::Dataset`
 and the corresponding time vector `t` and returns a `Vector{<:Real}` of features
 describing the trajectory.
-The _optional_ argument `attractors_ic`, if given, must be a `Dataset` of initial conditions
-each leading to a different attractor. Giving this argument switches the method from
-unsupervised (default) to supervised, see description below.
 
 ## Keyword arguments
 ### Integration
@@ -53,6 +50,7 @@ unsupervised (default) to supervised, see description below.
 
 ### Feature extraction and classification
 * `attractors_ic = nothing` Enables supervised version, see below.
+  If given, must be a `Dataset` of initial conditions each leading to a different attractor.
 * `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors
   (i.e. of similar features) each feature needs to have in order to be considered in a
   cluster (fewer than this, it is labeled as an outlier, `-1`).
@@ -99,8 +97,9 @@ supervised method of this featurizing algorithm instead.
 The trajectories in this method are integrated in parallel using `Threads`.
 To enable this, simply start Julia with the number of threads you want to use.
 
-[^Stender2021]: Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
-stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
+[^Stender2021]:
+    Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
+    stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
 function AttractorsViaFeaturizing(ds::DynamicalSystem, featurizer::Function;
         attractors_ic::Union{AbstractDataset, Nothing}=nothing, T=100, Ttr=100, Δt=1,

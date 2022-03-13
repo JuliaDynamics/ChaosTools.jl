@@ -1,10 +1,17 @@
 export basins_of_attraction, automatic_Δt_basins, AttractorMapper
 
+# TODO: Re-write docstring: Generic function for calculating the full basins of attraction
+# in a given state space region. It uses either of attractor mapers...
+
 """
-    basins_of_attraction(grid::Tuple, ds::DynamicalSystem; kwargs...) -> basins, attractors
+    basins_of_attraction(grid::Tuple, ds::GeneralizedDynamicalSystem; kwargs...)
 Compute an estimate of the basins of attraction of a dynamical system `ds` on
 a partitioning of the state space given by `grid`.
 This function implements the method developed by Datseris & Wagemakers [^Datseris2022].
+
+Works for any case encapsulated by [`GeneralizedDynamicalSystem`](@ref).
+
+
 It works _without_ knowledge of where attractors are; it identifies them automatically.
 
 The dynamical system an actual `DynamicalSystem`, or any
@@ -16,7 +23,8 @@ The grid has to be the same dimensionality as the state space, use a
 [`projected_integrator`](@ref) if you want to search for attractors in a lower
 dimensional space.
 
-The output `basins` is an integer-valued array on the `grid`, with its entries labelling
+The function returns `basins, attractors`. `basins` is an integer-valued array on the
+`grid`, with its entries labelling
 which basin of attraction the given grid point belongs to.
 The output `attractors` is a dictionary whose keys correspond to the attractor number and
 the values contains the points of the attractors found.
@@ -24,7 +32,9 @@ Notice that for some attractors this list may be incomplete.
 
 See also [`match_attractors!`](@ref), [`basin_fractions`](@ref), [`tipping_probabilities`](@ref).
 
-[^Datseris2022]: G. Datseris and A. Wagemakers, [Chaos 32, 023104 (2022)](https://doi.org/10.1063/5.0076568)
+[^Datseris2022]:
+    G. Datseris and A. Wagemakers, *Effortless estimation of basins of attraction*,
+    [Chaos 32, 023104 (2022)](https://doi.org/10.1063/5.0076568)
 
 ## Keyword Arguments
 * `Δt`: Approximate time step of the integrator, which is `1` for discrete systems.
@@ -105,26 +115,65 @@ influence in some cases. This algorithm is usually slower than the method with t
 attractors on the grid.
 """
 function basins_of_attraction(grid::Tuple, ds;
-        Δt=nothing, T=nothing, idxs = 1:length(grid),
-        complete_state = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid)),
-        diffeq = NamedTuple(), attractors = nothing, kwargs...
+        Δt=nothing, diffeq = NamedTuple(), attractors = nothing,
+        # T, idxs, compelte_state are DEPRECATED!
+        T=nothing, idxs = nothing, complete_state = nothing,
         # `kwargs` tunes the basin finding algorithm, e.g. `mx_chk_att`.
         # these keywords are actually expanded in `_identify_basin_of_cell!`
+        kwargs...
     )
 
-    # TODO: Here we add a lot of deprecations if:
-    # - grid is not correct dimension as `ds`
-    # - T is not nothing
-    # - complete_state is not nothing
+    if !isnothing(T)
+        @warn("Using `T` is deprecated. Initialize a `stroboscopicmap` and pass it.")
+        integ = stroboscopicmap(ds, T)
+    elseif length(grid) ≠ dimension(ds)
+        @warn("Giving a `grid` with dimension lower than `ds` is deprecated. "*
+        "Initialize a `projected_integrator` instead.")
+        idxs = 1:length(grid)
+    elseif !isnothing(idxs)
+        @warn("Using `idxs` is deprecated. Initialize a `projeted_integrator` instead.")
+        @assert length(idxs) == length(grid)
+        idxs = 1:length(grid)
+        if isnothing(complete_state)
+            c = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
+        else
+            c = complete_state
+        end
+        integ = projected_integrator(ds, idxs, compelte_state; diffeq)
+    else
+        integ = ds
+    end
 
-    bsn_nfo, integ = basininfo_and_integ(ds, attractors, grid, Δt, T, SVector(idxs...), complete_state, diffeq)
-    bsn_nfo = estimate_basins!(grid, bsn_nfo, integ; kwargs...)
-    return bsn_nfo.basins, bsn_nfo.attractors
+    if !isnothing(attractors) # proximity version
+        # initialize Proximity and loop.
+        mapper = AttractorsViaProximity(integ, attractors::Dict, ε;
+        Δt=isnothing(Δt) ? 1 : Δt, Ttr, mx_chk_lost, horizon_limit, diffeq,
+    )
+    return estimate_basins_proximity!(mapper, grid; kwargs...)
+    else # (original) recurrences version
+        bsn_nfo, integ = basininfo_and_integ(integ, grid, Δt, diffeq)
+        bsn_nfo = estimate_basins_recurrences!(grid, bsn_nfo, integ; kwargs...)
+        return bsn_nfo.basins, bsn_nfo.attractors
+    end
 end
 
 
 import ProgressMeter
 using Statistics: mean
+
+function estimate_basins_proximity!(mapper, grid; show_progress = true)
+    basins = zeros(Int16, map(length, grid))
+    progress = ProgressMeter.Progress(
+        length(basins); desc = "Basins of attraction: ", dt = 1.0
+    )
+    for (k,ind) in enumerate(CartesianIndices(bsn_nfo))
+        show_progress && ProgressMeter.update!(progress, k)
+        y0 = generate_ic_on_grid(grid, ind)
+        basins[ind] = mapper(y0)
+    end
+    return basins, attractors
+end
+
 
 """
 This is the low level function that computes the full basins of attraction,
@@ -132,7 +181,7 @@ given the already initialized `BasinsInfo` object and the integrator.
 It simply loops over the `get_label_ic!` function, that maps initial conditions
 to attractors.
 """
-function estimate_basins!(
+function estimate_basins_recurrences!(
         grid::Tuple,
         bsn_nfo::BasinsInfo, integ;
         show_progress = true, kwargs...,
@@ -159,4 +208,10 @@ function estimate_basins!(
     return bsn_nfo
 end
 
-
+@generated function generate_ic_on_grid(grid::NTuple{B, T}, ind) where {B, T}
+    gens = [:(grid[$k][ind[$k]]) for k=1:B]
+    quote
+        Base.@_inline_meta
+        @inbounds return SVector{$B, Float64}($(gens...))
+    end
+end

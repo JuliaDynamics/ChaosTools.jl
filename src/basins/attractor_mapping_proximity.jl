@@ -45,13 +45,7 @@ function AttractorsViaProximity(ds, attractors::Dict, ε = nothing;
     )
     @assert dimension(ds) == dimension(first(attractors)[2])
     search_trees = Dict(k => KDTree(att.data, Euclidean()) for (k, att) in attractors)
-
-    # TODO: After creating StroboscopicMap, the API will be simpler here...?
-
-    # TODO: For Poincare/Stroboscopic maps, `integrator` should return the objects
-    # themselves
     integ = integrator(ds; diffeq)
-
     # Minimum distance between attractors
     if isnothing(ε)
         @info("Computing minimum distance between attractos...")
@@ -68,7 +62,7 @@ function AttractorsViaProximity(ds, attractors::Dict, ε = nothing;
                 end
             end
         end
-        @info("Minimum distance between attractos computed: $(minε)")
+        @info("Minimum distance between attractors computed: $(minε)")
         d = minε/2
     else
         @assert ε isa Real

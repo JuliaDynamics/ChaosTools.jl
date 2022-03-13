@@ -6,34 +6,34 @@
 """
     AttractorsViaRecurrences(ds::GeneralizedDynamicalSystem, grid::Tuple; kwargs...)
 Map initial conditions to attractors by identifying attractors on the fly based on
-recurrences in the state space, as outlined by[^Datseris2022]. Works for any case
-encapsulated by [`GeneralizedDynamicalSystem`](@ref).
+recurrences in the state space, as outlined by Datseris & Wagemakers[^Datseris2022].
+Works for any case encapsulated by [`GeneralizedDynamicalSystem`](@ref).
 
 `grid` is a tuple of ranges partitioning the state space so that a finite state
 machine can operate on top of it. For example
 `grid = (xg, yg)` where `xg = yg = range(-5, 5; length = 100)` for a two-dimensional
 system. The grid has to be the same dimensionality as the state space, use a
 [`projected_integrator`](@ref) if you want to search for attractors in a lower
-dimensional space.
+dimensional subspace.
 
 ## Keyword Arguments
 * `Δt`: Approximate time step of the integrator, which is `1` for discrete systems.
   For continuous systems, an automatic value is calculated using
-  [`automatic_Δt_basins`](@ref). See that function for more info.
+  [`automatic_Δt_basins`](@ref).
 * `diffeq = NamedTuple()`: Keyword arguments propagated to [`integrator`](@ref). Only
-  useful for continuous systems. It is **strongly recommended** to choose high accuracy
+  valid for `ContinuousDynamicalSystem`. It is recommended to choose high accuracy
   solvers for this application, e.g. `diffeq = (alg=Vern9(), reltol=1e-9, abstol=1e-9)`.
 * `mx_chk_att = 2`: A parameter that sets the maximum checks of consecutives hits of
   an attractor before deciding the basin of the initial condition.
-* `mx_chk_hit_bas = 10` : Maximum check of consecutive visits of the same basin of
+* `mx_chk_hit_bas = 10`: Maximum check of consecutive visits of the same basin of
   attraction. This number can be increased for higher accuracy.
-* `mx_chk_fnd_att = 100` : Maximum check of unnumbered cell before considering we have
+* `mx_chk_fnd_att = 100`: Maximum check of unnumbered cell before considering we have
   an attractor. This number can be increased for higher accuracy.
-* `mx_chk_loc_att = 100` : Maximum check of consecutive cells marked as an attractor
+* `mx_chk_loc_att = 100`: Maximum check of consecutive cells marked as an attractor
   before considering that we have all the available pieces of the attractor.
-* `mx_chk_lost = 20` : Maximum check of iterations outside the defined grid before we
+* `mx_chk_lost = 20`: Maximum check of iterations outside the defined grid before we
   consider the orbit lost outside. This number can be increased for higher accuracy.
-* `horizon_limit = 1e6` : If the norm of the integrator state reaches this
+* `horizon_limit = 1e6`: If the norm of the integrator state reaches this
   limit we consider that the orbit diverges.
 
 ## Description
@@ -48,8 +48,8 @@ or with grid cells that belong to basins of already found attractors.
 The iteration of a given initial condition continues until one of the following happens:
 1. The trajectory hits `mx_chk_fnd_att` times in a row grid cells previously visited:
    it is considered that an attractor is found and is labelled with a new number.
-1. The trajectory hits an already numbered known attractor `mx_chk_att` consecutive times:
-   the initial condition is numbered with the corresponding number.
+1. The trajectory hits an already identified attractor `mx_chk_att` consecutive times:
+   the initial condition is numbered with the attractor's number.
 1. The trajectory hits a known basin `mx_chk_hit_bas` times in a row: the initial condition
    belongs to that basin and is numbered accordingly.
 1. The trajectory spends `mx_chk_lost` steps outside the defined grid or the norm
@@ -57,10 +57,10 @@ The iteration of a given initial condition continues until one of the following 
    condition is set to -1.
 
 [^Datseris2022]:
-    G. Datseris and A. Wagemakers,
+    G. Datseris and A. Wagemakers, *Effortless estimation of basins of attraction*,
     [Chaos 32, 023104 (2022)](https://doi.org/10.1063/5.0076568)
 """
-struct AttractorsViaRecurrences{I, B<:BasinsInfo, K} <: AttractorMapper
+struct AttractorsViaRecurrences{I, B, K} <: AttractorMapper
     integ::I
     bsn_nfo::B
     kwargs::K
@@ -69,7 +69,7 @@ end
 function AttractorsViaRecurrences(ds::GeneralizedDynamicalSystem, grid;
         Δt=nothing, diffeq = NamedTuple(), kwargs...
     )
-    bsn_nfo, integ = basininfo_and_integ(ds, nothing, grid, Δt, diffeq)
+    bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq)
     return AttractorsViaRecurrences(integ, bsn_nfo, kwargs)
 end
 
@@ -99,7 +99,7 @@ end
 
 # TODO: Decide, for projected system, do we save the "full state" attractor,
 # or the projected version...?
-mutable struct BasinsInfo{B, IF, RF, UF, D, T, Q, K}
+mutable struct BasinsInfo{B, IF, D, T, Q}
     basins::Array{Int16, B}
     grid_steps::SVector{B, Float64}
     grid_maxima::SVector{B, Float64}
@@ -113,39 +113,24 @@ mutable struct BasinsInfo{B, IF, RF, UF, D, T, Q, K}
     prev_label::Int
     attractors::Dict{Int16, Dataset{D, T}}
     visited_list::Q
-    search_trees::K
-    dist::Vector{Float64}
-    neighborindex::Vector{Int64}
 end
 
-function basininfo_and_integ(ds::GeneralizedDynamicalSystem, attractors, grid, Δt, diffeq)
+function basininfo_and_integ(ds::GeneralizedDynamicalSystem, grid, Δt, diffeq)
     integ = integrator(ds; diffeq)
     isdiscrete = isdiscretetime(integ)
-    if isnothing(Δt)
-        if !isdiscrete
-            Δt = automatic_Δt_basins(integ, grid)
-            @info "Automatic Δt estimation yielded Δt = $(Δt)"
-        else
-            Δt = 1
-        end
-    end
+    Δt = isnothing(Δt) ? automatic_Δt_basins(integ, grid) : Δt
     integ = integrator(ds; diffeq)
     iter_f! = if (isdiscrete && Δt == 1)
         (integ) -> step!(integ)
     else
         (integ) -> step!(integ, Δt)
     end
-    bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, attractors)
+    bsn_nfo = init_bsn_nfo(grid, integ, iter_f!)
     return bsn_nfo, integ
 end
 
-function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, attractors = nothing)
+function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function)
     D = length(grid)
-    trees = if isnothing(attractors)
-        nothing
-    else
-        Dict(k => searchstructure(KDTree, att, Euclidean()) for (k, att) in attractors)
-    end
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
     grid_minima = minimum.(grid)
@@ -157,11 +142,8 @@ function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, attractors = nothin
         iter_f!,
         :att_search,
         2,4,0,1,0,
-        Dict{Int16,Dataset{D,eltype(get_state(integ))}}(),
+        Dict{Int16,Dataset{D, eltype(get_state(integ))}}(),
         Vector{CartesianIndex{D}}(),
-        trees,
-        [Inf],
-        [0]
     )
     reset_basins_counters!(bsn_nfo)
     return bsn_nfo
@@ -187,6 +169,7 @@ Also, `Δt` that is smaller than the internal step size of the integrator will c
 a performance drop.
 """
 function automatic_Δt_basins(integ, grid; N = 5000)
+    isdiscretetime(integ) && return 1
     steps = step.(grid)
     s = sqrt(sum(x^2 for x in steps)) # diagonal length of a cell
     indices = CartesianIndices(length.(grid))
@@ -204,7 +187,9 @@ function automatic_Δt_basins(integ, grid; N = 5000)
         end
         dudt += norm(deriv)
     end
-    return Δt = 10*s*N/dudt
+    Δt = 10*s*N/dudt
+    @info "Automatic Δt estimation yielded Δt = $(Δt)"
+    return Δt
 end
 
 
@@ -251,32 +236,12 @@ The label `1` (initial value) outlined in the paper is `0` here instead.
 function _identify_basin_of_cell!(
         bsn_nfo::BasinsInfo, n::CartesianIndex, u_full_state;
         mx_chk_att = 2, mx_chk_hit_bas = 10, mx_chk_fnd_att = 100, mx_chk_loc_att = 100,
-        horizon_limit = 1e6, ε = 1e-3,
-        mx_chk_lost = isnothing(bsn_nfo.search_trees) ? 20 : 1000,
+        horizon_limit = 1e6, mx_chk_lost = 20,
         show_progress = true, # show_progress only used when finding new attractor.
     )
 
     #if n[1]==-1 means we are outside the grid
     ic_label = (n[1]==-1  || isnan(u_full_state[1])) ? -1 : bsn_nfo.basins[n]
-
-    # search attractors directly
-    if !isnothing(bsn_nfo.search_trees)
-        bsn_nfo.consecutive_lost = (ic_label == -1 ? bsn_nfo.consecutive_lost + 1 : 0);
-        if norm(u_full_state) > horizon_limit || bsn_nfo.consecutive_lost > mx_chk_lost
-            return -1
-        end
-        for (k, t) in bsn_nfo.search_trees # this is a `Dict`
-            Neighborhood.NearestNeighbors.knn_point!(
-                t, u_full_state, false, bsn_nfo.dist,
-                bsn_nfo.neighborindex, Neighborhood.alwaysfalse
-            )
-            if bsn_nfo.dist[1] < ε
-                ic_label = 2*k + 1
-                return ic_label
-            end
-        end
-        return 0
-    end
 
     check_next_state!(bsn_nfo, ic_label)
 
@@ -361,7 +326,7 @@ function _identify_basin_of_cell!(
 
     if bsn_nfo.state == :lost
         bsn_nfo.consecutive_lost += 1
-        if   bsn_nfo.consecutive_lost > mx_chk_lost || norm(u_full_state) > horizon_limit
+        if bsn_nfo.consecutive_lost > mx_chk_lost || norm(u_full_state) > horizon_limit
             relabel_visited_cell!(bsn_nfo, bsn_nfo.visited_cell, 0)
             reset_basins_counters!(bsn_nfo)
             # problematic IC : diverges or wanders outside the defined grid
@@ -372,8 +337,8 @@ function _identify_basin_of_cell!(
     end
 end
 
-function store_attractor!(bsn_nfo::BasinsInfo{B, IF, RF, UF, D, T, Q},
-    u_full_state, show_progress = true) where {B, IF, RF, UF, D, T, Q}
+function store_attractor!(bsn_nfo::BasinsInfo{B, IF, D, T, Q},
+    u_full_state, show_progress = true) where {B, IF, D, T, Q}
     # bsn_nfo.current_att_label is the number of the attractor multiplied by two
     attractor_id = bsn_nfo.current_att_label ÷ 2
     V = SVector{D, T}

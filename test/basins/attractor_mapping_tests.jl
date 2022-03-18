@@ -105,7 +105,7 @@ end
         3 => [0, 1.5, 1.0], # fixed point
     ]
     diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)
-    M = 200; z = 4
+    M = 200; z = 3
     xg = yg = zg = range(-z, z; length = M)
     grid = (xg, yg, zg)
     expected_fs_raw = Dict(2 => 0.165, 3 => 0.642, 1 => 0.193)

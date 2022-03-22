@@ -48,7 +48,7 @@ function AttractorsViaProximity(ds, attractors::Dict, ε = nothing;
     integ = integrator(ds; diffeq)
     # Minimum distance between attractors
     if isnothing(ε)
-        @info("Computing minimum distance between attractos...")
+        @info("Computing minimum distance between attractors...")
         dist, idx = [Inf], [0]
         minε = Inf
         for (k, A) in attractors

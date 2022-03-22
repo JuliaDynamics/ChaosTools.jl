@@ -12,7 +12,7 @@ using Statistics
 # Define generic testing framework
 function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         rerr = 1e-3, ferr = 1e-3, ε = nothing, clustering_threshold = 20.0,
-        diffeq = NamedTuple(),
+        diffeq = NamedTuple(), kwargs...
     )
     # u0s is Vector{Pair}
     known_attractors = Dict(
@@ -28,7 +28,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
     # reusable testing function
     function test_basin_fractions(mapper;
             err = 1e-3, known=false, single_u_mapping = true,
-            known_ids = known_ids
+            known_ids = known_ids, expected_fs = expected_fs
         )
         if single_u_mapping
             for (k, u0) in u0s
@@ -63,12 +63,12 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         test_basin_fractions(mapper; known = true, err = 1e-15)
     end
     @testset "Recurrences" begin
-        mapper = AttractorsViaRecurrences(ds, grid; diffeq, show_progress = false)
+        mapper = AttractorsViaRecurrences(ds, grid; diffeq, show_progress = false, kwargs...)
         test_basin_fractions(mapper; err = rerr)
     end
     @testset "Featurizing, unsupervised" begin
-        mapper = AttractorsViaFeaturizing(ds, featurizer; diffeq, Ttr = 100)
-        test_basin_fractions(mapper; err = ferr, single_u_mapping=false, known_ids=[1,2])
+        mapper = AttractorsViaFeaturizing(ds, featurizer; diffeq, Ttr = 200)
+        test_basin_fractions(mapper; err = ferr, single_u_mapping = false, known_ids = [1, 2])
     end
     @testset "Featurizing, supervised" begin
         attractors_ic = Dataset([v for (k,v) in u0s if k ≠ -1])
@@ -111,21 +111,19 @@ end
     expected_fs_raw = Dict(2 => 0.165, 3 => 0.642, 1 => 0.193)
 
     function lorenz84_featurizer(A, t)
-        x1 = ChaosTools.Entropies.genentropy(Dataset(A[:, 2:3]), 0.1)
-        mini, maxi = minmaxima(A)
-        x2 = maxi[1] - mini[1]
-        x3 = maxi[3] - mini[3]
-        return [x1, x2, x3]
+        a,b = ChaosTools.data_boxing(Dataset(A), 0.1, 3)
+        x1 = length(b)
+        return [x1*0.1]
     end
 
-    test_basins(ds, u0s, grid, expected_fs_raw, lorenz84_featurizer; diffeq, ferr=1e-2)
+    test_basins(ds, u0s, grid, expected_fs_raw, lorenz84_featurizer; diffeq, ferr=1e-2, Δt = 0.2, mx_chk_att = 20)
 end
 
 
 @testset "Duffing oscillator: stroboscopic map" begin
 
     ds = Systems.duffing([0.1, 0.25]; ω = 1.0, f = 0.2, d = 0.15, β = -1)
-    xg = yg = range(-2.2, 2.2; length=100)
+    xg = yg = range(-2.2, 2.2; length=200)
     grid = (xg, yg)
     diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)
     T = 2π/1.0
@@ -134,12 +132,12 @@ end
         1 => [-0.8, 0],
         2 => [1.8, 0],
     ]
-    expected_fs_raw = Dict(2 => 0.506, 1 => 0.494)
+    expected_fs_raw = Dict(2 => 0.509, 1 => 0.491)
     function duffing_featurizer(A, t)
         return [A[end][1]]
     end
 
-    test_basins(smap, u0s, grid, expected_fs_raw, duffing_featurizer; diffeq, ferr=1e-2)
+    test_basins(smap, u0s, grid, expected_fs_raw, duffing_featurizer; ε = 0.2, ferr=1e-2)
 
 end
 

@@ -8,7 +8,7 @@ using ProgressMeter
 #####################################################################################
 # AttractorMapper API
 #####################################################################################
-struct AttractorsViaFeaturizing{DS<:DynamicalSystem, T, F, A, K, M} <: AttractorMapper
+struct AttractorsViaFeaturizing{DS<:GeneralizedDynamicalSystem, T, F, A, K, M} <: AttractorMapper
     ds::DS
     Ttr::T
     Δt::T
@@ -101,7 +101,7 @@ To enable this, simply start Julia with the number of threads you want to use.
     Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
     stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
-function AttractorsViaFeaturizing(ds::DynamicalSystem, featurizer::Function;
+function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, featurizer::Function;
         attractors_ic::Union{AbstractDataset, Nothing}=nothing, T=100, Ttr=100, Δt=1,
         clust_method_norm=Euclidean(),
         clustering_threshold = 0.0, min_neighbors = 10, diffeq = NamedTuple(),
@@ -143,8 +143,13 @@ function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
 end
 
 function extract_features(mapper::AttractorsViaFeaturizing, u0::AbstractVector{<:Real})
-    u = trajectory(mapper.ds, mapper.total, u0;
-    Ttr=mapper.Ttr, Δt=mapper.Δt, diffeq=mapper.diffeq)
+    if isdiscretetime(mapper.ds)
+        u = trajectory(mapper.ds, mapper.total, u0;
+                Ttr = mapper.Ttr, Δt = mapper.Δt)
+    else
+        u = trajectory(mapper.ds, mapper.total, u0;
+                Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq)
+    end
     t = (mapper.Ttr):(mapper.Δt):(mapper.total+mapper.Ttr)
     feature = mapper.featurizer(u, t)
     return feature

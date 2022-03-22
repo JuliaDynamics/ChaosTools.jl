@@ -119,7 +119,6 @@ function basininfo_and_integ(ds::GeneralizedDynamicalSystem, grid, Δt, diffeq)
     integ = integrator(ds; diffeq)
     isdiscrete = isdiscretetime(integ)
     Δt = isnothing(Δt) ? automatic_Δt_basins(integ, grid) : Δt
-    integ = integrator(ds; diffeq)
     iter_f! = if (isdiscrete && Δt == 1)
         (integ) -> step!(integ)
     else

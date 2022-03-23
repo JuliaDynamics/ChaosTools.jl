@@ -46,7 +46,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         # Precise test with known initial conditions
         fs, labels = basin_fractions(mapper, ics; show_progress = false)
         @test sort!(unique(labels)) == known_ids
-        @show found_fs = sort(collect(values(fs)))
+        found_fs = sort(collect(values(fs)))
         errors = abs.(expected_fs .- found_fs)
         for er in errors
             @test er .≤ err

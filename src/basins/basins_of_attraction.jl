@@ -131,7 +131,7 @@ function basins_of_attraction(grid::Tuple, ds;
         "Initialize a `projected_integrator` instead.")
         idxs = 1:length(grid)
         c = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
-        integ = projected_integrator(ds, idxs, c; diffeq)        
+        integ = projected_integrator(ds, idxs, c; diffeq)
     elseif !isnothing(idxs)
         @warn("Using `idxs` is deprecated. Initialize a `projeted_integrator` instead.")
         @assert length(idxs) == length(grid)
@@ -152,7 +152,6 @@ function basins_of_attraction(grid::Tuple, ds;
         Δt=isnothing(Δt) ? 1 : Δt, Ttr, mx_chk_lost, horizon_limit, diffeq,)
         return estimate_basins_proximity!(mapper, grid; kwargs...)
     else # (original) recurrences version
-        @show integ
         bsn_nfo, integ = basininfo_and_integ(integ, grid, Δt, diffeq)
         bsn_nfo = estimate_basins_recurrences!(grid, bsn_nfo, integ; kwargs...)
         return bsn_nfo.basins, bsn_nfo.attractors

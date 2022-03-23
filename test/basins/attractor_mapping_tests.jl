@@ -46,7 +46,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         # Precise test with known initial conditions
         fs, labels = basin_fractions(mapper, ics; show_progress = false)
         @test sort!(unique(labels)) == known_ids
-        found_fs = sort(collect(values(fs)))
+        @show found_fs = sort(collect(values(fs)))
         errors = abs.(expected_fs .- found_fs)
         for er in errors
             @test er .≤ err
@@ -141,6 +141,50 @@ end
 
 end
 
+
+@testset "Magnetic pendulum: projected system" begin
+
+    ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
+    xg = range(-2,2,length = 200)
+    yg = range(-2,2,length = 200)
+    grid = (xg, yg)
+    diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)
+    psys = projected_integrator(ds, 1:2, [0.0, 0.0]; diffeq)
+    u0s = [
+        1 => [-0.5, 0.857],
+        2 => [-0.5, -0.857],
+        3 => [1., 0.],
+    ]
+    #expected_fs_raw = Dict(2 => 0.332725, 3 => 0.33455, 1 => 0.332725)
+    expected_fs_raw = Dict(2 => 0.318, 3 => 0.347, 1 => 0.335)
+
+    function magnetic_featurizer(A, t)
+        return [A[end][1]]
+    end
+
+    test_basins(psys, u0s, grid, expected_fs_raw, magnetic_featurizer; ε = 0.2, Δt = 1., ferr=1e-2)
+end
+
+
+# @testset "Thomas cyclical: Poincaré map" begin
+#
+#     ds = Systems.thomas_cyclical(b = 0.1665)
+#     xg = yg = range(-6.0, 6.0; length = 100)
+#     pmap = poincaremap(ds, (3, 0.0), 1e6;
+#         rootkw = (xrtol = 1e-8, atol = 1e-8), diffeq=(reltol=1e-9,)
+#     )
+#     basin,attractors = basins_of_attraction((xg,yg), pmap; show_progress = false)
+#     u0s = [
+#         1 => [-0.8, 0],
+#         2 => [1.8, 0],
+#     ]
+#     expected_fs_raw = Dict(2 => 0.509, 1 => 0.491)
+#     function duffing_featurizer(A, t)
+#         return [A[end][1]]
+#     end
+#
+#     test_basins(pmap, u0s, grid, expected_fs_raw, duffing_featurizer; ε = 0.2, ferr=1e-2)
+# end
 
 
 end

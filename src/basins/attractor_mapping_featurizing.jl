@@ -143,13 +143,8 @@ function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
 end
 
 function extract_features(mapper::AttractorsViaFeaturizing, u0::AbstractVector{<:Real})
-    if isdiscretetime(mapper.ds)
-        u = trajectory(mapper.ds, mapper.total, u0;
-                Ttr = mapper.Ttr, Δt = mapper.Δt)
-    else
-        u = trajectory(mapper.ds, mapper.total, u0;
-                Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq)
-    end
+    u = trajectory(mapper.ds, mapper.total, u0;
+            Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq)
     t = (mapper.Ttr):(mapper.Δt):(mapper.total+mapper.Ttr)
     feature = mapper.featurizer(u, t)
     return feature

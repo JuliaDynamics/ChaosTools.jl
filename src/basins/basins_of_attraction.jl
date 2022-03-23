@@ -126,10 +126,12 @@ function basins_of_attraction(grid::Tuple, ds;
     if !isnothing(T)
         @warn("Using `T` is deprecated. Initialize a `stroboscopicmap` and pass it.")
         integ = stroboscopicmap(ds, T)
-    elseif length(grid) ≠ dimension(ds)
+    elseif length(grid) ≠ dimension(ds) && isnothing(idxs)
         @warn("Giving a `grid` with dimension lower than `ds` is deprecated. "*
         "Initialize a `projected_integrator` instead.")
         idxs = 1:length(grid)
+        c = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
+        integ = projected_integrator(ds, idxs, c; diffeq)        
     elseif !isnothing(idxs)
         @warn("Using `idxs` is deprecated. Initialize a `projeted_integrator` instead.")
         @assert length(idxs) == length(grid)
@@ -139,7 +141,7 @@ function basins_of_attraction(grid::Tuple, ds;
         else
             c = complete_state
         end
-        integ = projected_integrator(ds, idxs, compelte_state; diffeq)
+        integ = projected_integrator(ds, idxs, c; diffeq)
     else
         integ = ds
     end
@@ -147,10 +149,10 @@ function basins_of_attraction(grid::Tuple, ds;
     if !isnothing(attractors) # proximity version
         # initialize Proximity and loop.
         mapper = AttractorsViaProximity(integ, attractors::Dict, ε;
-        Δt=isnothing(Δt) ? 1 : Δt, Ttr, mx_chk_lost, horizon_limit, diffeq,
-    )
-    return estimate_basins_proximity!(mapper, grid; kwargs...)
+        Δt=isnothing(Δt) ? 1 : Δt, Ttr, mx_chk_lost, horizon_limit, diffeq,)
+        return estimate_basins_proximity!(mapper, grid; kwargs...)
     else # (original) recurrences version
+        @show integ
         bsn_nfo, integ = basininfo_and_integ(integ, grid, Δt, diffeq)
         bsn_nfo = estimate_basins_recurrences!(grid, bsn_nfo, integ; kwargs...)
         return bsn_nfo.basins, bsn_nfo.attractors

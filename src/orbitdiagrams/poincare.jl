@@ -64,13 +64,13 @@ where ``\\mathbf{a}, b`` are the parameters of the hyperplane.
 
 In code, `plane` can be either:
 
-* A `Tuple{Int, <: Number}`, like `(j, r)` : the plane is defined
-  as when the `j` variable of the system equals the value `r`.
+* A `Tuple{Int, <: Real}`, like `(j, r)` : the plane is defined
+  as when the `j`th variable of the system equals the value `r`.
 * A vector of length `D+1`. The first `D` elements of the
   vector correspond to ``\\mathbf{a}`` while the last element is ``b``.
 
-This function uses `ds` and higher order interpolation from DifferentialEquations.jl
-to create a high accuracy estimate of the section.
+This function uses `ds`, higher order interpolation from DifferentialEquations.jl,
+and root finding from Roots.jl, to create a high accuracy estimate of the section.
 See also [`produce_orbitdiagram`](@ref).
 
 ## Keyword Arguments
@@ -199,7 +199,7 @@ end
 #                               Poincare Map                                        #
 #####################################################################################
 """
-	poincaremap(ds::ContinuousDynamicalSystem, plane, Tmax=1e6; kwargs...) → pmap
+	poincaremap(ds::ContinuousDynamicalSystem, plane, Tmax=1e3; kwargs...) → pmap
 
 Return a map (integrator) that produces iterations over the Poincaré map of the `ds`.
 This map is defined as the sequence of points on the Poincaré surface of section.
@@ -215,7 +215,7 @@ and then calling `step!` as normally.
 **Notice**: The argument `Tmax` exists so that the integrator can terminate instead
 of being evolved for infinite time, to avoid cases where iteration would continue
 forever for ill-defined hyperplanes or for convergence to fixed points.
-If during `step!` the system has been evolved for more than `Tmax`,
+If during one `step!` the system has been evolved for more than `Tmax`,
 then `step!(pmap)` will return `nothing`, while `get_state(pmap)` will return a vector
 of `NaN`.
 
@@ -230,7 +230,7 @@ next_state_on_psos = step!(pmap)
 ```
 """
 function poincaremap(
-		ds::CDS{IIP, S, D}, plane, Tmax = 1e6;
+		ds::CDS{IIP, S, D}, plane, Tmax = 1e3;
 	    direction = -1, u0 = get_state(ds),
 	    rootkw = (xrtol = 1e-6, atol = 1e-6), diffeq = NamedTuple(), kwargs...
 	) where {IIP, S, D}
@@ -244,9 +244,16 @@ function poincaremap(
     integ = integrator(ds, u0; diffeq)
 	planecrossing = PlaneCrossing(plane, direction > 0)
 	plane_distance = (t) -> planecrossing(integ(t))
-    v = SVector{length(u0), eltype(u0)}(u0)
-	return PoincareMap(integ, plane_distance, planecrossing, Tmax, rootkw, v)
+    v = SVector{D, eltype(u0)}(u0)
+    dummy = zeros(D)
+    diffidxs = _indices_on_poincare_plane(plane, D)
+	return PoincareMap(
+        integ, plane_distance, planecrossing, Tmax, rootkw, v, dummy, diffidxs
+    )
 end
+
+_indices_on_poincare_plane(plane::Tuple, D) = setdiff(1:D, [plane[1]])
+_indices_on_poincare_plane(::Vector, D) = collect(1:D-1)
 
 mutable struct PoincareMap{I, F, P, R, V} <: GeneralizedDynamicalSystem
 	integ::I
@@ -255,6 +262,10 @@ mutable struct PoincareMap{I, F, P, R, V} <: GeneralizedDynamicalSystem
 	Tmax::Float64
 	rootkw::R
 	proj_state::V
+    # These two fields are for setting the state of the pmap from the plane
+    # (i.e., given a D-1 dimensional state, create the full D-dimensional state)
+    dummy::Vector{Float64}
+    diffidxs::Vector{Int}
 end
 isdiscretetime(p::PoincareMap) = true
 DelayEmbeddings.dimension(p::PoincareMap) = length(p.proj_state) - 1
@@ -270,13 +281,28 @@ function DynamicalSystemsBase.step!(pmap::PoincareMap)
 		return pmap.proj_state
 	end
 end
+
 function DynamicalSystemsBase.reinit!(pmap::PoincareMap, u0)
     if length(u0) == dimension(pmap) + 1
-	    reinit!(pmap.integ, u0)
+	    u0 = u0
+    elseif length(u0) == dimension(pmap)
+        u0 = _recreate_state_from_plane(pmap, u0)
     else
-        error("Must convert state on the Poincare plane into full system state.")
+        error("Dimension of state for reinit is inappropriate.")
     end
+    reinit!(pmap.integ, u0)
 end
+function _recreate_state_from_plane(pmap::PoincareMap, u0)
+    if pmap.plane isa Tuple
+        pmap.dummy[pmap.diffidxs] .= u0
+        pmap.dummy[pmap.plane[1]] = u0[pmap.plane[1]]
+    else
+        error("Don't know how to convert state on generic plane into full space.")
+    end
+    return pmap.dummy
+end
+
+
 function DynamicalSystemsBase.get_state(pmap::PoincareMap)
 	if pmap.integ.t < pmap.Tmax
 		return pmap.proj_state

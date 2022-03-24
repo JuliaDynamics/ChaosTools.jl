@@ -166,25 +166,25 @@ end
 end
 
 
-# @testset "Thomas cyclical: Poincaré map" begin
-#
-#     ds = Systems.thomas_cyclical(b = 0.1665)
-#     xg = yg = range(-6.0, 6.0; length = 100)
-#     pmap = poincaremap(ds, (3, 0.0), 1e6;
-#         rootkw = (xrtol = 1e-8, atol = 1e-8), diffeq=(reltol=1e-9,)
-#     )
-#     basin,attractors = basins_of_attraction((xg,yg), pmap; show_progress = false)
-#     u0s = [
-#         1 => [-0.8, 0],
-#         2 => [1.8, 0],
-#     ]
-#     expected_fs_raw = Dict(2 => 0.509, 1 => 0.491)
-#     function duffing_featurizer(A, t)
-#         return [A[end][1]]
-#     end
-#
-#     test_basins(pmap, u0s, grid, expected_fs_raw, duffing_featurizer; ε = 0.2, ferr=1e-2)
-# end
+@testset "Thomas cyclical: Poincaré map" begin
+
+    ds = Systems.thomas_cyclical(b = 0.1665)
+    xg = yg = range(-6.0, 6.0; length = 100)
+    pmap = poincaremap(ds, (3, 0.0), 1e6;
+        rootkw = (xrtol = 1e-8, atol = 1e-8), diffeq=(reltol=1e-9,)
+    )
+    #basin,attractors = basins_of_attraction((xg,yg), pmap; show_progress = false)
+    u0s = [
+        1 => [-0.8, 0],
+        2 => [1.8, 0],
+    ]
+    expected_fs_raw = Dict(2 => 0.509, 1 => 0.491)
+    function duffing_featurizer(A, t)
+        return [A[end][1]]
+    end
+
+    test_basins(pmap, u0s, grid, expected_fs_raw, duffing_featurizer; ε = 0.2, ferr=1e-2)
+end
 
 
 end

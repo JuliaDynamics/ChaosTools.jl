@@ -256,6 +256,10 @@ mutable struct PoincareMap{I, F, P, R, V} <: GeneralizedDynamicalSystem
 	rootkw::R
 	proj_state::V
 end
+isdiscretetime(p::PoincareMap) = true
+DelayEmbeddings.dimension(p::PoincareMap) = length(p.proj_state)
+#integrator(p::PoincareMap) = p
+integrator(pinteg::PoincareMap, args...; kwargs...) = pinteg
 
 function DynamicalSystemsBase.step!(pmap::PoincareMap)
 	u = poincaremap!(pmap.integ, pmap.f, pmap.planecrossing, pmap.Tmax, pmap.rootkw)
@@ -267,6 +271,10 @@ function DynamicalSystemsBase.step!(pmap::PoincareMap)
 	end
 end
 function DynamicalSystemsBase.reinit!(pmap::PoincareMap, u0)
+	reinit!(pmap.integ, u0)
+	return
+end
+function DynamicalSystemsBase.reinit_on_the_plane!(pmap::PoincareMap, u0)
 	reinit!(pmap.integ, u0)
 	return
 end

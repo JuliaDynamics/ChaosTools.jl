@@ -126,6 +126,8 @@ function basins_of_attraction(grid::Tuple, ds;
     if !isnothing(T)
         @warn("Using `T` is deprecated. Initialize a `stroboscopicmap` and pass it.")
         integ = stroboscopicmap(ds, T)
+    elseif ds isa PoincareMap
+        integ = ds
     elseif length(grid) ≠ dimension(ds) && isnothing(idxs)
         @warn("Giving a `grid` with dimension lower than `ds` is deprecated. "*
         "Initialize a `projected_integrator` instead.")

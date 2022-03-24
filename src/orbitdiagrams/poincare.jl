@@ -257,7 +257,7 @@ mutable struct PoincareMap{I, F, P, R, V} <: GeneralizedDynamicalSystem
 	proj_state::V
 end
 isdiscretetime(p::PoincareMap) = true
-DelayEmbeddings.dimension(p::PoincareMap) = length(p.proj_state)
+DelayEmbeddings.dimension(p::PoincareMap) = length(p.proj_state) - 1
 #integrator(p::PoincareMap) = p
 integrator(pinteg::PoincareMap, args...; kwargs...) = pinteg
 
@@ -271,12 +271,11 @@ function DynamicalSystemsBase.step!(pmap::PoincareMap)
 	end
 end
 function DynamicalSystemsBase.reinit!(pmap::PoincareMap, u0)
-	reinit!(pmap.integ, u0)
-	return
-end
-function DynamicalSystemsBase.reinit_on_the_plane!(pmap::PoincareMap, u0)
-	reinit!(pmap.integ, u0)
-	return
+    if length(u0) == dimension(pmap) + 1
+	    reinit!(pmap.integ, u0)
+    else
+        error("Must convert state on the Poincare plane into full system state.")
+    end
 end
 function DynamicalSystemsBase.get_state(pmap::PoincareMap)
 	if pmap.integ.t < pmap.Tmax

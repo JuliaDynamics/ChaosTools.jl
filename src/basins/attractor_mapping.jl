@@ -87,6 +87,17 @@ function basins_of_attraction(mapper::AttractorMapper, grid::Tuple; kwargs...)
     return basins
 end
 
+# Type-stable generation of an initial condition given a grid array index
+@generated function generate_ic_on_grid(grid::NTuple{B, T}, ind) where {B, T}
+    gens = [:(grid[$k][ind[$k]]) for k=1:B]
+    quote
+        Base.@_inline_meta
+        @inbounds return SVector{$B, Float64}($(gens...))
+    end
+end
+
+
+
 # Generic pretty printing
 function generic_mapper_print(io, mapper)
     ps = 14

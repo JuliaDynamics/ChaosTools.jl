@@ -123,6 +123,8 @@ function basins_of_attraction(grid::Tuple, ds;
         kwargs...
     )
 
+
+
     if !isnothing(T)
         @warn("Using `T` is deprecated. Initialize a `stroboscopicmap` and pass it.")
         integ = stroboscopicmap(ds, T)
@@ -209,12 +211,4 @@ function estimate_basins_recurrences!(
     bsn_nfo.basins .= (bsn_nfo.basins .- 1) .÷ 2
 
     return bsn_nfo
-end
-
-@generated function generate_ic_on_grid(grid::NTuple{B, T}, ind) where {B, T}
-    gens = [:(grid[$k][ind[$k]]) for k=1:B]
-    quote
-        Base.@_inline_meta
-        @inbounds return SVector{$B, Float64}($(gens...))
-    end
 end

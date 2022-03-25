@@ -134,7 +134,7 @@ function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
     if show_progress
         progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:")
     end
-    for i = 1:N
+    Threads.@threads for i ∈ 1:N
         ic = _get_ic(ics,i)
         feature_array[i] = extract_features(mapper, ic)
         show_progress && ProgressMeter.next!(progress)

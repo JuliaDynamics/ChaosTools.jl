@@ -3,6 +3,9 @@ export basins_of_attraction, automatic_Δt_basins, AttractorMapper
 # TODO: Re-write docstring: Generic function for calculating the full basins of attraction
 # in a given state space region. It uses either of attractor mapers...
 
+# TODO: This entire function can be deprecated in favor of simpler
+# `basins_of_attraction(mapper::AttractorMapper, grid::Tuple)`.
+
 """
     basins_of_attraction(grid::Tuple, ds::GeneralizedDynamicalSystem; kwargs...)
 Compute an estimate of the basins of attraction of a dynamical system `ds` on
@@ -123,7 +126,12 @@ function basins_of_attraction(grid::Tuple, ds;
         kwargs...
     )
 
-
+    @warn("""
+    The function `basins_of_attraction(grid::Tuple, ds::DynamicalSystem; ...)` is
+    deprecated in favor of the simpler and more generic
+    `basins_of_attraction(mapper::AttractorMapper, grid::Tuple`) which works for
+    any instance of `AttractorMapper`. Please use that method in the future.
+    """)
 
     if !isnothing(T)
         @warn("Using `T` is deprecated. Initialize a `stroboscopicmap` and pass it.")

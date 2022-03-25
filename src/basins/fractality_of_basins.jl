@@ -16,12 +16,14 @@ this case the boundary is intermingled: for a given initial condition we can fin
 another initial condition that lead to another basin arbitriraly close. It provides also
 a simple criterion for fractality: if the boundary basin entropy `Sbb` is above `log(2)`
 then we have a fractal boundary. It doesn't mean that basins with values below cannot
-have a fractal boundary, for a more precise test see [`basins_fractal_test`](@ref). 
+have a fractal boundary, for a more precise test see [`basins_fractal_test`](@ref).
 An important feature of the basin entropy is that it allows
 comparisons between different basins using the same box size `ε`.
 
-[^Daza2016]: A. Daza, A. Wagemakers, B. Georgeot, D. Guéry-Odelin and M. A. F. Sanjuán, 
-Basin entropy: a new tool to analyze uncertainty in dynamical systems, Sci. Rep., 6, 31416, 2016.
+[^Daza2016]:
+    A. Daza, A. Wagemakers, B. Georgeot, D. Guéry-Odelin and M. A. F. Sanjuán,
+    Basin entropy: a new tool to analyze uncertainty in dynamical systems,
+    Sci. Rep., 6, 31416, 2016.
 """
 function basin_entropy(basins, ε = 20)
     dims = size(basins)
@@ -66,14 +68,14 @@ for `Ntotal`
 random balls of radius `ε`. If the computed value is equal to theoretical value of a smooth
 boundary
 (taking into account statistical errors and biases) then we decide that we have a smooth
-boundary. Notice that the response `test_res` may depend on the chosen ball radius `ε`. 
+boundary. Notice that the response `test_res` may depend on the chosen ball radius `ε`.
 For larger size,
 we may observe structures for smooth boundary and we obtain a *different* answer.
 
 The output `test_res` is a symbol describing the nature of the basin and the output `Sbb` is
 the estimated value of the boundary basin entropy with the sampling method.
 
-[^Puy2021] Andreu Puy, Alvar Daza, Alexandre Wagemakers, Miguel A. F. Sanjuán. A test for 
+[^Puy2021] Andreu Puy, Alvar Daza, Alexandre Wagemakers, Miguel A. F. Sanjuán. A test for
 fractal boundaries based on the basin entropy. Commun Nonlinear Sci Numer Simulat, 95, 105588, 2021.
 
 ## Keyword arguments
@@ -115,7 +117,7 @@ function basins_fractal_test(basins; ε = 20, Ntotal = 1000)
 
     Ŝbb = mean(N_stat)
     σ_sbb = std(N_stat)/sqrt(Nb)
-    # Table of boundary basin entropy of a smooth boundary for dimension 1 to 5:  
+    # Table of boundary basin entropy of a smooth boundary for dimension 1 to 5:
     Sbb_tab = [0.499999, 0.4395093, 0.39609176, 0.36319428, 0.33722572]
     if length(dims) ≤ 5
         Sbb_s = Sbb_tab[length(dims)]

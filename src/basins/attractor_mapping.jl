@@ -78,6 +78,15 @@ end
 _get_ic(ics::Function, i) = ics()
 _get_ic(ics::AbstractDataset, i) = ics[i]
 
+# Generic `basins_of_attraction` method
+function basins_of_attraction(mapper::AttractorMapper, grid::Tuple; kwargs...)
+    basins = zeros(Int16, map(length, grid))
+    A = Dataset([generate_ic_on_grid(grid, ind) for ind in CartesianIndices(basins)])
+    fs, labels = basin_fractions(mapper, A; kwargs...)
+    basins .= labels
+    return basins
+end
+
 # Generic pretty printing
 function generic_mapper_print(io, mapper)
     ps = 14

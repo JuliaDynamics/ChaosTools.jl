@@ -40,7 +40,7 @@ end
 
 Initialize a `mapper` that maps initial conditions
 to attractors using the featurizing and clustering method of [^Stender2021].
-See [`AttractorMapper`](@ref) for how to use te `mapper`.
+See [`AttractorMapper`](@ref) for how to use the `mapper`.
 
 `featurizer` is a function that takes as an input an integrated trajectory `A::Dataset`
 and the corresponding time vector `t` and returns a `Vector{<:Real}` of features
@@ -145,10 +145,10 @@ function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
 end
 
 function extract_features(mapper::AttractorsViaFeaturizing, u0::AbstractVector{<:Real})
-    u = trajectory(mapper.ds, mapper.total, u0;
+    A = trajectory(mapper.ds, mapper.total, u0;
             Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq)
     t = (mapper.Ttr):(mapper.Δt):(mapper.total+mapper.Ttr)
-    feature = mapper.featurizer(u, t)
+    feature = mapper.featurizer(A, t)
     return feature
 end
 
@@ -184,7 +184,7 @@ end
 
 # Unsupervised method: clustering in feature space
 function classify_features_clustering(features, min_neighbors)
-    ϵ_optimal = optimal_radius(features, min_neighbors)
+    ϵ_optimal = optimal_radius_dbscan(features, min_neighbors)
     # Now recalculate the final clustering with the optimal ϵ
     clusters = Clustering.dbscan(features, ϵ_optimal; min_neighbors)
     clusters, sizes = sort_clusters_calc_size(clusters)
@@ -241,14 +241,14 @@ Find the optimal radius ε of a point neighborhood for use in DBSCAN, in the uns
 `classify_features`. It does so by finding the `ε` which maximizes the minimum silhouette
 of the cluster.
 """
-function optimal_radius(features, min_neighbors)
+function optimal_radius_dbscan(features, min_neighbors)
     feat_ranges = maximum(features, dims=2)[:,1] .- minimum(features, dims=2)[:,1];
     ϵ_grid = range(minimum(feat_ranges)/200, minimum(feat_ranges), length=200)
     s_grid = zeros(size(ϵ_grid)) # min silhouette values (which we want to maximize)
 
     #vary ϵ to find the best one (which will maximize the minimum sillhoute)
     for i=1:length(ϵ_grid)
-        clusters = dbscan(features, ϵ_grid[i], min_neighbors=min_neighbors)
+        clusters = dbscan(features, ϵ_grid[i]; min_neighbors)
         dists = pairwise(Euclidean(), features)
         class_labels = cluster_props(clusters, features)
         if length(clusters) ≠ 1 #silhouette undefined if only one cluster.

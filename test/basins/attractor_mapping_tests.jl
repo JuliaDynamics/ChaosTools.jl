@@ -48,7 +48,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
 
         # Precise test with known initial conditions
         fs, labels = basin_fractions(mapper, ics; show_progress = false)
-        @test sort!(unique(labels)) == known_ids
+        @test sort!(unique!(labels)) == known_ids
         found_fs = sort(collect(values(fs)))
         errors = abs.(expected_fs .- found_fs)
         for er in errors
@@ -114,9 +114,10 @@ end
     expected_fs_raw = Dict(2 => 0.165, 3 => 0.642, 1 => 0.193)
 
     function lorenz84_featurizer(A, t)
-        a,b = ChaosTools.data_boxing(Dataset(A), 0.1, 3)
+        a, b = ChaosTools.data_boxing(A, 0.1, 3)
+        g = genentropy(A, 0.1)
         x1 = length(b)
-        return [x1*0.1]
+        return [x1*0.1, g]
     end
 
     test_basins(ds, u0s, grid, expected_fs_raw, lorenz84_featurizer; diffeq, ferr=1e-2, Δt = 0.2, mx_chk_att = 20)

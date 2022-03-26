@@ -114,10 +114,8 @@ end
     expected_fs_raw = Dict(2 => 0.165, 3 => 0.642, 1 => 0.193)
 
     function lorenz84_featurizer(A, t)
-        a, b = ChaosTools.data_boxing(A, 0.1, 3)
-        g = genentropy(A, 0.1)
-        x1 = length(b)
-        return [x1*0.1, g]
+        g = exp(genentropy(A, 0.1; q = 0))
+        return [g, g]
     end
 
     test_basins(ds, u0s, grid, expected_fs_raw, lorenz84_featurizer; diffeq, ferr=1e-2, Δt = 0.2, mx_chk_att = 20)

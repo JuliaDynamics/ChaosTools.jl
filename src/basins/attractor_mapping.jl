@@ -103,18 +103,18 @@ _get_ic(ics::AbstractDataset, i) = ics[i]
 # It works for all mappers that define a `basin_fractions` method.
 """
     basins_of_attraction(mapper::AttractorMapper, grid::Tuple; show_progress=true) → basins
-Compute the full basins of attraction as identified by the given `mapper`.
-`grid` is a `Tuple` of `AbstractRange` objects  corresponding to a state space partitioning
-of given `grid` using given `mapper`.
+Compute the full basins of attraction as identified by the given `mapper`,
+which includes a reference to a [`GeneralizedDynamicalSystem`](@ref).
 
-`grid` is a tuple of ranges defining the grid of initial conditions, for example
-`grid = (xg, yg)` where `xg = yg = range(-5, 5; length = 100)`.
+`grid` is a tuple of ranges defining the grid of initial conditions that partition
+the state space into boxes with size the step size of each range.
+For example, `grid = (xg, yg)` where `xg = yg = range(-5, 5; length = 100)`.
 The grid has to be the same dimensionality as the state space expected by the
 integrator/system used in `mapper`. E.g., a [`projected_integrator`](@ref)
 could be used for lower dimensional projections, etc. A special case here is
 a [`poincaremap`](@ref) with `plane` being `Tuple{Int, <: Real}`. In this special
 scenario the grid can be one dimension smaller than the state space, in which case
-the partitioning happens directly on the hyperplane the Poincare map operates on.
+the partitioning happens directly on the hyperplane the Poincaré map operates on.
 
 `basins_of_attraction` function is a convenience 5-lines-of-code wrapper which uses the
 `labels` returned by [`basin_fractions`](@ref) and simply assings them to a full array

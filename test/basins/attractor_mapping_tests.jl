@@ -1,11 +1,14 @@
 using ChaosTools
-using DynamicalSystemsBase
-using DynamicalSystemsBase.DelayEmbeddings
+using ChaosTools.DynamicalSystemsBase
+using ChaosTools.DelayEmbeddings
 using Test
 using LinearAlgebra
 using OrdinaryDiffEq
 using Random
 using Statistics
+
+
+# TODO: Include `basins_of_attraction` call in `test_basins`.
 
 @testset "AttractorMappers" begin
 
@@ -32,7 +35,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         )
         if single_u_mapping
             for (k, u0) in u0s
-                @test k  == mapper(u0)
+                @test k == mapper(u0)
             end
         end
         # Generic test
@@ -145,8 +148,8 @@ end
 @testset "Magnetic pendulum: projected system" begin
 
     ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
-    xg = range(-2,2,length = 200)
-    yg = range(-2,2,length = 200)
+    xg = range(-2,2,length = 201)
+    yg = range(-2,2,length = 201)
     grid = (xg, yg)
     diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)
     psys = projected_integrator(ds, 1:2, [0.0, 0.0]; diffeq)
@@ -159,7 +162,7 @@ end
     expected_fs_raw = Dict(2 => 0.318, 3 => 0.347, 1 => 0.335)
 
     function magnetic_featurizer(A, t)
-        return [A[end][1]]
+        return [A[end][1], A[end][2]]
     end
 
     test_basins(psys, u0s, grid, expected_fs_raw, magnetic_featurizer; ε = 0.2, Δt = 1., ferr=1e-2)
@@ -169,25 +172,28 @@ end
 @testset "Thomas cyclical: Poincaré map" begin
 
     ds = Systems.thomas_cyclical(b = 0.1665)
-    xg = yg = range(-6.0, 6.0; length = 100)
+    xg = yg = range(-6.0, 6.0; length = 100) # important, don't use 101 here, because
+    # the dynamical system has some fixed points ON the hyperplane.
+    grid = (xg, yg)
     pmap = poincaremap(ds, (3, 0.0), 1e6;
         rootkw = (xrtol = 1e-8, atol = 1e-8), diffeq=(reltol=1e-9,)
     )
     #basin,attractors = basins_of_attraction((xg,yg), pmap; show_progress = false)
     u0s = [
-        1 => [-0.8, 0],
-        2 => [1.8, 0],
+        1 => [1.83899, -4.15575, 0],
+        2 => [1.69823, -0.0167188, 0],
+        3 => [-4.08547,  -2.26516, 0],
     ]
-    expected_fs_raw = Dict(2 => 0.509, 1 => 0.491)
-    function duffing_featurizer(A, t)
-        return [A[end][1]]
+    expected_fs_raw = Dict(2 => 0.29, 3 => 0.237, 1 => 0.473)
+    function thomas_featurizer(A, t)
+        return [A[end][1], A[end][2]]
     end
 
-    test_basins(pmap, u0s, grid, expected_fs_raw, duffing_featurizer; ε = 0.2, ferr=1e-2)
+    test_basins(pmap, u0s, grid, expected_fs_raw, thomas_featurizer; ε = 1.0, ferr=1e-2)
 end
 
 
-end
+end # Attractor mapping tests
 
 # TODO: Add a call to `basins_of_attraction` within the `test_basin_fractions` function.
 # TODO: Tests for  projected system (magnetic) and poincare map (thomas cyclical)

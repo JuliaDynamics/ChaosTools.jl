@@ -130,20 +130,21 @@ function basininfo_and_integ(ds::GeneralizedDynamicalSystem, grid, Δt, diffeq)
 end
 
 function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function)
-    D = length(grid)
+    D = length(get_state(integ))
+    G = length(grid)
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
     grid_minima = minimum.(grid)
     bsn_nfo = BasinsInfo(
         zeros(Int16, map(length, grid)),
-        SVector{D, Float64}(grid_steps),
-        SVector{D, Float64}(grid_maxima),
-        SVector{D, Float64}(grid_minima),
+        SVector{G, Float64}(grid_steps),
+        SVector{G, Float64}(grid_maxima),
+        SVector{G, Float64}(grid_minima),
         iter_f!,
         :att_search,
         2,4,0,1,0,
         Dict{Int16,Dataset{D, eltype(get_state(integ))}}(),
-        Vector{CartesianIndex{D}}(),
+        Vector{CartesianIndex{G}}(),
     )
     reset_basins_counters!(bsn_nfo)
     return bsn_nfo
@@ -214,12 +215,26 @@ function get_label_ic!(bsn_nfo::BasinsInfo, integ, u0; kwargs...)
     while cell_label == 0
         bsn_nfo.iter_f!(integ)
         new_y = get_state(integ)
-        n = basin_cell_index(new_y, bsn_nfo)
-        u_att = get_state(integ) # in case we need the full state to save the attractor
-        cell_label = _identify_basin_of_cell!(bsn_nfo, n, u_att; kwargs...)
+        # The internal function `_possibly_reduced_state` exists solely to
+        # accommodate the special case of a Poincare map with the grid defined
+        # directly on the hyperplane, `plane::Tuple{Int, <: Real}`.
+        y = _possibly_reduced_state(new_y, integ, bsn_nfo.grid_minima)
+        n = basin_cell_index(y, bsn_nfo)
+        u = get_state(integ) # in case we need the full state to save the attractor
+        cell_label = _identify_basin_of_cell!(bsn_nfo, n, u; kwargs...)
     end
     return cell_label
 end
+
+_possibly_reduced_state(y, integ, grid) = y
+function _possibly_reduced_state(y, integ::PoincareMap, grid)
+    if integ.planecrossing.plane isa Tuple && length(grid) == dimension(integ)-1
+        return y[integ.diffidxs]
+    else
+        return y
+    end
+end
+
 
 
 """

@@ -1,8 +1,13 @@
 export AttractorMapper,
     AttractorsViaRecurrences,
     AttractorsViaProximity,
-    AttractorsViaFeaturizing
+    AttractorsViaFeaturizing,
+    basin_fractions,
+    basins_of_attraction
 
+#########################################################################################
+# AttractorMapper structure definition
+#########################################################################################
 """
     AttractorMapper(ds::DynamicalSystem, args...; kwargs...) → mapper
 Subtypes of `AttractorMapper` are structures that map initial conditions of `ds` to
@@ -11,7 +16,9 @@ attractors. Currently available mapping methods:
 * [`AttractorsViaRecurrences`](@ref)
 * [`AttractorsViaFeaturizing`](@ref)
 
-`AttractorMapper` subtypes can always be used directly with [`basin_fractions`](@ref).
+All `AttractorMapper` subtypes can be used with [`basin_fractions`](@ref)
+or [`basins_of_attraction`](@ref).
+
 In addition, some mappers can be called as a function of an initial condition:
 ```julia
 label = mapper(u0)
@@ -23,7 +30,18 @@ The mappers that can do this are:
 """
 abstract type AttractorMapper end
 
-# Generic method for `basin_fractions` here.
+# Generic pretty printing
+function generic_mapper_print(io, mapper)
+    ps = 14
+    text = "$(nameof(typeof(mapper)))"
+    println(io, text)
+    println(io, rpad(" rule f: ", ps), get_rule_for_print(mapper))
+    return ps
+end
+Base.show(io::IO, mapper::AttractorMapper) = generic_mapper_print(io, mapper)
+#########################################################################################
+# Generic basin fractions method structure definition
+#########################################################################################
 # It works for all mappers that define the function-like-object behavior
 """
     basin_fractions(mapper::AttractorMapper, ics::Union{Dataset, Function}; kwargs...)
@@ -78,7 +96,30 @@ end
 _get_ic(ics::Function, i) = ics()
 _get_ic(ics::AbstractDataset, i) = ics[i]
 
-# Generic `basins_of_attraction` method
+
+#########################################################################################
+# Generic basins of attraction method structure definition
+#########################################################################################
+# It works for all mappers that define a `basin_fractions` method.
+"""
+    basins_of_attraction(mapper::AttractorMapper, grid::Tuple; show_progress=true) → basins
+Compute the full basins of attraction as identified by the given `mapper`.
+`grid` is a `Tuple` of `AbstractRange` objects  corresponding to a state space partitioning
+of given `grid` using given `mapper`.
+
+`grid` is a tuple of ranges defining the grid of initial conditions, for example
+`grid = (xg, yg)` where `xg = yg = range(-5, 5; length = 100)`.
+The grid has to be the same dimensionality as the state space expected by the
+integrator/system used in `mapper`. E.g., a [`projected_integrator`](@ref)
+could be used for lower dimensional projections, etc. A special case here is
+a [`poincaremap`](@ref) with `plane` being `Tuple{Int, <: Real}`. In this special
+scenario the grid can be one dimension smaller than the state space, in which case
+the partitioning happens directly on the hyperplane the Poincare map operates on.
+
+`basins_of_attraction` function is a convenience 5-lines-of-code wrapper which uses the
+`labels` returned by [`basin_fractions`](@ref) and simply assings them to a full array
+corresponding to the state space partitioning indicated by `grid`.
+"""
 function basins_of_attraction(mapper::AttractorMapper, grid::Tuple; kwargs...)
     basins = zeros(Int16, map(length, grid))
     I = CartesianIndices(basins)
@@ -96,15 +137,3 @@ end
         @inbounds return SVector{$B, Float64}($(gens...))
     end
 end
-
-
-
-# Generic pretty printing
-function generic_mapper_print(io, mapper)
-    ps = 14
-    text = "$(nameof(typeof(mapper)))"
-    println(io, text)
-    println(io, rpad(" rule f: ", ps), get_rule_for_print(mapper))
-    return ps
-end
-Base.show(io::IO, mapper::AttractorMapper) = generic_mapper_print(io, mapper)

@@ -73,6 +73,9 @@ This function uses `ds`, higher order interpolation from DifferentialEquations.j
 and root finding from Roots.jl, to create a high accuracy estimate of the section.
 See also [`produce_orbitdiagram`](@ref).
 
+Notice that `poincaresos` is just a fancy wrapper of initializing a [`poincaremap`](@ref)
+and then calling `trajectory` on it.
+
 ## Keyword Arguments
 * `direction = -1` : Only crossings with `sign(direction)` are considered to belong to
   the surface of section. Positive direction means going from less than ``b``
@@ -89,7 +92,9 @@ See also [`produce_orbitdiagram`](@ref).
   `init` of DifferentialEquations.jl.
   See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
-[^Tabor1989]: M. Tabor, *Chaos and Integrability in Nonlinear Dynamics: An Introduction*, §4.1, in pp. 118-126, New York: Wiley (1989)
+[^Tabor1989]:
+    M. Tabor, *Chaos and Integrability in Nonlinear Dynamics: An Introduction*,
+    §4.1, in pp. 118-126, New York: Wiley (1989)
 """
 function poincaresos(
 		ds::CDS{IIP, S, D}, plane, tfinal = 1000.0;
@@ -119,7 +124,7 @@ end
 function _poincaresos(integ, plane_distance, planecrossing, tfinal, i, rootkw)
 	data = _initialize_output(integ.u, i)
 	while integ.t < tfinal
-		out = poincaremap!(integ, plane_distance, planecrossing, tfinal, rootkw)
+		out, t = poincaremap!(integ, plane_distance, planecrossing, tfinal, rootkw)
 		if !isnothing(out)
             push!(data, out[i])
         else
@@ -150,7 +155,7 @@ function poincaremap!(integ, plane_distance, planecrossing, Tmax, rootkw)
     if side == 0
 		dat = integ.u
         step!(integ)
-		return dat
+		return dat, t0
     end
     # Otherwise evolve until juuuuuust crossing the plane
     while side < 0
@@ -163,11 +168,12 @@ function poincaremap!(integ, plane_distance, planecrossing, Tmax, rootkw)
         step!(integ)
         side = planecrossing(integ.u)
     end
-    (integ.t - t0) > Tmax && return nothing # we evolved too long and no crossing, return nothing
+    # we evolved too long and no crossing, return nothing
+    (integ.t - t0) > Tmax && return (nothing, nothing)
     # Else, we're guaranteed to have `t` after plane and `tprev` before plane
     tcross = Roots.find_zero(plane_distance, (integ.tprev, integ.t), Roots.A42(); rootkw...)
     ucross = integ(tcross)
-    return ucross
+    return ucross, tcross
 end
 
 
@@ -206,18 +212,21 @@ This map is defined as the sequence of points on the Poincaré surface of sectio
 See [`poincaresos`](@ref) for details on `plane` and all other `kwargs`.
 Keyword `idxs` does not apply to `poincaremap`, as it doesn't save any states.
 
-You can progress the map one step on the section by calling `step!(pmap)`,
-which also returns the next state crossing the hyperplane.
-You can also set the integrator to start from a new
-state `u`, which doesn't have to be on the hyperplane, by using `reinit!(pmap, u)`
-and then calling `step!` as normally.
+Notice that while in theory the Poincaré map has one less dimension than `ds`,
+in code the map operates on the full `D`-dimensional state of `ds`
+because that is the only way to accommodate planes with generic orientation.
+
+The output `pmap` follows the [Integrator API](@ref), i.e., `step!` and `reinit!`.
+`current_time(pmap)` returns the time of the last crossing.
+For the special case of `plane` being a `Tuple{Int, <:Real}`, a special `reinit!` method
+is allowed with input state with length `D-1` instead of `D`, i.e., a reduced state already
+on the hyperplane that is then converted into the `D` dimensional state.
 
 **Notice**: The argument `Tmax` exists so that the integrator can terminate instead
 of being evolved for infinite time, to avoid cases where iteration would continue
 forever for ill-defined hyperplanes or for convergence to fixed points.
 If during one `step!` the system has been evolved for more than `Tmax`,
-then `step!(pmap)` will return `nothing`, while `get_state(pmap)` will return a vector
-of `NaN`.
+then `step!(pmap)` will terminate return `nothing`.
 
 ## Example
 ```julia
@@ -248,7 +257,7 @@ function poincaremap(
     dummy = zeros(D)
     diffidxs = _indices_on_poincare_plane(plane, D)
 	return PoincareMap(
-        integ, plane_distance, planecrossing, Tmax, rootkw, v, dummy, diffidxs
+        integ, plane_distance, planecrossing, Tmax, rootkw, v, 0.0, dummy, diffidxs
     )
 end
 
@@ -261,57 +270,55 @@ mutable struct PoincareMap{I, F, P, R, V} <: GeneralizedDynamicalSystem
  	planecrossing::P
 	Tmax::Float64
 	rootkw::R
-	proj_state::V
+	state_on_plane::V
+    tcross::Float64
     # These two fields are for setting the state of the pmap from the plane
     # (i.e., given a D-1 dimensional state, create the full D-dimensional state)
     dummy::Vector{Float64}
     diffidxs::Vector{Int}
 end
 DynamicalSystemsBase.isdiscretetime(p::PoincareMap) = true
-DelayEmbeddings.dimension(p::PoincareMap) = length(p.proj_state) - 1
+DelayEmbeddings.dimension(p::PoincareMap) = length(p.state_on_plane)
 DynamicalSystemsBase.integrator(pinteg::PoincareMap, args...; kwargs...) = pinteg
 
 function DynamicalSystemsBase.step!(pmap::PoincareMap)
-	u = poincaremap!(pmap.integ, pmap.f, pmap.planecrossing, pmap.Tmax, pmap.rootkw)
+	u, t = poincaremap!(pmap.integ, pmap.f, pmap.planecrossing, pmap.Tmax, pmap.rootkw)
 	if isnothing(u)
 		return nothing
 	else
-		pmap.proj_state = u
-		return pmap.proj_state
+		pmap.state_on_plane = u
+        pmap.tcross = t
+		return pmap.state_on_plane
 	end
 end
+DynamicalSystemsBase.step!(pmap::PoincareMap, n::Int) = for _ ∈ 1:n; step!(pmap); end
 
 function DynamicalSystemsBase.reinit!(pmap::PoincareMap, u0)
-    if length(u0) == dimension(pmap) + 1
+    if length(u0) == dimension(pmap)
 	    u0 = u0
-    elseif length(u0) == dimension(pmap)
-        u0 = _recreate_state_from_plane(pmap, u0)
+    elseif length(u0) == dimension(pmap) - 1
+        u0 = _recreate_state_from_poincare_plane(pmap, u0)
     else
-        error("Dimension of state for reinit is inappropriate.")
+        error("Dimension of state for poincare map reinit is inappropriate.")
     end
     reinit!(pmap.integ, u0)
 end
-function _recreate_state_from_plane(pmap::PoincareMap, u0)
-    if pmap.plane isa Tuple
+function _recreate_state_from_poincare_plane(pmap::PoincareMap, u0)
+    plane = pmap.planecrossing.plane
+    if plane isa Tuple
         pmap.dummy[pmap.diffidxs] .= u0
-        pmap.dummy[pmap.plane[1]] = u0[pmap.plane[1]]
+        pmap.dummy[plane[1]] = plane[2]
     else
         error("Don't know how to convert state on generic plane into full space.")
     end
     return pmap.dummy
 end
 
-
-function DynamicalSystemsBase.get_state(pmap::PoincareMap)
-	if pmap.integ.t < pmap.Tmax
-		return pmap.proj_state
-	else
-		return pmap.proj_state*NaN
-	end
-end
+DynamicalSystemsBase.get_state(pmap::PoincareMap) = pmap.state_on_plane
+DynamicalSystemsBase.current_time(pmap::PoincareMap) = pmap.tcross
 
 function Base.show(io::IO, pmap::PoincareMap)
-    println(io, "Iterator of the Poincaré map")
+    println(io, "Iterator of the Poincaré map of a $(dimension(pmap))-dimensional system")
     println(io,  rpad(" rule f: ", 14),     DynamicalSystemsBase.eomstring(pmap.integ.f.f))
     println(io,  rpad(" hyperplane: ", 14),     pmap.planecrossing.plane)
 end

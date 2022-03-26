@@ -186,7 +186,8 @@ end
     ]
     expected_fs_raw = Dict(2 => 0.29, 3 => 0.237, 1 => 0.473)
     function thomas_featurizer(A, t)
-        return [A[end][1], A[end][2]]
+        x, y = columns(A)
+        return [minimum(x), minimum(y)]
     end
 
     test_basins(pmap, u0s, grid, expected_fs_raw, thomas_featurizer; ε = 1.0, ferr=1e-2)

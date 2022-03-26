@@ -26,6 +26,7 @@ get_rule_for_print(m.ds)
 
 function Base.show(io::IO, mapper::AttractorsViaFeaturizing)
     ps = generic_mapper_print(io, mapper)
+    println(io, rpad(" type: ", ps), nameof(typeof(mapper.ds)))
     println(io, rpad(" featurizer: ", ps), DynamicalSystemsBase.eomstring(mapper.featurizer))
     println(io, rpad(" Ttr: ", ps), mapper.Ttr)
     println(io, rpad(" Δt: ", ps), mapper.Δt)
@@ -37,8 +38,9 @@ end
 """
     AttractorsViaFeaturizing(ds::DynamicalSystem, featurizer::Function; kwargs...) → mapper
 
-Initialize a `mapper` to be used with [`basin_fractions`](@ref) that maps initial conditions
+Initialize a `mapper` that maps initial conditions
 to attractors using the featurizing and clustering method of [^Stender2021].
+See [`AttractorMapper`](@ref) for how to use te `mapper`.
 
 `featurizer` is a function that takes as an input an integrated trajectory `A::Dataset`
 and the corresponding time vector `t` and returns a `Vector{<:Real}` of features

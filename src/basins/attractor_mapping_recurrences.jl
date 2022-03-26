@@ -82,6 +82,7 @@ end
 
 function Base.show(io::IO, mapper::AttractorsViaRecurrences)
     ps = generic_mapper_print(io, mapper)
+    println(io, rpad(" type: ", ps), nameof(typeof(mapper.integ)))
     println(io, rpad(" attractors: ", ps), mapper.bsn_nfo.attractors)
     println(io, rpad(" grid_maxima: ", ps), mapper.bsn_nfo.grid_maxima)
     println(io, rpad(" grid_steps: ", ps), mapper.bsn_nfo.grid_steps)

@@ -1,5 +1,3 @@
-# TODO: This should work for arbitrary integrators (including projected stuff)
-
 """
     AttractorsViaProximity(ds::DynamicalSystem, attractors::Dict [, ε]; kwargs...)
 Map initial conditions to attractors based on whether the trajectory reaches `ε`-distance
@@ -104,9 +102,14 @@ end
 
 function Base.show(io::IO, mapper::AttractorsViaProximity)
     ps = generic_mapper_print(io, mapper)
-    println(io, rpad(" attractors: ", ps), mapper.attractors)
+    println(io, rpad(" type: ", ps), nameof(typeof(mapper.integ)))
     println(io, rpad(" ε: ", ps), mapper.ε)
     println(io, rpad(" Δt: ", ps), mapper.Δt)
     println(io, rpad(" Ttr: ", ps), mapper.Ttr)
+    attstrings = split(sprint(show, MIME"text/plain"(), mapper.attractors), '\n')
+    println(io, rpad(" attractors: ", ps), attstrings[1])
+    for j in 2:length(attstrings)
+        println(io, rpad(" ", ps), attstrings[j])
+    end
     return
 end

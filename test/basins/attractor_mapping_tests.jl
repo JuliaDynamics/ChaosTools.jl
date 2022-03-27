@@ -120,12 +120,12 @@ end
     grid = (xg, yg, zg)
     expected_fs_raw = Dict(2 => 0.165, 3 => 0.642, 1 => 0.193)
 
-    function lorenz84_featurizer(A, t)
+    function featurizer(A, t)
         g = exp(genentropy(A, 0.1; q = 0))
         return [g, g]
     end
 
-    test_basins(ds, u0s, grid, expected_fs_raw, lorenz84_featurizer; diffeq, ferr=1e-2, Δt = 0.2, mx_chk_att = 20)
+    test_basins(ds, u0s, grid, expected_fs_raw, featurizer; diffeq, ferr=1e-2, Δt = 0.2, mx_chk_att = 20)
 end
 
 
@@ -136,17 +136,17 @@ end
     grid = (xg, yg)
     diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)
     T = 2π/1.0
-    smap = stroboscopicmap(ds, T; diffeq)
+    ds = stroboscopicmap(ds, T; diffeq)
     u0s = [
         1 => [-0.8, 0],
         2 => [1.8, 0],
     ]
-    expected_fs_raw = Dict(2 => 0.509, 1 => 0.491)
-    function duffing_featurizer(A, t)
+    expected_fs_raw = Dict(2 => 0.511, 1 => 0.489)
+    function featurizer(A, t)
         return [A[end][1]]
     end
 
-    test_basins(smap, u0s, grid, expected_fs_raw, duffing_featurizer; ε = 0.2, ferr=1e-2)
+    test_basins(ds, u0s, grid, expected_fs_raw, featurizer; ε = 0.2, ferr=1e-2)
 
 end
 

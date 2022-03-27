@@ -159,7 +159,7 @@ function classify_features(features, mapper::AttractorsViaFeaturizing)
     if !isnothing(mapper.attractors_ic)
         classify_features_distances(features, mapper)
     else
-        classify_features_clustering(features, mapper.min_neighbors)
+        classify_features_clustering(features, mapper.min_neighbors, mapper.clust_method_norm)
     end
 end
 
@@ -183,8 +183,8 @@ function classify_features_distances(features, mapper)
 end
 
 # Unsupervised method: clustering in feature space
-function classify_features_clustering(features, min_neighbors)
-    ϵ_optimal = optimal_radius_dbscan(features, min_neighbors)
+function classify_features_clustering(features, min_neighbors, metric)
+    ϵ_optimal = optimal_radius_dbscan(features, min_neighbors, metric)
     # Now recalculate the final clustering with the optimal ϵ
     clusters = Clustering.dbscan(features, ϵ_optimal; min_neighbors)
     clusters, sizes = sort_clusters_calc_size(clusters)
@@ -209,7 +209,7 @@ end
 #####################################################################################
 """
 Util function for `classify_features`. It returns the size of all the DBSCAN clusters and the
-assignment vector, in whch the i-th component is the cluster index of the i-th feature
+assignment vector, in which the i-th component is the cluster index of the i-th feature
 """
 function cluster_props(clusters, data; include_boundary=true)
     assign = zeros(Int, size(data)[2])
@@ -232,7 +232,7 @@ and sorts them in decreasing order according to the size.
 """
 function sort_clusters_calc_size(clusters)
     sizes = [cluster.size for cluster in clusters]
-    idxsort = sortperm(sizes,rev=true)
+    idxsort = sortperm(sizes; rev = true)
     return clusters[idxsort], sizes[idxsort]
 end
 
@@ -241,7 +241,7 @@ Find the optimal radius ε of a point neighborhood for use in DBSCAN, in the uns
 `classify_features`. It does so by finding the `ε` which maximizes the minimum silhouette
 of the cluster.
 """
-function optimal_radius_dbscan(features, min_neighbors)
+function optimal_radius_dbscan(features, min_neighbors, metric)
     feat_ranges = maximum(features, dims=2)[:,1] .- minimum(features, dims=2)[:,1];
     ϵ_grid = range(minimum(feat_ranges)/200, minimum(feat_ranges), length=200)
     s_grid = zeros(size(ϵ_grid)) # min silhouette values (which we want to maximize)
@@ -249,7 +249,7 @@ function optimal_radius_dbscan(features, min_neighbors)
     #vary ϵ to find the best one (which will maximize the minimum sillhoute)
     for i=1:length(ϵ_grid)
         clusters = dbscan(features, ϵ_grid[i]; min_neighbors)
-        dists = pairwise(Euclidean(), features)
+        dists = pairwise(metric, features)
         class_labels = cluster_props(clusters, features)
         if length(clusters) ≠ 1 #silhouette undefined if only one cluster.
             sils = silhouettes(class_labels, dists) #values == 0 are due to boundary points

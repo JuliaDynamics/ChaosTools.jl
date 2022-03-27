@@ -1,6 +1,7 @@
 using ChaosTools
 using ChaosTools.DynamicalSystemsBase
 using ChaosTools.DelayEmbeddings
+using ChaosTools.Entropies
 using Test
 using LinearAlgebra
 using OrdinaryDiffEq
@@ -27,6 +28,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
     ics = Dataset([sampler() for i in 1:1000])
     expected_fs = sort!(collect(values(expected_fs_raw)))
     known_ids = sort!(collect(u[1] for u in u0s))
+    reduced_grid = map(g -> range(minimum(g), maximum(g); length = 10), grid)
 
     # reusable testing function
     function test_basin_fractions(mapper;
@@ -59,6 +61,11 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
                 @test abs(fs[k] - expected_fs_raw[k]) ≤ err
             end
         end
+        # `basins_of_attraction` tests
+        basins = basins_of_attraction(mapper, reduced_grid; show_progress = false)
+        @test length(size(basins)) == length(grid)
+        bids = sort!(unique(basins))
+        @test all(x -> x ∈ known_ids, bids)
     end
 
     @testset "Proximity" begin

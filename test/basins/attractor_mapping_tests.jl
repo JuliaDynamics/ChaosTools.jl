@@ -15,7 +15,7 @@ using Statistics
 
 # Define generic testing framework
 function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
-        rerr = 1e-3, ferr = 1e-3, ε = nothing, clustering_threshold = 20.0,
+        rerr = 1e-3, ferr = 1e-3, ε = nothing, clustering_threshold = 0.0,
         diffeq = NamedTuple(), kwargs...
     )
     # u0s is Vector{Pair}
@@ -77,7 +77,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         test_basin_fractions(mapper; err = rerr)
     end
     @testset "Featurizing, unsupervised" begin
-        mapper = AttractorsViaFeaturizing(ds, featurizer; diffeq, Ttr = 200)
+        mapper = AttractorsViaFeaturizing(ds, featurizer; diffeq, Ttr = 100)
         test_basin_fractions(mapper; err = ferr, single_u_mapping = false, known_ids = [1, 2])
     end
     @testset "Featurizing, supervised" begin
@@ -102,7 +102,8 @@ end
         x = [mean(A[:, 1]), mean(A[:, 2])]
         return any(isinf, x) ? [200.0, 200.0] : x
     end
-    test_basins(ds, u0s, grid, expected_fs_raw, henon_featurizer; ε = 1e-3)
+    test_basins(ds, u0s, grid, expected_fs_raw, henon_featurizer;
+    clustering_threshold = 20, ε = 1e-3)
 end
 
 
@@ -125,7 +126,8 @@ end
         return [g, g]
     end
 
-    test_basins(ds, u0s, grid, expected_fs_raw, featurizer; diffeq, ferr=1e-2, Δt = 0.2, mx_chk_att = 20)
+    test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
+    diffeq, ε = 0.01, ferr=1e-2, Δt = 0.2, mx_chk_att = 20)
 end
 
 
@@ -158,20 +160,19 @@ end
     yg = range(-2,2,length = 201)
     grid = (xg, yg)
     diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)
-    psys = projected_integrator(ds, 1:2, [0.0, 0.0]; diffeq)
+    ds = projected_integrator(ds, 1:2, [0.0, 0.0]; diffeq)
     u0s = [
         1 => [-0.5, 0.857],
         2 => [-0.5, -0.857],
         3 => [1., 0.],
     ]
-    #expected_fs_raw = Dict(2 => 0.332725, 3 => 0.33455, 1 => 0.332725)
     expected_fs_raw = Dict(2 => 0.318, 3 => 0.347, 1 => 0.335)
 
-    function magnetic_featurizer(A, t)
+    function featurizer(A, t)
         return [A[end][1], A[end][2]]
     end
 
-    test_basins(psys, u0s, grid, expected_fs_raw, magnetic_featurizer; ε = 0.2, Δt = 1., ferr=1e-2)
+    test_basins(ds, u0s, grid, expected_fs_raw, featurizer; ε = 0.2, Δt = 1.0, ferr=1e-2)
 end
 
 
@@ -202,7 +203,6 @@ end
 
 end # Attractor mapping tests
 
-# TODO: Add a call to `basins_of_attraction` within the `test_basin_fractions` function.
-# TODO: Tests for  projected system (magnetic) and poincare map (thomas cyclical)
-# TODO: Tests of Lorenz84 fail, significant differences between recurrence and proximity
-# TODO: Tests of Duffing fail, significant differences between recurrence and proximity
+# TODO: DBSCAN tests all fail pretty much. Even in the most obvious clusters of
+# the magnetic pendulum and Lorenz84 case, the algorithm still fails to find 3 clusters
+# and finds 2 clusters instead.

@@ -114,7 +114,7 @@ function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, featurizer::Fu
     end
     return AttractorsViaFeaturizing(
         ds, Ttr, Δt, T, featurizer, attractors_ic, diffeq,
-        clust_method_norm, clust_method, clustering_threshold, min_neighbors
+        clust_method_norm, clust_method, Float64(clustering_threshold), min_neighbors
     )
 end
 

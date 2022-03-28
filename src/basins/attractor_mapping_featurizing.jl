@@ -109,6 +109,9 @@ function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, featurizer::Fu
         clustering_threshold = 0.0, min_neighbors = 10, diffeq = NamedTuple(),
         clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN",
     )
+    if !isnothing(attractors_ic)
+        @warn "Clustering algorithm is currently bugged and may not identify all clusters."
+    end
     if ds isa ContinuousDynamicalSystem
         T, Ttr, Δt = float.((T, Ttr, Δt))
     end
@@ -136,7 +139,7 @@ function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
     if show_progress
         progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:")
     end
-    Threads.@threads for i ∈ 1:N
+    for i ∈ 1:N
         ic = _get_ic(ics,i)
         feature_array[i] = extract_features(mapper, ic)
         show_progress && ProgressMeter.next!(progress)

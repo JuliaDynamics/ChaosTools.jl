@@ -1,9 +1,10 @@
-# export JULIA_NUM_THREADS=25
+# export JULIA_NUM_THREADS=4
 using Statistics, BenchmarkTools
-using ChaosTools, DelayEmbeddings, DynamicalSystemsBase
+using ChaosTools
+using ChaosTools.DelayEmbeddings, ChaosTools.DynamicalSystemsBase
 using Distributed, OrdinaryDiffEq
-addprocs(25)
-@everywhere using OrdinaryDiffEq, DynamicalSystemsBase
+addprocs(4)
+@everywhere using OrdinaryDiffEq, ChaosTools.DynamicalSystemsBase
 
 #Magnetic pendulum (3 attractors)
 function feature_extraction(t, A)
@@ -15,29 +16,29 @@ ds = Systems.lorenz84()
 
 #parameters
 T = 2000
-Ttr = 200 
+Ttr = 200
 Δt = 1.0
 
 
-#region of interest 
+#region of interest
 N = 1000;
-# N = 50000; 
-min_limits = [-2,-2,-2]; 
-max_limits = [2,2,2]; 
-sampling_method = "uniform"; 
+# N = 50000;
+min_limits = [-2,-2,-2];
+max_limits = [2,2,2];
+sampling_method = "uniform";
 
-s = ChaosTools.sampler(min_bounds=min_limits, max_bounds=max_limits, method=sampling_method)
+s, = statespace_sampler(min_bounds=min_limits, max_bounds=max_limits)
 ics = Dataset([s() for i=1:N])
 
 # Definition based on just looping over `trajectory`
 function featurizer(ds::DynamicalSystem, u0::AbstractVector, feature_extraction; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
-    u = trajectory(ds, T, u0; Ttr=Ttr, Δt=Δt, diffeq) 
+    u = trajectory(ds, T, u0; Ttr=Ttr, Δt=Δt, diffeq)
     t = Ttr:Δt:T+Ttr
     feature = feature_extraction(t, u)
     return feature
 end
 function featurizer(ds::DynamicalSystem, integ::SciMLBase.DEIntegrator, feature_extraction; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
-    u = trajectory(ds, integ, T, Δt, Ttr, nothing) 
+    u = trajectory(integ, T; Δt, Ttr, nothing)
     t = Ttr:Δt:T+Ttr
     feature = feature_extraction(t, u)
     return feature
@@ -46,7 +47,7 @@ end
 function featurizer_allics_threads(ds, ics::Dataset, feature_extraction::Function;  kwargs...)
     num_samples = size(ics, 1) #number of actual ICs
     feature_array = Vector{Vector{Float64}}(undef, num_samples)
-    Threads.@threads for i = 1:num_samples 
+    Threads.@threads for i = 1:num_samples
         ic, _ = iterate(ics, i)
         feature_array[i] = featurizer(ds, ic, feature_extraction; kwargs...)
     end
@@ -62,7 +63,7 @@ function featurizer_allics_threads_integrators(ds, ics::Dataset, feature_extract
     _featurizer_allics_threads_integrators!(feature_array, integrators, ds, ics::Dataset, feature_extraction::Function;  kwargs...)
 end # need a function barrier here because the integrator vector isn't type stable
 function _featurizer_allics_threads_integrators!(feature_array, integrators, ds, ics::Dataset, feature_extraction::Function;  kwargs...)
-    Threads.@threads for i = 1:length(feature_array) 
+    Threads.@threads for i = 1:length(feature_array)
         j = Threads.threadid()
         integ = integrators[j]
         reinit!(integ, ics[i])
@@ -72,7 +73,7 @@ function _featurizer_allics_threads_integrators!(feature_array, integrators, ds,
 end
 
 # Definition based on `EnsembleProblem` from DiffEq.
-function featurizer_allics_ensemble(ds, ics::Dataset, feature_extraction::Function; T=100, Ttr=50, 
+function featurizer_allics_ensemble(ds, ics::Dataset, feature_extraction::Function; T=100, Ttr=50,
     Δt=1, diffeq=NamedTuple(), EnsembleAlgorithm=EnsembleDistributed(), kwargs...)
     solver = DynamicalSystemsBase._get_solver(diffeq)
     prob = ODEProblem(ds, (ds.t0, T))
@@ -106,7 +107,7 @@ function featurizer_threads_integrators_onlinestats(ds, ics::Dataset;  kwargs...
     _featurizer_threads_integrators_onlinestats!(feature_array, integrators, ds, ics::Dataset;  kwargs...)
 end # need a function barrier here because the integrator vector isn't type stable
 # Finally, list the function that does the low-level computation
-function _featurizer_threads_integrators_onlinestats!(feature_array, integrators, ds, ics::Dataset;  
+function _featurizer_threads_integrators_onlinestats!(feature_array, integrators, ds, ics::Dataset;
     Ttr = 100, T = 1000, Δt = 1.0, kwargs...)
 
     t0 = ds.t0
@@ -117,7 +118,7 @@ function _featurizer_threads_integrators_onlinestats!(feature_array, integrators
         integ = integrators[j]
         reinit!(integ, ics[i])
 
-        # TODO: the feature extraction is handwritten for now 
+        # TODO: the feature extraction is handwritten for now
         # but can be easily made into generizable functions
         # Feature extraction needs to be recreated for each initial condition
         # (currently hardcoded but easily made into a function)
@@ -127,7 +128,7 @@ function _featurizer_threads_integrators_onlinestats!(feature_array, integrators
             (OnlineStats.Variance(Float64), 1),
             (OnlineStats.Variance(Float64), 3),
         )
-        
+
         step!(integ, Ttr)
         for (i, t) in enumerate(tvec)
             while t > integ.t
@@ -157,17 +158,4 @@ end
 @btime features_ensemble_threads = featurizer_allics_ensemble(ds, ics, feature_extraction, T=T, Ttr=Ttr, Δt=Δt, EnsembleAlgorithm=EnsembleThreads())
 @btime features_ensemble_distributed = featurizer_allics_ensemble(ds, ics, feature_extraction, T=T, Ttr=Ttr, Δt=Δt, EnsembleAlgorithm=EnsembleDistributed())
 
-# all(features_threads .- features_ensemble_distributed .< 1e-4) #true
-
-#=
-25 workers, N=50000, T = 2000
-Threads:    23.125 s (1077057193 allocations: 31.03 GiB)
-Ensemble (Distributed):     106.806 s (1176707851 allocations: 44.56 GiB)
-Emseble (Threads):   33.503 s (1242096027 allocations: 41.51 GiB) [It prints a long error message saying "concurrency violation detected". But also outputs the feature values similar to the other methods. Don't know what is happening.]
-
-
-25 workers, N=1000, T=2000
-Threads:   256.846 ms (21540932 allocations: 635.44 MiB)
-Ensemble (Distributed):   2.179 s (23598717 allocations: 916.71 MiB)
-Ensemble (Threads):   343.171 ms (24875192 allocations: 852.93 MiB)
-=#
+# Output

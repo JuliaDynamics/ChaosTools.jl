@@ -160,7 +160,6 @@ function basins_of_attraction(grid::Tuple, ds;
 
     if !isnothing(attractors) # proximity version
         # initialize Proximity and loop.
-        @show getindex(kwargs, :ε)
         mapper = AttractorsViaProximity(integ, attractors::Dict, getindex(kwargs, :ε) ;
         Δt=isnothing(Δt) ? 1 : Δt, kwargs...)
         return estimate_basins_proximity!(mapper, grid; kwargs...)

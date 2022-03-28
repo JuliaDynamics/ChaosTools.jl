@@ -48,8 +48,9 @@ Base.show(io::IO, mapper::AttractorMapper) = generic_mapper_print(io, mapper)
 
 Approximate the state space fractions `fs` of the basins of attraction of a dynamical
 stystem by mapping initial conditions to attractors using `mapper`
-(which contains a reference to a `ds::DynamicalSystem`), and then simply taking the
-ratios of how many initial conditions ended up at each attractor.
+(which contains a reference to a [`GeneralizedDynamicalSystem`](@ref)).
+The fractions are simply the ratios of how many initial conditions ended up
+at each attractor.
 
 Initial conditions to use are defined by `ics`. It can be:
 * a `Dataset` of initial conditions, in which case all are used.
@@ -57,13 +58,16 @@ Initial conditions to use are defined by `ics`. It can be:
   Then `N` random initial conditions are chosen.
   See [`statespace_sampler`](@ref) to generate such functions.
 
-If `ics` is a `Dataset` then besides `fs` the `labels` of each initial condition are also
-returned.
+The returned arguments are `fs`.
+If `ics` is a `Dataset` then the `labels` of each initial and roughly approximated
+attractors are also returned: `fs, labels, attractors`.
 
 The output `fs` is a dictionary whose keys are the labels given to each attractor
 (always integers enumerating the different attractors), and the
 values are their respective fractions. The label `-1` is given to any initial condition
 where `mapper` could not match to an attractor (this depends on the `mapper` type).
+`attractors` has the same structure, mapping labels to `Dataset`s.
+
 See [`AttractorMapper`](@ref) for all possible `mapper` types.
 
 ## Keyword arguments
@@ -90,7 +94,8 @@ function basin_fractions(mapper::AttractorMapper, ics::Union{AbstractDataset, Fu
         show_progress && next!(progress)
     end
     ffs = Dict(k => v/N for (k, v) in fs)
-    return used_dataset ? (ffs, labels) : ffs
+    attractors = extract_attractors(mapper, labels, ics)
+    return used_dataset ? (ffs, labels, attractors) : ffs
 end
 
 _get_ic(ics::Function, i) = ics()
@@ -102,9 +107,10 @@ _get_ic(ics::AbstractDataset, i) = ics[i]
 #########################################################################################
 # It works for all mappers that define a `basin_fractions` method.
 """
-    basins_of_attraction(mapper::AttractorMapper, grid::Tuple; show_progress=true) → basins
+    basins_of_attraction(mapper::AttractorMapper, grid::Tuple) → basins, attractors
 Compute the full basins of attraction as identified by the given `mapper`,
-which includes a reference to a [`GeneralizedDynamicalSystem`](@ref).
+which includes a reference to a [`GeneralizedDynamicalSystem`](@ref) and return them
+along with (perhaps approximated) found attractors.
 
 `grid` is a tuple of ranges defining the grid of initial conditions that partition
 the state space into boxes with size the step size of each range.
@@ -124,9 +130,9 @@ function basins_of_attraction(mapper::AttractorMapper, grid::Tuple; kwargs...)
     basins = zeros(Int16, map(length, grid))
     I = CartesianIndices(basins)
     A = Dataset([generate_ic_on_grid(grid, I[i]) for i in 1:length(I)])
-    fs, labels = basin_fractions(mapper, A; kwargs...)
+    fs, labels, attractors = basin_fractions(mapper, A; kwargs...)
     vec(basins) .= vec(labels)
-    return basins
+    return basins, attractors
 end
 
 # Type-stable generation of an initial condition given a grid array index

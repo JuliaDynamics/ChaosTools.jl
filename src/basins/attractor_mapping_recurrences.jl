@@ -90,6 +90,7 @@ function Base.show(io::IO, mapper::AttractorsViaRecurrences)
     return
 end
 
+extract_attractors(m::AttractorsViaRecurrences, labels, ics) = m.bsn_nfo.attractors
 
 
 #####################################################################################

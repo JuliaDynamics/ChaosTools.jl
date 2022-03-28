@@ -25,20 +25,19 @@ N = 1000;
 # N = 50000;
 min_limits = [-2,-2,-2];
 max_limits = [2,2,2];
-sampling_method = "uniform";
 
 s, = statespace_sampler(min_bounds=min_limits, max_bounds=max_limits)
 ics = Dataset([s() for i=1:N])
 
 # Definition based on just looping over `trajectory`
 function featurizer(ds::DynamicalSystem, u0::AbstractVector, feature_extraction; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
-    u = trajectory(ds, T, u0; Ttr=Ttr, Δt=Δt, diffeq)
+    u = trajectory(ds, T, u0; Ttr, Δt, diffeq)
     t = Ttr:Δt:T+Ttr
     feature = feature_extraction(t, u)
     return feature
 end
-function featurizer(ds::DynamicalSystem, integ::SciMLBase.DEIntegrator, feature_extraction; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
-    u = trajectory(integ, T; Δt, Ttr, nothing)
+function featurizer(integ::SciMLBase.DEIntegrator, feature_extraction, u0; T=100, Ttr=100, Δt=1, diffeq=NamedTuple(), kwargs...)
+    u = trajectory(integ, T, u0; Δt, Ttr)
     t = Ttr:Δt:T+Ttr
     feature = feature_extraction(t, u)
     return feature
@@ -66,8 +65,7 @@ function _featurizer_allics_threads_integrators!(feature_array, integrators, ds,
     Threads.@threads for i = 1:length(feature_array)
         j = Threads.threadid()
         integ = integrators[j]
-        reinit!(integ, ics[i])
-        feature_array[i] = featurizer(ds, integ, feature_extraction; kwargs...)
+        feature_array[i] = featurizer(integ, feature_extraction, ics[i]; kwargs...)
     end
     return reduce(hcat, feature_array)
 end

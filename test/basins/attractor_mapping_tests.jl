@@ -9,8 +9,6 @@ using Random
 using Statistics
 
 
-# TODO: Include `basins_of_attraction` call in `test_basins`.
-
 @testset "AttractorMappers" begin
 
 # Define generic testing framework
@@ -49,7 +47,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         @test sum(values(fs)) == 1
 
         # Precise test with known initial conditions
-        fs, labels = basin_fractions(mapper, ics; show_progress = false)
+        fs, labels, approx_atts = basin_fractions(mapper, ics; show_progress = false)
         @test sort!(unique!(labels)) == known_ids
         found_fs = sort(collect(values(fs)))
         errors = abs.(expected_fs .- found_fs)
@@ -62,7 +60,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
             end
         end
         # `basins_of_attraction` tests
-        basins = basins_of_attraction(mapper, reduced_grid; show_progress = false)
+        basins, approx_atts = basins_of_attraction(mapper, reduced_grid; show_progress = false)
         @test length(size(basins)) == length(grid)
         bids = sort!(unique(basins))
         @test all(x -> x ∈ known_ids, bids)

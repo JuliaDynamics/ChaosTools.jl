@@ -1,10 +1,5 @@
-export basins_of_attraction, automatic_Δt_basins, AttractorMapper
-
-# TODO: Re-write docstring: Generic function for calculating the full basins of attraction
-# in a given state space region. It uses either of attractor mapers...
-
-# TODO: This entire function can be deprecated in favor of simpler
-# `basins_of_attraction(mapper::AttractorMapper, grid::Tuple)`.
+# TODO:
+# This entire file is DEPRECATED.
 
 """
     basins_of_attraction(grid::Tuple, ds::GeneralizedDynamicalSystem; kwargs...)

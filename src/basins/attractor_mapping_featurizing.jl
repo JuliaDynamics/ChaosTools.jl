@@ -109,6 +109,9 @@ function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, featurizer::Fu
         clustering_threshold = 0.0, min_neighbors = 10, diffeq = NamedTuple(),
         clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN",
     )
+    if isnothing(attractors_ic)
+        @warn "Clustering algorithm is currently bugged and may not identify all clusters."
+    end
     if ds isa ContinuousDynamicalSystem
         T, Ttr, Δt = float.((T, Ttr, Δt))
     end
@@ -124,7 +127,8 @@ function basin_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDa
     feature_array = extract_features(mapper, ics; show_progress, N)
     class_labels, = classify_features(feature_array, mapper)
     fs = basin_fractions(class_labels) # Vanilla fractions method with Array input
-    return typeof(ics) <: AbstractDataset ? (fs, class_labels) : fs
+    attractors = extract_attractors(mapper, class_labels, ics)
+    return typeof(ics) <: AbstractDataset ? (fs, class_labels, attractors) : fs
 end
 
 function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
@@ -136,7 +140,7 @@ function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
     if show_progress
         progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:")
     end
-    Threads.@threads for i ∈ 1:N
+    for i ∈ 1:N
         ic = _get_ic(ics,i)
         feature_array[i] = extract_features(mapper, ic)
         show_progress && ProgressMeter.next!(progress)
@@ -146,10 +150,16 @@ end
 
 function extract_features(mapper::AttractorsViaFeaturizing, u0::AbstractVector{<:Real})
     A = trajectory(mapper.ds, mapper.total, u0;
-            Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq)
+        Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq)
     t = (mapper.Ttr):(mapper.Δt):(mapper.total+mapper.Ttr)
     feature = mapper.featurizer(A, t)
     return feature
+end
+
+function extract_attractors(mapper::AttractorsViaFeaturizing, labels, ics)
+    uidxs = unique(i -> labels[i], 1:length(x))
+    return Dict(labels[i] => trajectory(mapper.ds, mapper.total, ics[i];
+    Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq) for i in uidxs)
 end
 
 #####################################################################################

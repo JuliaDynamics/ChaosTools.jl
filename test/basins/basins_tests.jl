@@ -47,7 +47,7 @@ end
     ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
     xg = range(-2,2,length=100)
     yg = range(-2,2,length=100)
-    complete_state(y) = SVector(0.0, 0.0)
+    complete_state = SVector(0.0, 0.0)
     basin, attractors = basins_of_attraction((xg,yg), ds;
     idxs=1:2, Δt = 1., complete_state, show_progress = false)
     # pcolormesh(xg,yg, basin')

@@ -39,7 +39,7 @@ struct AttractorsViaProximity{I, AK, D, T, N, K} <: AttractorMapper
     maxdist::Float64
 end
 function AttractorsViaProximity(ds, attractors::Dict, ε = nothing;
-        Δt=1, Ttr=100, mx_chk_lost=1000, horizon_limit=1e3, diffeq = NamedTuple(),
+        Δt=1, Ttr=100, mx_chk_lost=1000, horizon_limit=1e3, diffeq = NamedTuple(), kwargs...
     )
     @assert dimension(ds) == dimension(first(attractors)[2])
     search_trees = Dict(k => KDTree(att.data, Euclidean()) for (k, att) in attractors)

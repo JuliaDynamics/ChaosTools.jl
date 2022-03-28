@@ -135,7 +135,7 @@ function basins_of_attraction(grid::Tuple, ds;
 
     if !isnothing(T)
         @warn("Using `T` is deprecated. Initialize a `stroboscopicmap` and pass it.")
-        integ = stroboscopicmap(ds, T)
+        integ = stroboscopicmap(ds, T; diffeq)
     elseif ds isa PoincareMap
         integ = ds
     elseif length(grid) ≠ dimension(ds) && isnothing(idxs)
@@ -160,8 +160,9 @@ function basins_of_attraction(grid::Tuple, ds;
 
     if !isnothing(attractors) # proximity version
         # initialize Proximity and loop.
-        mapper = AttractorsViaProximity(integ, attractors::Dict, ε;
-        Δt=isnothing(Δt) ? 1 : Δt, Ttr, mx_chk_lost, horizon_limit, diffeq,)
+        @show getindex(kwargs, :ε)
+        mapper = AttractorsViaProximity(integ, attractors::Dict, getindex(kwargs, :ε) ;
+        Δt=isnothing(Δt) ? 1 : Δt, kwargs...)
         return estimate_basins_proximity!(mapper, grid; kwargs...)
     else # (original) recurrences version
         bsn_nfo, integ = basininfo_and_integ(integ, grid, Δt, diffeq)
@@ -174,17 +175,17 @@ end
 import ProgressMeter
 using Statistics: mean
 
-function estimate_basins_proximity!(mapper, grid; show_progress = true)
+function estimate_basins_proximity!(mapper, grid; show_progress = true, kwargs...)
     basins = zeros(Int16, map(length, grid))
     progress = ProgressMeter.Progress(
         length(basins); desc = "Basins of attraction: ", dt = 1.0
     )
-    for (k,ind) in enumerate(CartesianIndices(bsn_nfo))
+    for (k,ind) in enumerate(CartesianIndices(basins))
         show_progress && ProgressMeter.update!(progress, k)
         y0 = generate_ic_on_grid(grid, ind)
         basins[ind] = mapper(y0)
     end
-    return basins, attractors
+    return basins, mapper.attractors
 end
 
 

@@ -142,9 +142,11 @@ function basins_of_attraction(grid::Tuple, ds;
     elseif !isnothing(idxs)
         @warn("Using `idxs` is deprecated. Initialize a `projeted_integrator` instead.")
         @assert length(idxs) == length(grid)
-        idxs = 1:length(grid)
+        remidxs = setdiff(1:dimension(ds), idxs)
         if isnothing(complete_state)
             c = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
+        elseif complete_state isa Function
+            c = (y) ->  y[remidxs] .= complete_state(y)
         else
             c = complete_state
         end

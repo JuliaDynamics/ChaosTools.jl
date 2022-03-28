@@ -110,7 +110,7 @@ function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, featurizer::Fu
         clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN",
     )
     if isnothing(attractors_ic)
-        @warn "Clustering algorithm is currently bugged and may not identify all clusters."
+        @warn "Unsupervised clustering algorithm is currently bugged and may not identify all clusters."
     end
     if ds isa ContinuousDynamicalSystem
         T, Ttr, Δt = float.((T, Ttr, Δt))

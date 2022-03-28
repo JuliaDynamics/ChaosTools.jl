@@ -95,8 +95,12 @@ function basin_fractions(mapper::AttractorMapper, ics::Union{AbstractDataset, Fu
         show_progress && next!(progress)
     end
     ffs = Dict(k => v/N for (k, v) in fs)
-    attractors = extract_attractors(mapper, labels, ics)
-    return used_dataset ? (ffs, labels, attractors) : ffs
+    if used_dataset
+        attractors = extract_attractors(mapper, labels, ics)
+        return ffs, labels, attractors
+    else
+        return ffs
+    end
 end
 
 _get_ic(ics::Function, i) = ics()

@@ -184,7 +184,6 @@ end
     pmap = poincaremap(ds, (3, 0.0), 1e6;
         rootkw = (xrtol = 1e-8, atol = 1e-8), diffeq=(reltol=1e-9,)
     )
-    #basin,attractors = basins_of_attraction((xg,yg), pmap; show_progress = false)
     u0s = [
         1 => [1.83899, -4.15575, 0],
         2 => [1.69823, -0.0167188, 0],

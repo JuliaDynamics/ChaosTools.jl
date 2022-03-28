@@ -1,3 +1,9 @@
+# 2.8
+* Brand new `AttractorMapper` infrastructure. It is a generic framework for mapping initial conditions to attractors and hence calculating basins of attraction and related quantities. Existing originally disparate functionality has been brought together under this framework.
+* The old `basins_of_attraction` function has been completely deprecated in favor of using the version `basins_of_attraction(mapper::AttractorMapper, grid)`, which utilizes the new `AttractorMapper` interface and is more intuitive and generalizable.
+* New method for mapping initial conditions to known attractors using proximity.
+* Old functions related to clustering via featurizing have been removed in favor of just using `AttractorsViaFeaturizing`.
+
 # 2.7
 * New function `basin_fractions_clustering` that estimates fractions of basins of attraction via a random sampling and clustering technique.
 * New function `statespace_sampler` that conveniently creates functions that sample state space regions.
@@ -30,7 +36,7 @@
 * Various improvements to the boxed correlation sum method. Now it also uses an automatic prism dimension.
 
 # 2.0
-* The keyword `dt` that was used to denote a chunk of time in many functions that 
+* The keyword `dt` that was used to denote a chunk of time in many functions that
   a `DynamicalSystem` has been changed to `Δt` due to conflicts with DifferentialEquations.jl solver options. This change is breaking and cannot be warned or deprecated. Functions affected: `lyapunov, lyapunovspectrum, gali, expansionentropy, orbitdiagram`
 * All deprecations have been removed, switch to previous stable version to see any.
 

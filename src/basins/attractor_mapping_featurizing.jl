@@ -127,8 +127,12 @@ function basin_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDa
     feature_array = extract_features(mapper, ics; show_progress, N)
     class_labels, = classify_features(feature_array, mapper)
     fs = basin_fractions(class_labels) # Vanilla fractions method with Array input
-    attractors = extract_attractors(mapper, class_labels, ics)
-    return typeof(ics) <: AbstractDataset ? (fs, class_labels, attractors) : fs
+    if typeof(ics) <: AbstractDataset
+        attractors = extract_attractors(mapper, class_labels, ics)
+        return fs, class_labels, attractors
+    else
+        return fs
+    end
 end
 
 function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
@@ -157,9 +161,9 @@ function extract_features(mapper::AttractorsViaFeaturizing, u0::AbstractVector{<
 end
 
 function extract_attractors(mapper::AttractorsViaFeaturizing, labels, ics)
-    uidxs = unique(i -> labels[i], 1:length(x))
+    uidxs = unique(i -> labels[i], 1:length(labels))
     return Dict(labels[i] => trajectory(mapper.ds, mapper.total, ics[i];
-    Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq) for i in uidxs)
+    Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq) for i in uidxs if i ≠ -1)
 end
 
 #####################################################################################

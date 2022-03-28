@@ -172,6 +172,10 @@ a performance drop.
 """
 function automatic_Δt_basins(integ, grid; N = 5000)
     isdiscretetime(integ) && return 1
+    if integ isa DynamicalSystemsBase.ProjectedIntegrator
+        # TODO:
+        error("Automatic Δt finding is not implemented yet for projected integrators.")
+    end
     steps = step.(grid)
     s = sqrt(sum(x^2 for x in steps)) # diagonal length of a cell
     indices = CartesianIndices(length.(grid))
@@ -180,7 +184,6 @@ function automatic_Δt_basins(integ, grid; N = 5000)
     udummy = copy(get_state(integ))
     for p in random_points
         reinit!(integ, p)
-        # TODO:  Fix this
         deriv = if get_state(integ) isa SVector
             integ.f(integ.u, integ.p, 0.0)
         else

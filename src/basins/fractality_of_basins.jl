@@ -204,7 +204,7 @@ end
 Estimate the uncertainty exponent[^Grebogi1983] of the basins of attraction. This exponent
 is related to the final state sensitivity of the trajectories in the phase space.
 An exponent close to `1` means basins with smooth boundaries whereas an exponent close
-to `0` represent complety fractalized basins, also called riddled basins.
+to `0` represent completely fractalized basins, also called riddled basins.
 
 The output `N_ε` is a vector with the number of the balls of radius `ε` (in pixels)
 that contain at least two initial conditions that lead to different attractors.

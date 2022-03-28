@@ -1,7 +1,7 @@
 name = "ChaosTools"
 uuid = "608a59af-f2a3-5ad4-90b4-758bdf3122a7"
 repo = "https://github.com/JuliaDynamics/ChaosTools.jl.git"
-version = "2.7.0"
+version = "2.8.0"
 
 [deps]
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"

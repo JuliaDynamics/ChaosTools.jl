@@ -9,7 +9,7 @@ export AttractorMapper,
 # AttractorMapper structure definition
 #########################################################################################
 """
-    AttractorMapper(ds::DynamicalSystem, args...; kwargs...) → mapper
+    AttractorMapper(ds::GeneralizedDynamicalSystem, args...; kwargs...) → mapper
 Subtypes of `AttractorMapper` are structures that map initial conditions of `ds` to
 attractors. Currently available mapping methods:
 * [`AttractorsViaProximity`](@ref)
@@ -39,6 +39,7 @@ function generic_mapper_print(io, mapper)
     return ps
 end
 Base.show(io::IO, mapper::AttractorMapper) = generic_mapper_print(io, mapper)
+
 #########################################################################################
 # Generic basin fractions method structure definition
 #########################################################################################

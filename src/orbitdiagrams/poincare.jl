@@ -207,7 +207,7 @@ end
 """
 	poincaremap(ds::ContinuousDynamicalSystem, plane, Tmax=1e3; kwargs...) → pmap
 
-Return a map (integrator) that produces iterations over the Poincaré map of the `ds`.
+Return a map (integrator) that produces iterations over the Poincaré map of `ds`.
 This map is defined as the sequence of points on the Poincaré surface of section.
 See [`poincaresos`](@ref) for details on `plane` and all other `kwargs`.
 Keyword `idxs` does not apply to `poincaremap`, as it doesn't save any states.
@@ -226,15 +226,15 @@ on the hyperplane that is then converted into the `D` dimensional state.
 of being evolved for infinite time, to avoid cases where iteration would continue
 forever for ill-defined hyperplanes or for convergence to fixed points.
 If during one `step!` the system has been evolved for more than `Tmax`,
-then `step!(pmap)` will terminate return `nothing`.
+then `step!(pmap)` will terminate and return `nothing`.
 
 ## Example
 ```julia
 ds = Systems.rikitake([0.,0.,0.], μ = 0.47, α = 1.0)
-pmap = poincaremap(ds, (3,0.), Tmax=200.)
+pmap = poincaremap(ds, (3, 0.0))
 next_state_on_psos = step!(pmap)
 # Change initial condition
-reinit!(pmap, [1.0, 0, 0])
+reinit!(pmap, [1.0, 0]) # 3rd variable gets value 0 from the plane
 next_state_on_psos = step!(pmap)
 ```
 """

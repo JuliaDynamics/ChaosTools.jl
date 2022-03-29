@@ -97,10 +97,10 @@ extract_attractors(m::AttractorsViaRecurrences, labels, ics) = m.bsn_nfo.attract
 """
     basins_of_attraction(mapper::AttractorsViaRecurrences; show_progress = true)
 This is a special method of `basins_of_attraction` that using recurrences does
-_exactly_ what is described in the paper by Datseris & Wagemakers. By enforcing
-that the internal grid of `mapper` is the same as the grid of initial conditions to
-map to attractors, the method can further utilize found exit and attraction basins,
-making the computation faster as the grid is processed more and more.
+_exactly_ what is described in the paper by Datseris & Wagemakers[^Datseris2022].
+By enforcing that the internal grid of `mapper` is the same as the grid of initial
+conditions to map to attractors, the method can further utilize found exit and attraction
+basins, making the computation faster as the grid is processed more and more.
 
 [^Datseris2022]:
     G. Datseris and A. Wagemakers, *Effortless estimation of basins of attraction*,

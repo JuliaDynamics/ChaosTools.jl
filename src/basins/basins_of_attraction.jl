@@ -12,7 +12,7 @@ function basins_of_attraction(grid::Tuple, ds;
 
     @warn("""
     The function `basins_of_attraction(grid::Tuple, ds::DynamicalSystem; ...)` is
-    deprecated in favor of the simpler and more generic
+    deprecated in favor of the more generic
     `basins_of_attraction(mapper::AttractorMapper, grid::Tuple`) which works for
     any instance of `AttractorMapper`. Please use that method in the future.
 

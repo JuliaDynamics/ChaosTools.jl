@@ -44,6 +44,10 @@ internally called "basins", stores the state of the FSM on the grid, according t
 indexing system described in [^Datseris2022]. As the system is integrated more and more,
 the information of the "basins" becomes richer and richer with more identified attractors
 or with grid cells that belong to basins of already found attractors.
+Notice that only in the special method
+`basins_of_attraction(mapper::AttractorsViaRecurrences)` the information of the
+attraction or exit basins is utilized. In other functions like `basins_fractions`
+only the attractor locations are utilized.
 
 The iteration of a given initial condition continues until one of the following happens:
 1. The trajectory hits `mx_chk_fnd_att` times in a row grid cells previously visited:
@@ -60,9 +64,10 @@ The iteration of a given initial condition continues until one of the following 
     G. Datseris and A. Wagemakers, *Effortless estimation of basins of attraction*,
     [Chaos 32, 023104 (2022)](https://doi.org/10.1063/5.0076568)
 """
-struct AttractorsViaRecurrences{I, B, K} <: AttractorMapper
+struct AttractorsViaRecurrences{I, B, G, K} <: AttractorMapper
     integ::I
     bsn_nfo::B
+    grid::G
     kwargs::K
 end
 
@@ -70,11 +75,12 @@ function AttractorsViaRecurrences(ds::GeneralizedDynamicalSystem, grid;
         Δt=nothing, diffeq = NamedTuple(), kwargs...
     )
     bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq)
-    return AttractorsViaRecurrences(integ, bsn_nfo, kwargs)
+    return AttractorsViaRecurrences(integ, bsn_nfo, grid, kwargs)
 end
 
 function (mapper::AttractorsViaRecurrences)(u0)
-    # Low level code of `basins_of_attraction` function
+    # Low level code of `basins_of_attraction` function. Notice that in this
+    # call signature the interal basins info array of the mapper is NOT updated.
     lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0; mapper.kwargs...)
     # Transform to integers indexing from odd-even indexing
     return iseven(lab) ? (lab ÷ 2) : (lab - 1) ÷ 2
@@ -84,13 +90,52 @@ function Base.show(io::IO, mapper::AttractorsViaRecurrences)
     ps = generic_mapper_print(io, mapper)
     println(io, rpad(" type: ", ps), nameof(typeof(mapper.integ)))
     println(io, rpad(" attractors: ", ps), mapper.bsn_nfo.attractors)
-    println(io, rpad(" grid_maxima: ", ps), mapper.bsn_nfo.grid_maxima)
-    println(io, rpad(" grid_steps: ", ps), mapper.bsn_nfo.grid_steps)
-    println(io, rpad(" grid_minima: ", ps), mapper.bsn_nfo.grid_minima)
+    println(io, rpad(" grid: ", ps), mapper.grid)
     return
 end
 
 extract_attractors(m::AttractorsViaRecurrences, labels, ics) = m.bsn_nfo.attractors
+
+"""
+    basins_of_attraction(mapper::AttractorsViaRecurrences; show_progress = true)
+This is a special method of `basins_of_attraction` that using recurrences does
+_exactly_ what is described in the paper by Datseris & Wagemakers. By enforcing
+that the internal grid of `mapper` is the same as the grid of initial conditions to
+map to attractors, the method can further utilize found exit and attraction basins,
+making the computation faster as the grid is processed more and more.
+
+[^Datseris2022]:
+    G. Datseris and A. Wagemakers, *Effortless estimation of basins of attraction*,
+    [Chaos 32, 023104 (2022)](https://doi.org/10.1063/5.0076568)
+"""
+function basins_of_attraction(mapper::AttractorsViaRecurrences; show_progress = true)
+    basins = mapper.bsn_nfo.basins
+    grid = mapper.grid
+    I = CartesianIndices(basins)
+    progress = ProgressMeter.Progress(
+        length(basins); desc = "Basins of attraction: ", dt = 1.0
+    )
+
+    # TODO: Here we can have a slightly more efficient iteration by
+    # iterating I in different ways. In this way it always starts from the edge of
+    # the grid, which is the least likely location for attractors. We need to
+    # iterate I either randomly or from its center.
+    for (k,ind) in enumerate(I)
+        if basins[ind] == 0
+            show_progress && ProgressMeter.update!(progress, k)
+            y0 = generate_ic_on_grid(grid, ind)
+            basins[ind] = get_label_ic!(
+                mapper.bsn_nfo, mapper.integ, y0; show_progress, mapper.kwargs...
+            )
+        end
+    end
+
+    # remove attractors and rescale from 1 to max number of attractors
+    ind = iseven.(basins)
+    basins[ind] .+= 1
+    basins .= (basins .- 1) .÷ 2
+    return basins, mapper.bsn_nfo.attractors
+end
 
 
 #####################################################################################

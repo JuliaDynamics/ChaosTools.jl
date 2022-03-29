@@ -39,7 +39,12 @@ function basins_of_attraction(grid::Tuple, ds;
         if isnothing(complete_state)
             c = zeros(eltype(get_state(ds)), length(get_state(ds)) - length(grid))
         elseif complete_state isa Function
-            c = (y) ->  y[remidxs] .= complete_state(y)
+            c = function(y)
+                    v = zeros(eltype(get_state(ds)), dimension(ds))
+                    v[idxs] .= y
+                    v[remidxs] .= complete_state(y)
+                    return v
+                end
         else
             c = complete_state
         end

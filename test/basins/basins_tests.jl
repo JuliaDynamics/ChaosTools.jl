@@ -32,7 +32,7 @@ end
 @testset "Test basin poincare map" begin
     ds = Systems.thomas_cyclical(b = 0.1665)
     xg = yg = range(-6.0, 6.0; length = 100)
-    pmap = poincaremap(ds, (3, 0.0), 1e6; 
+    pmap = poincaremap(ds, (3, 0.0), 1e6;
         rootkw = (xrtol = 1e-8, atol = 1e-8), diffeq=(reltol=1e-9,)
     )
     basin,attractors = basins_of_attraction((xg,yg), pmap; show_progress = false)
@@ -87,7 +87,7 @@ end
     ds = Systems.lorenz_iip()
     xg = yg = range(-30.0, 30.0; length=10)
     zg = range(0, 50; length=10)
-    basin, attractors = basins_of_attraction((xg,yg,zg), ds; show_progress=false, mx_chk_fnd_att = 1000)
+    basin, attractors = basins_of_attraction((xg,yg,zg), ds; show_progress = false, mx_chk_fnd_att = 1000)
     @test length(attractors) == 1
     @test unique(basin) == [1]
 end
@@ -109,7 +109,6 @@ end
         end
     end
 end
-
 
 
 end

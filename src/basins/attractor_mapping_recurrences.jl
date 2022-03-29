@@ -1,8 +1,6 @@
 #####################################################################################
 # Type definition and documentation
 #####################################################################################
-# TODO: Move here the docstring of `basins_of_attraction`. THere, say that
-# the "supervised" version actually just uses `AttractorsViaProximity`.
 """
     AttractorsViaRecurrences(ds::GeneralizedDynamicalSystem, grid::Tuple; kwargs...)
 Map initial conditions to attractors by identifying attractors on the fly based on
@@ -141,11 +139,6 @@ end
 #####################################################################################
 # Definition of `BasinInfo` and initialization
 #####################################################################################
-# TODO: the functionality of proximty must be completely removed from `BasinsInfo`.
-# A loop calling `AttractorsViaProximity` will be called in `basins_of_attraction`.
-
-# TODO: Decide, for projected system, do we save the "full state" attractor,
-# or the projected version...?
 mutable struct BasinsInfo{B, IF, D, T, Q}
     basins::Array{Int16, B}
     grid_steps::SVector{B, Float64}

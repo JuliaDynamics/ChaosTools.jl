@@ -3,7 +3,8 @@ export AttractorMapper,
     AttractorsViaProximity,
     AttractorsViaFeaturizing,
     basins_fractions,
-    basins_of_attraction
+    basins_of_attraction,
+    automatic_Δt_basins
 
 #########################################################################################
 # AttractorMapper structure definition

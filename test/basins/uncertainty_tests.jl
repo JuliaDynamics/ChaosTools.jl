@@ -3,9 +3,9 @@ using DynamicalSystemsBase
 using Test
 using OrdinaryDiffEq
 
-@testset "Uncertainty exponent / fractal boundaries" begin
+@testset "Uncertainty exponent" begin
 
-@testset "Test uncertainty orginal paper" begin
+@testset "orginal paper" begin
     ds = Systems.grebogi_map(rand(2))
     θg = range(0, 2π, length = 251)
     xg = range(-0.5, 0.5, length = 251)
@@ -15,7 +15,7 @@ using OrdinaryDiffEq
     @test (0.2 ≤ α ≤ 0.3)
 end
 
-@testset "Test uncertainty Newton map" begin
+@testset "Newton map" begin
 
 function newton_map(dz,z, p, n)
     f(x) = x^p[1]-1

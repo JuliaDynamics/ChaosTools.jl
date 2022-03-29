@@ -12,7 +12,6 @@ include("basins/attractor_mapping_tests.jl")
 include("basins/basins_tests.jl")
 include("basins/uncertainty_tests.jl")
 include("basins/tipping_points_tests.jl")
-include("basins/basin_fractions_clustering_tests.jl")
 
 include("orbitdiagrams/orbitdiagram_tests.jl")
 include("orbitdiagrams/poincare_tests.jl")

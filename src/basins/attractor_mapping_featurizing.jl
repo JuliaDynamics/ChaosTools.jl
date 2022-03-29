@@ -1,4 +1,4 @@
-export basin_fractions_clustering, basin_fractions
+export basins_fractions_clustering, basins_fractions
 using Statistics: mean
 using Neighborhood
 using Distances, Clustering, Distributions
@@ -121,12 +121,12 @@ function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, featurizer::Fu
     )
 end
 
-function basin_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
+function basins_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
         show_progress = true, N = 1000
     )
     feature_array = extract_features(mapper, ics; show_progress, N)
     class_labels, = classify_features(feature_array, mapper)
-    fs = basin_fractions(class_labels) # Vanilla fractions method with Array input
+    fs = basins_fractions(class_labels) # Vanilla fractions method with Array input
     if typeof(ics) <: AbstractDataset
         attractors = extract_attractors(mapper, class_labels, ics)
         return fs, class_labels, attractors

@@ -3,6 +3,8 @@
 * The old `basins_of_attraction` function has been completely deprecated in favor of using the version `basins_of_attraction(mapper::AttractorMapper, grid)`, which utilizes the new `AttractorMapper` interface and is more intuitive and generalizable.
 * New method for mapping initial conditions to known attractors using proximity.
 * Old functions related to clustering via featurizing have been removed in favor of just using `AttractorsViaFeaturizing`.
+* **BREAKINNG** Function `basin_fractions_clustering` is removed.
+* `basin_fractions` is deprecated in favor of `basins_fractions`.
 
 # 2.7
 * New function `basin_fractions_clustering` that estimates fractions of basins of attraction via a random sampling and clustering technique.

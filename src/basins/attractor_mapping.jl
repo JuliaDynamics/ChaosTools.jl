@@ -2,7 +2,7 @@ export AttractorMapper,
     AttractorsViaRecurrences,
     AttractorsViaProximity,
     AttractorsViaFeaturizing,
-    basin_fractions,
+    basins_fractions,
     basins_of_attraction
 
 #########################################################################################
@@ -16,7 +16,7 @@ attractors. Currently available mapping methods:
 * [`AttractorsViaRecurrences`](@ref)
 * [`AttractorsViaFeaturizing`](@ref)
 
-All `AttractorMapper` subtypes can be used with [`basin_fractions`](@ref)
+All `AttractorMapper` subtypes can be used with [`basins_fractions`](@ref)
 or [`basins_of_attraction`](@ref).
 
 In addition, some mappers can be called as a function of an initial condition:
@@ -45,7 +45,7 @@ Base.show(io::IO, mapper::AttractorMapper) = generic_mapper_print(io, mapper)
 #########################################################################################
 # It works for all mappers that define the function-like-object behavior
 """
-    basin_fractions(mapper::AttractorMapper, ics::Union{Dataset, Function}; kwargs...)
+    basins_fractions(mapper::AttractorMapper, ics::Union{Dataset, Function}; kwargs...)
 
 Approximate the state space fractions `fs` of the basins of attraction of a dynamical
 stystem by mapping initial conditions to attractors using `mapper`
@@ -75,7 +75,7 @@ See [`AttractorMapper`](@ref) for all possible `mapper` types.
 * `N = 1000`: Number of random initial conditions to generate in case `ics` is a function.
 * `show_progress = true`: Display a progress bar of the process.
 """
-function basin_fractions(mapper::AttractorMapper, ics::Union{AbstractDataset, Function};
+function basins_fractions(mapper::AttractorMapper, ics::Union{AbstractDataset, Function};
         show_progress = true, N = 1000
     )
     used_dataset = ics isa AbstractDataset
@@ -110,7 +110,7 @@ _get_ic(ics::AbstractDataset, i) = ics[i]
 #########################################################################################
 # Generic basins of attraction method structure definition
 #########################################################################################
-# It works for all mappers that define a `basin_fractions` method.
+# It works for all mappers that define a `basins_fractions` method.
 """
     basins_of_attraction(mapper::AttractorMapper, grid::Tuple) → basins, attractors
 Compute the full basins of attraction as identified by the given `mapper`,
@@ -128,14 +128,14 @@ scenario the grid can be one dimension smaller than the state space, in which ca
 the partitioning happens directly on the hyperplane the Poincaré map operates on.
 
 `basins_of_attraction` function is a convenience 5-lines-of-code wrapper which uses the
-`labels` returned by [`basin_fractions`](@ref) and simply assings them to a full array
+`labels` returned by [`basins_fractions`](@ref) and simply assings them to a full array
 corresponding to the state space partitioning indicated by `grid`.
 """
 function basins_of_attraction(mapper::AttractorMapper, grid::Tuple; kwargs...)
     basins = zeros(Int16, map(length, grid))
     I = CartesianIndices(basins)
     A = Dataset([generate_ic_on_grid(grid, I[i]) for i in 1:length(I)])
-    fs, labels, attractors = basin_fractions(mapper, A; kwargs...)
+    fs, labels, attractors = basins_fractions(mapper, A; kwargs...)
     vec(basins) .= vec(labels)
     return basins, attractors
 end

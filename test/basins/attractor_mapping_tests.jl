@@ -29,7 +29,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
     reduced_grid = map(g -> range(minimum(g), maximum(g); length = 10), grid)
 
     # reusable testing function
-    function test_basin_fractions(mapper;
+    function test_basins_fractions(mapper;
             err = 1e-3, known=false, single_u_mapping = true,
             known_ids = known_ids, expected_fs = expected_fs
         )
@@ -39,7 +39,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
             end
         end
         # Generic test
-        fs = basin_fractions(mapper, sampler; show_progress = false)
+        fs = basins_fractions(mapper, sampler; show_progress = false)
         @test sort!(collect(keys(fs))) == known_ids
         for k in keys(fs)
             @test 0 < fs[k] < 1
@@ -47,7 +47,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         @test sum(values(fs)) == 1
 
         # Precise test with known initial conditions
-        fs, labels, approx_atts = basin_fractions(mapper, ics; show_progress = false)
+        fs, labels, approx_atts = basins_fractions(mapper, ics; show_progress = false)
         @test sort!(unique!(labels)) == known_ids
         found_fs = sort(collect(values(fs)))
         errors = abs.(expected_fs .- found_fs)
@@ -68,23 +68,23 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
 
     @testset "Proximity" begin
         mapper = AttractorsViaProximity(ds, known_attractors, ε; diffeq, Ttr = 100)
-        test_basin_fractions(mapper; known = true, err = 1e-15)
+        test_basins_fractions(mapper; known = true, err = 1e-15)
     end
     @testset "Recurrences" begin
         mapper = AttractorsViaRecurrences(ds, grid; diffeq, show_progress = false, kwargs...)
-        test_basin_fractions(mapper; err = rerr)
+        test_basins_fractions(mapper; err = rerr)
     end
     # TODO: Clustering is bugged
     # @testset "Featurizing, unsupervised" begin
     #     mapper = AttractorsViaFeaturizing(ds, featurizer; diffeq, Ttr = 100)
-    #     test_basin_fractions(mapper; err = ferr, single_u_mapping = false, known_ids = [1, 2])
+    #     test_basins_fractions(mapper; err = ferr, single_u_mapping = false, known_ids = [1, 2])
     # end
     @testset "Featurizing, supervised" begin
         attractors_ic = Dataset([v for (k,v) in u0s if k ≠ -1])
         mapper = AttractorsViaFeaturizing(ds, featurizer;
             Ttr = 100, attractors_ic, clustering_threshold, diffeq,
         )
-        test_basin_fractions(mapper; err = ferr, single_u_mapping = false)
+        test_basins_fractions(mapper; err = ferr, single_u_mapping = false)
     end
 end
 

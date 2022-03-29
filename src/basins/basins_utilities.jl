@@ -1,7 +1,7 @@
-export basin_fractions, match_attractors!
+export basins_fractions, match_attractors!
 
 """
-    basin_fractions(basins::Array) → fs::Dict
+    basins_fractions(basins::Array) → fs::Dict
 Calculate the state space fraction of the basins of attraction encoded in `basins`.
 The elements of `basins` are integers, enumerating the attractor that the entry of
 `basins` converges to (i.e., like the output of [`basins_of_attraction`](@ref)).
@@ -14,7 +14,7 @@ attraction, and specifically how it changes when a parameter is changed.
     Menck, Heitzig, Marwan & Kurths. How basin stability complements the linear
     stability paradigm. [Nature Physics, 9(2), 89–92](https://doi.org/10.1038/nphys2516)
 """
-function basin_fractions(basins::AbstractArray)
+function basins_fractions(basins::AbstractArray)
     fs = Dict{eltype(basins), Float64}()
     ids = unique(basins)
     N = length(basins)

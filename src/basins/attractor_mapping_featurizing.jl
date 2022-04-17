@@ -121,6 +121,8 @@ function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, featurizer::Fu
     )
 end
 
+# We need to extend the general `basins_fractions`, because the clustering method
+# cannot map individual initial conditions to attractors
 function basins_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
         show_progress = true, N = 1000
     )
@@ -144,7 +146,7 @@ function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
     if show_progress
         progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:")
     end
-    for i ∈ 1:N
+    Threads.@threads for i ∈ 1:N
         ic = _get_ic(ics,i)
         feature_array[i] = extract_features(mapper, ic)
         show_progress && ProgressMeter.next!(progress)

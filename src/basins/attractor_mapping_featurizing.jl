@@ -260,18 +260,18 @@ of the cluster.
 function optimal_radius_dbscan(features, min_neighbors, metric)
     feat_ranges = maximum(features, dims=2)[:,1] .- minimum(features, dims=2)[:,1];
     ϵ_grid = range(minimum(feat_ranges)/200, minimum(feat_ranges), length=200)
-    s_grid = zeros(size(ϵ_grid)) # min or average silhouette values (which we want to maximize)
+    s_grid = zeros(size(ϵ_grid)) #average silhouette values (which we want to maximize)
 
     #vary ϵ to find the best one (which will maximize the minimum sillhoute)
     for i=1:length(ϵ_grid)
-        clusters = ChaosTools.dbscan(features, ϵ_grid[i]; min_neighbors)
-        dists = ChaosTools.pairwise(metric, features)
-        class_labels = ChaosTools.cluster_props(clusters, features)
+        clusters = dbscan(features, ϵ_grid[i]; min_neighbors)
+        dists = pairwise(metric, features)
+        class_labels = cluster_props(clusters, features)
         if length(clusters) ≠ 1 #silhouette undefined if only one cluster. ***
-            sils = ChaosTools.silhouettes(class_labels, dists) 
+            sils = silhouettes(class_labels, dists) 
             s_grid[i] = mean(sils) 
         else
-            s_grid[i] = 0; #considers single-cluster solution on the average between (following Wikipedia)
+            s_grid[i] = 0; #considers single-cluster solution on the midpoint (following Wikipedia)
         end
     end
 

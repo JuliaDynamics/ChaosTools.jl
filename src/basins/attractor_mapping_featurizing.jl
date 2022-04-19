@@ -140,7 +140,7 @@ end
 function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
     show_progress = true, N = 1000)
 
-    N = (typeof(ics) <: Function)  ? N : size(ics, 1) #number of actual ICs
+    N = (typeof(ics) <: Function)  ? N : size(ics, 1) # number of actual ICs
 
     feature_array = Vector{Vector{Float64}}(undef, N)
     if show_progress
@@ -260,18 +260,18 @@ of the cluster.
 function optimal_radius_dbscan(features, min_neighbors, metric)
     feat_ranges = maximum(features, dims=2)[:,1] .- minimum(features, dims=2)[:,1];
     ϵ_grid = range(minimum(feat_ranges)/200, minimum(feat_ranges), length=200)
-    s_grid = zeros(size(ϵ_grid)) #average silhouette values (which we want to maximize)
+    s_grid = zeros(size(ϵ_grid)) # average silhouette values (which we want to maximize)
 
-    #vary ϵ to find the best one (which will maximize the minimum sillhoute)
+    # vary ϵ to find the best one (which will maximize the minimum sillhoute)
     for i=1:length(ϵ_grid)
         clusters = dbscan(features, ϵ_grid[i]; min_neighbors)
         dists = pairwise(metric, features)
         class_labels = cluster_props(clusters, features)
-        if length(clusters) ≠ 1 #silhouette undefined if only one cluster. ***
+        if length(clusters) ≠ 1 # silhouette undefined if only one cluster
             sils = silhouettes(class_labels, dists) 
             s_grid[i] = mean(sils) 
         else
-            s_grid[i] = 0; #considers single-cluster solution on the midpoint (following Wikipedia)
+            s_grid[i] = 0; # considers single-cluster solution on the midpoint (following Wikipedia)
         end
     end
 

@@ -36,8 +36,12 @@ dimensional subspace.
 
 ## Description
 An initial condition given to an instance of `AttractorsViaRecurrences` is iterated
-based on the integrator corresponding to `ds`. A finite state machine (FSM) follows the
-trajectory in the state space, and constantly maps it to the given `grid`. An array,
+based on the integrator corresponding to `ds`. A recurrence in the state space means
+that the trajectory has converged to an attractor. This is the basis for finding attractors.
+
+A finite state machine (FSM) follows the
+trajectory in the state space, and constantly maps it to the given `grid`. The FSM
+decides when an initial condition has successfully converged into an attractor. An array,
 internally called "basins", stores the state of the FSM on the grid, according to the
 indexing system described in [^Datseris2022]. As the system is integrated more and more,
 the information of the "basins" becomes richer and richer with more identified attractors

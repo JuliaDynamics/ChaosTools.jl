@@ -20,6 +20,7 @@ struct AttractorsViaFeaturizing{DS<:GeneralizedDynamicalSystem, T, F, A, K, M} <
     clust_method::String
     clustering_threshold::Float64
     min_neighbors::Int
+    rescale_features::Bool
 end
 DynamicalSystemsBase.get_rule_for_print(m::AttractorsViaFeaturizing) =
 get_rule_for_print(m.ds)
@@ -65,6 +66,8 @@ describing the trajectory.
   apply. If `"kNN"`, the first-neighbor clustering is used. If `"kNN_thresholded"`, a
   subsequent step is taken, which considers as unclassified (label `-1`) the features
   whose distance to the nearest template is above the `clustering_threshold`.
+* `rescale_features = true`: (unsupervised method): if true, rescale each dimension of
+the extracted features separately into the range `[0,1]`.
 
 ## Description
 The trajectory `X` of each initial condition is transformed into a vector of features.
@@ -83,7 +86,10 @@ If the attractors are not known a-priori the **unsupervised versions** should be
 Here, the vectors of features of each initial condition are mapped to an attractor by
 analysing how the features are clustered in the feature space. Using the DBSCAN algorithm,
 we identify these clusters of features, and consider each cluster to represent an
-attractor. Features whose attractor is not identified are labeled as `-1`.
+attractor. Features whose attractor is not identified are labeled as `-1`. If each feature
+spans different scales of magnitude, rescaling them into the same `[0,1]` interval can 
+bring significant improvements in the clustering in case the `Euclidean` distance metric is 
+used.   
 
 In the **supervised version**, the attractors are known to the user, who provides one
 initial condition for each attractor using the `attractors_ic` keyword.
@@ -109,9 +115,6 @@ function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, featurizer::Fu
         clustering_threshold = 0.0, min_neighbors = 10, diffeq = NamedTuple(),
         clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN",
     )
-    if isnothing(attractors_ic)
-        @warn "Unsupervised clustering algorithm is currently bugged and may not identify all clusters."
-    end
     if ds isa ContinuousDynamicalSystem
         T, Ttr, Δt = float.((T, Ttr, Δt))
     end
@@ -198,8 +201,19 @@ function classify_features_distances(features, mapper)
     return class_labels, class_errors
 end
 
+"""
+Does "min-max" rescaling of vector `vec`: rescales it such that its values span `[0,1]`.
+"""
+function rescale(vec::Vector{T}) where T
+    vec .-= minimum(vec)
+    max = maximum(vec)
+    if max == 0 return zeros(T, length(vec)) end
+    vec ./= maximum(vec)
+end
+
 # Unsupervised method: clustering in feature space
 function classify_features_clustering(features, min_neighbors, metric)
+    if mapper.rescale_features features = mapslices(rescale, features, dims=2) end
     ϵ_optimal = optimal_radius_dbscan(features, min_neighbors, metric)
     # Now recalculate the final clustering with the optimal ϵ
     clusters = Clustering.dbscan(features, ϵ_optimal; min_neighbors)

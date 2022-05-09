@@ -144,7 +144,7 @@ end
         1 => [-0.8, 0],
         2 => [1.8, 0],
     ]
-    expected_fs_raw = Dict(2 => 0.511, 1 => 0.489)
+    expected_fs_raw = Dict(2 => 0.509, 1 => 0.491)
     function featurizer(A, t)
         return [A[end][1]]
     end

@@ -27,7 +27,7 @@ include("period_return/period_tests.jl")
 include("period_return/yin_tests.jl")
 # include("period_return/transit_time_tests.jl")
 
-include("dimensions/dims.jl")
+include("dimensions/entropydim.jl")
 include("dimensions/correlationdim.jl")
 include("nlts_tests.jl")
 include("dyca_tests.jl")

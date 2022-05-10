@@ -1,4 +1,4 @@
-using ChaosTools, DynamicalSystemsBase
+using ChaosTools
 using Test
 using Statistics
 using ChaosTools.DynamicalSystemsBase
@@ -13,10 +13,11 @@ println("\nTesting correlation sum...")
         ts = trajectory(ds, 5000)
         R = 1.5maximum(maxima(ts) - minima(ts))
         # check for right normalisation with various combinations of `q` and `w`
-        @test correlationsum(ts, R; q = 2, w = 0) ≈ 1
-        @test correlationsum(ts, R; q = 2, w = 1) ≈ 1
+        @test correlationsum(ts, R; q = 2, w = 0) == 1
+        @test correlationsum(ts, R; q = 2, w = 10) == 1
+        # Notice that here we don't get exact 1 due to finite number precision
         @test correlationsum(ts, R; q = 2.2, w = 0) ≈ 1
-        @test correlationsum(ts, R; q = 2.2, w = 1) ≈ 1
+        @test correlationsum(ts, R; q = 2.2, w = 10) ≈ 1
         es = 10 .^ range(-3, stop = 0, length = 7)
         cs1 = correlationsum(ts, es)
         dim1 = linear_region(log.(es), log.(cs1))[2]

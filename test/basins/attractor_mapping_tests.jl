@@ -40,7 +40,6 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         end
         # Generic test
         fs = basins_fractions(mapper, sampler; show_progress = false)
-        # @test sort!(collect(keys(fs))) == known_ids #why compare keys?
         for k in keys(fs)
             @test 0 < fs[k] < 1
         end
@@ -48,9 +47,9 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
 
         # Precise test with known initial conditions
         fs, labels, approx_atts = basins_fractions(mapper, ics; show_progress = false)
-        # @test sort!(unique!(labels)) == known_ids #why compare keys?
         found_fs = sort(collect(values(fs)))
-        if length(found_fs) > length(expected_fs) found_fs = found_fs[2:end] end
+        if length(found_fs) > length(expected_fs) found_fs = found_fs[2:end] end #drop -1 key if it corresponds to just unidentified points
+        @test length(found_fs) == length(expected_fs) #number of attractors
         errors = abs.(expected_fs .- found_fs)
         for er in errors
             @test er .≤ err
@@ -124,7 +123,7 @@ end
 
     function featurizer(A, t)
         g = exp(genentropy(A, 0.1; q = 0))
-        return [g, estimate_period(A[:,1], :zc)]
+        return [g, minimum(A[:,1])]
     end
 
     test_basins(ds, u0s, grid, expected_fs_raw, featurizer;

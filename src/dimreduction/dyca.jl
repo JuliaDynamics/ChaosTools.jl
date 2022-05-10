@@ -23,7 +23,7 @@ determinism for the investigated data. Furthermore, the number of the generalize
 with a value of approximately 1.0 are a measure of the number of linear equations contained
 in the dataset. This property is useful in detecting regions with highly deterministic parts
 in the time-series and also as a preprocessing step for reservoir computing of high-dimensional
-spatio-temporal data. 
+spatio-temporal data.
 
 The generalised eigenvalue problem we solve is:
 
@@ -53,13 +53,13 @@ function dyca(data, eig_thresold::AbstractFloat; norm_eigenvectors::Bool=false)
 
     #solve the generalized eigenproblem
     eigenvalues, eigenvectors = eigen(C1*inv(C0)*transpose(C1),C2)
-    norm_eigenvectors && normalize_eigenvectors!(eigenvectors) 
+    norm_eigenvectors && normalize_eigenvectors!(eigenvectors)
     eigenvectors = eigenvectors[:, vec(eig_thresold .< abs.(eigenvalues) .<= 1.0)]
-    if size(eigenvectors,2) > 0
+    if size(eigenvectors, 2) > 0
         mul!(C3, inv(C1), C2)
         proj_mat = hcat(eigenvectors,mapslices(x -> C3*x,eigenvectors,dims=[1]))
     else
-        throw(DomainError("No generalized eigenvalue fulfills threshold!"))
+        error("No generalized eigenvalue fulfills threshold!")
     end
      return eigenvalues, proj_mat, data*proj_mat
 end

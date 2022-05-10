@@ -19,14 +19,14 @@ using DelayEmbeddings #to get columns() and embed()
 
     @testset "Eigenvalues of Embeded Roessler system" begin
         # Initial conditions from `dyca()` paper
-        eigenthresold = collect(0.90:0.01:0.995)
+        eigenthresold = collect(0.90:0.1:0.95)
         ds = Systems.roessler(ones(3); a = 0.15, b = 0.2, c = 10);
         ts = trajectory(ds, 1000.0; Δt = 0.05);
         cols = columns(ts);
         for thresold in eigenthresold
             for i in 1:3
                 Embedded_system = Matrix(embed(cols[i], 25, 1));
-                eigenvals,_ = dyca(Embedded_system,thresold)
+                eigenvals,_ = dyca(Embedded_system, thresold)
                 # eigenvalues satisfy `dyca` condtiion and have imaginary part = 0.0
                 wanted_eigenvalues = eigenvals[vec(0.999 .< abs.(eigenvals) .< 1.0) .& vec(imag(eigenvals) .== 0)]
                 # due to floating point errors more than 2 eigenvalues might satisy the above condition
@@ -60,17 +60,17 @@ end
 # ax = fig.add_subplot(2, 2, 1, projection="3d")
 # ax.plot(proj_eeg[:,1], proj_eeg[:,2], proj_eeg[:,3])
 # ax.view_init(elev=51, azim=86)
-# ax.set_xlabel(L"x_1"); ax.set_ylabel(L"x_2"); ax.set_zlabel(L"x_3"); 
+# ax.set_xlabel(L"x_1"); ax.set_ylabel(L"x_2"); ax.set_zlabel(L"x_3");
 # ax = fig.add_subplot(2, 2, 2, projection="3d")
 # ax.plot(proj_eeg[:,1], proj_eeg[:,2], proj_eeg[:,4])
 # ax.view_init(elev=37, azim=173)
-# ax.set_xlabel(L"x_1"); ax.set_ylabel(L"x_2"); ax.set_zlabel(L"x_3"); 
+# ax.set_xlabel(L"x_1"); ax.set_ylabel(L"x_2"); ax.set_zlabel(L"x_3");
 # ax = fig.add_subplot(2, 2, 3, projection="3d")
 # ax.plot(proj_eeg[:,2], proj_eeg[:,3], proj_eeg[:,4])
 # ax.view_init(elev=17, azim=36)
-# ax.set_xlabel(L"x_1"); ax.set_ylabel(L"x_2"); ax.set_zlabel(L"x_3"); 
+# ax.set_xlabel(L"x_1"); ax.set_ylabel(L"x_2"); ax.set_zlabel(L"x_3");
 # ax = fig.add_subplot(2, 2, 4, projection="3d")
 # ax.plot(proj_eeg[:,1], proj_eeg[:,3], proj_eeg[:,4])
 # ax.view_init(elev=43, azim=148)
-# ax.set_xlabel(L"x_1"); ax.set_ylabel(L"x_2"); ax.set_zlabel(L"x_3"); 
+# ax.set_xlabel(L"x_1"); ax.set_ylabel(L"x_2"); ax.set_zlabel(L"x_3");
 # savefig("projected_eeg_data_phasespace.png")

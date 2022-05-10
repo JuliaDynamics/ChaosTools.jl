@@ -1,3 +1,7 @@
+#2.9
+* Improved the `AttractorsViaFeaturizing` algorithm by improving the method for finding the optimal radius used in the clustering. This consisted in (i) maximizing the average silhouette values, instead of minimum (slight improvement), (ii) min-max rescaling the features for the clustering (big improvement); (iii) adding an alternative method ,called elbow method, that is faster but worse at clustering.  
+* Changed `attractor_mapping_tests.jl` to deal better with the Featurizing method. 
+
 # 2.8
 * Brand new `AttractorMapper` infrastructure. It is a generic framework for mapping initial conditions to attractors and hence calculating basins of attraction and related quantities. Existing originally disparate functionality has been brought together under this framework.
 * The old `basins_of_attraction` function has been completely deprecated in favor of using the version `basins_of_attraction(mapper::AttractorMapper, grid)`, which utilizes the new `AttractorMapper` interface and is more intuitive and generalizable.

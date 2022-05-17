@@ -25,6 +25,7 @@ where `` \\Psi(j) = \\frac{\\text{d} \\log Γ(j)}{\\text{d} j}
 `` is the digamma function, `rs` = ``\\overline{\\log \\left( r^{(j)}\\right)}`` is the mean
 logarithm of a radius containing `j` neighboring points, and
 `ys` = ``\\Psi(j) - \\log N`` (``N`` is the length of the data).
+The amount of neighbors found ``j`` range from 1 to `max_j`.
 
 ``\\Delta`` can be computed by using `linear_region(rs, ys)`.
 
@@ -36,9 +37,9 @@ function correlationsum_fixedmass(data, max_j; metric = Euclidean(), M = length(
     N = length(data)
     @assert M ≤ N
     tree = searchstructure(KDTree, data, metric)
-    searchdata = N == M ? data : view(data, view(randperm(N), 1:M))
+    searchdata = view(data, view(randperm(N), 1:M))
     _, distances = bulksearch(tree, searchdata, NeighborNumber(max_j), Theiler(w))
-    # The epsilons define the left side of the equation
+    # The ys define the left side of the equation
     ys = [digamma(j) - log(N) for j in 1:max_j]
     # Holds the mean value of the logarithms of the distances.
     rs = zeros(max_j)

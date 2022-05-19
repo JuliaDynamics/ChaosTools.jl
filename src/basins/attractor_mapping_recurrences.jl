@@ -1,3 +1,5 @@
+using SparseArrayKit
+
 #####################################################################################
 # Type definition and documentation
 #####################################################################################
@@ -144,7 +146,8 @@ end
 # Definition of `BasinInfo` and initialization
 #####################################################################################
 mutable struct BasinsInfo{B, IF, D, T, Q}
-    basins::Array{Int16, B}
+    #basins::Array{Int16, B}
+    basins::SparseArray{Int16, B}
     grid_steps::SVector{B, Float64}
     grid_maxima::SVector{B, Float64}
     grid_minima::SVector{B, Float64}
@@ -175,11 +178,12 @@ end
 function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function)
     D = length(get_state(integ))
     G = length(grid)
+    sparse = true
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
     grid_minima = minimum.(grid)
     bsn_nfo = BasinsInfo(
-        zeros(Int16, map(length, grid)),
+        sparse ? SparseArray{Int16}(undef, map(length, grid)) : zeros(Int16, map(length, grid)),
         SVector{G, Float64}(grid_steps),
         SVector{G, Float64}(grid_maxima),
         SVector{G, Float64}(grid_minima),

@@ -35,12 +35,11 @@ D = 100
 K = 3.0; ω = range(-1, 1; length = D)
 ds = Systems.kuramoto(D; K = K, ω = ω)
 res = 500
-default_diffeq = (reltol = 1e-9,  alg = Vern9(), callback = cb)
+diffeq = (reltol = 1e-9,  alg = Vern9(), callback = cb)
 xg = range(-π, π; length = res)
 grid = ntuple(x -> xg, D)
 
-mapper = AttractorsViaRecurrences(ds, grid;
-diffeq = default_diffeq, Δt = 0.1, sparse = true)
+mapper = AttractorsViaRecurrences(ds, grid; diffeq, Δt = 0.1, sparse = true)
 
 
 nsamples = 100
@@ -52,11 +51,15 @@ end
 
 
 # using PyPlot
-# for A in mapper.attractors
-#     plot(A[:, 1], A[:, 2]; alpha = 0.2)
+# for A in values(mapper.bsn_nfo.attractors)
+#     scatter(A[:, 1], A[:, 2]; alpha = 0.5)
 # end
 
-
-# t1 = trajectory(ds, T, diffeq = default_diffeq)
+# T = 100.0
+# t1 = trajectory(ds, T, diffeq = diffeq)
 # plot(range(0, T, step = 0.01), Matrix(t1))
 #@save "kur_D9.jld2" D K ω bsn att grid
+
+# i = xg[1]..xg[end]
+# box = IntervalBox(fill(i, D)...)
+# fixedpoints(ds, box)

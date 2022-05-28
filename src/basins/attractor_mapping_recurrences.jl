@@ -313,8 +313,8 @@ function _identify_basin_of_cell!(
         show_progress = true, # show_progress only used when finding new attractor.
     )
 
-    #if n[1]==-1 means we are outside the grid
-    ic_label = (n[1]==-1  || isnan(u_full_state[1])) ? -1 : bsn_nfo.basins[n]
+    #if n[1] == -1 means we are outside the grid
+    ic_label = n[1] == -1 ? -1 : bsn_nfo.basins[n]
 
     check_next_state!(bsn_nfo, ic_label)
 
@@ -329,9 +329,9 @@ function _identify_basin_of_cell!(
             relabel_visited_cell!(bsn_nfo, bsn_nfo.visited_cell, 0)
             reset_basins_counters!(bsn_nfo)
             return hit_att
-         end
-         bsn_nfo.prev_label = ic_label
-         return 0
+        end
+        bsn_nfo.prev_label = ic_label
+        return 0
     end
 
     if bsn_nfo.state == :att_search

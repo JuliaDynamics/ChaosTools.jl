@@ -1,4 +1,4 @@
-using SparseArrayKit
+using SparseArrayKit: SparseArray
 
 #####################################################################################
 # Type definition and documentation
@@ -114,6 +114,11 @@ basins, making the computation faster as the grid is processed more and more.
 """
 function basins_of_attraction(mapper::AttractorsViaRecurrences; show_progress = true)
     basins = mapper.bsn_nfo.basins
+    if basins isa SparseArray;
+        throw(ArgumentError(
+            "Sparse version is incompatible with `basins_of_attraction(mapper)`."
+        ))
+    end
     grid = mapper.grid
     I = CartesianIndices(basins)
     progress = ProgressMeter.Progress(
@@ -145,7 +150,7 @@ end
 #####################################################################################
 # Definition of `BasinInfo` and initialization
 #####################################################################################
-mutable struct BasinsInfo{A <: AbstractArray, B, IF, D, T, Q}
+mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray}
     basins::A # A always have type parameterization {Int16, B}. Sparse or Array
     grid_steps::SVector{B, Float64}
     grid_maxima::SVector{B, Float64}
@@ -432,7 +437,7 @@ end
 
 function basin_cell_index(y_grid_state, bsn_nfo::BasinsInfo{B}) where {B}
     iswithingrid = true
-    @inbounds for i in 1:length(bsn_nfo.grid_minima)
+    @inbounds for i in eachindex(bsn_nfo.grid_minima)
         if !(bsn_nfo.grid_minima[i] ≤ y_grid_state[i] ≤ bsn_nfo.grid_maxima[i])
             iswithingrid = false
             break

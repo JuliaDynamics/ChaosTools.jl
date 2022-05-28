@@ -1,10 +1,6 @@
-using Revise
 using ChaosTools
 using ChaosTools.DynamicalSystemsBase
-#using DynamicalSystems
-using DifferentialEquations
-#using OrdinaryDiffEq
-#using BenchmarkTools
+using OrdinaryDiffEq
 
 
 
@@ -45,7 +41,7 @@ default_diffeq = (reltol = 1e-9,  alg = Vern9(), callback = cb)
 xg = range(-pi,pi,length = res)
 grid = ntuple(x-> xg, D)
 
-mapper = AttractorsViaRecurrences(ds, grid; diffeq = default_diffeq, Δt = 0.1)
+mapper = AttractorsViaRecurrences(ds, grid; diffeq = default_diffeq, Δt = 0.1, sparse = true)
 
 
 nsamples = 100

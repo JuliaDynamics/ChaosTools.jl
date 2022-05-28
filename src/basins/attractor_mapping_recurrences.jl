@@ -76,14 +76,14 @@ struct AttractorsViaRecurrences{I, B, G, K} <: AttractorMapper
 end
 
 function AttractorsViaRecurrences(ds::GeneralizedDynamicalSystem, grid;
-        Δt=nothing, diffeq = NamedTuple(), kwargs...
+        Δt = nothing, diffeq = NamedTuple(), sparse = false, kwargs...
     )
-    bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq)
+    bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq, sparse)
     return AttractorsViaRecurrences(integ, bsn_nfo, grid, kwargs)
 end
 
 function (mapper::AttractorsViaRecurrences)(u0)
-    # Low level code of `basins_of_attraction` function. Notice that in this
+    # Call low level code of `basins_of_attraction` function. Notice that in this
     # call signature the interal basins info array of the mapper is NOT updated.
     lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0; mapper.kwargs...)
     # Transform to integers indexing from odd-even indexing
@@ -145,9 +145,8 @@ end
 #####################################################################################
 # Definition of `BasinInfo` and initialization
 #####################################################################################
-mutable struct BasinsInfo{B, IF, D, T, Q}
-    #basins::Array{Int16, B}
-    basins::SparseArray{Int16, B}
+mutable struct BasinsInfo{A <: AbstractArray, B, IF, D, T, Q}
+    basins::A # A always have type parameterization {Int16, B}. Sparse or Array
     grid_steps::SVector{B, Float64}
     grid_maxima::SVector{B, Float64}
     grid_minima::SVector{B, Float64}
@@ -162,7 +161,7 @@ mutable struct BasinsInfo{B, IF, D, T, Q}
     visited_list::Q
 end
 
-function basininfo_and_integ(ds::GeneralizedDynamicalSystem, grid, Δt, diffeq)
+function basininfo_and_integ(ds::GeneralizedDynamicalSystem, grid, Δt, diffeq, sparse)
     integ = integrator(ds; diffeq)
     isdiscrete = isdiscretetime(integ)
     Δt = isnothing(Δt) ? automatic_Δt_basins(integ, grid) : Δt
@@ -171,19 +170,23 @@ function basininfo_and_integ(ds::GeneralizedDynamicalSystem, grid, Δt, diffeq)
     else
         (integ) -> step!(integ, Δt)
     end
-    bsn_nfo = init_bsn_nfo(grid, integ, iter_f!)
+    bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, sparse)
     return bsn_nfo, integ
 end
 
-function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function)
+function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, sparse::Bool)
     D = length(get_state(integ))
     G = length(grid)
-    sparse = true
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
     grid_minima = minimum.(grid)
+    basins_array = if sparse
+        SparseArray{Int16}(undef, map(length, grid))
+    else
+        zeros(Int16, map(length, grid))
+    end
     bsn_nfo = BasinsInfo(
-        sparse ? SparseArray{Int16}(undef, map(length, grid)) : zeros(Int16, map(length, grid)),
+        basins_array,
         SVector{G, Float64}(grid_steps),
         SVector{G, Float64}(grid_maxima),
         SVector{G, Float64}(grid_minima),

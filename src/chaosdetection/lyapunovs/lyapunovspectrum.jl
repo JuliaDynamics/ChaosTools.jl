@@ -6,8 +6,8 @@ using DynamicalSystemsBase: MinimalDiscreteIntegrator
     lyapunovspectrum(ds::DynamicalSystem, N [, k::Int | Q0]; kwargs...) -> λs
 
 Calculate the spectrum of Lyapunov exponents [^Lyapunov1992] of `ds` by applying
-a QR-decomposition on the parallelepiped matrix `N` times. Return the
-spectrum sorted from maximum to minimum.
+a QR-decomposition on the parallelepiped defined by the deviation vectors, in total for
+`N` evolution steps. Return the spectrum sorted from maximum to minimum.
 
 The third argument `k` is optional, and dictates how many lyapunov exponents
 to calculate (defaults to `dimension(ds)`).
@@ -30,8 +30,8 @@ See also [`lyapunov`](@ref), [`local_growth_rates`](@ref).
   See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
 ## Description
-The method we employ is "H2" of [^Geist1990], originally stated in [^Benettin1980]. The deviation vectors
-defining a `D`-dimensional parallepiped in tangent space
+The method we employ is "H2" of [^Geist1990], originally stated in [^Benettin1980].
+The deviation vectors defining a `D`-dimensional parallepiped in tangent space
 are evolved using the tangent dynamics of the system.
 A QR-decomposition at each step yields the local growth rate for each dimension
 of the parallepiped. The growth rates are
@@ -75,12 +75,7 @@ function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix;
         diffeq = NamedTuple(kwargs)
     end
 
-    if typeof(ds) <: DDS
-        @assert typeof(Ttr) == Int
-        integ = tangent_integrator(ds, Q0; u0)
-    else
-        integ = tangent_integrator(ds, Q0; u0, diffeq)
-    end
+    integ = tangent_integrator(ds, Q0; u0, diffeq)
     λ = lyapunovspectrum(integ, N, Δt, Ttr, show_progress)
     return λ
 end
@@ -177,6 +172,7 @@ function lyapunovspectrum_convergence(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix;
         Ttr::Real = 0, Δt::Real = 1, u0 = get_state(ds), show_progress = false, diffeq...
     ) where {IIP, S, D}
 
+    @warn "This function is deprecated."
     if typeof(ds) <: DDS
         @assert typeof(Ttr) == Int
         integ = tangent_integrator(ds, Q0; u0)

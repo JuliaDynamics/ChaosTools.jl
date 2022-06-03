@@ -70,8 +70,8 @@ ChaosTools.lyapunovspectrum_convergence(tinteg, N, Δt, Ttr)
 lyapunovspectrum(ds::DS, N, k::Int = dimension(ds); kwargs...) =
 lyapunovspectrum(ds, N, orthonormal(dimension(ds), k); kwargs...)
 
-function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix; 
-        Ttr::Real = 0, Δt::Real = 1, u0 = get_state(ds), show_progress = false, 
+function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix;
+        Ttr::Real = 0, Δt::Real = 1, u0 = get_state(ds), show_progress = false,
         diffeq = NamedTuple(), kwargs...
     ) where {IIP, S, D}
 
@@ -503,30 +503,30 @@ end
 #                    Numerical Lyapunov (from reconstruction)                       #
 #####################################################################################
 using Neighborhood, StaticArrays
-using Distances: Metric, Cityblock, Euclidean
+using Distances: Cityblock, Euclidean
 export NeighborNumber, WithinRange
 export lyapunov_from_data
 export Cityblock, Euclidean
-# Everything in this section is based on Ulrich Parlitz [1]
 
 """
     lyapunov_from_data(R::Dataset, ks;  refstates, w, distance, ntype)
 Return `E = [E(k) for k ∈ ks]`, where `E(k)` is the average logarithmic distance
 between states of a neighborhood that are evolved in time for `k` steps
 (`k` must be integer). The slope of `E` vs `k` approximate the maximum Lyapunov exponent,
-see below.
-Typically `R` is the result of delay coordinates of a single timeseries.
+see below. It can be estimated with [`linear_region`](@ref).
+
+Typically `R` is the result of delay coordinates embedding of a timeseries,
+see [`embed`](@ref).
 
 ## Keyword Arguments
 
-* `refstates = 1:(length(R) - ks[end])` : Vector of indices
-  that notes which
-  states of the reconstruction should be used as "reference states", which means
+* `refstates = 1:(length(R) - ks[end])` : Vector of indices that notes which
+  states of the dataset should be used as "reference states", which means
   that the algorithm is applied for all state indices contained in `refstates`.
 * `w::Int = 1` : The [Theiler window](@ref).
 * `ntype = NeighborNumber(1)` : The neighborhood type. Either [`NeighborNumber`](@ref)
   or [`WithinRange`](@ref). See [Neighborhoods](@ref) for more info.
-* `distance::Metric = Cityblock()` : The distance function used in the
+* `distance = Cityblock()` : The distance function used in the
   logarithmic distance of nearby states. The allowed distances are `Cityblock()`
   and `Euclidean()`. See below for more info. The metric for finding neighbors is
   always the Euclidean one.
@@ -537,7 +537,7 @@ If the dataset exhibits exponential divergence of nearby states, then it should 
 ```math
 E(k) \\approx \\lambda\\cdot k \\cdot \\Delta t + E(0)
 ```
-for a *well defined region* in the `k` axis, where ``\\lambda`` is
+for a *well defined region* in the ``k`` axis, where ``\\lambda`` is
 the approximated maximum Lyapunov exponent. ``\\Delta t`` is the time between samples in the
 original timeseries. You can use [`linear_region`](@ref) with arguments `(ks .* Δt, E)` to
 identify the slope (= ``\\lambda``) immediatelly, assuming you
@@ -554,52 +554,38 @@ all neighborhood states over all reference states is the returned result.
 If the `Metric` is `Euclidean()` then use the Euclidean distance of the
 full `D`-dimensional points (distance ``d_E`` in ref.[^Skokos2016]).
 If however the `Metric` is `Cityblock()`, calculate
-the absolute distance of *only the first elements* of the `m+k` and `n+k` points
-of `R` (distance ``d_F`` in ref.[^Skokos2016], useful when `R` comes from delay embedding).
+the absolute distance of *only the first elements* of the points of `R`
+(distance ``d_F`` in ref.[^Skokos2016], useful when `R` comes from delay embedding).
 
-[^Skokos2016]: Skokos, C. H. *et al.*, *Chaos Detection and Predictability* - Chapter 1 (section 1.3.2), Lecture Notes in Physics **915**, Springer (2016)
+[^Skokos2016]:
+    Skokos, C. H. *et al.*, *Chaos Detection and Predictability* -
+    Chapter 1 (section 1.3.2), Lecture Notes in Physics **915**, Springer (2016)
 
 [^Kantz1994]: Kantz, H., Phys. Lett. A **185**, pp 77–87 (1994)
 """
-function lyapunov_from_data(
-        R::AbstractDataset{D, T}, ks;
-        refstates = 1:(length(R) - ks[end]),
-        w = 1,
-        distance = Cityblock(),
-        ntype = NeighborNumber(1),
-    ) where {D, T}
-    Ek = lyapunov_from_data(R, ks, refstates, Theiler(w), distance, ntype)
-end
-
-function lyapunov_from_data(
-        R::AbstractDataset{D, T},
-        ks::AbstractVector{Int},
-        ℜ::AbstractVector{Int},
-        theiler,
-        distance::Metric,
-        ntype::SearchType
+function lyapunov_from_data(R::AbstractDataset{D, T}, ks;
+        refstates = 1:(length(R) - ks[end]), w = 1,
+        distance = Cityblock(), ntype = NeighborNumber(1),
     ) where {D, T}
 
     # ℜ = \Re<tab> = set of indices that have the points that one finds neighbors.
     # n belongs in ℜ and R[n] is the "reference state".
     # Thus, ℜ contains all the reference states the algorithm will iterate over.
-    # ℜ is not estimated. it is given by the user. Most common choice:
-    # ℜ = 1:(length(R) - ks[end])
-
     # ⩅(n) = \Cup<tab> = neighborhood of reference state n
     # which is evaluated for each n and for the given neighborhood type
 
     timethres = length(R) - ks[end]
     if maximum(ℜ) > timethres
-        erstr = "Maximum index of reference states is > length(R) - ks[end] "
-        erstr*= "and the algorithm cannot be performed on it. You have to choose "
-        erstr*= "reference state indices of at most up to length(R) - ks[end]."
+        erstr = "Maximum index of reference states is > length(R) - ks[end]. "
+        erstr*= "Choose indices of at most up to length(R) - ks[end]."
         throw(ArgumentError(erstr))
     end
     E = zeros(T, length(ks))
     E_n, E_m = copy(E), copy(E)
     tree = KDTree(R, Euclidean())
-    skippedm = 0; skippedn = 0
+    skippedm = skippedn = 0
+    ℜ = refstates
+    theiler = Theiler(w)
 
     for n in ℜ
         # The ⋓(n) can be evaluated on the spot instead of being pre-calculated

@@ -568,14 +568,8 @@ function lyapunov_from_data(R::AbstractDataset{D, T}, ks;
         distance = Cityblock(), ntype = NeighborNumber(1),
     ) where {D, T}
 
-    # ℜ = \Re<tab> = set of indices that have the points that one finds neighbors.
-    # n belongs in ℜ and R[n] is the "reference state".
-    # Thus, ℜ contains all the reference states the algorithm will iterate over.
-    # ⩅(n) = \Cup<tab> = neighborhood of reference state n
-    # which is evaluated for each n and for the given neighborhood type
-
     timethres = length(R) - ks[end]
-    if maximum(ℜ) > timethres
+    if maximum(refstates) > timethres
         erstr = "Maximum index of reference states is > length(R) - ks[end]. "
         erstr*= "Choose indices of at most up to length(R) - ks[end]."
         throw(ArgumentError(erstr))
@@ -584,19 +578,18 @@ function lyapunov_from_data(R::AbstractDataset{D, T}, ks;
     E_n, E_m = copy(E), copy(E)
     tree = KDTree(R, Euclidean())
     skippedm = skippedn = 0
-    ℜ = refstates
     theiler = Theiler(w)
 
-    for n in ℜ
-        # The ⋓(n) can be evaluated on the spot instead of being pre-calculated
+    for n in refstates
+        # The neighborhood(n) can be evaluated on the spot instead of being pre-calculated
         # for all reference states. Precalculating is faster, but allocates more memory.
-        # Since ⋓[n] doesn't depend on `k` one can then interchange the loops:
+        # Since neighborhood[n] doesn't depend on `k` one can then interchange the loops:
         # Instead of k being the outermost loop, it becomes the innermost loop!
         point = R[n]
-        ⋓ = isearch(tree, point, ntype, theiler(n))
-        for m in ⋓
+        neighborhood = isearch(tree, point, ntype, theiler(n))
+        for m in neighborhood
             # If `m` is nearer to the end of the timeseries than k allows
-            # is it completely skipped (and length(⋓) reduced).
+            # is it completely skipped.
             if m > timethres
                 skippedm += 1
                 continue
@@ -604,25 +597,25 @@ function lyapunov_from_data(R::AbstractDataset{D, T}, ks;
             for (j, k) in enumerate(ks) #ks should be small (of order 10 to 100 MAX)
                 E_m[j] = log(delay_distance(distance, R, m, n, k))
             end
-            E_n .+= E_m # no need to reset E_m
+            E_n .+= E_m
         end
-        if skippedm >= length(⋓)
+        if skippedm >= length(neighborhood)
             skippedn += 1
             skippedm = 0
             continue # be sure to continue if no valid point!
         end
-        E .+= E_n ./ (length(⋓) - skippedm)
+        E .+= E_n ./ (length(neighborhood) - skippedm)
         skippedm = 0
-        fill!(E_n, zero(T)) #reset distances for n-th reference state
+        E_n .= zero(T) # reset distances for n-th reference state
     end
 
-    if skippedn >= length(ℜ)
+    if skippedn >= length(refstates)
         ers = "Skipped number of points ≥ length(R)...\n"
         ers*= "Could happen because all the neighbors fall within the Theiler "
         ers*= "window. Fix: increase neighborhood size."
         error(ers)
     end
-    E ./= (length(ℜ) - skippedn)
+    E ./= (length(refstates) - skippedn)
 end
 
 @inline function delay_distance(::Cityblock, R, m, n, k)

@@ -506,7 +506,8 @@ using Neighborhood, StaticArrays
 using Distances: Cityblock, Euclidean
 export NeighborNumber, WithinRange
 export lyapunov_from_data
-export Cityblock, Euclidean
+struct FirstElement end
+export Euclidean, FirstElement
 
 """
     lyapunov_from_data(R::Dataset, ks;  refstates, w, distance, ntype)
@@ -526,9 +527,9 @@ see [`embed`](@ref).
 * `w::Int = 1` : The [Theiler window](@ref).
 * `ntype = NeighborNumber(1)` : The neighborhood type. Either [`NeighborNumber`](@ref)
   or [`WithinRange`](@ref). See [Neighborhoods](@ref) for more info.
-* `distance = Cityblock()` : The distance function used in the
-  logarithmic distance of nearby states. The allowed distances are `Cityblock()`
-  and `Euclidean()`. See below for more info. The metric for finding neighbors is
+* `distance = FirstElement()` : Specifies what kind of distance function is used in the
+  logarithmic distance of nearby states. Allowed distances values are `FirstElement()`
+  or `Euclidean()`, see below for more info. The metric for finding neighbors is
   always the Euclidean one.
 
 
@@ -545,15 +546,15 @@ have choosen sufficiently good `ks` such that the linear scaling region is bigge
 than the saturated region.
 
 The algorithm used in this function is due to Parlitz[^Skokos2016], which itself
-expands upon Kantz [^Kantz1994]. In sort, for
+expands upon Kantz[^Kantz1994]. In sort, for
 each reference state a neighborhood is evaluated. Then, for each point in this
 neighborhood, the logarithmic distance between reference state and neighborhood
 state(s) is calculated as the "time" index `k` increases. The average of the above over
 all neighborhood states over all reference states is the returned result.
 
-If the `Metric` is `Euclidean()` then use the Euclidean distance of the
+If the `distance` is `Euclidean()` then use the Euclidean distance of the
 full `D`-dimensional points (distance ``d_E`` in ref.[^Skokos2016]).
-If however the `Metric` is `Cityblock()`, calculate
+If however the `distance` is `FirstElement()`, calculate
 the absolute distance of *only the first elements* of the points of `R`
 (distance ``d_F`` in ref.[^Skokos2016], useful when `R` comes from delay embedding).
 
@@ -565,9 +566,14 @@ the absolute distance of *only the first elements* of the points of `R`
 """
 function lyapunov_from_data(R::AbstractDataset{D, T}, ks;
         refstates = 1:(length(R) - ks[end]), w = 1,
-        distance = Cityblock(), ntype = NeighborNumber(1),
+        distance = FirstElement(), ntype = NeighborNumber(1),
     ) where {D, T}
 
+    if distance isa Cityblock
+        @warn "Using `Cityblock()` as distance is deprecated in favor of `FirstElement()`."
+    end
+
+    @assert all(k -> 1 ≤ k ≤ length(R), ks) "Invalid time range `ks`."
     timethres = length(R) - ks[end]
     if maximum(refstates) > timethres
         erstr = "Maximum index of reference states is > length(R) - ks[end]. "
@@ -582,14 +588,13 @@ function lyapunov_from_data(R::AbstractDataset{D, T}, ks;
 
     for n in refstates
         # The neighborhood(n) can be evaluated on the spot instead of being pre-calculated
-        # for all reference states. Precalculating is faster, but allocates more memory.
-        # Since neighborhood[n] doesn't depend on `k` one can then interchange the loops:
+        # for all reference states. This is actually faster than precalculating.
+        # Since neighborhood(n) doesn't depend on `k` one can then interchange the loops:
         # Instead of k being the outermost loop, it becomes the innermost loop!
-        point = R[n]
-        neighborhood = isearch(tree, point, ntype, theiler(n))
+        neighborhood = isearch(tree, R[n], ntype, theiler(n))
         for m in neighborhood
             # If `m` is nearer to the end of the timeseries than k allows
-            # is it completely skipped.
+            # is it completely skipped (no points to compute distance for)
             if m > timethres
                 skippedm += 1
                 continue
@@ -599,7 +604,7 @@ function lyapunov_from_data(R::AbstractDataset{D, T}, ks;
             end
             E_n .+= E_m
         end
-        if skippedm >= length(neighborhood)
+        if skippedm ≥ length(neighborhood)
             skippedn += 1
             skippedm = 0
             continue # be sure to continue if no valid point!
@@ -609,8 +614,8 @@ function lyapunov_from_data(R::AbstractDataset{D, T}, ks;
         E_n .= zero(T) # reset distances for n-th reference state
     end
 
-    if skippedn >= length(refstates)
-        ers = "Skipped number of points ≥ length(R)...\n"
+    if skippedn ≥ length(refstates)
+        ers = "Skipped number of points ≥ length(refstates)...\n"
         ers*= "Could happen because all the neighbors fall within the Theiler "
         ers*= "window. Fix: increase neighborhood size."
         error(ers)
@@ -619,6 +624,10 @@ function lyapunov_from_data(R::AbstractDataset{D, T}, ks;
 end
 
 @inline function delay_distance(::Cityblock, R, m, n, k)
+    @inbounds abs(R[m+k][1] - R[n+k][1])
+end
+
+@inline function delay_distance(::FirstElement, R, m, n, k)
     @inbounds abs(R[m+k][1] - R[n+k][1])
 end
 

@@ -25,6 +25,9 @@ function basins_fractions(basins::AbstractArray)
     return fs
 end
 
+
+# TODO: Somehow needs to make sure that attractors that are too far get different key.
+
 """
     match_attractors!(b₋, a₋, b₊, a₊, [, method = :distance])
 Attempt to match the attractors in basins/attractors `b₊, a₊` with those at `b₋, a₋`.
@@ -38,7 +41,7 @@ same system for slightly different parameters could label the "same" attractors 
 the different parameters) with different IDs. `match_attractors!` tries to "match" them
 by modifying the attractor IDs.
 
-The modification of IDs is always done on the `b, a` that have less attractors.
+The modification of IDs is always done on the `b, a` that have *less* attractors.
 
 `method` decides the matching process:
 * `method = :overlap` matches attractors whose basins before and after have the most
@@ -54,39 +57,30 @@ function match_attractors!(b₋, a₋, b₊, a₊, method = :distance)
     end
     ids₊, ids₋ = sort!(collect(keys(a₊))), sort!(collect(keys(a₋)))
     if method == :overlap
-        match_metric = _match_from_overlaps(b₋, a₋, ids₋, b₊, a₊, ids₊)
+        closeness_metric = _match_from_overlaps(b₋, ids₋, a₊, ids₊)
     elseif method == :distance
-        match_metric = _match_from_distance(b₋, a₋, ids₋, b₊, a₊, ids₊)
+        closeness_metric = _match_from_distance(a₋, ids₋, a₊, ids₊)
     else
-        error("Unknown method")
+        error("Unknown `method` for `match_attractors!`.")
     end
 
-    replacement_mapping = Dict{Int, Int}()
-    for (i, ι) in enumerate(ids₊)
-        v = match_metric[i, :]
-        for j in sortperm(v) # go through the match metric in sorted order
-            if ids₋[j] ∈ values(replacement_mapping)
-                continue # do not use keys that have been used
-            else
-                replacement_mapping[ι] = ids₋[j]
-            end
-        end
-    end
+    replacement_map = _replacement_map(closeness_metric, ids₋, ids₊)
 
-    # Do the actual replacing
-    replace!(b₊, replacement_mapping...)
+    # Do the actual replacing; easy for the basin arrays
+    replace!(b₊, replacement_map...)
+    # But a bit more involved for the attractor dictionaries
     aorig = copy(a₊)
-    for (k, v) ∈ replacement_mapping
+    for (k, v) ∈ replacement_map
         a₊[v] = aorig[k]
     end
-    # delete unused keys
+    # delete unused keys!
     for k ∈ keys(a₊)
-        if k ∉ values(replacement_mapping); delete!(a₊, k); end
+        if k ∉ values(replacement_map); delete!(a₊, k); end
     end
     return
 end
 
-function _match_from_overlaps(b₋, a₋, ids₋, b₊, a₊, ids₊)
+function _match_from_overlaps(b₋, ids₋, b₊, ids₊)
     # Compute normalized overlaps of each basin with each other basin
     overlaps = zeros(length(ids₊), length(ids₋))
     for (i, ι) in enumerate(ids₊)
@@ -99,8 +93,8 @@ function _match_from_overlaps(b₋, a₋, ids₋, b₊, a₊, ids₊)
     overlaps
 end
 
-using LinearAlgebra
-function _match_from_distance(b₋, a₋, ids₋, b₊, a₊, ids₊)
+using LinearAlgebra: norm
+function _match_from_distance(a₋, ids₋, a₊, ids₊)
     closeness = zeros(length(ids₊), length(ids₋))
     for (i, ι) in enumerate(ids₊)
         aι = a₊[ι]
@@ -110,4 +104,25 @@ function _match_from_distance(b₋, a₋, ids₋, b₊, a₊, ids₊)
         end
     end
     closeness
+end
+
+
+"""
+    _replacement_map(closeness_metric, ids₋, ids₊)
+Return a dictionary mapping old IDs to new IDs for `ids₊` given the `closeness_metric`.
+Closest keys in `ids₋` become keys for `ids₊`.
+"""
+function _replacement_map(closeness_metric, ids₋, ids₊)
+    replacement_map = Dict{Int, Int}()
+    for (i, ι) in enumerate(ids₊)
+        v = closeness_metric[i, :]
+        for j in sortperm(v) # go through the closeness metric in sorted order
+            if ids₋[j] ∈ values(replacement_map)
+                continue # do not use keys that have been used
+            else
+                replacement_map[ι] = ids₋[j]
+            end
+        end
+    end
+    return replacement_map
 end

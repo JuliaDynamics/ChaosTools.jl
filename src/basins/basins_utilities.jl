@@ -143,8 +143,12 @@ with ID 1 are not within `threshold` distance. Keys 2, 3 remain as is in both `a
 but key 1 will become 4 in `a₊`.
 
 This is used in [`continuation_basins_fractions`](@ref).
+
+    unique_attractor_ids!(as::AbstractVector, threshold::Real; kwargs...)
+When given a vector of dictionaries, iteratively perform the above method for each
+consecutive two dictionaries in the vector.
 """
-function unique_attractor_ids!(a₋, a₊, threshold::Real; metric = Euclidean())
+function unique_attractor_ids!(a₋::AbstractDict, a₊, threshold::Real; metric = Euclidean())
     # We utilize duck-typing of `match_attractor_ids!` for the `b` values
     similarity = match_attractor_ids!(nothing, a₋, nothing, a₊, :distance; metric)
     if length(a₊) > length(a₋) # because of the swapping in `match_attractor_ids!`
@@ -166,5 +170,12 @@ function unique_attractor_ids!(a₋, a₊, threshold::Real; metric = Euclidean()
         else
             continue
         end
+    end
+end
+
+function unique_attractor_ids!(as::AbstractVector, threshold::Real; kwargs...)
+    for i in 1:length(as)-1
+        a₋ = as[i]; a₊ = as[i+1]
+        unique_attractor_ids!(a₋, a₊, threshold; kwargs...)
     end
 end

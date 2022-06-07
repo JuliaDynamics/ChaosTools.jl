@@ -1,4 +1,4 @@
-export basins_fractions, match_attractors!
+export basins_fractions, match_attractor_ids!, unique_attractor_ids!
 
 """
     basins_fractions(basins::Array) → fs::Dict
@@ -137,11 +137,10 @@ Then, there is an extra step that ensures that attractors whose
 distance is greater than `threshold` are explicitly assigned different IDs.
 The new IDs used are always higher integers than the existing IDs in either `a₋, a₊`.
 
-For example, assume that both `a₋, a₊` have three attractors, and
+For example, assume that both `a₋, a₊` have three attractors, and (after matching)
 attractors with IDs 2, 3 are closer than `threshold` to each other, but attractors
 with ID 1 are not within `threshold` distance. Keys 2, 3 remain as is in both `a₋, a₊`
 but key 1 will become 4 in `a₊`.
-In this function modification is always done on `a₊`.
 
 This is used in [`continuation_basins_fractions`](@ref).
 """

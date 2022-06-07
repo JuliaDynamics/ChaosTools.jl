@@ -28,11 +28,11 @@ See [`generalized_dim`](@ref) for a more thorough explanation.
 
 See also [`takens_best_estimate`](@ref).
 
-[^Grassberger1983]: 
+[^Grassberger1983]:
     Grassberger and Proccacia, [Characterization of strange attractors, PRL 50 (1983)
     ](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.50.346)
 
-[^Theiler1986]: 
+[^Theiler1986]:
     Theiler, [Spurious dimension from correlation algorithms applied to limited time-series
     data. Physical Review A, 34](https://doi.org/10.1103/PhysRevA.34.2427)
 """
@@ -40,4 +40,11 @@ function grassberger_dim(data::AbstractDataset, εs = estimate_boxsizes(data); k
     @warn "`grassberger_dim` is deprecated and will be removed in future versions."
     cm = correlationsum(data, εs; kwargs...)
     return linear_region(log.(εs), log.(cm))[2]
+end
+
+
+export match_attractors!
+function match_attractors!(args...; kwargs...)
+    @warn "`match_attractors!` is deprecated in favor of `match_attractor_ids!`."
+    return match_attractor_ids!(args...; kwargs...)
 end

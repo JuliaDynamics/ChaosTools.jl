@@ -1,4 +1,6 @@
+
 @testset "matching attractors" begin
+    # TODO: Need to test what happens if I have one attractor with key 4 and one with 1.
     d, α, ω = 0.3, 0.2, 0.5
     ds = Systems.magnetic_pendulum(; d, α, ω)
     xg = yg = range(-3, 3, length = 100)

@@ -1,4 +1,5 @@
-using Test, ChaosTools, ChaosTools.DynamicalSystemsBase
+using Test, ChaosTools
+using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
 
 d, α, ω = 0.3, 0.2, 0.5
 ds = Systems.magnetic_pendulum(; d, α, ω)
@@ -15,6 +16,7 @@ b₋, a₋ = basins_of_attraction(mapper; show_progress = false)
 end
 
 @testset "matching attractors" begin
+    using LinearAlgebra: norm
     @testset "method $method" for method ∈ (:overlap, :distance)
         @testset "γ3 $γ3" for γ3 ∈ [0.2, 0.1] # still 3 at 0.2, but only 2 at 0.1
             ds = Systems.magnetic_pendulum(; d, α, ω,  γs = [1, 1, γ3])

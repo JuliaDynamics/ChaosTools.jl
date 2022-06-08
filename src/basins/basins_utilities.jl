@@ -56,7 +56,7 @@ function match_attractor_ids!(b₋, a₋, b₊, a₊, method = :distance; metric
     end
     ids₊, ids₋ = sort!(collect(keys(a₊))), sort!(collect(keys(a₋)))
     if method == :overlap
-        similarity = _similarity_from_overlaps(b₋, ids₋, a₊, ids₊)
+        similarity = _similarity_from_overlaps(b₋, ids₋, b₊, ids₊)
     elseif method == :distance
         similarity = _similarity_from_distance(a₋, ids₋, a₊, ids₊, metric)
     else

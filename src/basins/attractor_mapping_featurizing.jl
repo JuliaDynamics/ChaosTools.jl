@@ -38,6 +38,26 @@ function Base.show(io::IO, mapper::AttractorsViaFeaturizing)
 end
 
 """
+Featurize the dataset and then cluster it via DBSCAN or kNN. If `dataset` is a Dictionary,
+we consider it to be trajectories (including points in attractors) that are to be clustered.
+In this case, we simply extract the features from them and cluster the features. If
+`dataset` is an AbstractDataset or a function, then we consider it to be initial conditions
+that are to be integrated, then featurized and then clustered.
+"""
+function cluster_datasets(dataset::Union{Dict, AbstractDataset, Function},
+     mapper::AttractorsViaFeaturizing; show_progress=true, N=1000)
+    if dataset isa Dict  #attractors
+        feature_array = extract_features(mapper, dataset)
+    elseif dataset isa Union{AbstractDataset, Function} #ics
+        feature_array = extract_features(mapper, dataset; show_progress, N)
+    else
+        error("Incorrect input.")
+    end
+    class_labels, class_errors = classify_features(feature_array, mapper)
+    return class_labels, class_errors
+end
+
+"""
     AttractorsViaFeaturizing(ds::DynamicalSystem, featurizer::Function; kwargs...) → mapper
 
 Initialize a `mapper` that maps initial conditions to attractors using the featurizing and
@@ -133,11 +153,13 @@ end
 
 # We need to extend the general `basins_fractions`, because the clustering method
 # cannot map individual initial conditions to attractors
+"""
+`N = 1000` : number of initial conditions to be sampled, if `ics` is passed as a `Function`.
+"""
 function basins_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
         show_progress = true, N = 1000
     )
-    feature_array = extract_features(mapper, ics; show_progress, N)
-    class_labels, = classify_features(feature_array, mapper)
+    class_labels,  = cluster_datasets(ics, mapper; show_progress, N)
     fs = basins_fractions(class_labels) # Vanilla fractions method with Array input
     if typeof(ics) <: AbstractDataset
         attractors = extract_attractors(mapper, class_labels, ics)
@@ -176,6 +198,21 @@ function extract_attractors(mapper::AttractorsViaFeaturizing, labels, ics)
     uidxs = unique(i -> labels[i], 1:length(labels))
     return Dict(labels[i] => trajectory(mapper.ds, mapper.total, ics[i];
     Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq) for i in uidxs if i ≠ -1)
+end
+
+"""
+Extracts features from trajectories directly, including eg attractors that were identified
+via XX. Receives a dictionary, with each entry being a vector of points whose features are
+to be extracted.
+"""
+function extract_features(mapper::AttractorsViaFeaturizing, atts::Dict)
+
+    N = length(atts) # number of attractors
+    feature_array = Vector{Vector{Float64}}(undef, N)
+    for i ∈ 1:N
+        feature_array[i] = mapper.featurizer(atts[i], []) #t not being considered for featurizers, possible todo is to allow for that
+    end
+    return reduce(hcat, feature_array) # Convert to Matrix from Vector{Vector}
 end
 
 #####################################################################################
@@ -222,6 +259,7 @@ end
 # Unsupervised method: clustering in feature space
 function classify_features_clustering(features, min_neighbors, metric, rescale_features,
      optimal_radius_method)
+    dimfeats, nfeats = size(features); if dimfeats ≥ nfeats return 1:nfeats, zeros(nfeats) end  #needed because dbscan, as implemented, needs to receive as input a matrix D x N such that D < N
     if rescale_features features = mapslices(rescale, features, dims=2) end
     ϵ_optimal = optimal_radius_dbscan(features, min_neighbors, metric, optimal_radius_method)
     # Now recalculate the final clustering with the optimal ϵ

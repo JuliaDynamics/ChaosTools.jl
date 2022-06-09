@@ -7,11 +7,11 @@ export fixedpoints, .., ×, IntervalBox, interval
 Return all fixed points `fp` of the given `ds`
 that exist within the state space subset `box` for parameter configuration `p`.
 Fixed points are returned as a [`Dataset`](@ref).
-For convenience, a vector of the Jacobian eigenvalues of each fixed point, and whether 
+For convenience, a vector of the Jacobian eigenvalues of each fixed point, and whether
 the fixed points are stable or not, are also returned.
 
-`box` is an appropriate `IntervalBox` from IntervalRootFinding.jl. 
-E.g. for a 3D system it would be something like 
+`box` is an appropriate `IntervalBox` from IntervalRootFinding.jl.
+E.g. for a 3D system it would be something like
 ```julia
 v, z = -5..5, -2..2   # 1D intervals, can use `interval(-5, 5)` instead
 box = v × v × z       # `\\times = ×`, or use `IntervalBox(v, v, z)` instead
@@ -20,14 +20,14 @@ box = v × v × z       # `\\times = ×`, or use `IntervalBox(v, v, z)` instead
 Internally IntervalRootFinding.jl is used and as a result we are guaranteed to find all
 fixed points that exist in `box`, regardless of stability. Since IntervalRootFinding.jl
 returns an interval containing a unique fixed point, we return the midpoint of the
-interval as the actual fixed point. 
+interval as the actual fixed point.
 Naturally, limitations inherent to IntervalRootFinding.jl apply here.
 
 The output of `fixedpoints` can be used in the [BifurcationKit.jl](https://github.com/rveltz/BifurcationKit.jl)
 as a start of a continuation process. See also [`periodicorbits`](@ref).
 
 ## Keywords
-* `method = IntervalRootFinding.Krawczyk` configures the root finding method, 
+* `method = IntervalRootFinding.Krawczyk` configures the root finding method,
   see the docs of IntervalRootFinding.jl for all posibilities.
 * `tol = 1e-15` is the root-finding tolerance.
 * `warn = true` throw a warning if no fixed points are found.
@@ -35,7 +35,7 @@ as a start of a continuation process. See also [`periodicorbits`](@ref).
 function fixedpoints(ds::DynamicalSystem, box, p = ds.p;
         method = IntervalRootFinding.Krawczyk, o = nothing, tol = 1e-15, warn = true,
     )
-    if DynamicalSystemsBase.isinplace(ds) 
+    if DynamicalSystemsBase.isinplace(ds)
         error("`fixedpoints` works only for out-of-place dynamical systems.")
     end
     # Find roots via IntervalRootFinding.jl
@@ -64,7 +64,7 @@ function to_root_J(ds::DDS{IIP, S}, p, ::Nothing) where {IIP, S}
 end
 
 # Discrete with periodic order
-function to_root_f(ds::DDS, p, o::Int) 
+function to_root_f(ds::DDS, p, o::Int)
     u -> begin
         v = copy(u) # copy is free for StaticArrays
         for _ in 1:o

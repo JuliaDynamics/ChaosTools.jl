@@ -9,7 +9,8 @@ ti = time()
 @testset "ChaosTools tests" begin
 
 include("basins/attractor_mapping_tests.jl")
-@testset "Basins utilities" begin; include("basins/basins_tests.jl"); end
+@testset "Basins utilities" begin; include("basins/basins_utilities_tests.jl"); end
+@testset "Fractions continuation" begin; include("basins/basins_continuation_tests.jl"); end
 include("basins/basins_utilities_tests.jl")
 include("basins/uncertainty_tests.jl")
 include("basins/tipping_points_tests.jl")

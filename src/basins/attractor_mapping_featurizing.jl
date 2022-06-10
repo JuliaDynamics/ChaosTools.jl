@@ -8,9 +8,9 @@ using ProgressMeter
 #####################################################################################
 # AttractorMapper API
 #####################################################################################
-struct ClusteringSpecs{F, A, M} 
+mutable struct ClusteringSpecs{F, A, M} 
     featurizer::F
-    attractors_ic::A
+    attractors_template::A
     clust_method_norm::M
     clust_method::String
     clustering_threshold::Float64
@@ -19,7 +19,7 @@ struct ClusteringSpecs{F, A, M}
     optimal_radius_method::String
 end
 
-struct AttractorsViaFeaturizing{DS<:GeneralizedDynamicalSystem, C<:ClusteringSpecs, T, K
+struct AttractorsViaFeaturizing{DS<:GeneralizedDynamicalSystem, C<:ClusteringSpecs, T, K, A
     } <: AttractorMapper
     ds::DS
     cluster_specs::C
@@ -27,6 +27,7 @@ struct AttractorsViaFeaturizing{DS<:GeneralizedDynamicalSystem, C<:ClusteringSpe
     Δt::T
     total::T
     diffeq::K
+    attractors_ic::A
 end
 DynamicalSystemsBase.get_rule_for_print(m::AttractorsViaFeaturizing) =
 get_rule_for_print(m.ds)
@@ -53,10 +54,28 @@ function cluster_datasets(dataset, cluster_specs::ClusteringSpecs)
     return class_labels, class_errors
 end
 
+function integrate_ics(mapper::AttractorsViaFeaturizing, ics::AbstractDataset;
+    show_progress = true)
+    N = size(ics, 1) # number of actual ICs
+    trajectories = Vector{Dataset}(undef, N)
+    Threads.@threads for i ∈ 1:N
+        ic = ChaosTools._get_ic(ics,i)
+        trajectories[i] = trajectory(mapper.ds, mapper.total, ic;
+        Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq)
+        show_progress && ProgressMeter.next!(progress)
+    end
+    return trajectories
+end 
+
 function cluster_datasets(dataset::Union{AbstractDataset, Function},
      mapper::AttractorsViaFeaturizing; show_progress=true, N=1000)
     feature_array = extract_features(mapper, dataset; show_progress, N)
-    class_labels, class_errors = classify_features(feature_array, mapper)
+    if !isnothing(mapper.attractors_ic) 
+        attractors_template = integrate_ics(mapper, mapper.attractors_ic; show_progress=false)
+        mapper.cluster_specs.attractors_template = attractors_template #errors: MethodError: Cannot `convert` an object of type Vector{Dataset} to an object of type Nothing
+    end
+    
+    class_labels, class_errors = classify_features(feature_array, mapper.cluster_specs)
     return class_labels, class_errors
 end
 
@@ -112,12 +131,13 @@ simply start Julia with the number of threads you want to use.
 """
 function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, cluster_specs::ClusteringSpecs;
         T=100, Ttr=100, Δt=1, diffeq = NamedTuple(), 
+        attractors_ic::Union{AbstractDataset, Nothing}=nothing,
     )
     if ds isa ContinuousDynamicalSystem
         T, Ttr, Δt = float.((T, Ttr, Δt))
     end
     return AttractorsViaFeaturizing(
-        ds, cluster_specs, Ttr, Δt, T, diffeq 
+        ds, cluster_specs, Ttr, Δt, T, diffeq, attractors_ic
     )
 end
 
@@ -133,7 +153,7 @@ the corresponding time vector `t` and returns a `Vector{<:Real}` of features des
 trajectory.
 
 ## Keyword arguments
-* `attractors_ic = nothing` Enables supervised version, see below. If given, must be a
+* `attractors_template = nothing` Enables supervised version, see below. If given, must be a
   `Dataset` of initial conditions each leading to a different attractor, to which trajectories
   will be matched.
 * `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors (i.e. of
@@ -176,7 +196,7 @@ rescaling them into the same `[0,1]` interval can bring significant improvements
 clustering in case the `Euclidean` distance metric is used.   
 
 In the **supervised version**, the attractors are known to the user, who provides one
-initial condition for each attractor using the `attractors_ic` keyword. The algorithm then
+initial condition for each attractor using the `attractors_template` keyword. The algorithm then
 evolves these initial conditions, extracts their features, and uses them as templates
 representing the attrators. Each trajectory is considered to belong to the nearest template
 (based on the distance in feature space). Notice that the functionality of this version is
@@ -189,13 +209,13 @@ algorithm instead.
     stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
 function ClusteringSpecs(featurizer::Function;
-        attractors_ic::Union{AbstractDataset, Nothing}=nothing,
+        attractors_template::Union{AbstractDataset, Dict, Nothing, Vector}=nothing,
         clust_method_norm=Euclidean(), clustering_threshold = 0.0, min_neighbors = 10,
         clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN", 
         rescale_features=true, optimal_radius_method="silhouettes",
     )
     return ClusteringSpecs(
-        featurizer, attractors_ic, clust_method_norm, clust_method, 
+        featurizer, attractors_template, clust_method_norm, clust_method, 
         Float64(clustering_threshold), min_neighbors, rescale_features, optimal_radius_method
     )
 end
@@ -267,7 +287,7 @@ end
 # Clustering classification low level code
 #####################################################################################
 function classify_features(features, cluster_specs::ClusteringSpecs)
-    if !isnothing(cluster_specs.attractors_ic)
+    if !isnothing(cluster_specs.attractors_template)
         classify_features_distances(features, cluster_specs)
     else
         classify_features_clustering(features, cluster_specs.min_neighbors, cluster_specs.clust_method_norm,
@@ -276,17 +296,17 @@ function classify_features(features, cluster_specs::ClusteringSpecs)
 end
 
 # Supervised method: closest attractor template in feature space
-function classify_features_distances(features, mapper)
+function classify_features_distances(features, cluster_specs)
 
-    templates = extract_features(mapper, mapper.attractors_ic; show_progress=false)
+    templates = extract_features(cluster_specs, cluster_specs.attractors_template)
 
-    if mapper.clust_method == "kNN" || mapper.clust_method == "kNN_thresholded"
-        template_tree = searchstructure(KDTree, templates, mapper.clust_method_norm)
+    if cluster_specs.clust_method == "kNN" || cluster_specs.clust_method == "kNN_thresholded"
+        template_tree = searchstructure(KDTree, templates, cluster_specs.clust_method_norm)
         class_labels, class_errors = bulksearch(template_tree, features, NeighborNumber(1))
         class_labels = reduce(vcat, class_labels) # make it a vector
-        if mapper.clust_method == "kNN_thresholded" # Make label -1 if error bigger than threshold
+        if cluster_specs.clust_method == "kNN_thresholded" # Make label -1 if error bigger than threshold
             class_errors = reduce(vcat, class_errors)
-            class_labels[class_errors .≥ mapper.clustering_threshold] .= -1
+            class_labels[class_errors .≥ cluster_specs.clustering_threshold] .= -1
         end
     else
         error("Incorrect clustering mode.")

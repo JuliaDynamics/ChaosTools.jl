@@ -78,7 +78,7 @@ function _similarity_from_distance(a₊, a₋, metric::Metric = Euclidean())
     ids₊, ids₋ = keys(a₊), keys(a₋)
     distances = Dict{eltype(ids₊), Dict{eltype(ids₋), Float64}}()
     for i in ids₊
-        d = Dict{eltype(ids₋), Float64}()
+        d = valtype(distances)()
         for j in ids₋
             # TODO: create and use `dataset_distance` function in delay embeddings.jl
             # TODO: Use KD-trees or `pairwise`
@@ -145,7 +145,8 @@ the dictionary `a₊` and the basins of attraction `b₊`. In addition, the
 * `method = :overlap` matches attractors whose basins of attraction before and after
   have the most overlap (in pixels). This overlap is normalized in 0-1 (with 1 meaning
   100% overlap of pixels). The `threshold` in this case is compared to the inverse
-  of the overlap.
+  of the overlap (so, `threshold = 2` attractors that have less than 50% overlap get
+  different IDs guaranteed).
 * `method = :distance` is the same as in `match_attractor_ids!(a₊, a₋, ...)`.
 """
 function match_attractor_ids!(b₊::AbstractArray, a₊::AbstractDict, b₋, a₋,
@@ -167,10 +168,10 @@ end
 
 function _similarity_from_overlaps(b₊, ids₊, b₋, ids₋)
     @assert size(b₋) == size(b₊)
-    distances = Dict{eltype(ids₊), Dict{eltype(ids₋), Float64}}[]
+    distances = Dict{eltype(ids₊), Dict{eltype(ids₋), Float64}}()
     for i in ids₊
         Bi = findall(isequal(i), b₊)
-        d = valtype(distances)[]
+        d = valtype(distances)()
         # Compute normalized overlaps of each basin with each other basis
         for j in ids₋
             Bj = findall(isequal(j), b₋)

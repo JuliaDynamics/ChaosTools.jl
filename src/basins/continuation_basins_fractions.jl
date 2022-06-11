@@ -3,10 +3,11 @@ export continuation_basins_fractions
 """
     continuation_...
 ...
-
+TODO: What the hell am I doing man... I am giving fractions of basins to `unique_attractor_ids!`
+while I should be giving actual attractors...
 """
 function continuation_basins_fractions(mapper, ps, pidx, ics::Function;
-        seeds_per_attractor = 5, samples_per_parameter = 100, threshold = 1.0,
+        seeds_per_attractor = 5, samples_per_parameter = 100, threshold = Inf,
     )
     rng = Random.Xoshiro()
     # At each parmaeter `p`, a dictionary mapping attractor ID to fraction is created.
@@ -30,9 +31,14 @@ function continuation_basins_fractions(mapper, ps, pidx, ics::Function;
         end
         # Now poerform basin fractions estimation as normal, utilizing found attractors
         fs = basins_fractions(mapper, ics; show_progress = false, N = samples_per_parameter)
+
+        # Find new attractors
+        unique_attractor_ids!(prev_attractors, mapper.bsn_nfo.attractors, 1.0)
+
+        # But also correctly set new keys to new dictionary.
         push!(fractions_curves, fs)
     end
-    unique_attractor_ids!(fractions_curves, threshold)
+    unique_attractor_ids!(fractions_curves, 1.0)
     return fractions_curves
 end
 

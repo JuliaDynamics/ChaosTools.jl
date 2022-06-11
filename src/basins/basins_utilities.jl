@@ -26,6 +26,103 @@ function basins_fractions(basins::AbstractArray)
 end
 
 
+###########################################################################################
+# Matching attractors and key swapping business
+###########################################################################################
+# This code is one of the most complicated pieces of code I've ever had to write.
+# It is like 50 lines of code, yet it took me 6 full hours. Shit.
+# Thanks a lot to Valentin @Seelengrab for generous help in the key swapping code.
+"""
+    match_attractor_ids!(a₊::AbstractDict, a₋; metric = Euclidean(), threshold = Inf)
+Match attractor IDs in dictionary `a₊` so that its attractors that are the closest to
+those in dictionary `a₋` get assigned the same key as in `a₋`.
+Typically the +,- mean after and before some change of parameter of a system.
+Distance is quantified by the `metric`.
+
+Optionally, you can provide a `threshold` value. If the distance between two attractors
+is larger than this `threshold`, then it is guaranteed that the attractors will get assigned
+different key in the dictionary `a₊`.
+
+Return the final `replacement_map`, a dictionary mapping previous indices of `a₊` to
+the new ones that they were mapped to.
+
+    match_attractor_ids!(as::AbstractVector{<:AbstractDict}; kwargs...)
+When given a vector of dictionaries, iteratively perform the above method for each
+consecutive two dictionaries in the vector.
+"""
+function match_attractor_ids!(a₊::AbstractDict, a₋; metric = Euclidean(), threshold = Inf)
+    distances = _similarity_from_distance(a₊, a₋, metric)
+    mdc = _minimal_distance_combinations(distances)
+    replacement_map = _swap_dict_keys!(a₊, a₋, mdc, threshold)
+    return replacement_map
+end
+
+function match_attractor_ids!(as::AbstractVector{<:AbstractDict}; kwargs...)
+    for i in 1:length(as)-1
+        a₋ = as[i]; a₊ = as[i+1]
+        match_attractor_ids!(a₊, a₋; kwargs...)
+    end
+end
+
+function _similarity_from_distance(a₊, a₋, metric::Metric = Euclidean())
+    ids₊, ids₋ = keys(a₊), keys(a₋)
+    distances = Dict{eltype(ids₊), Dict{eltype(ids₋), Float64}}()
+    for i in ids₊
+        d = Dict{eltype(ids₋), Float64}()
+        for j in ids₋
+            # TODO: create and use `dataset_distance` function in delay embeddings.jl
+            # TODO: Use KD-trees or `pairwise`
+            d[j] = minimum(metric(x, y) for x ∈ a₊[i] for y ∈ a₋[j])
+        end
+        distances[i] = d
+    end
+    return distances
+end
+
+function _minimal_distance_combinations(distances)
+    # Prioritize mappings that have the least distance
+    minimal_distance_combinations = Tuple{Int, Int, Float64}[]
+    for i in keys(distances)
+        s = distances[i] # dict with distances of i to all in "-"
+        j = argmin(s)
+        push!(minimal_distance_combinations, (i, j, s[j]))
+    end
+    sort!(minimal_distance_combinations; by = x -> x[3])
+end
+
+function _swap_dict_keys!(a₊, a₋, minimal_distance_combinations, threshold = Inf)
+    replacement_map = Dict{keytype(a₊), keytype(a₋)}()
+    next_id = max(maximum(keys(a₊),), maximum(keys(a₋))) + 1
+    # In the same loop we do the logic that matches keys according to distance of values,
+    # but also ensures that keys that have too high of a value distance are guaranteeed
+    # to have different keys.
+    cache = Tuple{keytype(a₊), valtype(a₊)}[]
+    for (oldkey, newkey, mindist) in minimal_distance_combinations
+        if mindist > threshold
+            # The distance exceeds threshold, so we will assign a new key
+            newkey = next_id
+            next_id += 1
+        end
+        tmp = pop!(a₊, oldkey)
+        if !haskey(a₊, newkey)
+            a₊[newkey] = tmp
+        else
+            push!(cache, (newkey, tmp))
+        end
+        replacement_map[oldkey] = newkey
+    end
+    for (k, v) in cache
+        a₊[k] = v
+    end
+    return replacement_map
+end
+
+
+
+
+###########################################################################################
+# Matching with basins and possibly overlaps
+###########################################################################################
 """
     match_attractor_ids!(b₋, a₋, b₊, a₊, [, method = :distance]; metric = Euclidean())
 Match the attractors in basins/attractors `b₊, a₊` with those at `b₋, a₋`.
@@ -39,31 +136,36 @@ same system for slightly different parameters could label the "same" attractors 
 the different parameters) with different IDs. `match_attractors!` tries to "match" them
 by modifying the attractor IDs.
 
-The modification of IDs is always done on the `b, a` that have *less* attractors.
-If they have equal, modification is done on the `₊` values.
-
 `method` decides the matching process:
 * `method = :overlap` matches attractors whose basins of attraction before and after
   have the most overlap (in pixels).
 * `method = :distance` matches attractors whose state space distance the smallest.
   The keyword `metric` decides the metric for the distance (anything from Distances.jl).
+
+The modification of IDs is always done on the `b, a` that have *less* attractors.
+If they have equal, modification is done on the `₊` values.
+
+The modification of IDs is always done on the `₊` values. If they have more attractors
+than the `₋`, then a match is first done, and then the least matching attractors get
+any non used integers as keys.
 """
-function match_attractor_ids!(b₋, a₋, b₊, a₊, method = :distance; metric = Euclidean())
-    if length(a₊) > length(a₋)
-        # Set it up so that modification is always done on `+` attractors
-        a₋, a₊ = a₊, a₋
-        b₋, b₊ = b₊, b₋
-    end
-    ids₊, ids₋ = sort!(collect(keys(a₊))), sort!(collect(keys(a₋)))
+function match_attractor_ids!(b₋::AbstractArray, a₋::AbstractDict, b₊, a₊, method = :distance; metric = Euclidean())
+    error("TODO: Re-write in new code.")
+    # if length(a₊) > length(a₋)
+    #     # Set it up so that modification is always done on `+` attractors
+    #     a₋, a₊ = a₊, a₋
+    #     b₋, b₊ = b₊, b₋
+    # end
+    ids₊, ids₋ = keys(a₊), keys(a₋)
     if method == :overlap
-        similarity = _similarity_from_overlaps(b₋, ids₋, b₊, ids₊)
+        distances = _similarity_from_overlaps(b₋, ids₋, b₊, ids₊)
     elseif method == :distance
-        similarity = _similarity_from_distance(a₋, ids₋, a₊, ids₊, metric)
+        distances = _similarity_from_distance(a₋, ids₋, a₊, ids₊, metric)
     else
         error("Unknown `method` for `match_attractors!`.")
     end
 
-    replacement_map = _replacement_map(similarity, ids₋, ids₊)
+    replacement_map = _replacement_map(distances, ids₋, ids₊)
 
     # Do the actual replacing; easy for the basin arrays
     if b₊ isa AbstractArray
@@ -79,103 +181,32 @@ function match_attractor_ids!(b₋, a₋, b₊, a₊, method = :distance; metric
         if k ∉ values(replacement_map); delete!(a₊, k); end
     end
     return similarity
+
+    # TODO: Modification of IDs must always be done on + version, because
+    # only this way I can maintain the replacement_mapping.
+
+    # For a replacement map, I can Do
+    # for (k, v) ∈ replacement_map
+    #     # a₊[v] = aorig[k]
+    #     a+[v] = pop!(a+, k)
+    # end
+
 end
+
 
 function _similarity_from_overlaps(b₋, ids₋, b₊, ids₊)
     @assert size(b₋) == size(b₊)
-    # Compute normalized overlaps of each basin with each other basin
-    overlaps = zeros(length(ids₊), length(ids₋))
-    for (i, ι) in enumerate(ids₊)
-        Bi = findall(isequal(ι), b₊)
-        for (j, ξ) in enumerate(ids₋)
-            Bj = findall(isequal(ξ), b₋)
-            overlaps[i, j] = length(Bi ∩ Bj)/length(Bj)
+    distances = Dict{eltype(ids₊), Dict{eltype(ids₋), Float64}}[]
+    for i in ids₊
+        Bi = findall(isequal(i), b₊)
+        d = valtype(distances)[]
+        # Compute normalized overlaps of each basin with each other basis
+        for j in ids₋
+            Bj = findall(isequal(j), b₋)
+            overlap = length(Bi ∩ Bj)/length(Bj)
+            d[j] = 1 / overlap # distance is inverse overlap
         end
+        distances[i] = d
     end
-    return overlaps
-end
-
-function _similarity_from_distance(a₋, ids₋, a₊, ids₊, metric::Metric)
-    distances = zeros(length(ids₊), length(ids₋))
-    for (i, ι) in enumerate(ids₊)
-        aι = a₊[ι]
-        for (j, ξ) in enumerate(ids₋)
-            aξ = a₋[ξ]
-            distances[i, j] = minimum(metric(x, y) for x ∈ aι for y ∈ aξ)
-        end
-    end
-    return 1 ./ distances
-end
-
-
-"""
-    _replacement_map(similarity, ids₋, ids₊)
-Return a dictionary mapping old IDs to new IDs for `ids₊` given the `similarity`.
-Closest keys (according to similarity) in `ids₋` become keys for `ids₊`.
-"""
-function _replacement_map(similarity, ids₋, ids₊)
-    replacement_map = Dict{Int, Int}()
-    for (i, ι) in enumerate(ids₊)
-        v = similarity[i, :]
-        for j in sortperm(v) # go through the closeness metric in sorted order
-            if ids₋[j] ∈ values(replacement_map)
-                continue # do not use keys that have been used
-            else
-                replacement_map[ι] = ids₋[j]
-            end
-        end
-    end
-    return replacement_map
-end
-
-
-"""
-    unique_attractor_ids!(a₋, a₊, threshold::Real; metric = Euclidean())
-This is a stricter version of [`match_attractor_ids!`](@ref).
-First, attractors are matched by distance by calling [`match_attractor_ids`](@ref).
-Then, there is an extra step that ensures that attractors whose
-distance is greater than `threshold` are explicitly assigned different IDs.
-The new IDs used are always higher integers than the existing IDs in either `a₋, a₊`.
-
-For example, assume that both `a₋, a₊` have three attractors, and (after matching)
-attractors with IDs 2, 3 are closer than `threshold` to each other, but attractors
-with ID 1 are not within `threshold` distance. Keys 2, 3 remain as is in both `a₋, a₊`
-but key 1 will become 4 in `a₊`.
-
-This is used in [`continuation_basins_fractions`](@ref).
-
-    unique_attractor_ids!(as::AbstractVector, threshold::Real; kwargs...)
-When given a vector of dictionaries, iteratively perform the above method for each
-consecutive two dictionaries in the vector.
-"""
-function unique_attractor_ids!(a₋::AbstractDict, a₊, threshold::Real; metric = Euclidean())
-    # We utilize duck-typing of `match_attractor_ids!` for the `b` values
-    similarity = match_attractor_ids!(nothing, a₋, nothing, a₊, :distance; metric)
-    if length(a₊) > length(a₋) # because of the swapping in `match_attractor_ids!`
-        similarity = permutedims(similarity) # like transpose, but not lazy
-    end
-    distances = 1 ./ similarity
-    ids₊, ids₋ = sort!(collect(keys(a₊))), sort!(collect(keys(a₋)))
-    next_id = max(maximum(ids₊), maximum(ids₋)) + 1
-    # Go through attractors; for same ID, check distance
-    for (i, ι) in enumerate(ids₊)
-        if ι ∈ ids₋
-            j = findfirst(isequal(ι), ids₋)
-            d = distances[i, j]
-            if d > threshold # replace key with `next_id`
-                a₊[next_id] = a₊[ι]
-                delete!(a₊, ι)
-                next_id += 1
-            end
-        else
-            continue
-        end
-    end
-end
-
-function unique_attractor_ids!(as::AbstractVector, threshold::Real; kwargs...)
-    for i in 1:length(as)-1
-        a₋ = as[i]; a₊ = as[i+1]
-        unique_attractor_ids!(a₋, a₊, threshold; kwargs...)
-    end
+    return distances
 end

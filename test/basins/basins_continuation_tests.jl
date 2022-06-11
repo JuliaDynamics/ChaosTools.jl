@@ -14,7 +14,7 @@ using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
 
     # With this threshold all attractors are mapped to each other, they are within
     # distance 1 in state space.
-    fractions_curves = continuation_basins_fractions(mapper, ps, pidx, sampler; threshold = 1.0)
+    fractions_curves = continuation_basins_fractions(mapper, ps, pidx, sampler)
 
     for (i, p) in enumerate(ps)
         γ = p[3]
@@ -27,4 +27,17 @@ using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
             @test k == 1:3
         end
     end
+    # Plot code for fractions
+    # using GLMakie
+    # x = [fs[1] for fs in fractions_curves]
+    # y = [fs[3] for fs in fractions_curves]
+    # z = zeros(length(x))
+    # fig = Figure()
+    # ax = Axis(fig[1,1])
+    # display(fig)
+    # γs = [p[3] for p in ps]
+    # band!(ax, γs, z, x; color = :violet)
+    # band!(ax, γs, x, x .+ y; color = :blue)
+    # band!(ax, γs, x .+ y, 1; color = :red)
+    # ylims!(ax, 0, 1)
 end

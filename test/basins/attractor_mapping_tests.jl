@@ -74,7 +74,10 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         mapper = AttractorsViaRecurrences(ds, grid; diffeq, show_progress = false, kwargs...)
         test_basins_fractions(mapper; err = rerr)
     end
-
+    @testset "Recurrences Sparse" begin
+        mapper = AttractorsViaRecurrences(ds, grid; sparse = true, diffeq, show_progress = false, kwargs...)
+        test_basins_fractions(mapper; err = rerr)
+    end
     @testset "Featurizing, unsupervised" begin
         mapper = AttractorsViaFeaturizing(ds, featurizer; diffeq, Ttr = 500)
         test_basins_fractions(mapper; err = ferr, single_u_mapping = false, known_ids = [-1, 1, 2, 3])
@@ -103,7 +106,7 @@ end
         return any(isinf, x) ? [200.0, 200.0] : x
     end
     test_basins(ds, u0s, grid, expected_fs_raw, henon_featurizer;
-    clustering_threshold = 20, ε = 1e-3)
+     clustering_threshold = 20, ε = 1e-3)
 end
 
 
@@ -201,4 +204,3 @@ end
 
 
 end # Attractor mapping tests
-

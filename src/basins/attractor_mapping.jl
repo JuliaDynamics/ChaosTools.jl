@@ -2,7 +2,7 @@ export AttractorMapper,
     AttractorsViaRecurrences,
     AttractorsViaProximity,
     AttractorsViaFeaturizing,
-    ClusteringSpecs,
+    ClusteringConfig,
     basins_fractions,
     basins_of_attraction,
     automatic_Δt_basins

@@ -10,11 +10,17 @@ algorithm by [^Molteno1993]. Division stops if the
 average number of points per filled box falls below the threshold `k0`.
 
 Return `probs`, a vector of [`Probabilities`](@ref) of finding points in boxes for
-different box sizes, and the corresponding box sizes `εs`.
+different box sizes, and the corresponding box sizes `εs`. These probabilities can be used
+to calculate a fractal dimension like so
+```julia
+probs, εs = molteno_boxing(data; k0)
+dd = genentropy.(probs; q, base)
+Δ = linear_region(-log.(base, εs), dd)[2]
+```
 
 ## Description
 Project the `data` onto the whole interval of numbers that is covered by
-`UInt64`. This projected data is distributed into boxes whose size
+`UInt64`. The projected data is distributed into boxes whose size
 decreases by factor 2 in each step. For each box that contains more than one
 point `2^D` new boxes are created where `D` is the dimension of the data.
 
@@ -31,7 +37,6 @@ to a low number of data points to fit the dimension to and thereby a poor estima
 [^Molteno1993]:
     Molteno, T. C. A., [Fast O(N) box-counting algorithm for estimating dimensions.
     Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/10.1103/PhysRevE.48.R3263)
-
 """
 function molteno_boxing(data::AbstractDataset; k0 = 10)
     integers, ε0 = real_to_uint64(data)

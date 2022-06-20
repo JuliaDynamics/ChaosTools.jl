@@ -17,7 +17,7 @@ the featurizing and clustering method based on [^Stender2021].
 
 
 ## Keyword arguments
-* `attractors_template = nothing` Enables supervised version, see below. If given, must be a
+* `templates = nothing` Enables supervised version, see below. If given, must be a
   `Dataset` of initial conditions each leading to a different attractor, to which
   trajectories will be matched.
 * `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors (i.e. of
@@ -57,14 +57,14 @@ magnitude, rescaling them into the same `[0,1]` interval can bring significant i
 in the clustering in case the `Euclidean` distance metric is used.   
 
 In the **supervised version**, the user provides features to be used as templates guiding the
-clustering via the `attractors_template` keyword. Each trajectory is considered to belong to
+clustering via the `templates` keyword. Each trajectory is considered to belong to
 the nearest template (based on the distance in feature space). 
 
 [^Stender2021]: Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
     stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
 mutable struct ClusteringConfig{A, M} 
-    attractors_template::A
+    templates::A
     clust_method_norm::M
     clust_method::String
     clustering_threshold::Float64
@@ -73,13 +73,13 @@ mutable struct ClusteringConfig{A, M}
     optimal_radius_method::String
 end
 
-function ClusteringConfig(;attractors_template::Union{Nothing, Vector}=nothing,
+function ClusteringConfig(;templates::Union{Nothing, Vector}=nothing,
         clust_method_norm=Euclidean(), clustering_threshold = 0.0, min_neighbors = 10,
         clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN", 
         rescale_features=true, optimal_radius_method="silhouettes",
     )
     return ClusteringConfig(
-        attractors_template, clust_method_norm, clust_method, 
+        templates, clust_method_norm, clust_method, 
         Float64(clustering_threshold), min_neighbors, rescale_features, optimal_radius_method
     )
 end
@@ -247,7 +247,7 @@ end
 # Clustering classification low level code
 #####################################################################################
 function cluster_features(features, cluster_specs::ClusteringConfig)
-    if !isnothing(cluster_specs.attractors_template)
+    if !isnothing(cluster_specs.templates)
         cluster_features_distances(features, cluster_specs)
     else
         cluster_features_clustering(features, cluster_specs.min_neighbors, cluster_specs.clust_method_norm,
@@ -258,7 +258,7 @@ end
 # Supervised method: closest attractor template in feature space
 function cluster_features_distances(features, cluster_specs)
 
-    templates = Float64.(reduce(hcat, cluster_specs.attractors_template)) #casting to float needed for kNN
+    templates = Float64.(reduce(hcat, cluster_specs.templates)) #casting to float needed for kNN
 
     if cluster_specs.clust_method == "kNN" || cluster_specs.clust_method == "kNN_thresholded"
         template_tree = searchstructure(KDTree, templates, cluster_specs.clust_method_norm)

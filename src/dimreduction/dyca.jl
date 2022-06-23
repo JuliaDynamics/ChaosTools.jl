@@ -37,7 +37,11 @@ derivative of the data with itself. The eigenvectors ``\\bar{u}`` with eigenvalu
 approximately 1 and their ``C_1^{-1} C_2 u`` counterpart, form the space where the data
 is projected onto.
 
-[^Uhl2018]: B Seifert, K Korn, S Hartmann, C Uhl, *Dynamical Component Analysis (DYCA): Dimensionality Reduction for High-Dimensional Deterministic Time-Series*, 10.1109/mlsp.2018.8517024, 2018 IEEE 28th International Workshop on Machine Learning for Signal Processing (MLSP)
+[^Uhl2018]:
+    B Seifert, K Korn, S Hartmann, C Uhl, *Dynamical Component Analysis (DYCA):
+    Dimensionality Reduction for High-Dimensional Deterministic Time-Series*,
+    10.1109/mlsp.2018.8517024, 2018 IEEE 28th International Workshop on Machine Learning
+    for Signal Processing (MLSP)
 """
 dyca(A::Dataset, e) = dyca(Matrix(A), e)
 function dyca(data, eig_thresold::AbstractFloat; norm_eigenvectors::Bool=false)
@@ -73,7 +77,7 @@ end
 
 """
     matrix_gradient(matrix)
-Compute the gradient of a matrix along axis=1.
+Compute the gradient of a matrix along 1st axis.
 
 ## Description
 Compute the gradient using second order accurate central differences in the interior points
@@ -85,8 +89,6 @@ second order approximation by using:
 The returned gradient matrix hence has the same shape as the input array. Here we compute
 the gradient along axis=1 (row-wise), so to compute gradient along axis=2 (column-wise),
 the tranpose of the input matrix must be given.
-
-[^Quarteroni2007]: Quarteroni A., Sacco R., Saleri F. (2007) Numerical Mathematics (Texts in Applied Mathematics). New York: Springer.
 """
 function matrix_gradient(matrix::Matrix)
     gradient = copy(matrix)

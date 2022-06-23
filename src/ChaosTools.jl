@@ -13,8 +13,6 @@ using DynamicalSystemsBase: stateeltype
 using DynamicalSystemsBase.SciMLBase: AbstractODEIntegrator, u_modified!, DEIntegrator
 DEI = DEIntegrator
 
-include("deprecations.jl")
-
 include("orbitdiagrams/discrete_diagram.jl")
 include("orbitdiagrams/poincare.jl")
 include("orbitdiagrams/produce_orbitdiagram.jl")
@@ -48,10 +46,20 @@ include("period_return/transit_times_statistics.jl")
 include("period_return/fixedpoints.jl")
 include("period_return/yin.jl")
 
-include("chaosdetection/lyapunovs.jl")
+include("chaosdetection/lyapunovs/lyapunovspectrum.jl")
+include("chaosdetection/lyapunovs/lyapunov.jl")
+include("chaosdetection/lyapunovs/local_growth_rates.jl")
+include("chaosdetection/lyapunovs/lyapunov_from_data.jl")
 include("chaosdetection/gali.jl")
 include("chaosdetection/expansionentropy.jl")
 include("chaosdetection/partially_predictable.jl")
 include("chaosdetection/testchaos01.jl")
+
+# Exports
+export lyapunovspectrum, lyapunov, local_growth_rates, lyapuov_from_data
+
+
+
+include("deprecations.jl")
 
 end # module

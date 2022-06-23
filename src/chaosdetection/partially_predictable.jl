@@ -60,41 +60,35 @@ be increased, e.g. to 1e9. This is part of the `diffeq` kwargs.
 In addition, be aware that this function does a *lot* of internal computations.
 It is operating in a different speed than e.g. [`lyapunov`](@ref).
 
-[^Wernecke2017]: Wernecke, H., Sándor, B. & Gros, C. *How to test for partially predictable chaos*. [Scientific Reports **7**, (2017)](https://www.nature.com/articles/s41598-017-01083-x).
+[^Wernecke2017]:
+    Wernecke, H., Sándor, B. & Gros, C. *How to test for partially predictable chaos*.
+    [Scientific Reports **7**, (2017)](https://www.nature.com/articles/s41598-017-01083-x).
 """
 function predictability(ds::DynamicalSystem;
-        Ttr::Real = 200,
-        T_sample::Real = 1e4,
-        n_samples::Integer = 500,
-        λ_max::Real = lyapunov(ds, 5000),
-        d_tol::Real = 1e-3,
-        T_multiplier::Real = 10,
-        T_max::Real = Inf,
-        δ_range::AbstractArray = 10.0 .^ (-9:-6),
+        Ttr::Real = 200, T_sample::Real = 1e4, n_samples::Integer = 500,
+        λ_max::Real = lyapunov(ds, 5000), d_tol::Real = 1e-3, T_multiplier::Real = 10,
+        T_max::Real = Inf, δ_range::AbstractArray = 10.0 .^ (-9:-6),
         diffeq = NamedTuple(), kwargs...
     )
-
     if !isempty(kwargs)
         @warn DIFFEQ_DEP_WARN
         diffeq = NamedTuple(kwargs)
     end
-
     λ_max < 0 && return :REG, 1.0, 1.0
-    # Internal Constants
+    # Internal Constants, arbitrarily decided half-way points (from paper)
     ν_threshold = 0.5
     C_threshold = 0.5
-
-    # Sample points from a single trajectory of the system
     samples = sample_trajectory(ds, Ttr, T_sample, n_samples; diffeq)
-
-    # Calculate the mean position and variance of the trajectory. ([1] pg. 5)
-    # Using samples 'Monte Carlo' approach instead of direct integration
+    # Calculate the mean position and variance of the trajectory. (eq. [1] pg. 5)
+    # Using random samples approach instead of direct integration
     μ = mean(samples)
-    s² = mean(map(x->(x-μ)⋅(x-μ), samples))
-
+    s² = mean(map(x -> (x - μ)⋅(x - μ), samples))
     # Calculate cross-distance scaling and correlation scaling
     distances = Float64[] # Mean distances at time T for different δ
     correlations = Float64[] # Cross-correlation at time T for different δ
+
+    # TODO: p_integ is type unstable, the rest of the code should be moved
+    # into a separate function
     p_integ = parallel_integrator(ds, samples[1:2]; diffeq)
     for δ in δ_range
         # TODO: some kind of warning should be thrown for very large Tλ
@@ -107,9 +101,8 @@ function predictability(ds::DynamicalSystem;
             n = rand(Random.GLOBAL_RNG, Normal(), size(u))
             n /= norm(n)
             û = u + δ*n
-            # Update integrator with new initial conditions
+            # re-integrate to time T
             reinit!(p_integ, [u, û])
-            # Simulate trajectory until T
             step!(p_integ, T)
             # Accumulate distance and square-distance
             d = norm(p_integ.u[1]-p_integ.u[2], 2)
@@ -129,33 +122,30 @@ function predictability(ds::DynamicalSystem;
     # Perform regression to check cross-distance scaling
     ν = slope(log.(δ_range), log.(distances))
     C = mean(correlations)
-
     # Determine chaotic nature of the system
     if ν > ν_threshold && C > C_threshold
         chaos_type = :REG
-    elseif ν <= ν_threshold && C > C_threshold
+    elseif ν ≤ ν_threshold && C > C_threshold
         chaos_type = :PPC
-    elseif ν <= ν_threshold && C ≤ C_threshold
+    elseif ν ≤ ν_threshold && C ≤ C_threshold
         chaos_type = :SC
     else
-        # Covers the case when ν > ν_threshold but C <= C_threshold
         chaos_type = :INDETERMINATE
     end
-
     return chaos_type, ν, C
 end
 
 
+# Samples *approximately* `n_samples` points via exponential distribution sampling times
 function sample_trajectory(ds::ContinuousDynamicalSystem,
                            Ttr::Real, T_sample::Real,
                            n_samples::Real;
                            diffeq = NamedTuple())
-    # Samples *approximately* `n_samples` points.
     β = T_sample/n_samples
     D_sample = Exponential(β)
     sample_trajectory(ds, Ttr, T_sample, D_sample; diffeq)
 end
-
+# Same as above but geometric distribution due to discrete nature of time
 function sample_trajectory(ds::DiscreteDynamicalSystem,
                            Ttr::Real, T_sample::Real,
                            n_samples::Real;
@@ -174,9 +164,7 @@ function sample_trajectory(ds::DynamicalSystem,
     # Simulate initial transient
     integ = integrator(ds; diffeq)
     step!(integ, Ttr)
-
     # Time to the next sample is sampled from the distribution D_sample
-    # e.g. Continuous systems: D_sample is Exponential distribution
     samples = typeof(integ.u)[]
     while integ.t < Ttr + T_sample
         step!(integ, rand(D_sample))

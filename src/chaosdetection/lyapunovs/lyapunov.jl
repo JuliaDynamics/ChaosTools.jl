@@ -110,13 +110,13 @@ function lyapunov(pinteg, T, Ttr, Δt, d0, ut, lt)
     λ = zero(d)
     while pinteg.t < t0 + T
         d = λdist(pinteg)
-        #evolve until rescaling:
+        # evolve until rescaling
         while lt ≤ d ≤ ut
             step!(pinteg, Δt)
             d = λdist(pinteg)
             pinteg.t ≥ t0 + T && break
         end
-        # local lyapunov exponent is simply the relative distance of the trajectories
+        # local lyapunov exponent is the relative distance of the trajectories
         a = d/d0
         λ += log(a)
         rescale!(pinteg, a)

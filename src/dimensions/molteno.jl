@@ -22,7 +22,9 @@ box into `2^D` new boxes if `D` is the dimension. For large `D` this leads to lo
 box divisions before the threshold is passed and the divison stops. This results
 to a low number of data points to fit the dimension to and thereby a poor estimate.
 
-[^Molteno1993]: Molteno, T. C. A., [Fast O(N) box-counting algorithm for estimating dimensions. Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/10.1103/PhysRevE.48.R3263)
+[^Molteno1993]:
+    Molteno, T. C. A., [Fast O(N) box-counting algorithm for estimating dimensions.
+    Phys. Rev. E 48, R3263(R) (1993)](https://doi.org/10.1103/PhysRevE.48.R3263)
 """
 function molteno_dim(data; k0 = 10, α = nothing, q=1.0, base = ℯ)
     if α ≠ nothing

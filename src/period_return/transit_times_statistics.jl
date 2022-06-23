@@ -37,9 +37,13 @@ re-entry is recorded immediatelly on re-entry. This means that if an orbit needs
 is 1. For continuous systems high-order
 interpolation is done to accurately record the time of exactly crossing the `ε`-ball/box.
 
-[^Meiss1997]: Meiss, J. D. *Average exit time for volume-preserving maps*, Chaos (1997)](https://doi.org/10.1063/1.166245)
+[^Meiss1997]:
+    Meiss, J. D. *Average exit time for volume-preserving maps*,
+    [Chaos (1997)](https://doi.org/10.1063/1.166245)
 
-[^Boev2014]: Boev, Vadivasova, & Anishchenko, *Poincaré recurrence statistics as an indicator of chaos synchronization*, Chaos (2014)](https://doi.org/10.1063/1.4873721)
+[^Boev2014]:
+    Boev, Vadivasova, & Anishchenko, *Poincaré recurrence statistics as an indicator of
+    chaos synchronization*, [Chaos (2014)](https://doi.org/10.1063/1.4873721)
 """
 function exit_entry_times end
 

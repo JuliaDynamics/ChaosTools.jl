@@ -81,6 +81,7 @@ function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix;
 end
 
 function lyapunovspectrum(integ, N, Δt::Real, Ttr::Real = 0.0, show_progress = false)
+	has_retcode = hasfield(typeof(integ),:sol) 
     if show_progress
         progress = ProgressMeter.Progress(N; desc = "Lyapunov Spectrum: ", dt = 1.0)
     end
@@ -89,6 +90,10 @@ function lyapunovspectrum(integ, N, Δt::Real, Ttr::Real = 0.0, show_progress = 
         t0 = integ.t
         while integ.t < t0 + Ttr
             step!(integ, Δt)
+            if has_retcode
+       			integ.sol.retcode ==:Unstable && return fill(NaN,length(get_state(integ)))
+       		end
+       		
             Q, R = _buffered_qr(B, get_deviations(integ))
             set_deviations!(integ, Q)
         end
@@ -99,6 +104,10 @@ function lyapunovspectrum(integ, N, Δt::Real, Ttr::Real = 0.0, show_progress = 
     t0 = integ.t
     for i in 1:N
         step!(integ, Δt)
+        if has_retcode
+       		integ.sol.retcode ==:Unstable && return fill(NaN,length(get_state(integ)))
+       	end
+       	
         Q, R = _buffered_qr(B, get_deviations(integ))
         for j in 1:k
             @inbounds λ[j] += log(abs(R[j,j]))

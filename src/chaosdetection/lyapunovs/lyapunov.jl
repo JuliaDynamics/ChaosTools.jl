@@ -95,10 +95,14 @@ end
 inittest_default(D) = (state1, d0) -> state1 .+ d0/sqrt(D)
 
 function lyapunov(pinteg, T, Ttr, Δt, d0, ut, lt)
+	has_retcode = hasfield(typeof(pinteg),:sol) 
     # transient
     t0 = pinteg.t
     while pinteg.t < t0 + Ttr
         step!(pinteg, Δt)
+    	if has_retcode
+       		pinteg.sol.retcode ==:Unstable && return NaN
+        end
         d = λdist(pinteg)
         lt ≤ d ≤ ut || rescale!(pinteg, d/d0)
     end
@@ -113,6 +117,9 @@ function lyapunov(pinteg, T, Ttr, Δt, d0, ut, lt)
         # evolve until rescaling
         while lt ≤ d ≤ ut
             step!(pinteg, Δt)
+            if has_retcode
+       			pinteg.sol.retcode ==:Unstable && return NaN
+        	end
             d = λdist(pinteg)
             pinteg.t ≥ t0 + T && break
         end

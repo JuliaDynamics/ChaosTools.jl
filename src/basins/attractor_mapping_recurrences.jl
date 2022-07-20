@@ -225,7 +225,7 @@ function automatic_Δt_basins(integ, grid; N = 5000)
     dudt = 0.0
     udummy = copy(get_state(integ))
     for p in random_points
-        reinit!(integ, p)
+        reinit!(integ, p; reset_dt = true)
         deriv = if get_state(integ) isa SVector
             integ.f(integ.u, integ.p, 0.0)
         else
@@ -254,7 +254,7 @@ Notice the numbering system `cell_label` is as in `_identify_basin_of_cell!`.
 function get_label_ic!(bsn_nfo::BasinsInfo, integ, u0; kwargs...)
     # This routine identifies the attractor using the previously defined basin.
     # reinitialize integrator
-    reinit!(integ, u0)
+    reinit!(integ, u0; reset_dt = true)
     reset_basins_counters!(bsn_nfo)
     cell_label = 0
 

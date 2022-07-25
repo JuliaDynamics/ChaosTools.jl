@@ -1,9 +1,9 @@
 using ChaosTools
 using ChaosTools.DynamicalSystemsBase
+using ChaosTools.Entropies
+using ChaosTools.StatsBase
 using Test
-using StatsBase
 using Statistics
-using Entropies
 
 test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
 

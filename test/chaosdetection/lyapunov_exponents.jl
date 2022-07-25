@@ -137,7 +137,7 @@ end
     ks = 1:20
     @testset "meth = $meth" for meth in
         [NeighborNumber(1), NeighborNumber(4), WithinRange(0.01)]
-        @testset "distance = $di" for di in [Euclidean(), Cityblock()]
+        @testset "distance = $di" for di in [Euclidean(), FirstElement()]
             for D in [2, 4]
                 R = embed(x, D, 1)
                 E = lyapunov_from_data(R, ks,

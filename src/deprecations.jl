@@ -79,3 +79,5 @@ function molteno_dim(data; k0 = 10, α = nothing, q=1.0, base = ℯ)
     dd = genentropy.(probs; q, base)
     return linear_region(-log.(base, εs), dd)[2]
 end
+
+# Remove warning for Cityblock in `lyapunov_from_data`.

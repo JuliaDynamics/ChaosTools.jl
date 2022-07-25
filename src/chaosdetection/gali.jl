@@ -81,7 +81,6 @@ function gali(ds::DS{IIP, S, D}, tmax::Real, Q0::AbstractMatrix;
     threshold = 1e-12, Δt = 1, u0 = get_state(ds),
     diffeq = NamedTuple(), kwargs...) where {IIP, S, D}
 
-    
     if !isempty(kwargs)
         @warn DIFFEQ_DEP_WARN
         diffeq = NamedTuple(kwargs)
@@ -93,7 +92,6 @@ function gali(ds::DS{IIP, S, D}, tmax::Real, Q0::AbstractMatrix;
     2 ≤ size(Q0)[2] ≤ D || throw(ArgumentError(
     "The order of GALI_k must be 2 ≤ k ≤ $D."))
 
-    # Create tangent integrator:
     if typeof(ds) <: DDS
         tinteg = tangent_integrator(ds, Q0; u0 = u0)
     else
@@ -107,16 +105,13 @@ function gali(ds::DS{IIP, S, D}, tmax::Real, Q0::AbstractMatrix;
 end
 
 function gali(tinteg, tmax, Δt, threshold)
-
     rett = [tinteg.t]
     gali_k = [one(eltype(tinteg.u))]
     t0 = tinteg.t
 
     while tinteg.t < tmax + t0
         step!(tinteg, Δt)
-        # Normalize deviation vectors
         normalize_deviations!(tinteg)
-        # Calculate singular values:
         zs = LinearAlgebra.svd(get_deviations(tinteg)).S
         push!(gali_k, prod(zs))
         push!(rett, tinteg.t)

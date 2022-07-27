@@ -11,7 +11,7 @@ struct AttractorsViaFeaturizing{DS<:GeneralizedDynamicalSystem, C<:ClusteringCon
     F} <: AttractorMapper
     ds::DS
     featurizer::F
-    cluster_specs::C
+    cluster_config::C
     Ttr::T
     Δt::T
     total::T
@@ -66,13 +66,13 @@ simply start Julia with the number of threads you want to use.
     stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
 function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, featurizer::Function,
-    cluster_specs::ClusteringConfig; T=100, Ttr=100, Δt=1, diffeq = NamedTuple(),
+    cluster_config::ClusteringConfig; T=100, Ttr=100, Δt=1, diffeq = NamedTuple(),
     attractors_ic::Union{AbstractDataset, Nothing}=nothing)
     if ds isa ContinuousDynamicalSystem
         T, Ttr, Δt = float.((T, Ttr, Δt))
     end
     return AttractorsViaFeaturizing(
-        ds, featurizer, cluster_specs, Ttr, Δt, T, diffeq, attractors_ic
+        ds, featurizer, cluster_config, Ttr, Δt, T, diffeq, attractors_ic
     )
 end
 
@@ -94,7 +94,7 @@ function basins_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
         show_progress = true, N = 1000
     )
     feature_array = extract_features(mapper, ics; show_progress, N)
-    cluster_labels,  = cluster_features(feature_array, mapper.cluster_specs)
+    cluster_labels,  = cluster_features(feature_array, mapper.cluster_config)
     fs = basins_fractions(cluster_labels) # Vanilla fractions method with Array input
     if typeof(ics) <: AbstractDataset
         attractors = extract_attractors(mapper, cluster_labels, ics)

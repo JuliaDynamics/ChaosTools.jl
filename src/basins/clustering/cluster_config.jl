@@ -1,8 +1,8 @@
 using Distances, Clustering, Distributions
-export ClusterConfig
-export cluster_datasets, cluster_features
+export ClusterConfig, cluster_features
 
-# TODO: This docstirng needs to be reworked completely
+# TODO: Kalel needs to add a small description of the silhuette method.
+
 """
     ClusteringConfig(; kwargs...)
 
@@ -12,14 +12,17 @@ These features are typically extracted from trajectories/datasets in
 
 The clustering is done in the function [`cluster_features`](@ref).
 
+The default clustering method is that used in [^Stender2021]
+which is based on silhouettes, see Description below.
+
 ## Keyword arguments
-* `templates = nothing` Enables supervised version, see below. If given, must be a
-  `Dataset` of initial conditions each leading to a different attractor, to which
-  trajectories will be matched.
+* `templates = nothing`: Enables supervised version, see below. If given, must be a
+  vector of `Vector`s, each inner vector containing the features representing a center of a
+  cluster.
 * `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors (i.e. of
   similar features) each feature needs to have in order to be considered in a cluster (fewer
   than this, it is labeled as an outlier, `-1`).
-* `clust_method_norm=Euclidean()`: metric to be used in the clustering.
+* `clust_method_norm = Euclidean()`: metric to be used in the clustering.
 * `clustering_threshold = 0.0`: Maximum allowed distance between a feature and the cluster
   center for it to be considered inside the cluster. Only used when `clust_method =
   "kNN_thresholded"`.
@@ -29,14 +32,15 @@ The clustering is done in the function [`cluster_features`](@ref).
   (label `-1`) the features whose distance to the nearest template is above the
   `clustering_threshold`.
 * `rescale_features = true`: (unsupervised method): if true, rescale each dimension of the
-extracted features separately into the range `[0,1]`.
+  extracted features separately into the range `[0,1]`. This typically leads to
+  more accurate clustering.
 * `optimal_radius_method = silhouettes` (unsupervised method): the method used to determine
-the optimal radius for clustering features in the unsupervised method. The `silhouettes`
-    method chooses the radius that maximizes the average silhouette values of clusters, and
-    is an iterative optimization procedure that may take some time to execute. The `elbow`
-    method chooses the the radius according to the elbow (knee, highest-derivative method)
-    (see [`optimal_radius_dbscan_elbow`](@ref) for details), and is quicker though possibly
-    leads to worse clustering.
+  the optimal radius for clustering features in the unsupervised method. The `silhouettes`
+  method chooses the radius that maximizes the average silhouette values of clusters, and
+  is an iterative optimization procedure that may take some time to execute. The `elbow`
+  method chooses the the radius according to the elbow (knee, highest-derivative method)
+  (see [`optimal_radius_dbscan_elbow`](@ref) for details), and is quicker though possibly
+  leads to worse clustering.
 
 ## Description
 The trajectory `X`, which may for instance be an attractor, is transformed into a vector of
@@ -46,17 +50,16 @@ of one of the of the timeseries of the trajectory, the entropy of the first two 
 the fractal dimension of `X`, or anything else you may fancy. The vectors of features are
 then used to identify clusters of attractors.
 
-There are two versions to do this. The **unsupervised versions** will cluster trajectories
-(e.g. attractors) using the DBSCAN algorithm, which does not rely on templates. Features whose
-cluster is not identified are labeled as `-1`. If each attractors spans different scales of
-magnitude, rescaling them into the same `[0,1]` interval can bring significant improvements
-in the clustering in case the `Euclidean` distance metric is used.
+There are two versions to do this. The **unsupervised version** will cluster trajectories
+using the DBSCAN algorithm, which does not rely on templates. Features whose
+cluster is not identified are labeled as `-1`.
 
 In the **supervised version**, the user provides features to be used as templates guiding the
-clustering via the `templates` keyword. Each trajectory is considered to belong to
-the nearest template (based on the distance in feature space).
+clustering via the `templates` keyword. Each feature is considered to belong to
+the "cluster" of the nearest template (based on the distance in feature space).
 
-[^Stender2021]: Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
+[^Stender2021]:
+    Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
     stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
 mutable struct ClusteringConfig{A, M}
@@ -86,12 +89,6 @@ include("cluster_utils.jl")
 #####################################################################################
 # Clustering classification functions
 #####################################################################################
-# TODO: Wait, do we need this function...?
-function cluster_datasets(dataset, featurizer, cluster_specs::ClusteringConfig)
-    feature_array = extract_features(featurizer, dataset)
-    return cluster_features(feature_array, cluster_specs)
-end
-
 """
     cluster_features(features, cluster_specs::ClusteringConfig)
 Cluster the given `features::Vector{<:AbstractVector}`,

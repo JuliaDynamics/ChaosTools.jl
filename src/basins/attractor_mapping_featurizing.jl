@@ -21,7 +21,7 @@ end
 
 """
     AttractorsViaFeaturizing(
-        ds::DynamicalSystem, featurizer::Function, cluster_specs::ClusteringConfig;
+        ds::DynamicalSystem, featurizer::Function, clusterconfig::ClusteringConfig;
     kwargs...)
 
 Initialize a `mapper` that maps initial conditions to attractors using the featurizing and
@@ -46,32 +46,23 @@ basin of attractor each initial condition is in). The method thus relies on the 
 at least some basic idea about what attractors to expect in order to pick the right
 features, in contrast to [`AttractorsViaRecurrences`](@ref).
 
-The algorithm of[^Stender2021] that we use has two versions to do this. If the attractors
-are not known a-priori the **unsupervised versions** should be used. Here, the vectors of
-features of each initial condition are mapped to an attractor by analysing how the features
-are clustered in the feature space. Using the DBSCAN algorithm, we identify these clusters
-of features, and consider each cluster to represent an attractor. Features whose attractor
-is not identified are labeled as `-1`. If each feature spans different scales of magnitude,
-rescaling them into the same `[0,1]` interval can bring significant improvements in the
-clustering in case the `Euclidean` distance metric is used.
+Once the features are extracted, they are clustered using
+[`ClusterConfig`](@ref), so see that docstring for more details on the clustering.
+Each cluster is considered one attractor.
 
-# TODO: We need to revise this text!
-
-In the **supervised version**, the attractors are known to the user, who provides one
-initial condition for each attractor using the `attractors_ic` keyword. The algorithm then
-evolves these initial conditions, extracts their features, and uses them as templates
-representing the attrators. Each trajectory is considered to belong to the nearest template
-(based on the distance in feature space). Notice that the functionality of this version is
-similar to [`AttractorsViaProximity`](@ref). Generally speaking, the
+If `templates` are provided to [`ClusterConfig`](@ref), then a supervised version is used,
+and the functionality issimilar to [`AttractorsViaProximity`](@ref). Generally speaking, the
 [`AttractorsViaProximity`](@ref) is superior. However, if the dynamical system has extremely
 high-dimensionality, there may be reasons to use the supervised method of this featurizing
-algorithm instead.
+algorithm instead, as it projects the trajectories into a much lower dimensional
+representation of features.
 
 ## Parallelization note
 The trajectories in this method are integrated in parallel using `Threads`. To enable this,
 simply start Julia with the number of threads you want to use.
 
-[^Stender2021]: Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
+[^Stender2021]:
+    Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
     stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
 function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, featurizer::Function,

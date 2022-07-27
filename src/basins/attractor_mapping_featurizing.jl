@@ -118,7 +118,7 @@ function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
         feature_array[i] = extract_features(mapper, ic)
         show_progress && ProgressMeter.next!(progress)
     end
-    return reduce(hcat, feature_array) # Convert to Matrix from Vector{Vector}
+    return feature_array
 end
 
 function extract_features(mapper::AttractorsViaFeaturizing, u0::AbstractVector{<:Real})

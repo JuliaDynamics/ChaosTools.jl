@@ -96,11 +96,13 @@ according to given [`ClusteringConfig`](@ref).
 Return `cluster_labels, cluster_errors`, which are
 """
 function cluster_features(features::Vector{<:AbstractVector}, cluster_specs::ClusteringConfig)
+    # All methods require the features in a matrix format
+    f = reduce(hcat, features) # Convert to Matrix from Vector{Vector}
     if !isnothing(cluster_specs.templates)
-        cluster_features_distances(features, cluster_specs)
+        cluster_features_distances(f, cluster_specs)
     else
         cluster_features_clustering(
-            features, cluster_specs.min_neighbors, cluster_specs.clust_method_norm,
+            f, cluster_specs.min_neighbors, cluster_specs.clust_method_norm,
             cluster_specs.rescale_features, cluster_specs.optimal_radius_method
         )
     end
@@ -109,6 +111,7 @@ end
 # Supervised method: closest attractor template in feature space
 function cluster_features_distances(features, cluster_specs)
     # casting to floats needed for kNN
+    # TODO: Why do we do this here instead of when creating the struct...?
     templates = float.(reduce(hcat, cluster_specs.templates))
 
     if !(cluster_specs.clust_method == "kNN" ||

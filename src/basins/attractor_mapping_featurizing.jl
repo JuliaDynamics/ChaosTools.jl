@@ -57,10 +57,6 @@ high-dimensionality, there may be reasons to use the supervised method of this f
 algorithm instead, as it projects the trajectories into a much lower dimensional
 representation of features.
 
-## Parallelization note
-The trajectories in this method are integrated in parallel using `Threads`. To enable this,
-simply start Julia with the number of threads you want to use.
-
 [^Stender2021]:
     Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
     stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
@@ -113,7 +109,9 @@ function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
     if show_progress
         progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:")
     end
-    Threads.@threads for i ∈ 1:N
+    # TODO: We can multi-thread this, but we need to make it so that integrators
+    # are deepcopied (i.e., if mapper has a stroboscopic map)
+    for i ∈ 1:N
         ic = _get_ic(ics,i)
         feature_array[i] = extract_features(mapper, ic)
         show_progress && ProgressMeter.next!(progress)

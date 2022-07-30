@@ -10,7 +10,6 @@ ti = time()
 
 include("basins/clustering_tests.jl")
 include("basins/attractor_mapping_tests.jl")
-include("basins/basins_tests.jl")
 include("basins/uncertainty_tests.jl")
 include("basins/tipping_points_tests.jl")
 

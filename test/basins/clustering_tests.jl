@@ -7,7 +7,7 @@ using Test
         return [maximum(A[:,1]), maximum(A[:,2])]
     end
     function cluster_datasets(featurizer, t, datasets, clusterspecs)
-        features = [featurizer(datasets[i], t) for i=1:length(datasets)]
+        features = [featurizer(d, t) for d in datasets]
         clust_labels, clust_errors = cluster_features(features, clusterspecs)
     end
     attractor_pool = [[1 1], [20 20], [30 30]];

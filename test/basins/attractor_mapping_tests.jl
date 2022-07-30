@@ -89,9 +89,13 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
     end
 
     @testset "Featurizing, supervised" begin
-        clusterspecs = ClusteringConfig()
-        mapper = AttractorsViaFeaturizing(ds, featurizer, clusterspecs; diffeq, Ttr = 500)
-        templates = ChaosTools.extract_features(mapper, Dataset([u0[2] for u0 in u0s]))
+        # First generate the templates
+        function features_from_u(u)
+            A = trajectory(ds, 100, u; Ttr = 500, Δt = 1, diffeq)
+            featurizer(A, 0)
+        end
+        templates = [features_from_u(x[2]) for x in u0s]
+
         clusterspecs = ClusteringConfig(; templates, clustering_threshold)
         mapper = AttractorsViaFeaturizing(ds, featurizer, clusterspecs; diffeq, Ttr=500
         )

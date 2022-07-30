@@ -31,7 +31,8 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
     # reusable testing function
     function test_basins_fractions(mapper;
             err = 1e-3, known=false, single_u_mapping = true,
-            known_ids = known_ids, expected_fs = expected_fs
+            known_ids = known_ids, expected_fs = expected_fs,
+            replace_ids_for_clustering = nothing
         )
         if single_u_mapping
             for (k, u0) in u0s
@@ -41,14 +42,17 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         # Generic test
         fs = basins_fractions(mapper, sampler; show_progress = false)
         for k in keys(fs)
-            @test 0 < fs[k] ≤ 1
+            @test 0 ≤ fs[k] ≤ 1
         end
         @test sum(values(fs)) == 1
 
         # Precise test with known initial conditions
         fs, labels, approx_atts = basins_fractions(mapper, ics; show_progress = false)
         found_fs = sort(collect(values(fs)))
-        if length(found_fs) > length(expected_fs) found_fs = found_fs[2:end] end #drop -1 key if it corresponds to just unidentified points
+        if length(found_fs) > length(expected_fs)
+            # drop -1 key if it corresponds to just unidentified points
+            found_fs = found_fs[2:end]
+        end
         @test length(found_fs) == length(expected_fs) #number of attractors
         errors = abs.(expected_fs .- found_fs)
         for er in errors
@@ -62,8 +66,10 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         # `basins_of_attraction` tests
         basins, approx_atts = basins_of_attraction(mapper, reduced_grid; show_progress = false)
         @test length(size(basins)) == length(grid)
-        bids = sort!(unique(basins))
-        @test all(x -> x ∈ known_ids, bids)
+        if known
+            bids = sort!(unique(basins))
+            @test all(x -> x ∈ known_ids, bids)
+        end
     end
 
     @testset "Proximity" begin
@@ -136,7 +142,6 @@ end
 
 
 @testset "Duffing oscillator: stroboscopic map" begin
-
     ds = Systems.duffing([0.1, 0.25]; ω = 1.0, f = 0.2, d = 0.15, β = -1)
     xg = yg = range(-2.2, 2.2; length=200)
     grid = (xg, yg)
@@ -158,7 +163,6 @@ end
 
 
 @testset "Magnetic pendulum: projected system" begin
-
     ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
     xg = range(-2,2,length = 201)
     yg = range(-2,2,length = 201)
@@ -181,7 +185,6 @@ end
 
 
 @testset "Thomas cyclical: Poincaré map" begin
-
     ds = Systems.thomas_cyclical(b = 0.1665)
     xg = yg = range(-6.0, 6.0; length = 100) # important, don't use 101 here, because
     # the dynamical system has some fixed points ON the hyperplane.

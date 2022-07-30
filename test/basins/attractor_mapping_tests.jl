@@ -132,6 +132,7 @@ end
     expected_fs_raw = Dict(2 => 0.165, 3 => 0.642, 1 => 0.193)
 
     function featurizer(A, t)
+        # This is the number of boxes needed to cover the set
         g = exp(genentropy(A, 0.1; q = 0))
         return [g, minimum(A[:,1])]
     end
@@ -152,13 +153,12 @@ end
         1 => [-0.8, 0],
         2 => [1.8, 0],
     ]
-    expected_fs_raw = Dict(2 => 0.509, 1 => 0.491)
+    expected_fs_raw = Dict(2 => 0.511, 1 => 0.489)
     function featurizer(A, t)
-        return [A[end][1]]
+        return [A[end][1], A[end][2]]
     end
 
-    test_basins(ds, u0s, grid, expected_fs_raw, featurizer; ε = 0.2, ferr=1e-2)
-
+    test_basins(ds, u0s, grid, expected_fs_raw, featurizer; ε = 0.01, ferr=1e-3)
 end
 
 

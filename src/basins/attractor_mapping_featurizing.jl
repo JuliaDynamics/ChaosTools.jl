@@ -134,17 +134,3 @@ function extract_attractors(mapper::AttractorsViaFeaturizing, labels, ics)
     return Dict(labels[i] => trajectory(mapper.ds, mapper.total, ics[i];
     Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq) for i in uidxs if i ≠ -1)
 end
-
-# TODO: Does this function have a reason to exist...?
-# ALso, it makes the features matrix already, which is probably wrong.
-"""
-Extracts features from trajectories directly, including eg attractors.
-"""
-function extract_features(featurizer::Function, atts)
-    N = length(atts) # number of attractors
-    feature_array = Vector{Vector{Float64}}(undef, N)
-    for i ∈ 1:N
-        feature_array[i] = featurizer(atts[i], []) #t not being considered for featurizers, possible todo is to allow for that
-    end
-    return reduce(hcat, feature_array) # Convert to Matrix from Vector{Vector}
-end

@@ -31,9 +31,13 @@ function sort_clusters_calc_size(clusters)
 end
 
 """
-Find the optimal radius ε of a point neighborhood for use in DBSCAN, in the unsupervised
-`classify_features`. It does so by finding the `ε` which maximizes the average silhouette
-of the clusters. If only one cluster is found, assigned silhouette is 0.
+Find the optimal radius ε of a point neighborhood to use in DBSCAN, the unsupervised clustering
+method for `AttractorsViaFeaturizing`. The basic idea is to iteratively search for the radius that
+leads to the best clustering, as characterized by quantifiers known as silhouettes. A silhouette value
+measures how similar a point is to the cluster it currently belongs, 
+compared to the other clusters, and ranges from -1 (worst matching) to +1 (ideal matching).
+If only one cluster is found, the assigned silhouette is 0. Currently, the
+function chooses the radius `ε` that maximizes the average silhouette across all clusters. 
 """
 function optimal_radius_dbscan_silhouette(features, min_neighbors, metric)
     feat_ranges = maximum(features, dims=2)[:,1] .- minimum(features, dims=2)[:,1];

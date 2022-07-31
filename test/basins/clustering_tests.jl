@@ -7,14 +7,16 @@ using Test
         return [maximum(A[:,1]), maximum(A[:,2])]
     end
     function cluster_datasets(featurizer, t, datasets, clusterspecs)
-        features = [featurizer(d, t) for d in datasets]
-        clust_labels, clust_errors = cluster_features(features, clusterspecs)
+        features = [featurizer(d[2], t) for d in datasets]
+        return cluster_features(features, clusterspecs)
     end
     attractor_pool = [[1 1], [20 20], [30 30]];
-    errors = [[0.0 0.0], [0.0 -0.01], [0.0 +0.01], [0.1 0.0], [0.1 0], [0.0 0.0], [0.0 0], [0.2 0] ];
-    correctlabels = [1,1,1,2,2,1,3,3];
+    errors = [[0.0 0.0], [0.0 -0.01], [0.0 +0.01], [0.1 0.0], [0.1 0],
+        [0.0 0.0], [0.0 0.0], [0.2 0]
+    ]
+    correctlabels = [1,1,1,2,2,1,3,3]
     a = attractor_pool[correctlabels] .+ errors
-    attractors = Dict(1:length(a) .=> Dataset.(a));
+    attractors = Dict(1:length(a) .=> Dataset.(a; warn = false));
 
     ## Unsupervised
     correcterrors = [0, 0.01, 0.01, 0, 0.0, 0, 0.1, 0.1] #error is dist to center of cluster (cloud of features)

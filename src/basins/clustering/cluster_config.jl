@@ -35,7 +35,7 @@ which is unsupervised, see Description below.
 * `optimal_radius_method = silhouettes` (unsupervised method): the method used to determine
   the optimal radius for clustering features in the unsupervised method. The `silhouettes`
   method chooses the radius that maximizes the average silhouette values of clusters, and
-  is an iterative optimization procedure that may take some time to execute (see 
+  is an iterative optimization procedure that may take some time to execute (see
   [`optimal_radius_dbscan_silhouettes`](@ref) for details). The `elbow`
   method chooses the the radius according to the elbow (knee, highest-derivative method)
   (see [`optimal_radius_dbscan_elbow`](@ref) for details), and is quicker though possibly
@@ -49,11 +49,11 @@ of one of the of the timeseries of the trajectory, the entropy of the first two 
 the fractal dimension of `X`, or anything else you may fancy. The vectors of features are
 then used to identify clusters of attractors.
 
-There are two versions to do this. The **unsupervised version** does not rely on templates, 
+There are two versions to do this. The **unsupervised version** does not rely on templates,
 and instead uses the DBSCAN clustering algorithm to identify clusters of similar features.
 To achieve this, each feature is considered a point in feature space. In this space, the
 algorithm basically groups points that are closely packed. To achieve this, a crucial parameter
-is a radius for  distance `ϵ` that determines the "closeness" of points in clusters. 
+is a radius for  distance `ϵ` that determines the "closeness" of points in clusters.
 Two methods are currently implemented to determine an `optimal_radius`, as described and
 referred in `optimal_radius_method` above.
 
@@ -78,10 +78,10 @@ mutable struct ClusteringConfig{A, M}
 end
 
 function ClusteringConfig(; templates::Union{Nothing, Vector} = nothing,
-    clust_method_norm=Euclidean(), clustering_threshold = 0.0, min_neighbors = 10,
-    clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN",
-    rescale_features=true, optimal_radius_method="silhouettes",
-)
+        clust_method_norm=Euclidean(), clustering_threshold = 0.0, min_neighbors = 10,
+        clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN",
+        rescale_features=true, optimal_radius_method="silhouettes",
+    )
     return ClusteringConfig(
         templates, clust_method_norm, clust_method,
         Float64(clustering_threshold), min_neighbors,
@@ -99,8 +99,8 @@ include("cluster_utils.jl")
 Cluster the given `features::Vector{<:AbstractVector}`,
 according to given [`ClusteringConfig`](@ref).
 Return `cluster_labels, cluster_errors`, which respectively contain, for each feature, the labels
-(indices) of the corresponding cluster and the error associated with that clustering. 
-The error is the distance from the feature to (i) the cluster, in the supervised method 
+(indices) of the corresponding cluster and the error associated with that clustering.
+The error is the distance from the feature to (i) the cluster, in the supervised method
 or (ii) to the center of the cluster, in the unsupervised method.
 """
 function cluster_features(features::Vector{<:AbstractVector}, cluster_specs::ClusteringConfig)
@@ -119,8 +119,7 @@ end
 
 # Supervised method: closest attractor template in feature space
 function cluster_features_distances(features, cluster_specs)
-    # casting to floats needed for kNN
-    # TODO: Why do we do this here instead of when creating the struct...? We can do it, if you think it's better design! 
+    # TODO: Do this when creating the struct, not here
     templates = float.(reduce(hcat, cluster_specs.templates))
 
     if !(cluster_specs.clust_method == "kNN" ||

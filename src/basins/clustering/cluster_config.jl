@@ -119,8 +119,7 @@ end
 
 # Supervised method: closest attractor template in feature space
 function cluster_features_distances(features, cluster_specs)
-    templates = float.(reduce(hcat, [cluster_specs.templates[i] for i ∈ 1:length(cluster_specs.templates)] ) )
-
+    templates = float.(reduce(hcat, [cluster_specs.templates[i] for i ∈ keys(cluster_specs.templates)] ) ) #puts each vector into a column, with the ordering based on the order given in keys(d)
     if !(cluster_specs.clust_method == "kNN" ||
          cluster_specs.clust_method == "kNN_thresholded")
         error("Incorrect clustering mode for \"supervised\" method.")
@@ -133,7 +132,9 @@ function cluster_features_distances(features, cluster_specs)
         # Make label -1 if error bigger than threshold
         cluster_labels[cluster_errors .≥ cluster_specs.clustering_threshold] .= -1
     end
-    return cluster_labels, cluster_errors
+    matlabels_to_dictlabels = Dict(1:length(keys(cluster_specs.templates)).=>keys(cluster_specs.templates))
+    cluster_user_labels = replace(cluster_labels, matlabels_to_dictlabels...) #cluster_user_labels[i] is the label of template nearest to feature i (i-th column of features matrix)
+    return cluster_user_labels, cluster_errors
 end
 
 """

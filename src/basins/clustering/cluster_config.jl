@@ -77,7 +77,7 @@ mutable struct ClusteringConfig{A, M}
     optimal_radius_method::String
 end
 
-function ClusteringConfig(; templates::Union{Nothing, Vector} = nothing,
+function ClusteringConfig(; templates::Union{Nothing, Dict} = nothing,
         clust_method_norm=Euclidean(), clustering_threshold = 0.0, min_neighbors = 10,
         clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN",
         rescale_features=true, optimal_radius_method="silhouettes",
@@ -119,8 +119,7 @@ end
 
 # Supervised method: closest attractor template in feature space
 function cluster_features_distances(features, cluster_specs)
-    # TODO: Do this when creating the struct, not here
-    templates = float.(reduce(hcat, cluster_specs.templates))
+    templates = float.(reduce(hcat, [cluster_specs.templates[i] for i ∈ 1:length(cluster_specs.templates)] ) )
 
     if !(cluster_specs.clust_method == "kNN" ||
          cluster_specs.clust_method == "kNN_thresholded")

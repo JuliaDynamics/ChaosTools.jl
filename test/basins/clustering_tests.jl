@@ -7,7 +7,7 @@ using Test
         return [maximum(A[:,1]), maximum(A[:,2])]
     end
     function cluster_datasets(featurizer, t, datasets, clusterspecs)
-        features = [featurizer(d[2], t) for d in datasets]
+        features = [featurizer(datasets[i], t) for i=1:length(datasets)]
         return cluster_features(features, clusterspecs)
     end
     attractor_pool = [[1 1], [20 20], [30 30]];
@@ -28,7 +28,8 @@ using Test
     ## Supervised
     correcterrors = [0, 0.01, 0.01, 0.1, 0.1, 0, 0.0, 0.2] #now error is dist to template
     correctlabels = [1,1,1, -1, -1,1,3, -1]; #for threshold at 0.1
-    templates = [featurizer(a, []) for a ∈ attractor_pool]
+    t = map(x->featurizer(x, []), attractor_pool)
+    templates = Dict(1:length(attractor_pool) .=> t)
     clusterspecs = ClusteringConfig(; templates, min_neighbors=1, rescale_features=false, clustering_threshold=0.1)
     clust_labels, clust_errors = cluster_datasets(featurizer, [], attractors, clusterspecs)
     @test clust_labels == correctlabels

@@ -94,7 +94,8 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
             A = trajectory(ds, 100, u; Ttr = 500, Δt = 1, diffeq)
             featurizer(A, 0)
         end
-        templates = [features_from_u(x[2]) for x in u0s]
+        t = [features_from_u(x[2]) for x in u0s]
+        templates = Dict(1:length(u0s) .=> t)
 
         clusterspecs = ClusteringConfig(; templates, clustering_threshold)
         mapper = AttractorsViaFeaturizing(ds, featurizer, clusterspecs; diffeq, Ttr=500

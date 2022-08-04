@@ -27,9 +27,10 @@ using Test
 
     ## Supervised
     correcterrors = [0, 0.01, 0.01, 0.1, 0.1, 0, 0.0, 0.2] #now error is dist to template
-    correctlabels = [1,1,1, -1, -1,1,3, -1]; #for threshold at 0.1
     t = map(x->featurizer(x, []), attractor_pool)
-    templates = Dict(1:length(attractor_pool) .=> t)
+    template_labels = ["att$(i)" for i ∈ eachindex(attractor_pool)]
+    correctlabels = ["att1","att1","att1", -1, -1, "att1", "att3", -1]; #for threshold at 0.1
+    templates = Dict(template_labels.=> t)
     clusterspecs = ClusteringConfig(; templates, min_neighbors=1, rescale_features=false, clustering_threshold=0.1)
     clust_labels, clust_errors = cluster_datasets(featurizer, [], attractors, clusterspecs)
     @test clust_labels == correctlabels

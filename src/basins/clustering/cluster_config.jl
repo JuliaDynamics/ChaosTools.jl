@@ -15,8 +15,9 @@ which is unsupervised, see Description below.
 
 ## Keyword arguments
 * `templates = nothing`: Enables supervised version, see below. If given, must be a
-   Dictionary of `Vector`s, each containing the features representing a cluster (which can
-   be an attractor, for instance).
+   Dictionary of cluster labels to cluster features. The labels can be of arbitrary type,
+   and the features are `Vector`s representing a cluster (which can be an attractor, for
+   instance).
 * `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors (i.e. of
   similar features) each feature needs to have in order to be considered in a cluster (fewer
   than this, it is labeled as an outlier, `-1`).
@@ -32,7 +33,7 @@ which is unsupervised, see Description below.
 * `rescale_features = true`: (unsupervised method): if true, rescale each dimension of the
   extracted features separately into the range `[0,1]`. This typically leads to
   more accurate clustering.
-* `optimal_radius_method = silhouettes` (unsupervised method): the method used to
+* `optimal_radius_method = "silhouettes"` (unsupervised method): the method used to
   determine the optimal radius for clustering features in the unsupervised method. The
   `silhouettes` method chooses the radius that maximizes the average silhouette values of
   clusters, and is an iterative optimization procedure that may take some time to execute.

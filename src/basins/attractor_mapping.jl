@@ -134,7 +134,7 @@ the partitioning happens directly on the hyperplane the Poincaré map operates o
 corresponding to the state space partitioning indicated by `grid`.
 """
 function basins_of_attraction(mapper::AttractorMapper, grid::Tuple; kwargs...)
-    basins = zeros(Int16, map(length, grid))
+    basins = Array{Any}(undef, map(length, grid))
     I = CartesianIndices(basins)
     A = Dataset([generate_ic_on_grid(grid, I[i]) for i in 1:length(I)])
     fs, labels, attractors = basins_fractions(mapper, A; kwargs...)

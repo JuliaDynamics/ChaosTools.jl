@@ -25,7 +25,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
     )
     ics = Dataset([sampler() for i in 1:1000])
     expected_fs = sort!(collect(values(expected_fs_raw)))
-    known_ids = sort!(collect(u[1] for u in u0s))
+    known_ids = collect(u[1] for u in u0s)
     reduced_grid = map(g -> range(minimum(g), maximum(g); length = 10), grid)
 
     # reusable testing function
@@ -67,7 +67,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         basins, approx_atts = basins_of_attraction(mapper, reduced_grid; show_progress = false)
         @test length(size(basins)) == length(grid)
         if known
-            bids = sort!(unique(basins))
+            bids = unique(basins)
             @test all(x -> x ∈ known_ids, bids)
         end
     end
@@ -95,7 +95,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
             featurizer(A, 0)
         end
         t = [features_from_u(x[2]) for x in u0s]
-        templates = Dict([u0[1] for u0 ∈ u0s] .=> t) #keeps labels of u0s
+        templates = Dict([string(u0[1]) for u0 ∈ u0s] .=> t) #keeps labels of u0s
 
         clusterspecs = ClusteringConfig(; templates, clustering_threshold)
         mapper = AttractorsViaFeaturizing(ds, featurizer, clusterspecs; diffeq, Ttr=500

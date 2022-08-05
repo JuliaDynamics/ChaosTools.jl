@@ -33,11 +33,7 @@ end
 """
 Find the optimal radius ε of a point neighborhood to use in DBSCAN, the unsupervised clustering
 method for `AttractorsViaFeaturizing`. The basic idea is to iteratively search for the radius that
-leads to the best clustering, as characterized by quantifiers known as silhouettes. A silhouette value
-measures how similar a point is to the cluster it currently belongs, 
-compared to the other clusters, and ranges from -1 (worst matching) to +1 (ideal matching).
-If only one cluster is found, the assigned silhouette is 0. Currently, the
-function chooses the radius `ε` that maximizes the average silhouette across all clusters. 
+leads to the best clustering, as characterized by quantifiers known as silhouettes.
 """
 function optimal_radius_dbscan_silhouette(features, min_neighbors, metric)
     feat_ranges = maximum(features, dims=2)[:,1] .- minimum(features, dims=2)[:,1];
@@ -63,14 +59,7 @@ end
 
 """
 Find the optimal radius ϵ of a point neighborhood for use in DBSCAN through the elbow method
-(knee method, highest derivative method). Works by calculating the distance of each point to its
-k-nearest-neighbors (with `k=min_neighbors`) and finding the distance corresponding to the
-highest derivative in the curve of the distances, sorted in ascending order. This distance
-is chosen as the optimal radius. Described in the following references:
-[^1]: Ester, Kriegel, Sander and Xu: A Density-Based Algorithm for Discovering Clusters in
-Large Spatial Databases with Noise
-[^2]: Schubert, Sander, Ester, Kriegel and Xu: DBSCAN Revisited, Revisited: Why and How You
-Should (Still) Use DBSCAN
+(knee method, highest derivative method).
 """
 function optimal_radius_dbscan_elbow(features, min_neighbors, metric)
     tree = searchstructure(KDTree, features, metric)

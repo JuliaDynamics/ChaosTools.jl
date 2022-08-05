@@ -15,8 +15,8 @@ which is unsupervised, see Description below.
 
 ## Keyword arguments
 * `templates = nothing`: Enables supervised version, see below. If given, must be a
-  vector of `Vector`s, each inner vector containing the features representing a center of a
-  cluster.
+   Dictionary of `Vector`s, each containing the features representing a cluster (which can
+   be an attractor, for instance).
 * `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors (i.e. of
   similar features) each feature needs to have in order to be considered in a cluster (fewer
   than this, it is labeled as an outlier, `-1`).
@@ -32,40 +32,55 @@ which is unsupervised, see Description below.
 * `rescale_features = true`: (unsupervised method): if true, rescale each dimension of the
   extracted features separately into the range `[0,1]`. This typically leads to
   more accurate clustering.
-* `optimal_radius_method = silhouettes` (unsupervised method): the method used to determine
-  the optimal radius for clustering features in the unsupervised method. The `silhouettes`
-  method chooses the radius that maximizes the average silhouette values of clusters, and
-  is an iterative optimization procedure that may take some time to execute (see
-  [`optimal_radius_dbscan_silhouettes`](@ref) for details). The `elbow`
-  method chooses the the radius according to the elbow (knee, highest-derivative method)
-  (see [`optimal_radius_dbscan_elbow`](@ref) for details), and is quicker though possibly
-  leads to worse clustering.
+* `optimal_radius_method = silhouettes` (unsupervised method): the method used to
+  determine the optimal radius for clustering features in the unsupervised method. The
+  `silhouettes` method chooses the radius that maximizes the average silhouette values of
+  clusters, and is an iterative optimization procedure that may take some time to execute.
+  The `elbow` method chooses the the radius according to the elbow (knee,
+  highest-derivative method) and is quicker, though possibly leads to worse clustering.
 
 ## Description
-The trajectory `X`, which may for instance be an attractor, is transformed into a vector of
-features. Each feature is a number useful in _characterizing the attractor_, and
-distinguishing it from other attrators. Example features are the mean or standard deviation
-of one of the of the timeseries of the trajectory, the entropy of the first two dimensions,
-the fractal dimension of `X`, or anything else you may fancy. The vectors of features are
-then used to identify clusters of attractors.
+The trajectory `X`, which may for instance be an attractor, is transformed into a vector
+of features. Each feature is a number useful in _characterizing the attractor_, and
+distinguishing it from other attrators. Example features are the mean or standard
+deviation of one of the of the timeseries of the trajectory, the entropy of the first two
+dimensions, the fractal dimension of `X`, or anything else you may fancy. The vectors of
+features are then used to identify clusters of attractors.
 
-There are two versions to do this. The **unsupervised version** does not rely on templates,
-and instead uses the DBSCAN clustering algorithm to identify clusters of similar features.
-To achieve this, each feature is considered a point in feature space. In this space, the
-algorithm basically groups points that are closely packed. To achieve this, a crucial parameter
-is a radius for  distance `ϵ` that determines the "closeness" of points in clusters.
-Two methods are currently implemented to determine an `optimal_radius`, as described and
-referred in `optimal_radius_method` above.
+There are two versions to do this. The **unsupervised version** does not rely on
+templates, and instead uses the DBSCAN clustering algorithm to identify clusters of
+similar features. To achieve this, each feature is considered a point in feature space. In
+this space, the algorithm basically groups points that are closely packed. To achieve
+this, a crucial parameter is a radius for  distance `ϵ` that determines the "closeness" of
+points in clusters.
 
-Features whose cluster is not identified are labeled as `-1`.
+Two methods are currently implemented to determine an `optimal_radius`, as described in
+`optimal_radius_method` above. The default method is based on the silhouette values of
+clusters. A silhouette value measures how similar a point is to the cluster it currently
+belongs, compared to the other clusters, and ranges from -1 (worst matching) to +1 (ideal
+matching). If only one cluster is found, the assigned silhouette is 0. The default method
+,`silhouettes`, chooses the radius `ε` that maximizes the average silhouette across all
+clusters.  The alternative `elbow` method works by calculating the distance of each point
+to its k-nearest-neighbors (with `k=min_neighbors`) and finding the distance corresponding
+to the highest derivative in the curve of the distances, sorted in ascending order. This
+distance is chosen as the optimal radius. It is described in [^Kriegel1996] and
+[^Schubert2017].
 
-In the **supervised version**, the user provides features to be used as templates guiding the
-clustering via the `templates` keyword. Each feature is considered to belong to
-the "cluster" of the nearest template (based on the distance in feature space).
+In the **supervised version**, the user provides features to be used as templates guiding
+the clustering via the `templates` keyword. Each feature is considered to belong to the
+"cluster" of the nearest template (based on the distance in feature space), and is
+labelled following the template's label, given in `templates`.
+
+In both versions, features whose cluster is not identified are labeled as `-1`.
 
 [^Stender2021]:
     Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
     stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
+[^Kriegel1996]: Ester, Kriegel, Sander and Xu: A Density-Based Algorithm for Discovering
+    Clusters in Large Spatial Databases with Noise
+[^Schubert2017]:
+    Schubert, Sander, Ester, Kriegel and Xu: DBSCAN Revisited, Revisited: Why and How You
+    Should (Still) Use DBSCAN
 """
 mutable struct ClusteringConfig{A, M}
     templates::A

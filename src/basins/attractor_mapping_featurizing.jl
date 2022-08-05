@@ -51,7 +51,7 @@ Once the features are extracted, they are clustered using
 Each cluster is considered one attractor.
 
 If `templates` are provided to [`ClusterConfig`](@ref), then a supervised version is used,
-and the functionality issimilar to [`AttractorsViaProximity`](@ref). Generally speaking, the
+and the functionality is similar to [`AttractorsViaProximity`](@ref). Generally speaking, the
 [`AttractorsViaProximity`](@ref) is superior. However, if the dynamical system has extremely
 high-dimensionality, there may be reasons to use the supervised method of this featurizing
 algorithm instead, as it projects the trajectories into a much lower dimensional

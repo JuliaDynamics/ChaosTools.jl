@@ -62,8 +62,8 @@ representation of features.
     stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
 function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, featurizer::Function,
-    cluster_config::ClusteringConfig; T=100, Ttr=100, Δt=1, diffeq = NamedTuple(),
-    attractors_ic::Union{AbstractDataset, Nothing}=nothing)
+    cluster_config::ClusteringConfig = ClusteringConfig(); T=100, Ttr=100, Δt=1,
+    diffeq = NamedTuple(), attractors_ic::Union{AbstractDataset, Nothing}=nothing)
     if ds isa ContinuousDynamicalSystem
         T, Ttr, Δt = float.((T, Ttr, Δt))
     end

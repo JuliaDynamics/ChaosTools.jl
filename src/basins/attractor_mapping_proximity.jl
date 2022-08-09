@@ -51,7 +51,7 @@ function AttractorsViaProximity(ds, attractors::Dict, ε = nothing;
     search_trees = Dict(k => KDTree(att.data, Euclidean()) for (k, att) in attractors)
     integ = integrator(ds; diffeq)
     if isnothing(ε)
-        ε = _deduce_ε_from_attractors(attractors, verbose)
+        ε = _deduce_ε_from_attractors(attractors, search_trees, verbose)
     else
         @assert ε isa Real
     end
@@ -65,7 +65,7 @@ function AttractorsViaProximity(ds, attractors::Dict, ε = nothing;
     return mapper
 end
 
-function _deduce_ε_from_attractors(attractors, verbose = false)
+function _deduce_ε_from_attractors(attractors, search_trees, verbose = false)
     if length(attractors) != 1
         verbose && @info("Computing minimum distance between attractors to deduce `ε`...")
         # Minimum distance between attractors
@@ -90,10 +90,10 @@ function _deduce_ε_from_attractors(attractors, verbose = false)
         mini, maxi = minmaxima(attractor)
         ε = sqrt(sum(abs, maxi .- mini))/10
         if ε == 0
-            error("""
+            throw(ArgumentError("""
             Computed `ε = 0` in automatic estimation, probably because there is
             a single attractor that also is a single point. Please provide `ε` manually.
-            """)
+            """))
         end
     end
     return ε

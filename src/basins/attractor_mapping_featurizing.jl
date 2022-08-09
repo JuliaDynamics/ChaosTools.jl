@@ -21,8 +21,9 @@ end
 
 """
     AttractorsViaFeaturizing(
-        ds::DynamicalSystem, featurizer::Function, clusterconfig::ClusteringConfig;
-    kwargs...)
+        ds::DynamicalSystem, featurizer::Function, 
+        clusterconfig = ClusteringConfig(); kwargs...
+    )
 
 Initialize a `mapper` that maps initial conditions to attractors using the featurizing and
 clustering method of [^Stender2021]. See [`AttractorMapper`](@ref) for how to use the
@@ -62,8 +63,8 @@ representation of features.
     stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
 """
 function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, featurizer::Function,
-    cluster_config::ClusteringConfig; T=100, Ttr=100, Δt=1, diffeq = NamedTuple(),
-    attractors_ic::Union{AbstractDataset, Nothing}=nothing)
+    cluster_config::ClusteringConfig = ClusteringConfig(); T=100, Ttr=100, Δt=1,
+    diffeq = NamedTuple(), attractors_ic::Union{AbstractDataset, Nothing}=nothing)
     if ds isa ContinuousDynamicalSystem
         T, Ttr, Δt = float.((T, Ttr, Δt))
     end

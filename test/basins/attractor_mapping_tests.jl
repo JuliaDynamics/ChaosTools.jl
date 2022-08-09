@@ -25,7 +25,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
     )
     ics = Dataset([sampler() for i in 1:1000])
     expected_fs = sort!(collect(values(expected_fs_raw)))
-    known_ids = sort!(collect(u[1] for u in u0s))
+    known_ids = collect(u[1] for u in u0s)
     reduced_grid = map(g -> range(minimum(g), maximum(g); length = 10), grid)
 
     # reusable testing function

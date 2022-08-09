@@ -15,9 +15,10 @@ which is unsupervised, see Description below.
 
 ## Keyword arguments
 * `templates = nothing`: Enables supervised version, see below. If given, must be a
-   Dictionary of cluster labels to cluster features. The labels can be of arbitrary type,
+   Dictionary of cluster labels to cluster features. The labels must be of `Int` type,
    and the features are `Vector`s representing a cluster (which can be an attractor, for
-   instance).
+   instance). The label `-1` is reserved for invalid trajectories, which either diverge or 
+   whose clustering failed.
 * `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors (i.e. of
   similar features) each feature needs to have in order to be considered in a cluster (fewer
   than this, it is labeled as an outlier, `-1`).

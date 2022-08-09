@@ -21,8 +21,8 @@ end
 
 """
     AttractorsViaFeaturizing(
-        ds::DynamicalSystem, featurizer::Function, clusterconfig::ClusteringConfig;
-    kwargs...)
+        ds::DynamicalSystem, featurizer::Function, 
+        clusterconfig = ClusteringConfig(); kwargs...)
 
 Initialize a `mapper` that maps initial conditions to attractors using the featurizing and
 clustering method of [^Stender2021]. See [`AttractorMapper`](@ref) for how to use the

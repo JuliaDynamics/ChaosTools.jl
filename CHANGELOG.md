@@ -1,8 +1,9 @@
 # 2.10
-- Clustering has been completely overhauled. Now, a `ClusteringConfig` instances must be created and then passed on to `AttractorsViaFeaturizing`.
+- Clustering (used in `AttractorsViaFeaturizing`) has been completely overhauled. Now, a `ClusteringConfig` instances must be created and then passed on to `AttractorsViaFeaturizing`.
 - `AttractorsViaFeaturizing` no longer has keywords about clustering.
 - A new function `cluster_features` is exposed to the user.
--
+- Added a new clause in automatic `ε` estimation in `AttractorsViaProximity` for when there is only a single attractor passed in by the user.
+
 # 2.9
 * Improved the `AttractorsViaFeaturizing` algorithm by improving the method for finding the optimal radius used in the clustering. This consisted in (i) maximizing the average silhouette values, instead of minimum (slight improvement), (ii) min-max rescaling the features for the clustering (big improvement); (iii) adding an alternative method ,called elbow method, that is faster but worse at clustering.
 * Changed `attractor_mapping_tests.jl` to deal better with the Featurizing method.

@@ -25,13 +25,14 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
     )
     ics = Dataset([sampler() for i in 1:1000])
     expected_fs = sort!(collect(values(expected_fs_raw)))
-    known_ids = sort!(collect(u[1] for u in u0s))
+    known_ids = collect(u[1] for u in u0s)
     reduced_grid = map(g -> range(minimum(g), maximum(g); length = 10), grid)
 
     # reusable testing function
     function test_basins_fractions(mapper;
             err = 1e-3, known=false, single_u_mapping = true,
-            known_ids = known_ids, expected_fs = expected_fs
+            known_ids = known_ids, expected_fs = expected_fs,
+            replace_ids_for_clustering = nothing
         )
         if single_u_mapping
             for (k, u0) in u0s
@@ -41,14 +42,17 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         # Generic test
         fs = basins_fractions(mapper, sampler; show_progress = false)
         for k in keys(fs)
-            @test 0 < fs[k] < 1
+            @test 0 ≤ fs[k] ≤ 1
         end
         @test sum(values(fs)) == 1
 
         # Precise test with known initial conditions
         fs, labels, approx_atts = basins_fractions(mapper, ics; show_progress = false)
         found_fs = sort(collect(values(fs)))
-        if length(found_fs) > length(expected_fs) found_fs = found_fs[2:end] end #drop -1 key if it corresponds to just unidentified points
+        if length(found_fs) > length(expected_fs)
+            # drop -1 key if it corresponds to just unidentified points
+            found_fs = found_fs[2:end]
+        end
         @test length(found_fs) == length(expected_fs) #number of attractors
         errors = abs.(expected_fs .- found_fs)
         for er in errors
@@ -62,14 +66,17 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         # `basins_of_attraction` tests
         basins, approx_atts = basins_of_attraction(mapper, reduced_grid; show_progress = false)
         @test length(size(basins)) == length(grid)
-        bids = sort!(unique(basins))
-        @test all(x -> x ∈ known_ids, bids)
+        if known
+            bids = sort!(unique(basins))
+            @test all(x -> x ∈ known_ids, bids)
+        end
     end
 
     @testset "Proximity" begin
         mapper = AttractorsViaProximity(ds, known_attractors, ε; diffeq, Ttr = 100)
         test_basins_fractions(mapper; known = true, err = 1e-15)
     end
+
     @testset "Recurrences" begin
         mapper = AttractorsViaRecurrences(ds, grid; diffeq, show_progress = false, kwargs...)
         test_basins_fractions(mapper; err = rerr)
@@ -79,14 +86,22 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         test_basins_fractions(mapper; err = rerr)
     end
     @testset "Featurizing, unsupervised" begin
-        mapper = AttractorsViaFeaturizing(ds, featurizer; diffeq, Ttr = 500)
+        clusterspecs = ClusteringConfig()
+        mapper = AttractorsViaFeaturizing(ds, featurizer, clusterspecs; diffeq, Ttr = 500)
         test_basins_fractions(mapper; err = ferr, single_u_mapping = false, known_ids = [-1, 1, 2, 3])
     end
 
     @testset "Featurizing, supervised" begin
-        attractors_ic = Dataset([v for (k,v) in u0s if k ≠ -1])
-        mapper = AttractorsViaFeaturizing(ds, featurizer;
-            Ttr = 100, attractors_ic, clustering_threshold, diffeq,
+        # First generate the templates
+        function features_from_u(u)
+            A = trajectory(ds, 100, u; Ttr = 500, Δt = 1, diffeq)
+            featurizer(A, 0)
+        end
+        t = [features_from_u(x[2]) for x in u0s]
+        templates = Dict([u0[1] for u0 ∈ u0s] .=> t) #keeps labels of u0s
+
+        clusterspecs = ClusteringConfig(; templates, clustering_threshold)
+        mapper = AttractorsViaFeaturizing(ds, featurizer, clusterspecs; diffeq, Ttr=500
         )
         test_basins_fractions(mapper; err = ferr, single_u_mapping = false)
     end
@@ -94,7 +109,7 @@ end
 
 
 @testset "Henon map: discrete & divergence" begin
-    u0s = [1 => [0.0, 0.0], -1 => [0.0, 2.0]]
+    u0s = [1 => [0.0, 0.0], -1 => [0.0, 2.0]] #template ics
     ds = Systems.henon(zeros(2); a = 1.4, b = 0.3)
     xg = yg = range(-2.0, 2.0; length=100)
     grid = (xg, yg)
@@ -125,6 +140,7 @@ end
     expected_fs_raw = Dict(2 => 0.165, 3 => 0.642, 1 => 0.193)
 
     function featurizer(A, t)
+        # This is the number of boxes needed to cover the set
         g = exp(genentropy(A, 0.1; q = 0))
         return [g, minimum(A[:,1])]
     end
@@ -135,7 +151,6 @@ end
 
 
 @testset "Duffing oscillator: stroboscopic map" begin
-
     ds = Systems.duffing([0.1, 0.25]; ω = 1.0, f = 0.2, d = 0.15, β = -1)
     xg = yg = range(-2.2, 2.2; length=200)
     grid = (xg, yg)
@@ -146,18 +161,16 @@ end
         1 => [-0.8, 0],
         2 => [1.8, 0],
     ]
-    expected_fs_raw = Dict(2 => 0.509, 1 => 0.491)
+    expected_fs_raw = Dict(2 => 0.511, 1 => 0.489)
     function featurizer(A, t)
-        return [A[end][1]]
+        return [A[end][1], A[end][2]]
     end
 
-    test_basins(ds, u0s, grid, expected_fs_raw, featurizer; ε = 0.2, ferr=1e-2)
-
+    test_basins(ds, u0s, grid, expected_fs_raw, featurizer; ε = 0.01, ferr=1e-3)
 end
 
 
 @testset "Magnetic pendulum: projected system" begin
-
     ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
     xg = range(-2,2,length = 201)
     yg = range(-2,2,length = 201)
@@ -167,7 +180,7 @@ end
     u0s = [
         1 => [-0.5, 0.857],
         2 => [-0.5, -0.857],
-        3 => [1., 0.],
+        3 => [1.  , 0.],
     ]
     expected_fs_raw = Dict(2 => 0.318, 3 => 0.347, 1 => 0.335)
 
@@ -180,7 +193,6 @@ end
 
 
 @testset "Thomas cyclical: Poincaré map" begin
-
     ds = Systems.thomas_cyclical(b = 0.1665)
     xg = yg = range(-6.0, 6.0; length = 100) # important, don't use 101 here, because
     # the dynamical system has some fixed points ON the hyperplane.
@@ -201,6 +213,5 @@ end
 
     test_basins(pmap, u0s, grid, expected_fs_raw, thomas_featurizer; ε = 1.0, ferr=1e-2)
 end
-
 
 end # Attractor mapping tests

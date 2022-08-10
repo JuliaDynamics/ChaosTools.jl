@@ -99,13 +99,13 @@ end
     xg = yg = range(-2.0, 2.0; length=100)
     grid = (xg, yg)
     expected_fs_raw = Dict(1 => 0.451, -1 => 0.549)
-    function henon_featurizer(A, t)
+    function featurizer(A, t)
         # Notice that unsupervised clustering cannot support "divergence to infinity",
         # which it identifies as another attractor (in fact, the first one).
         x = [mean(A[:, 1]), mean(A[:, 2])]
         return any(isinf, x) ? [200.0, 200.0] : x
     end
-    test_basins(ds, u0s, grid, expected_fs_raw, henon_featurizer;
+    test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
      clustering_threshold = 20, ε = 1e-3)
 end
 

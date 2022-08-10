@@ -106,7 +106,7 @@ end
         return any(isinf, x) ? [200.0, 200.0] : x
     end
     test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
-     clustering_threshold = 20, ε = 1e-3)
+    clustering_threshold = 20, ε = 1e-3)
 end
 
 

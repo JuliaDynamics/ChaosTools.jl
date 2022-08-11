@@ -22,7 +22,7 @@ end
 
 """
 Util function for `classify_features`. Returns the (`DbscanCluster`) sorted in decreasing order
-of their size and their sizes. 
+of their size and their sizes.
 """
 function sort_clusters_calc_size(clusters)
     sizes = [cluster.size for cluster in clusters]
@@ -31,9 +31,9 @@ function sort_clusters_calc_size(clusters)
 end
 
 """
-Find the optimal radius ε of a point neighborhood for use in DBSCAN, in the unsupervised
-`classify_features`. It does so by finding the `ε` which maximizes the average silhouette
-of the clusters. If only one cluster is found, assigned silhouette is 0.
+Find the optimal radius ε of a point neighborhood to use in DBSCAN, the unsupervised clustering
+method for `AttractorsViaFeaturizing`. The basic idea is to iteratively search for the radius that
+leads to the best clustering, as characterized by quantifiers known as silhouettes.
 """
 function optimal_radius_dbscan_silhouette(features, min_neighbors, metric)
     feat_ranges = maximum(features, dims=2)[:,1] .- minimum(features, dims=2)[:,1];
@@ -46,8 +46,8 @@ function optimal_radius_dbscan_silhouette(features, min_neighbors, metric)
         dists = pairwise(metric, features)
         class_labels = cluster_assignment(clusters, features)
         if length(clusters) ≠ 1 # silhouette undefined if only one cluster
-            sils = silhouettes(class_labels, dists) 
-            s_grid[i] = mean(sils) 
+            sils = silhouettes(class_labels, dists)
+            s_grid[i] = mean(sils)
         else
             s_grid[i] = 0; # considers single-cluster solution on the midpoint (following Wikipedia)
         end
@@ -59,14 +59,7 @@ end
 
 """
 Find the optimal radius ϵ of a point neighborhood for use in DBSCAN through the elbow method
-(knee method, highest derivative method). Works by calculating the distance of each point to its
-k-nearest-neighbors (with `k=min_neighbors`) and finding the distance corresponding to the 
-highest derivative in the curve of the distances, sorted in ascending order. This distance 
-is chosen as the optimal radius. Described in the following references:
-[^1]: Ester, Kriegel, Sander and Xu: A Density-Based Algorithm for Discovering Clusters in
-Large Spatial Databases with Noise
-[^2]: Schubert, Sander, Ester, Kriegel and Xu: DBSCAN Revisited, Revisited: Why and How You 
-Should (Still) Use DBSCAN
+(knee method, highest derivative method).
 """
 function optimal_radius_dbscan_elbow(features, min_neighbors, metric)
     tree = searchstructure(KDTree, features, metric)
@@ -82,9 +75,8 @@ function optimal_radius_dbscan(features, min_neighbors, metric, optimal_radius_m
         ϵ_optimal = optimal_radius_dbscan_silhouette(features, min_neighbors, metric)
     elseif optimal_radius_method == "elbow" || optimal_radius_method == "knee"
         ϵ_optimal = optimal_radius_dbscan_elbow(features, min_neighbors, metric)
-    else 
+    else
         error("Unkown optimal_radius_method.")
-    end 
-    return ϵ_optimal 
+    end
+    return ϵ_optimal
 end
-

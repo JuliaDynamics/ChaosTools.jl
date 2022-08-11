@@ -1,12 +1,12 @@
-export continuation_basins_fractions
+export basins_fractions_continuation
 
 """
-    continuation_...
+basins_fractions_continuation...
 ...
 TODO: What the hell am I doing man... I am giving fractions of basins to `unique_attractor_ids!`
 while I should be giving actual attractors...
 """
-function continuation_basins_fractions(mapper, ps, pidx, ics::Function;
+function basins_fractions_continuation(mapper, ps, pidx, ics::Function;
         seeds_per_attractor = 5, samples_per_parameter = 100, threshold = Inf,
     )
     rng = Random.Xoshiro()

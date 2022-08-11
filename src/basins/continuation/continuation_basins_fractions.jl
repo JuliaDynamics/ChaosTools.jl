@@ -1,5 +1,31 @@
 export basins_fractions_continuation
 
+# Design of the API:
+function basins_fractions_continuation(mapper::AttractorMapper, maching_method, parameter; kwargs...)
+    # code
+end
+
+# Decide the kind of dynamical system
+α = 0.2; ω = 1.0; d = 0.3
+ma = Systems.magnetic_pendulum(; α, ω, d)
+proj = projected_integrator(ma, [1,2], [0,0])
+# Decide the attractor mapping
+gx = gy = range(-5, 5; length = 1500)
+mapper = AttractorsViaRecurrences(proj, (gx, gy))
+# Decide how to match attractors
+matching_method = StateSpaceDistance(kwargs...)
+# What parameter to continue over
+parameter = (0:0.01:1, 1) # index, range
+# Call function
+fracs = basins_fractions_continuation(mapper, matching_method, parameter; ...)
+fracs <: Vector{Dict{Int, Float64}}
+
+# Make matching subtype an "AttractorMatcher" interface.
+# And perhaps teh `threshold` doesn't need to be given to the matchers,
+# but only to the matching function? And the matchers provide only the
+# similarity measure.
+
+
 """
 basins_fractions_continuation...
 ...

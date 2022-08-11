@@ -35,6 +35,10 @@ dimensional subspace.
   consider the orbit lost outside. This number can be increased for higher accuracy.
 * `horizon_limit = 1e6`: If the norm of the integrator state reaches this
   limit we consider that the orbit diverges.
+* `sparse = false`: Use of a sparse matrix array for the detection of attractors. When 
+  the dimension of the dynamical state space is large (above 4), the array needed for the 
+  recurrence detection soon becomes too big. The use `sparse = true` allows to detect 
+  attractors in very high dimension.  
 
 ## Description
 An initial condition given to an instance of `AttractorsViaRecurrences` is iterated

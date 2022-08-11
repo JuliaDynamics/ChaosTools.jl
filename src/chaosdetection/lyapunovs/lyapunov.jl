@@ -119,6 +119,7 @@ function lyapunov(pinteg, T, Ttr, Δt, d0, ut, lt)
             pinteg.t ≥ t0 + T && break
         end
         # local lyapunov exponent is the relative distance of the trajectories
+        isnan(d) && return NaN
         a = d/d0
         λ += log(a)
         rescale!(pinteg, a)

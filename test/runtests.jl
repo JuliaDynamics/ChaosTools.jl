@@ -10,7 +10,7 @@ ti = time()
 
 include("basins/clustering_tests.jl")
 include("basins/attractor_mapping_tests.jl")
-@testset "Basins utilities" begin; include("basins/basins_utilities_tests.jl"); end
+include("basins/matching_attractors_tests.jl")
 # @testset "Fractions continuation" begin; include("basins/basins_continuation_tests.jl"); end
 include("basins/uncertainty_tests.jl")
 include("basins/tipping_points_tests.jl")

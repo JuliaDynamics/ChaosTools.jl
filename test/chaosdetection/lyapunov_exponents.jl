@@ -150,4 +150,60 @@ end
 end
 
 
+#test lyapunov and lyapunovspectrum for unstable and stable ds
+
+@testset "lyapunov tests for unstable systems" begin
+
+
+	############## define unstable dynamical systems ##################
+	function divergent_chaotictest!(du,u, p, t)
+           k1, k2 = p
+           x, y, z = u
+           du[1] = y
+           du[2] = z
+           du[3] = k1-7*y+x^2+k2*z
+	end
+
+	u0 = rand(3)
+	para = [2, -0.9] #k2=k6=0
+
+	ds_cont_unstable = ContinuousDynamicalSystem(divergent_chaotictest!, u0, para)
+	ds_disc_unstable = DiscreteDynamicalSystem(divergent_chaotictest!, u0, para)
+	
+	diffeq = (alg=Tsit5(),)
+	
+	T = 50
+
+	@test isnan(lyapunov(ds_disc_unstable,T))
+	@test all(isnan,lyapunovspectrum(ds_disc_unstable,T))
+	
+	@test_logs (:warn, "Instability detected. Aborting") isnan(lyapunov(ds_cont_unstable,T;diffeq))
+	@test_logs (:warn, "Instability detected. Aborting") all(isnan,lyapunovspectrum(ds_cont_unstable,T;diffeq))
+
+end
+
+
+@testset "lyapunov tests for stable systems" begin
+	
+	################### define stable dynamical systems ####################
+	
+	ds_cont_stable = Systems.lorenz()
+	ds_disc_stable = Systems.henon()
+
+
+	T = 50
+	diffeq = (alg=Tsit5(),)
+	
+	@test lyapunov(ds_cont_stable,T) != NaN
+	@test lyapunov(ds_disc_stable,T) != NaN
+	@test all(isfinite,lyapunovspectrum(ds_cont_stable,T))
+	@test all(isfinite,lyapunovspectrum(ds_disc_stable,T))
+	
+	@test lyapunov(ds_cont_stable,T;diffeq) != NaN
+	@test lyapunov(ds_disc_stable,T;diffeq) != NaN
+	@test all(isfinite,lyapunovspectrum(ds_cont_stable,T;diffeq))
+	@test all(isfinite,lyapunovspectrum(ds_disc_stable,T;diffeq))
+
+end
+
 end

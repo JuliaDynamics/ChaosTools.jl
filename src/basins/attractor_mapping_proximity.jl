@@ -6,9 +6,14 @@ mapping attractor labels to `Dataset`s containing the attractors.
 
 The system gets stepped, and at each step the minimum distance to all
 attractors is computed. If any of these distances is `< ε`, then the label of the nearest
-attractor is returned. If an `ε::Real` is not provided by the user, a value is computed
+attractor is returned.
+
+If an `ε::Real` is _not_ provided by the user, a value is computed
 automatically as half of the minimum distance between all attractors.
 This operation can be expensive for large attractor datasets.
+If `length(attractors) == 1`, then `ε` becomes 1/10 of the diagonal of the box containing
+the attractor. If `length(attractors) == 1` and the attractor is a single point,
+an error is thrown.
 
 Because in this method the attractors are already known to the user,
 the method can also be called _supervised_.
@@ -39,14 +44,32 @@ struct AttractorsViaProximity{I, AK, D, T, N, K} <: AttractorMapper
     maxdist::Float64
 end
 function AttractorsViaProximity(ds, attractors::Dict, ε = nothing;
-        Δt=1, Ttr=100, mx_chk_lost=1000, horizon_limit=1e3, diffeq = NamedTuple(), kwargs...
+        Δt=1, Ttr=100, mx_chk_lost=1000, horizon_limit=1e3, diffeq = NamedTuple(),
+        verbose = false, kwargs...
     )
     @assert dimension(ds) == dimension(first(attractors)[2])
     search_trees = Dict(k => KDTree(att.data, Euclidean()) for (k, att) in attractors)
     integ = integrator(ds; diffeq)
-    # Minimum distance between attractors
     if isnothing(ε)
-        @info("Computing minimum distance between attractors...")
+        ε = _deduce_ε_from_attractors(attractors, search_trees, verbose)
+    else
+        @assert ε isa Real
+    end
+
+    mapper = AttractorsViaProximity(
+        integ, attractors,
+        ε, Δt, eltype(Δt)(Ttr), mx_chk_lost, horizon_limit,
+        search_trees, [Inf], [0], 0.0,
+    )
+
+    return mapper
+end
+
+function _deduce_ε_from_attractors(attractors, search_trees, verbose = false)
+    if length(attractors) != 1
+        verbose && @info("Computing minimum distance between attractors to deduce `ε`...")
+        # Minimum distance between attractors
+        # TODO: This will become a function for `Dataset`
         dist, idx = [Inf], [0]
         minε = Inf
         for (k, A) in attractors
@@ -61,20 +84,21 @@ function AttractorsViaProximity(ds, attractors::Dict, ε = nothing;
             end
         end
         @info("Minimum distance between attractors computed: $(minε)")
-        d = minε/2
+        ε = minε/2
     else
-        @assert ε isa Real
-        d = ε
+        attractor = first(attractors)[2] # get the single attractor
+        mini, maxi = minmaxima(attractor)
+        ε = sqrt(sum(abs, maxi .- mini))/10
+        if ε == 0
+            throw(ArgumentError("""
+            Computed `ε = 0` in automatic estimation, probably because there is
+            a single attractor that also is a single point. Please provide `ε` manually.
+            """))
+        end
     end
-
-    mapper = AttractorsViaProximity(
-        integ, attractors,
-        d, Δt, eltype(Δt)(Ttr), mx_chk_lost, horizon_limit,
-        search_trees, [Inf], [0], 0.0,
-    )
-
-    return mapper
+    return ε
 end
+
 
 function (mapper::AttractorsViaProximity)(u0)
     reinit!(mapper.integ, u0)

@@ -125,29 +125,29 @@ end
 end
 
 
-# @testset "Lorenz-84 system: interlaced close-by" begin
-#     F = 6.886; G = 1.347; a = 0.255; b = 4.0
-#     ds = Systems.lorenz84(; F, G, a, b)
-#     u0s = [
-#         1 => [2.0, 1, 0], # periodic
-#         2 => [-2.0, 1, 0], # chaotic
-#         3 => [0, 1.5, 1.0], # fixed point
-#     ]
-#     diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)
-#     M = 200; z = 3
-#     xg = yg = zg = range(-z, z; length = M)
-#     grid = (xg, yg, zg)
-#     expected_fs_raw = Dict(2 => 0.165, 3 => 0.642, 1 => 0.193)
+@testset "Lorenz-84 system: interlaced close-by" begin
+    F = 6.886; G = 1.347; a = 0.255; b = 4.0
+    ds = Systems.lorenz84(; F, G, a, b)
+    u0s = [
+        1 => [2.0, 1, 0], # periodic
+        2 => [-2.0, 1, 0], # chaotic
+        3 => [0, 1.5, 1.0], # fixed point
+    ]
+    diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)
+    M = 200; z = 3
+    xg = yg = zg = range(-z, z; length = M)
+    grid = (xg, yg, zg)
+    expected_fs_raw = Dict(2 => 0.165, 3 => 0.642, 1 => 0.193)
 
-#     function featurizer(A, t)
-#         # This is the number of boxes needed to cover the set
-#         g = exp(genentropy(A, 0.1; q = 0))
-#         return [g, minimum(A[:,1])]
-#     end
+    function featurizer(A, t)
+        # This is the number of boxes needed to cover the set
+        g = exp(genentropy(A, 0.1; q = 0))
+        return [g, minimum(A[:,1])]
+    end
 
-#     test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
-#     diffeq, ε = 0.01, ferr=1e-2, Δt = 0.2, mx_chk_att = 20)
-# end
+    test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
+    diffeq, ε = 0.01, ferr=1e-2, Δt = 0.2, mx_chk_att = 20)
+end
 
 
 @testset "Duffing oscillator: stroboscopic map" begin
@@ -171,48 +171,48 @@ end
 end
 
 
-# @testset "Magnetic pendulum: projected system" begin
-#     ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
-#     xg = range(-2,2,length = 201)
-#     yg = range(-2,2,length = 201)
-#     grid = (xg, yg)
-#     diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)
-#     ds = projected_integrator(ds, 1:2, [0.0, 0.0]; diffeq)
-#     u0s = [
-#         1 => [-0.5, 0.857],
-#         2 => [-0.5, -0.857],
-#         3 => [1.  , 0.],
-#     ]
-#     expected_fs_raw = Dict(2 => 0.318, 3 => 0.347, 1 => 0.335)
+@testset "Magnetic pendulum: projected system" begin
+    ds = Systems.magnetic_pendulum(γ=1, d=0.2, α=0.2, ω=0.8, N=3)
+    xg = range(-2,2,length = 201)
+    yg = range(-2,2,length = 201)
+    grid = (xg, yg)
+    diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)
+    ds = projected_integrator(ds, 1:2, [0.0, 0.0]; diffeq)
+    u0s = [
+        1 => [-0.5, 0.857],
+        2 => [-0.5, -0.857],
+        3 => [1.  , 0.],
+    ]
+    expected_fs_raw = Dict(2 => 0.318, 3 => 0.347, 1 => 0.335)
 
-#     function featurizer(A, t)
-#         return [A[end][1], A[end][2]]
-#     end
+    function featurizer(A, t)
+        return [A[end][1], A[end][2]]
+    end
 
-#     test_basins(ds, u0s, grid, expected_fs_raw, featurizer; ε = 0.2, Δt = 1.0, ferr=1e-2)
-# end
+    test_basins(ds, u0s, grid, expected_fs_raw, featurizer; ε = 0.2, Δt = 1.0, ferr=1e-2)
+end
 
 
-# @testset "Thomas cyclical: Poincaré map" begin
-#     ds = Systems.thomas_cyclical(b = 0.1665)
-#     xg = yg = range(-6.0, 6.0; length = 100) # important, don't use 101 here, because
-#     # the dynamical system has some fixed points ON the hyperplane.
-#     grid = (xg, yg)
-#     pmap = poincaremap(ds, (3, 0.0), 1e6;
-#         rootkw = (xrtol = 1e-8, atol = 1e-8), diffeq=(reltol=1e-9,)
-#     )
-#     u0s = [
-#         1 => [1.83899, -4.15575, 0],
-#         2 => [1.69823, -0.0167188, 0],
-#         3 => [-4.08547,  -2.26516, 0],
-#     ]
-#     expected_fs_raw = Dict(2 => 0.29, 3 => 0.237, 1 => 0.473)
-#     function thomas_featurizer(A, t)
-#         x, y = columns(A)
-#         return [minimum(x), minimum(y)]
-#     end
+@testset "Thomas cyclical: Poincaré map" begin
+    ds = Systems.thomas_cyclical(b = 0.1665)
+    xg = yg = range(-6.0, 6.0; length = 100) # important, don't use 101 here, because
+    # the dynamical system has some fixed points ON the hyperplane.
+    grid = (xg, yg)
+    pmap = poincaremap(ds, (3, 0.0), 1e6;
+        rootkw = (xrtol = 1e-8, atol = 1e-8), diffeq=(reltol=1e-9,)
+    )
+    u0s = [
+        1 => [1.83899, -4.15575, 0],
+        2 => [1.69823, -0.0167188, 0],
+        3 => [-4.08547,  -2.26516, 0],
+    ]
+    expected_fs_raw = Dict(2 => 0.29, 3 => 0.237, 1 => 0.473)
+    function thomas_featurizer(A, t)
+        x, y = columns(A)
+        return [minimum(x), minimum(y)]
+    end
 
-#     test_basins(pmap, u0s, grid, expected_fs_raw, thomas_featurizer; ε = 1.0, ferr=1e-2)
-# end
+    test_basins(pmap, u0s, grid, expected_fs_raw, thomas_featurizer; ε = 1.0, ferr=1e-2)
+end
 
 end # Attractor mapping tests

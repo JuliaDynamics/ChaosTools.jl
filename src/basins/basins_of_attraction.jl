@@ -59,7 +59,7 @@ function basins_of_attraction(grid::Tuple, ds;
         Δt=isnothing(Δt) ? 1 : Δt, kwargs...)
         return estimate_basins_proximity!(mapper, grid; kwargs...)
     else # (original) recurrences version
-        bsn_nfo, integ = basininfo_and_integ(integ, grid, Δt, diffeq)
+        bsn_nfo, integ = basininfo_and_integ(integ, grid, Δt, diffeq, false)
         bsn_nfo = estimate_basins_recurrences!(grid, bsn_nfo, integ; kwargs...)
         return bsn_nfo.basins, bsn_nfo.attractors
     end

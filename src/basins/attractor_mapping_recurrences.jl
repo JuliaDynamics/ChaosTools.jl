@@ -79,10 +79,33 @@ struct AttractorsViaRecurrences{I, B, G, K} <: AttractorMapper
     kwargs::K
 end
 
+
 function AttractorsViaRecurrences(ds::GeneralizedDynamicalSystem, grid;
         Δt = nothing, diffeq = NamedTuple(), sparse = false, kwargs...
     )
     bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq, sparse)
+    return AttractorsViaRecurrences(integ, bsn_nfo, grid, kwargs)
+end
+
+"""
+    AttractorsViaRecurrencesSparse(ds::GeneralizedDynamicalSystem, grid::Tuple; kwargs...)
+This helper function has the same interface as [`AttractorsViaRecurrences`](@ref) but propagates
+automatically the keyword argument `sparse = true`. This mode is useful for the detection 
+of attractors in high dimensional systems.  
+
+# Example 
+```julia
+D = 10
+ds = Systems.nld_coupled_logistic_maps(D; k = 0.02)
+grid = Tuple(range(-1.7, 1.7, length = 201) for i in 1:D)
+mapper = AttractorsViaRecurrencesSparse(ds, grid) 
+mapper(rand(D))
+```
+"""
+function AttractorsViaRecurrencesSparse(ds::GeneralizedDynamicalSystem, grid;
+        Δt = nothing, diffeq = NamedTuple(), kwargs...
+    )
+    bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq, true)
     return AttractorsViaRecurrences(integ, bsn_nfo, grid, kwargs)
 end
 

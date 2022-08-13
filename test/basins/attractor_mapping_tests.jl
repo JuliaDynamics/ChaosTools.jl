@@ -82,7 +82,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         test_basins_fractions(mapper; err = rerr)
     end
     @testset "Recurrences Sparse" begin
-        mapper = AttractorsViaRecurrences(ds, grid; sparse = true, diffeq, show_progress = false, kwargs...)
+        mapper = AttractorsViaRecurrencesSparse(ds, grid; diffeq, show_progress = false, kwargs...)
         test_basins_fractions(mapper; err = rerr)
     end
     @testset "Featurizing, unsupervised" begin
@@ -157,7 +157,6 @@ end
     diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9)
     T = 2π/1.0
     ds = stroboscopicmap(ds, T; diffeq)
-    # ds = stroboscopicmap(ds, T)
     u0s = [
         1 => [-0.8, 0],
         2 => [1.8, 0],

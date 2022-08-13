@@ -8,7 +8,7 @@ using Test
     @testset "single attractor, no ε" begin
         attractors = Dict(1 => trajectory(ds, 10000, [0.0, 0.0]; Δt = 1, Ttr=100))
         mapper = AttractorsViaProximity(ds, attractors)
-        @test mapper.ε ≈ 0.18 # approximate size of attractor here
+        @test trunc(mapper.ε, digits = 2)  ≈ 0.18 # approximate size of attractor here
     end
     @testset "two attractors, analytically known ε" begin
         attractors = Dict(

@@ -35,6 +35,10 @@ dimensional subspace.
   consider the orbit lost outside. This number can be increased for higher accuracy.
 * `horizon_limit = 1e6`: If the norm of the integrator state reaches this
   limit we consider that the orbit diverges.
+* `sparse = false`: Use of a sparse matrix array for the detection of attractors. When 
+  the dimension of the dynamical state space is large (above 4), the array needed for the 
+  recurrence detection soon becomes too big. The use `sparse = true` allows to detect 
+  attractors in very high dimension.  
 
 ## Description
 An initial condition given to an instance of `AttractorsViaRecurrences` is iterated
@@ -75,10 +79,33 @@ struct AttractorsViaRecurrences{I, B, G, K} <: AttractorMapper
     kwargs::K
 end
 
+
 function AttractorsViaRecurrences(ds::GeneralizedDynamicalSystem, grid;
         Δt = nothing, diffeq = NamedTuple(), sparse = false, kwargs...
     )
     bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq, sparse)
+    return AttractorsViaRecurrences(integ, bsn_nfo, grid, kwargs)
+end
+
+"""
+    AttractorsViaRecurrencesSparse(ds::GeneralizedDynamicalSystem, grid::Tuple; kwargs...)
+This helper function has the same interface as [`AttractorsViaRecurrences`](@ref) but propagates
+automatically the keyword argument `sparse = true`. This mode is useful for the detection 
+of attractors in high dimensional systems.  
+
+# Example 
+```julia
+D = 10
+ds = Systems.nld_coupled_logistic_maps(D; k = 0.02)
+grid = Tuple(range(-1.7, 1.7, length = 201) for i in 1:D)
+mapper = AttractorsViaRecurrencesSparse(ds, grid) 
+mapper(rand(D))
+```
+"""
+function AttractorsViaRecurrencesSparse(ds::GeneralizedDynamicalSystem, grid;
+        Δt = nothing, diffeq = NamedTuple(), kwargs...
+    )
+    bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq, true)
     return AttractorsViaRecurrences(integ, bsn_nfo, grid, kwargs)
 end
 
@@ -150,8 +177,8 @@ end
 #####################################################################################
 # Definition of `BasinInfo` and initialization
 #####################################################################################
-mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray}
-    basins::A # A always have type parameterization {Int16, B}. Sparse or Array
+mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray{Int16, B}}
+    basins::A # sparse or dense
     grid_steps::SVector{B, Float64}
     grid_maxima::SVector{B, Float64}
     grid_minima::SVector{B, Float64}

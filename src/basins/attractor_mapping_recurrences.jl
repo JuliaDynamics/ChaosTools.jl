@@ -1,3 +1,5 @@
+using SparseArrayKit: SparseArray
+
 #####################################################################################
 # Type definition and documentation
 #####################################################################################
@@ -33,6 +35,10 @@ dimensional subspace.
   consider the orbit lost outside. This number can be increased for higher accuracy.
 * `horizon_limit = 1e6`: If the norm of the integrator state reaches this
   limit we consider that the orbit diverges.
+* `sparse = false`: Use of a sparse matrix array for the detection of attractors. When 
+  the dimension of the dynamical state space is large (above 4), the array needed for the 
+  recurrence detection soon becomes too big. The use `sparse = true` allows to detect 
+  attractors in very high dimension.  
 
 ## Description
 An initial condition given to an instance of `AttractorsViaRecurrences` is iterated
@@ -73,15 +79,38 @@ struct AttractorsViaRecurrences{I, B, G, K} <: AttractorMapper
     kwargs::K
 end
 
+
 function AttractorsViaRecurrences(ds::GeneralizedDynamicalSystem, grid;
-        Δt=nothing, diffeq = NamedTuple(), kwargs...
+        Δt = nothing, diffeq = NamedTuple(), sparse = false, kwargs...
     )
-    bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq)
+    bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq, sparse)
+    return AttractorsViaRecurrences(integ, bsn_nfo, grid, kwargs)
+end
+
+"""
+    AttractorsViaRecurrencesSparse(ds::GeneralizedDynamicalSystem, grid::Tuple; kwargs...)
+This helper function has the same interface as [`AttractorsViaRecurrences`](@ref) but propagates
+automatically the keyword argument `sparse = true`. This mode is useful for the detection 
+of attractors in high dimensional systems.  
+
+# Example 
+```julia
+D = 10
+ds = Systems.nld_coupled_logistic_maps(D; k = 0.02)
+grid = Tuple(range(-1.7, 1.7, length = 201) for i in 1:D)
+mapper = AttractorsViaRecurrencesSparse(ds, grid) 
+mapper(rand(D))
+```
+"""
+function AttractorsViaRecurrencesSparse(ds::GeneralizedDynamicalSystem, grid;
+        Δt = nothing, diffeq = NamedTuple(), kwargs...
+    )
+    bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq, true)
     return AttractorsViaRecurrences(integ, bsn_nfo, grid, kwargs)
 end
 
 function (mapper::AttractorsViaRecurrences)(u0)
-    # Low level code of `basins_of_attraction` function. Notice that in this
+    # Call low level code of `basins_of_attraction` function. Notice that in this
     # call signature the interal basins info array of the mapper is NOT updated.
     lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0; mapper.kwargs...)
     # Transform to integers indexing from odd-even indexing
@@ -112,6 +141,11 @@ basins, making the computation faster as the grid is processed more and more.
 """
 function basins_of_attraction(mapper::AttractorsViaRecurrences; show_progress = true)
     basins = mapper.bsn_nfo.basins
+    if basins isa SparseArray;
+        throw(ArgumentError(
+            "Sparse version is incompatible with `basins_of_attraction(mapper)`."
+        ))
+    end
     grid = mapper.grid
     I = CartesianIndices(basins)
     progress = ProgressMeter.Progress(
@@ -143,8 +177,8 @@ end
 #####################################################################################
 # Definition of `BasinInfo` and initialization
 #####################################################################################
-mutable struct BasinsInfo{B, IF, D, T, Q}
-    basins::Array{Int16, B}
+mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray{Int16, B}}
+    basins::A # sparse or dense
     grid_steps::SVector{B, Float64}
     grid_maxima::SVector{B, Float64}
     grid_minima::SVector{B, Float64}
@@ -159,7 +193,7 @@ mutable struct BasinsInfo{B, IF, D, T, Q}
     visited_list::Q
 end
 
-function basininfo_and_integ(ds::GeneralizedDynamicalSystem, grid, Δt, diffeq)
+function basininfo_and_integ(ds::GeneralizedDynamicalSystem, grid, Δt, diffeq, sparse)
     integ = integrator(ds; diffeq)
     isdiscrete = isdiscretetime(integ)
     Δt = isnothing(Δt) ? automatic_Δt_basins(integ, grid) : Δt
@@ -168,18 +202,23 @@ function basininfo_and_integ(ds::GeneralizedDynamicalSystem, grid, Δt, diffeq)
     else
         (integ) -> step!(integ, Δt)
     end
-    bsn_nfo = init_bsn_nfo(grid, integ, iter_f!)
+    bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, sparse)
     return bsn_nfo, integ
 end
 
-function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function)
+function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, sparse::Bool)
     D = length(get_state(integ))
     G = length(grid)
     grid_steps = step.(grid)
     grid_maxima = maximum.(grid)
     grid_minima = minimum.(grid)
+    basins_array = if sparse
+        SparseArray{Int16}(undef, map(length, grid))
+    else
+        zeros(Int16, map(length, grid))
+    end
     bsn_nfo = BasinsInfo(
-        zeros(Int16, map(length, grid)),
+        basins_array,
         SVector{G, Float64}(grid_steps),
         SVector{G, Float64}(grid_maxima),
         SVector{G, Float64}(grid_minima),
@@ -301,8 +340,8 @@ function _identify_basin_of_cell!(
         show_progress = true, # show_progress only used when finding new attractor.
     )
 
-    #if n[1]==-1 means we are outside the grid
-    ic_label = (n[1]==-1  || isnan(u_full_state[1])) ? -1 : bsn_nfo.basins[n]
+    #if n[1] == -1 means we are outside the grid
+    ic_label = n[1] == -1 ? -1 : bsn_nfo.basins[n]
 
     check_next_state!(bsn_nfo, ic_label)
 
@@ -317,9 +356,9 @@ function _identify_basin_of_cell!(
             relabel_visited_cell!(bsn_nfo, bsn_nfo.visited_cell, 0)
             reset_basins_counters!(bsn_nfo)
             return hit_att
-         end
-         bsn_nfo.prev_label = ic_label
-         return 0
+        end
+        bsn_nfo.prev_label = ic_label
+        return 0
     end
 
     if bsn_nfo.state == :att_search
@@ -425,7 +464,7 @@ end
 
 function basin_cell_index(y_grid_state, bsn_nfo::BasinsInfo{B}) where {B}
     iswithingrid = true
-    @inbounds for i in 1:length(bsn_nfo.grid_minima)
+    @inbounds for i in eachindex(bsn_nfo.grid_minima)
         if !(bsn_nfo.grid_minima[i] ≤ y_grid_state[i] ≤ bsn_nfo.grid_maxima[i])
             iswithingrid = false
             break

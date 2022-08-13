@@ -13,7 +13,7 @@ using Statistics
 
 # Define generic testing framework
 function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
-        rerr = 1e-3, ferr = 1e-3, ε = nothing, clustering_threshold = 0.0,
+        rerr = 1e-3, ferr = 1e-3, aerr = 1e-15, ε = nothing, clustering_threshold = 0.0,
         diffeq = NamedTuple(), kwargs...
     )
     # u0s is Vector{Pair}
@@ -74,14 +74,17 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
 
     @testset "Proximity" begin
         mapper = AttractorsViaProximity(ds, known_attractors, ε; diffeq, Ttr = 100)
-        test_basins_fractions(mapper; known = true, err = 1e-15)
+        test_basins_fractions(mapper; known = true, err = aerr)
     end
 
     @testset "Recurrences" begin
         mapper = AttractorsViaRecurrences(ds, grid; diffeq, show_progress = false, kwargs...)
         test_basins_fractions(mapper; err = rerr)
     end
-
+    @testset "Recurrences Sparse" begin
+        mapper = AttractorsViaRecurrencesSparse(ds, grid; diffeq, show_progress = false, kwargs...)
+        test_basins_fractions(mapper; err = rerr)
+    end
     @testset "Featurizing, unsupervised" begin
         clusterspecs = ClusteringConfig()
         mapper = AttractorsViaFeaturizing(ds, featurizer, clusterspecs; diffeq, Ttr = 500)
@@ -163,7 +166,7 @@ end
         return [A[end][1], A[end][2]]
     end
 
-    test_basins(ds, u0s, grid, expected_fs_raw, featurizer; ε = 0.01, ferr=1e-3)
+    test_basins(ds, u0s, grid, expected_fs_raw, featurizer; ε = 0.01, ferr=1e-2, rerr = 1e-2, aerr = 5e-3)
 end
 
 
@@ -212,4 +215,3 @@ end
 end
 
 end # Attractor mapping tests
-

@@ -4,6 +4,13 @@ export basins_fractions_continuation
 function basins_fractions_continuation(mapper::AttractorMapper, maching_method, parameter; kwargs...)
     # code
 end
+# Return values:
+fracs <: Vector{Dict{Int, Float64}}
+attractor_summary <: Vector{<:Any}
+# some info on the attractors which depends on the method.
+# Could be the actual attractors (possible in recurrences),
+# or the attractor features...?
+
 
 # Decide the kind of dynamical system
 α = 0.2; ω = 1.0; d = 0.3
@@ -17,8 +24,7 @@ matching_method = StateSpaceDistance(kwargs...)
 # What parameter to continue over
 parameter = (0:0.01:1, 1) # index, range
 # Call function
-fracs = basins_fractions_continuation(mapper, matching_method, parameter; ...)
-fracs <: Vector{Dict{Int, Float64}}
+basins_fractions_continuation(mapper, matching_method, parameter; ...)
 
 # Make matching subtype an "AttractorMatcher" interface.
 # And perhaps teh `threshold` doesn't need to be given to the matchers,

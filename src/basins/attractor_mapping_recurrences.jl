@@ -154,8 +154,8 @@ end
 #####################################################################################
 # Definition of `BasinInfo` and initialization
 #####################################################################################
-mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray}
-    basins::A # A always have type parameterization {Int16, B}. Sparse or Array
+mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray{Int16, B}}
+    basins::A # sparse or dense
     grid_steps::SVector{B, Float64}
     grid_maxima::SVector{B, Float64}
     grid_minima::SVector{B, Float64}

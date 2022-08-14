@@ -1,40 +1,81 @@
+export RecurrencesSeedingContinuation, basins_fractions_continuation
 # The recurrences based method is rather flexible because it works
-# in two independent steps: it first finds attractors and then matches them.
+# in two independent steprange: it first finds attractors and then matches them.
+struct RecurrencesSeedingContinuation{A, M, S, E}
+    mapper::A
+    metric::M
+    threshold::Float64
+    seeds_from_attractor::S
+    info_extraction::E
+end
 
-function basins_fractions_continuation(mapper, ps, pidx, ics::Function;
-        seeds_per_attractor = 5, samples_per_parameter = 100, threshold = Inf,
+function _default_seeding_process(attractor::AbstractDataset)
+    max_possible_seeds = 10
+    seeds = round(Int, log(10, length(attractor)))
+    seeds = clamp(seeds, 1, max_possible_seeds)
+    return (rand(attractor.data) for _ in 1:seeds)
+end
+
+"""
+TODO: write this.
+"""
+function RecurrencesSeedingContinuation(
+        mapper::AttractorsViaRecurrences; metric = Euclidean(),
+        threshold = Inf, seeds_from_attractor = _default_seeding_process,
+        info_extraction = identity
     )
-    rng = Random.Xoshiro()
-    # At each parmaeter `p`, a dictionary mapping attractor ID to fraction is created.
-    fractions_curves = Dict{Int8, Float64}[]
-    # first parameter is run in isolation, as it has no prior to seed from
-    set_parameter!(mapper.integ, pidx, ps[1])
-    fs = basins_fractions(mapper, ics; show_progress = false, N = samples_per_parameter)
-    push!(fractions_curves, fs)
-    prev_attractors = deepcopy(mapper.bsn_nfo.attractors)
+    return RecurrencesSeedingContinuation(
+        mapper, metric, threshold, seeds_from_attractor, info_extraction
+    )
+end
 
-    for p in ps[2:end]
+function basins_fractions_continuation(
+        continuation::RecurrencesSeedingContinuation, prange, pidx, ics::Function;
+        samples_per_parameter = 100, show_progress = true
+    )
+    show_progress && @info "Starting basins fraction continuation."
+    show_progress && @info "p = $(prange[1])"
+    (; mapper, metric, threshold) = continuation
+    # first parameter is run in isolation, as it has no prior to seed from
+    set_parameter!(mapper.integ, pidx, prange[1])
+    fs = basins_fractions(mapper, ics; show_progress = false, N = samples_per_parameter)
+    # At each parmaeter `p`, a dictionary mapping attractor ID to fraction is created.
+    fractions_curves = [fs]
+    # Furthermore some info about the attractors is stored and returned
+    prev_attractors = deepcopy(mapper.bsn_nfo.attractors)
+    get_info = attractors -> Dict(k => continuation.info_extraction(att) for (k, att) in attractors)
+    info = get_info(prev_attractors)
+    attractors_info = [info]
+
+    for p in prange[2:end]
+        show_progress && @show p
         set_parameter!(mapper.integ, pidx, p)
         overwrite_dict!(prev_attractors, mapper.bsn_nfo.attractors)
         reset!(mapper)
         # Seed initial conditions from previous attractors
-        for (i, att) in prev_attractors
-            for j in 1:seeds_per_attractor
-                u0 = rand(rng, att.data)
-                mapper(u0) # we don't care about return value here.
+        for (id, att) in prev_attractors
+            for u0 in continuation.seeds_from_attractor(att)
+                # We map the initial condition to an attractor, but we don't care
+                # about which attractor we go to. This is just so that the internal
+                # array of `AttractorsViaRecurrences` registers the attractors
+                mapper(u0; show_progress)
             end
         end
-        # Now poerform basin fractions estimation as normal, utilizing found attractors
+        # Now perform basin fractions estimation as normal, utilizing found attractors
         fs = basins_fractions(mapper, ics; show_progress = false, N = samples_per_parameter)
-
-        # Find new attractors
-        unique_attractor_ids!(prev_attractors, mapper.bsn_nfo.attractors, 1.0)
-
-        # But also correctly set new keys to new dictionary.
+        current_attractors = mapper.bsn_nfo.attractors
+        # Match with previous attractors before storing anything!
+        rmap = match_attractor_ids!(current_attractors, prev_attractors; metric, threshold)
+        # Then do the remaining setup for storing and next step
+        @show rmap
+        _swap_dict_keys!(fs, rmap)
+        overwrite_dict!(prev_attractors, current_attractors)
+        reset!(mapper)
         push!(fractions_curves, fs)
+        push!(attractors_info, get_info(prev_attractors))
+        @show fs
     end
-    unique_attractor_ids!(fractions_curves, 1.0)
-    return fractions_curves
+    return fractions_curves, attractors_info
 end
 
 function overwrite_dict!(old::Dict, new::Dict)
@@ -47,6 +88,7 @@ end
 function reset!(mapper::AttractorsViaRecurrences)
     empty!(mapper.bsn_nfo.attractors)
     mapper.bsn_nfo.basins .= 0
-    # TODO: Also set attractor ID to 0. How?
+    # TODO: Why doesn't this actually set the attractor starting labels to 1...???
+    mapper.bsn_nfo.prev_label = 0
     return
 end

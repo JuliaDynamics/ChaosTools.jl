@@ -1,43 +1,42 @@
 export basins_fractions_continuation
 
-"""
-    AttractorMatcher
-Supertype governing how attractors are matched in [`basins_fractions_continuation`](@ref).
-Some matching methods can only be used with some specific [`AttractorMapper`](@ref) types.
-At the moment we have:
+# In the end, it is better to have a continuation type that contains
+# how to match, because there are other keywords that always go into the
+# continuation... Like in the recurrences the keyword of seeds per attractor,
+# or in the clustering some other stuff that Max will add...
 
-- [`MatchByDistance`](@ref) which can be used with [`AttractorsViaRecurrences`](@ref).
 """
-abstract type AttractorMatcher end
-
+    BasinsFractionContinuation
+Supertype of all methods that can be given to the [`basins_fractions_continuation`](@ref)
+function. Current types are:
+- [`RecurrencesSeedingContinuation`](@ref).
+"""
+abstract type BasinsFractionContinuation end
 
 # Design of the API:
-function basins_fractions_continuation(mapper::AttractorMapper, maching_method::AttractorMatcher, parameter; kwargs...)
+function basins_fractions_continuation(continuation::BasinsFractionContinuation, parameter; kwargs...)
     # code
+    # Return values:
+    # the fractions
+    fracs <: Vector{Dict{Int, Float64}}
+    # some info on the attractors which depends on the method.
+    # Could be the actual attractors (possible in recurrences),
+    # or the attractor features...?
+    attractor_summary <: Vector{<:Any}
 end
-# Return values:
-fracs <: Vector{Dict{Int, Float64}}
-attractor_summary <: Vector{<:Any}
-# some info on the attractors which depends on the method.
-# Could be the actual attractors (possible in recurrences),
-# or the attractor features...?
 
-
-# Decide the kind of dynamical system
-α = 0.2; ω = 1.0; d = 0.3
-ma = Systems.magnetic_pendulum(; α, ω, d)
-proj = projected_integrator(ma, [1,2], [0,0])
-# Decide the attractor mapping
-gx = gy = range(-5, 5; length = 1500)
-mapper = AttractorsViaRecurrences(proj, (gx, gy))
-# Decide how to match attractors
-matching_method = StateSpaceDistance(kwargs...)
-# What parameter to continue over
-parameter = (0:0.01:1, 1) # index, range
-# Call function
-basins_fractions_continuation(mapper, matching_method, parameter; ...)
-
-# Make matching subtype an "AttractorMatcher" interface.
-# And perhaps teh `threshold` doesn't need to be given to the matchers,
-# but only to the matching function? And the matchers provide only the
-# similarity measure.
+function _example()
+    # Decide the kind of dynamical system
+    α = 0.2; ω = 1.0; d = 0.3
+    ma = Systems.magnetic_pendulum(; α, ω, d)
+    proj = projected_integrator(ma, [1,2], [0,0])
+    # Decide the attractor mapping
+    gx = gy = range(-5, 5; length = 1500)
+    mapper = AttractorsViaRecurrences(proj, (gx, gy))
+    # Decide how to match attractors
+    continuation = RecurrencesSeedingContinuation(mapper, kwargs...)
+    # What parameter to continue over
+    parameter = (0:0.01:1, 1) # index, range
+    # Call function
+    basins_fractions_continuation(continuation, parameter; ...)
+end

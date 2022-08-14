@@ -88,7 +88,7 @@ function _minimal_distance_combinations(distances)
     return minimal_distance_combinations
 end
 
-function _swap_dict_keys!(a₊, a₋, minimal_distance_combinations, threshold = Inf)
+function _swap_dict_keys!(a₊, a₋, minimal_distance_combinations, threshold)
     replacement_map = Dict{keytype(a₊), keytype(a₋)}()
     next_id = max(maximum(keys(a₊),), maximum(keys(a₋))) + 1
     # In the same loop we do the logic that matches keys according to distance of values,
@@ -114,6 +114,28 @@ function _swap_dict_keys!(a₊, a₋, minimal_distance_combinations, threshold =
     end
     return replacement_map
 end
+
+# Convenience version that swaps keys of a dictionary given the replacement
+# map derived from the above version. Useful when we want to swap keys of
+# other quantities like the attractor dictionaries (e.g., fraction dinctionaries)
+function _swap_dict_keys!(fs::Dict, rmap::Dict)
+    isempty(rmap) && return
+    cache = Tuple{keytype(fs), valtype(fs)}[]
+    for (oldkey, newkey) in rmap
+        haskey(fs, oldkey) || continue
+        tmp = pop!(fs, oldkey)
+        if !haskey(fs, newkey)
+            fs[newkey] = tmp
+        else
+            push!(cache, (newkey, tmp))
+        end
+    end
+    for (k, v) in cache
+        fs[k] = v
+    end
+    return
+end
+
 
 
 ###########################################################################################

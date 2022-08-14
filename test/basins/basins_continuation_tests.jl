@@ -12,9 +12,12 @@ using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
     pidx = :γs
     sampler, = statespace_sampler(; min_bounds = [-3,-3], max_bounds = [3,3])
 
+    continuation = RecurrencesSeedingContinuation(mapper)
     # With this threshold all attractors are mapped to each other, they are within
     # distance 1 in state space.
-    fractions_curves = continuation_basins_fractions(mapper, ps, pidx, sampler)
+    fractions_curves, attractors_info = basins_fractions_continuation(
+        continuation, ps, pidx, sampler
+    )
 
     for (i, p) in enumerate(ps)
         γ = p[3]

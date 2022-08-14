@@ -27,6 +27,7 @@ include("basins/fractality_of_basins.jl")
 include("basins/tipping.jl")
 include("basins/sampler.jl")
 include("basins/continuation/match_attractor_ids.jl")
+include("basins/continuation/recurrences.jl")
 
 include("dimensions/linear_regions.jl")
 include("dimensions/generalized_dim.jl")

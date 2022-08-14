@@ -35,10 +35,10 @@ dimensional subspace.
   consider the orbit lost outside. This number can be increased for higher accuracy.
 * `horizon_limit = 1e6`: If the norm of the integrator state reaches this
   limit we consider that the orbit diverges.
-* `sparse = false`: Use of a sparse matrix array for the detection of attractors. When 
-  the dimension of the dynamical state space is large (above 4), the array needed for the 
-  recurrence detection soon becomes too big. The use `sparse = true` allows to detect 
-  attractors in very high dimension.  
+* `sparse = false`: Use of a sparse matrix array for the detection of attractors. When
+  the dimension of the dynamical state space is large (above 4), the array needed for the
+  recurrence detection soon becomes too big. The use `sparse = true` allows to detect
+  attractors in very high dimension.
 
 ## Description
 An initial condition given to an instance of `AttractorsViaRecurrences` is iterated
@@ -90,15 +90,15 @@ end
 """
     AttractorsViaRecurrencesSparse(ds::GeneralizedDynamicalSystem, grid::Tuple; kwargs...)
 This helper function has the same interface as [`AttractorsViaRecurrences`](@ref) but propagates
-automatically the keyword argument `sparse = true`. This mode is useful for the detection 
-of attractors in high dimensional systems.  
+automatically the keyword argument `sparse = true`. This mode is useful for the detection
+of attractors in high dimensional systems.
 
-# Example 
+# Example
 ```julia
 D = 10
 ds = Systems.nld_coupled_logistic_maps(D; k = 0.02)
 grid = Tuple(range(-1.7, 1.7, length = 201) for i in 1:D)
-mapper = AttractorsViaRecurrencesSparse(ds, grid) 
+mapper = AttractorsViaRecurrencesSparse(ds, grid)
 mapper(rand(D))
 ```
 """
@@ -109,10 +109,10 @@ function AttractorsViaRecurrencesSparse(ds::GeneralizedDynamicalSystem, grid;
     return AttractorsViaRecurrences(integ, bsn_nfo, grid, kwargs)
 end
 
-function (mapper::AttractorsViaRecurrences)(u0)
+function (mapper::AttractorsViaRecurrences)(u0; show_progress = true)
     # Call low level code of `basins_of_attraction` function. Notice that in this
     # call signature the interal basins info array of the mapper is NOT updated.
-    lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0; mapper.kwargs...)
+    lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0; show_progress, mapper.kwargs...)
     # Transform to integers indexing from odd-even indexing
     return iseven(lab) ? (lab ÷ 2) : (lab - 1) ÷ 2
 end
@@ -189,6 +189,7 @@ mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray{Int16, B}}
     consecutive_match::Int
     consecutive_lost::Int
     prev_label::Int
+    # TODO: Isn't `D` and `B` always equivalent...? can't we just remove `D`?
     attractors::Dict{Int16, Dataset{D, T}}
     visited_list::Q
 end

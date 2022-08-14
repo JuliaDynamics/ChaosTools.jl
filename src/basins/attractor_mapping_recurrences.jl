@@ -366,7 +366,7 @@ function _identify_basin_of_cell!(
         if ic_label == 0
             # unlabeled box, label it with current odd label and reset counter
             bsn_nfo.basins[n] = bsn_nfo.visited_cell
-            push!(bsn_nfo.visited_list,n) # keep track of visited cells
+            push!(bsn_nfo.visited_list, n) # keep track of visited cells
             bsn_nfo.consecutive_match = 1
         elseif ic_label == bsn_nfo.visited_cell
             # hit a previously visited box with the current label, possible attractor?

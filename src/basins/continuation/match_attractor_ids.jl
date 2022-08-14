@@ -7,7 +7,7 @@
 # TODO: allow giving in any kind of similarity function.
 """
     match_attractor_ids!(a₊::AbstractDict, a₋; metric = Euclidean(), threshold = Inf)
-Given dictionaries `a₊, a₋` mapping IDs to attractors,
+Given dictionaries `a₊, a₋` mapping IDs to attractors (`Dataset` instances),
 match attractor IDs in dictionary `a₊` so that its attractors that are the closest to
 those in dictionary `a₋` get assigned the same key as in `a₋`.
 Typically the +,- mean after and before some change of parameter of a system.
@@ -47,6 +47,15 @@ function match_attractor_ids!(as::AbstractVector{<:AbstractDict}; kwargs...)
     end
 end
 
+
+
+# TODO: use a the function
+"""
+    sets_of_datasets_distance(datasets1, datasets2 [, method])
+Calculate a distance between _containers of datasets_, such as
+dictionaries or arrays with `AbstractDataset` as value.
+"""
+# above
 function _similarity_from_distance(a₊, a₋, metric::Metric = Euclidean())
     ids₊, ids₋ = keys(a₊), keys(a₋)
     distances = Dict{eltype(ids₊), Dict{eltype(ids₋), Float64}}()
@@ -62,8 +71,13 @@ function _similarity_from_distance(a₊, a₋, metric::Metric = Euclidean())
     return distances
 end
 
+"""
+    _minimal_distance_combinations(distances)
+Using the distances (dict of dicts), create a vector that only keeps
+the minimum distance for each attractor. The output is a vector of
+`Tuple{Int, Int, Float64}` meaning `(oldkey, newkey, min_distance)`.
+"""
 function _minimal_distance_combinations(distances)
-    # Prioritize mappings that have the least distance
     minimal_distance_combinations = Tuple{Int, Int, Float64}[]
     for i in keys(distances)
         s = distances[i] # dict with distances of i to all in "-"

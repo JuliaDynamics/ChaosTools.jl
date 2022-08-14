@@ -68,6 +68,7 @@ function _similarity_from_distance(a₊, a₋, metric::Metric = Euclidean())
         end
         distances[i] = d
     end
+    # @show distances
     return distances
 end
 

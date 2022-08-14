@@ -23,17 +23,21 @@ using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
         γ = p[3]
         fs = fractions_curves[i]
         k = sort!(collect(keys(fs)))
-        @test max(k) ≤ 3
+        @test maximum(k) ≤ 3
+        # It is arbitrary what id we get, because the third
+        # fixed point that vanishes could have any of the three ids
+        # But we can test for sure how many ids we have
         if γ < 0.3
-            @test k == 1:2
+            @test length(k) == 2
         else
-            @test k == 1:3
+            @test length(k) == 3
         end
+        @test sum(values(fs)) == 1
     end
     # Plot code for fractions
     # using GLMakie
     # x = [fs[1] for fs in fractions_curves]
-    # y = [fs[3] for fs in fractions_curves]
+    # y = [fs[2] for fs in fractions_curves]
     # z = zeros(length(x))
     # fig = Figure()
     # ax = Axis(fig[1,1])

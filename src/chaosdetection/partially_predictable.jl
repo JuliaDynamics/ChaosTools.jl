@@ -18,9 +18,10 @@ Typical values for `ν`, `C` and `chaos_type` are given in Table 2 of[^Wernecke2
 |    `:PPC`    |  0  |  1  |
 |    `:REG`    |  1  |  1  |
 
+If none of these conditions apply, the return value is `:IND` (for indeterminate).
 
 ## Keyword Arguments
-* `Ttr = 200` : Extra "transient" time to evolve the system before sampling from
+* `Ttr = 200` : Extra transient time to evolve the system before sampling from
    the trajectory. Should be `Int` for discrete systems.
 * `T_sample = 1e4` : Time to evolve the system for taking samples. Should be
   `Int` for discrete systems.
@@ -32,16 +33,20 @@ Typical values for `ν`, `C` and `chaos_type` are given in Table 2 of[^Wernecke2
 * `T_multiplier = 10` : Multiplier from the Lyapunov prediction time to the evaluation time.
 * `T_max = Inf` : Maximum time at which to evaluate trajectory distance. If the internally
    computed evaluation time is larger than `T_max`, stop at `T_max` instead.
+   **It is strongly recommended to manually set this!**
 * `δ_range = 10.0 .^ (-9:-6)` : Range of initial condition perturbation distances
    to use to determine scaling `ν`.
+* `ν_threshold = C_threshold = 0.5` : Thresholds for scaling coefficients (they become 0 or
+  1 if they are less or more than the threshold).
 * `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
   `init` of DifferentialEquations.jl.
   See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
 ## Description
-Samples points from a trajectory of the system to be used as initial conditions. Each of
-these initial conditions is randomly perturbed by a distance `δ`, and the trajectories for
-both the original and perturbed initial conditions are computed to the 'evaluation time' `T`.
+The algorithm samples points from a trajectory of the system to be used as initial
+conditions. Each of these initial conditions is randomly perturbed by a distance `δ`,
+and the trajectories for both the original and perturbed initial conditions are evolved
+up to the 'evaluation time' `T` (see below its definition).
 
 The average (over the samples) distance and cross-correlation coefficient
 of the state at time `T` is
@@ -68,6 +73,7 @@ function predictability(ds::DynamicalSystem;
         Ttr::Real = 200, T_sample::Real = 1e4, n_samples::Integer = 500,
         λ_max::Real = lyapunov(ds, 5000), d_tol::Real = 1e-3, T_multiplier::Real = 10,
         T_max::Real = Inf, δ_range::AbstractArray = 10.0 .^ (-9:-6),
+        ν_threshold = 0.5, C_threshold = 0.5,
         diffeq = NamedTuple(), kwargs...
     )
     if !isempty(kwargs)
@@ -75,20 +81,17 @@ function predictability(ds::DynamicalSystem;
         diffeq = NamedTuple(kwargs)
     end
     λ_max < 0 && return :REG, 1.0, 1.0
-    # Internal Constants, arbitrarily decided half-way points (from paper)
-    ν_threshold = 0.5
-    C_threshold = 0.5
     samples = sample_trajectory(ds, Ttr, T_sample, n_samples; diffeq)
-    # Calculate the mean position and variance of the trajectory. (eq. [1] pg. 5)
-    # Using random samples approach instead of direct integration
+    # Calculate initial mean position and variance of the trajectory. (eq. [1] pg. 5)
+    # using random samples approach instead of direct integration
     μ = mean(samples)
     s² = mean(map(x -> (x - μ)⋅(x - μ), samples))
+
     # Calculate cross-distance scaling and correlation scaling
     distances = Float64[] # Mean distances at time T for different δ
     correlations = Float64[] # Cross-correlation at time T for different δ
-
     # TODO: p_integ is type unstable, the rest of the code should be moved
-    # into a separate function
+    # into a separate function. It's also good todo for more readable code...
     p_integ = parallel_integrator(ds, samples[1:2]; diffeq)
     for δ in δ_range
         # TODO: some kind of warning should be thrown for very large Tλ
@@ -105,6 +108,7 @@ function predictability(ds::DynamicalSystem;
             reinit!(p_integ, [u, û])
             step!(p_integ, T)
             # Accumulate distance and square-distance
+            # TODO: This integrator access is not using the API!
             d = norm(p_integ.u[1]-p_integ.u[2], 2)
             Σd  += d
             Σd² += d^2
@@ -130,7 +134,7 @@ function predictability(ds::DynamicalSystem;
     elseif ν ≤ ν_threshold && C ≤ C_threshold
         chaos_type = :SC
     else
-        chaos_type = :INDETERMINATE
+        chaos_type = :IND
     end
     return chaos_type, ν, C
 end

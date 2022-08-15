@@ -27,13 +27,13 @@ If you want to access the various `Kc` you should call the method
 `testchaos01(x, c::Real, N0)` which returns `Kc`. In fact, the high level method is
 just `median(testchaos01(x, c, N0) for c in cs) > 0.5`.
 
-`cs` defaults to `3π/5*rand(10) + π/4` and `N0`, the length
+`cs` defaults to `3π/5*rand(100) + π/4` and `N0`, the length
 of the two-dimensional process, is `N0 = length(x)/10`.
 
 For data sampled from continous dynamical systems, some
 care must be taken regarding the values of `cs`.
 Also note that this method performs rather poorly with even the slight amount
-of noise, returning `true` for practically any noisy timeseries.
+of noise, returning `true` for even small amounts of noise noisy timeseries.
 Some possibilities to eliviate this exist, but are context specific on the application.
 See [^Gottwald2016] for more info.
 
@@ -42,7 +42,7 @@ See [^Gottwald2016] for more info.
     [Lect. Notes Phys., vol. 915, pp. 221–247, 2016.](
     www.doi.org/10.1007/978-3-662-48410-4_7)
 """
-function testchaos01(x::Vector, cs = 3π/5*rand(10) .+ π/4, N0 = Int(length(x)÷10))
+function testchaos01(x::Vector, cs = 3π/5*rand(100) .+ π/4, N0 = Int(length(x)÷10))
     K = median(testchaos01(x, c, N0) for c in cs)
     return K > 0.5
 end

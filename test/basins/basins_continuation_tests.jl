@@ -2,24 +2,27 @@ using Test, ChaosTools
 using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
 
 @testset "magnetic pendulum" begin
-    d, α, ω = 0.3, 0.2, 0.5
+    d, α, ω = 0.3, 0.2, 0.
     ds = Systems.magnetic_pendulum(; d, α, ω)
-    xg = yg = range(-3, 3, length = 100)
+    xg = yg = range(-3, 3, length = 201)
     ds = projected_integrator(ds, 1:2, [0.0, 0.0])
     mapper = AttractorsViaRecurrences(ds, (xg, yg); Δt = 1.0)
-
-    ps = [[1, 1, γ] for γ in range(1.0, 0; length = 101)]
+    rr = rand(10).*0.2 .+ 0.1
+    ps = [[1, 1, γ] for γ in rr]
     pidx = :γs
     sampler, = statespace_sampler(; min_bounds = [-3,-3], max_bounds = [3,3])
 
-    continuation = RecurrencesSeedingContinuation(mapper)
+    continuation = RecurrencesSeedingContinuation(mapper; threshold = 1.)
     # With this threshold all attractors are mapped to each other, they are within
     # distance 1 in state space.
     fractions_curves, attractors_info = basins_fractions_continuation(
-        continuation, ps, pidx, sampler
-    )
+        continuation, ps, pidx, sampler; show_progress = true, samples_per_parameter = 1000)
 
     finalkeys = collect(keys(fractions_curves[end]))
+
+    for k in attractors_info
+        @show collect(keys(k))
+    end
 
     for (i, p) in enumerate(ps)
         γ = p[3]

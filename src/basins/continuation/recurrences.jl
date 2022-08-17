@@ -81,7 +81,7 @@ function basins_fractions_continuation(
         fs = basins_fractions(mapper, ics; show_progress = false, N = samples_per_parameter)
         current_attractors = mapper.bsn_nfo.attractors
         # Match with previous attractors before storing anything!
-    @show     rmap = match_attractor_ids!(current_attractors, prev_attractors; metric, threshold)
+        rmap = match_attractor_ids!(current_attractors, prev_attractors; metric, threshold)
         # Then do the remaining setup for storing and next step
         _swap_dict_keys!(fs, rmap)
         overwrite_dict!(prev_attractors, current_attractors)

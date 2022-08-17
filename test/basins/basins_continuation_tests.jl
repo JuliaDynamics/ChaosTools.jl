@@ -7,7 +7,6 @@ using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
 #     xg = yg = range(-3, 3, length = 201)
 #     ds = projected_integrator(ds, 1:2, [0.0, 0.0])
 #     mapper = AttractorsViaRecurrences(ds, (xg, yg); Δt = 1.0)
-#     # rr = rand(10).*0.2 .+ 0.1
 #     rr = range(1.,0., length = 100)
 #     ps = [[1, 1, γ] for γ in rr]
 #     pidx = :γs
@@ -59,7 +58,6 @@ using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
 
 
 @testset "Henon map" begin
-
     function new_henon(x, p, n)
         return SVector{2}(p[1] - x[1]^2 - (1 - p[2])*x[2],  x[1])
     end
@@ -68,15 +66,16 @@ using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
     u0 = [0.0, 0.6]
     ds = DiscreteDynamicalSystem(new_henon, u0, [a,ν])
     xg = yg = range(-2.5, 2.5, length = 500)
-    mapper = AttractorsViaRecurrences(ds, (xg, yg))
-    ps = range(0.0, 1.2; length = 30)
+    mapper = AttractorsViaRecurrences(ds, (xg, yg),
+            mx_chk_fnd_att = 3000,
+            mx_chk_loc_att = 3000)
+    ps = range(0.0, 0.4; length = 10)
     pidx = 1
     sampler, = statespace_sampler(; min_bounds = [-2,-2], max_bounds = [2,2])
-    continuation = RecurrencesSeedingContinuation(mapper; threshold = 0.2)
+    continuation = RecurrencesSeedingContinuation(mapper; threshold = 0.1)
     fractions_curves, attractors_info = basins_fractions_continuation(
         continuation, ps, pidx, sampler;
-        show_progress = true, samples_per_parameter = 100
-    )
+        show_progress = true, samples_per_parameter = 100)
 
     for k in attractors_info
         @show collect(keys(k))

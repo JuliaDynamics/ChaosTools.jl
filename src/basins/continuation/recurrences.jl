@@ -9,15 +9,24 @@ struct RecurrencesSeedingContinuation{A, M, S, E}
     info_extraction::E
 end
 
-function _default_seeding_process(attractor::AbstractDataset)
-    max_possible_seeds = 10
-    seeds = round(Int, log(10, length(attractor)))
-    seeds = clamp(seeds, 1, max_possible_seeds)
-    return (rand(attractor.data) for _ in 1:seeds)
-end
 
 """
-TODO: write this.
+    RecurrencesSeedingContinuation(mapper::AttractorsViaRecurrences; kwargs...)
+A method for [`basins_fractions_continuation`](@ref).
+It uses seeding of previous attractors to find new ones, which is the main performance
+bottleneck. Will write more once we have the paper going.
+
+## Keyword Arguments
+- `metric, threshold`: Given to [`match_attractor_ids!`](@ref) which is the function
+  used to match attractors between each parameter slice.
+- `info_extraction = identity`: A function that takes as an input an attractor (`Dataset`)
+  and outputs whatever information should be stored. It is used to return the
+  `attractors_info` in [`basins_fractions_continuation`](@ref).
+- `seeds_from_attractor`: A function that takes as an input an attractor and returns
+  an iterator of initial conditions to be seeded from the attractor for the next
+  parameter slice. By default, we sample some points from existing attractors according
+  to how many points the attractors themselves contain. A maximum of `10` seeds is done
+  per attractor.
 """
 function RecurrencesSeedingContinuation(
         mapper::AttractorsViaRecurrences; metric = Euclidean(),
@@ -29,6 +38,13 @@ function RecurrencesSeedingContinuation(
     )
 end
 
+function _default_seeding_process(attractor::AbstractDataset)
+    max_possible_seeds = 10
+    seeds = round(Int, log(10, length(attractor)))
+    seeds = clamp(seeds, 1, max_possible_seeds)
+    return (rand(attractor.data) for _ in 1:seeds)
+end
+
 function basins_fractions_continuation(
         continuation::RecurrencesSeedingContinuation, prange, pidx, ics::Function;
         samples_per_parameter = 100, show_progress = false,
@@ -37,7 +53,7 @@ function basins_fractions_continuation(
     show_progress && @info "p = $(prange[1])"
     (; mapper, metric, threshold) = continuation
     # first parameter is run in isolation, as it has no prior to seed from
-    set_parameter!(mapper, pidx, prange[1])  # There is a problem here with discrete integrators for mapper.inte
+    set_parameter!(mapper.integ, pidx, prange[1])
     fs = basins_fractions(mapper, ics; show_progress, N = samples_per_parameter)
     # At each parmaeter `p`, a dictionary mapping attractor ID to fraction is created.
     fractions_curves = [fs]
@@ -50,7 +66,7 @@ function basins_fractions_continuation(
     for p in prange[2:end]
         # TODO: Make this use ProgressMeter.jl
         show_progress && @show p
-        set_parameter!(mapper, pidx, p) # Same problem here
+        set_parameter!(mapper.integ, pidx, p) # Same problem here
         reset!(mapper)
         # Seed initial conditions from previous attractors
         for att in values(prev_attractors)

@@ -13,7 +13,6 @@ function. Current types are:
 """
 abstract type BasinsFractionContinuation end
 
-# Design of the API:
 function basins_fractions_continuation(continuation::BasinsFractionContinuation, parameter; kwargs...)
     # code
     # Return values:
@@ -22,7 +21,7 @@ function basins_fractions_continuation(continuation::BasinsFractionContinuation,
     # some info on the attractors which depends on the method.
     # Could be the actual attractors (possible in recurrences),
     # or the attractor features...?
-    attractor_summary <: Vector{<:Any}
+    attractor_summary <: Vector{Dict{Int, <:Any}}
 end
 
 function _example()

@@ -63,18 +63,20 @@ using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
     function new_henon(x, p, n)
         return SVector{2}(p[1] - x[1]^2 - (1 - p[2])*x[2],  x[1])
     end
-    a = 0.
+    a = 0.0
     ν = 0.01
-    u0 = [0., 0.6]
-    ds = DiscreteDynamicalSystem(new_henon, u0, [a,ν]) 
+    u0 = [0.0, 0.6]
+    ds = DiscreteDynamicalSystem(new_henon, u0, [a,ν])
     xg = yg = range(-2.5, 2.5, length = 500)
     mapper = AttractorsViaRecurrences(ds, (xg, yg))
-    ps = range(0.,1.2, length = 30)
+    ps = range(0.0, 1.2; length = 30)
     pidx = 1
     sampler, = statespace_sampler(; min_bounds = [-2,-2], max_bounds = [2,2])
     continuation = RecurrencesSeedingContinuation(mapper; threshold = 0.2)
     fractions_curves, attractors_info = basins_fractions_continuation(
-        continuation, ps, pidx, sampler; show_progress = true, samples_per_parameter = 100)
+        continuation, ps, pidx, sampler;
+        show_progress = true, samples_per_parameter = 100
+    )
 
     for k in attractors_info
         @show collect(keys(k))

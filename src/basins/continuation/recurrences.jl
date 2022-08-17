@@ -37,7 +37,7 @@ function basins_fractions_continuation(
     show_progress && @info "p = $(prange[1])"
     (; mapper, metric, threshold) = continuation
     # first parameter is run in isolation, as it has no prior to seed from
-    set_parameter!(mapper.integ, pidx, prange[1])
+    set_parameter!(mapper, pidx, prange[1])  # There is a problem here with discrete integrators for mapper.inte
     fs = basins_fractions(mapper, ics; show_progress, N = samples_per_parameter)
     # At each parmaeter `p`, a dictionary mapping attractor ID to fraction is created.
     fractions_curves = [fs]
@@ -50,7 +50,7 @@ function basins_fractions_continuation(
     for p in prange[2:end]
         # TODO: Make this use ProgressMeter.jl
         show_progress && @show p
-        set_parameter!(mapper.integ, pidx, p)
+        set_parameter!(mapper, pidx, p) # Same problem here
         reset!(mapper)
         # Seed initial conditions from previous attractors
         for att in values(prev_attractors)
@@ -65,7 +65,7 @@ function basins_fractions_continuation(
         fs = basins_fractions(mapper, ics; show_progress = false, N = samples_per_parameter)
         current_attractors = mapper.bsn_nfo.attractors
         # Match with previous attractors before storing anything!
-@show   rmap = match_attractor_ids!(current_attractors, prev_attractors; metric, threshold)
+        rmap = match_attractor_ids!(current_attractors, prev_attractors; metric, threshold)
         # Then do the remaining setup for storing and next step
         _swap_dict_keys!(fs, rmap)
         overwrite_dict!(prev_attractors, current_attractors)

@@ -1,10 +1,11 @@
 using Test, ChaosTools
 using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
+using Random
 
 @testset "magnetic pendulum" begin
     d, α, ω = 0.3, 0.2, 0.
     ds = Systems.magnetic_pendulum(; d, α, ω)
-    xg = yg = range(-3, 3, length = 201)
+    xg = yg = range(-3, 3, length = 101)
     ds = projected_integrator(ds, 1:2, [0.0, 0.0])
     mapper = AttractorsViaRecurrences(ds, (xg, yg); Δt = 1.0)
     rr = range(1.,0., length = 100)
@@ -16,7 +17,7 @@ using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
     # With this threshold all attractors are mapped to each other, they are within
     # distance 1 in state space.
     fractions_curves, attractors_info = basins_fractions_continuation(
-        continuation, ps, pidx, sampler; show_progress = true, samples_per_parameter = 100)
+        continuation, ps, pidx, sampler; show_progress = false, samples_per_parameter = 100)
 
     finalkeys = collect(keys(fractions_curves[end]))
 
@@ -27,9 +28,12 @@ using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
     for (i, p) in enumerate(ps)
         γ = p[3]
         fs = fractions_curves[i]
+        attractors = attractors_info[i]
         k = sort!(collect(keys(fs)))
-        @show k
-        # @test maximum(k) ≤ 3
+        @test maximum(k) ≤ 3
+        # @show k
+        attk = sort!(collect(keys(attractors)))
+        @test k == attk
         # @test all(fk -> fk ∈ k, finalkeys)
         # It is arbitrary what id we get, because the third
         # fixed point that vanishes could have any of the three ids
@@ -75,7 +79,8 @@ end
     continuation = RecurrencesSeedingContinuation(mapper; threshold = 0.2)
     fractions_curves, attractors_info = basins_fractions_continuation(
         continuation, ps, pidx, sampler;
-        show_progress = true, samples_per_parameter = 100)
+        show_progress = true, samples_per_parameter = 100
+    )
 
     for k in attractors_info
         @show collect(keys(k))

@@ -9,6 +9,8 @@ struct RecurrencesSeedingContinuation{A, M, S, E}
     info_extraction::E
 end
 
+# TODO: Allow generalized function for matching: any function that given
+# two attractors, it gives a real positive number (distance).
 
 """
     RecurrencesSeedingContinuation(mapper::AttractorsViaRecurrences; kwargs...)
@@ -69,16 +71,26 @@ function basins_fractions_continuation(
         set_parameter!(mapper.integ, pidx, p)
         reset!(mapper)
         # Seed initial conditions from previous attractors
+        # Notice that one of the things that happens here is some attractors have
+        # really small basins. We find them with the seeding process here, but the
+        # subsequent random sampling in `basins_fractions` doesn't. This leads to
+        # having keys in `mapper.bsn_nfo.attractors` that do not exist in the computed
+        # fractions. The fix is easy: we add the initial conditions mapped from
+        # seeding to the fractions using an internal argument.
+        seeded_fs = Dict{Int, Float64}()
         for att in values(prev_attractors)
             for u0 in continuation.seeds_from_attractor(att)
                 # We map the initial condition to an attractor, but we don't care
                 # about which attractor we go to. This is just so that the internal
                 # array of `AttractorsViaRecurrences` registers the attractors
-                mapper(u0; show_progress)
+                label = mapper(u0; show_progress)
+                seeded_fs[label] = get(seeded_fs, label, 0) + 1
             end
         end
         # Now perform basin fractions estimation as normal, utilizing found attractors
-        fs = basins_fractions(mapper, ics; show_progress = false, N = samples_per_parameter)
+        fs = basins_fractions(mapper, ics;
+            additional_fs = seeded_fs, show_progress = false, N = samples_per_parameter
+        )
         current_attractors = mapper.bsn_nfo.attractors
         # Match with previous attractors before storing anything!
         @show rmap = match_attractor_ids!(current_attractors, prev_attractors; metric, threshold)
@@ -89,9 +101,10 @@ function basins_fractions_continuation(
         push!(fractions_curves, fs)
         push!(attractors_info, get_info(prev_attractors))
     end
-
-    srmap = renumber_keys_sequentially!(attractors_info, fractions_curves)
-    @show srmap
+    # TODO: Enable this back once we renumber keys sequentially WITHOUT
+    # duplication.
+    # srmap = renumber_keys_sequentially!(attractors_info, fractions_curves)
+    # @show srmap
     return fractions_curves, attractors_info
 end
 

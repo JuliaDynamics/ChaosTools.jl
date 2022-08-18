@@ -63,6 +63,7 @@ end
 
 
 @testset "Henon map" begin
+    # Don't know where this came from or what is happening in this parameter range
     function new_henon(x, p, n)
         return SVector{2}(p[1] - x[1]^2 - (1 - p[2])*x[2],  x[1])
     end
@@ -70,11 +71,20 @@ end
     ν = 0.01
     u0 = [0.0, 0.6]
     ds = DiscreteDynamicalSystem(new_henon, u0, [a,ν])
+    ps = range(0.0, 0.4; length = 101)
+
+    # This is standard henon map
+    ds = Systems.henon(; b = 0.3, a = 1.4)
+    # In these arameters we go from a chaotic attractor to a period 7 orbit
+    # and we can use this to test different matching processes
+    # (because "by distance" matches the two kind of attractors already)
+    ps = range(1.2, 1.25; length = 101)
+
     xg = yg = range(-2.5, 2.5, length = 500)
     mapper = AttractorsViaRecurrences(ds, (xg, yg),
             mx_chk_fnd_att = 3000,
-            mx_chk_loc_att = 3000)
-    ps = range(0.0, 0.4; length = 101)
+            mx_chk_loc_att = 3000
+    )
     pidx = 1
     sampler, = statespace_sampler(Random.MersenneTwister(1234);
         min_bounds = [-2,-2], max_bounds = [2,2]
@@ -82,16 +92,42 @@ end
     continuation = RecurrencesSeedingContinuation(mapper; threshold = 0.2)
     fractions_curves, attractors_info = basins_fractions_continuation(
         continuation, ps, pidx, sampler;
-        show_progress = true, samples_per_parameter = 100
+        show_progress = false, samples_per_parameter = 100
     )
-
-    for k in attractors_info
-        @show collect(keys(k))
-    end
 
     for (i, p) in enumerate(ps)
         fs = fractions_curves[i]
+        attractors = attractors_info[i]
+        @test sum(values(fs)) ≈ 1
+        # Test that keys are the same (-1 doesn't have attractor)
         k = sort!(collect(keys(fs)))
-        @show k
+        -1 ∈ k && deleteat!(k, 1)
+        attk = sort!(collect(keys(attractors)))
+        @test k == attk
     end
+
+    # unique keys
+    unique_keys = unique!(reduce(vcat, [collect(keys(a)) for a in attractors_info]))
+
+
+    # Animation of henon attractors
+    # using GLMakie
+    # fig = Figure()
+    # ax = Axis(fig[1,1]; limits = (-2,2,-1,1))
+    # colors = Dict(k => Cycled(i) for (i, k) in enumerate(unique_keys))
+    # display(fig)
+    # record(fig, "henon_test.mp4", eachindex(ps); framerate = 5) do i
+    #     empty!(ax)
+    #     p = ps[i]
+    #     ax.title = "p = $p"
+    #     # fs = fractions_curves[i]
+    #     attractors = attractors_info[i]
+    #     set_parameter!(ds, pidx, p)
+    #     for (k, att) in attractors
+    #         tr = trajectory(ds, 1000, att[1])
+    #         scatter!(ax, tr[:, 1], tr[:, 2]; color = colors[k])
+    #     end
+    # end
+
+
 end

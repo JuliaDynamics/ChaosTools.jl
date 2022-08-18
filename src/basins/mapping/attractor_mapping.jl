@@ -82,14 +82,14 @@ See [`AttractorMapper`](@ref) for all possible `mapper` types.
 * `show_progress = true`: Display a progress bar of the process.
 """
 function basins_fractions(mapper::AttractorMapper, ics::Union{AbstractDataset, Function};
-        show_progress = true, N = 1000, additional_fs = Dict(),
+        show_progress = true, N = 1000, additional_fs::Dict = Dict(),
     )
     used_dataset = ics isa AbstractDataset
     N = used_dataset ? size(ics, 1) : N
     if show_progress
         progress=ProgressMeter.Progress(N; desc="Mapping initial conditions to attractors:")
     end
-    fs = Dict{Int, Float64}()
+    fs = Dict{Int, Int}()
     used_dataset && (labels = Vector{Int}(undef, N))
     # TODO: If we want to parallelize this, then we need to initialize as many
     # mappers as threads. Use a `threading` keyword and `deepcopy(mapper)`
@@ -102,8 +102,9 @@ function basins_fractions(mapper::AttractorMapper, ics::Union{AbstractDataset, F
     end
     # the non-public-API `additional_fs` is used in the continuation methods
     additive_dict_merge!(fs, additional_fs)
+    N = N + (isempty(additional_fs) ? 0 : sum(values(additional_fs)))
     # Transform count into fraction
-    ffs = Dict(k => v/(N+length(additional_fs)) for (k, v) in fs)
+    ffs = Dict(k => v/N for (k, v) in fs)
     if used_dataset
         attractors = extract_attractors(mapper, labels, ics)
         return ffs, labels, attractors
@@ -143,7 +144,7 @@ corresponding to the state space partitioning indicated by `grid`.
 function basins_of_attraction(mapper::AttractorMapper, grid::Tuple; kwargs...)
     basins = zeros(Int16, map(length, grid))
     I = CartesianIndices(basins)
-    A = Dataset([generate_ic_on_grid(grid, I[i]) for i in 1:length(I)])
+    A = Dataset([generate_ic_on_grid(grid, i) for i in I])
     fs, labels, attractors = basins_fractions(mapper, A; kwargs...)
     vec(basins) .= vec(labels)
     return basins, attractors

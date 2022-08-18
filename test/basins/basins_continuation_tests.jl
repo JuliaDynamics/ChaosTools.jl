@@ -17,7 +17,8 @@ using Random
     # With this threshold all attractors are mapped to each other, they are within
     # distance 1 in state space.
     fractions_curves, attractors_info = basins_fractions_continuation(
-        continuation, ps, pidx, sampler; show_progress = false, samples_per_parameter = 100)
+        continuation, ps, pidx, sampler; show_progress = false, samples_per_parameter = 100
+    )
 
     finalkeys = collect(keys(fractions_curves[end]))
 

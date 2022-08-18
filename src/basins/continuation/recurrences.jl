@@ -65,8 +65,8 @@ function basins_fractions_continuation(
     info = get_info(prev_attractors)
     attractors_info = [info]
 
+    # TODO: Make this use ProgressMeter.jl
     for p in prange[2:end]
-        # TODO: Make this use ProgressMeter.jl
         show_progress && @show p
         set_parameter!(mapper.integ, pidx, p)
         reset!(mapper)
@@ -77,7 +77,7 @@ function basins_fractions_continuation(
         # having keys in `mapper.bsn_nfo.attractors` that do not exist in the computed
         # fractions. The fix is easy: we add the initial conditions mapped from
         # seeding to the fractions using an internal argument.
-        seeded_fs = Dict{Int, Float64}()
+        seeded_fs = Dict{Int, Int}()
         for att in values(prev_attractors)
             for u0 in continuation.seeds_from_attractor(att)
                 # We map the initial condition to an attractor, but we don't care

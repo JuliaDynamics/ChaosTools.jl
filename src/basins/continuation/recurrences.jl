@@ -66,7 +66,7 @@ function basins_fractions_continuation(
     for p in prange[2:end]
         # TODO: Make this use ProgressMeter.jl
         show_progress && @show p
-        set_parameter!(mapper.integ, pidx, p) 
+        set_parameter!(mapper.integ, pidx, p)
         reset!(mapper)
         # Seed initial conditions from previous attractors
         for att in values(prev_attractors)
@@ -84,46 +84,15 @@ function basins_fractions_continuation(
         @show rmap = match_attractor_ids!(current_attractors, prev_attractors; metric, threshold)
 
         # Then do the remaining setup for storing and next step
-        _swap_dict_keys!(fs, rmap)
+        swap_dict_keys!(fs, rmap)
         overwrite_dict!(prev_attractors, current_attractors)
         push!(fractions_curves, fs)
         push!(attractors_info, get_info(prev_attractors))
     end
-    
-    renumber_keys_sequentially!(attractors_info, fractions_curves) 
 
+    srmap = renumber_keys_sequentially!(attractors_info, fractions_curves)
+    @show srmap
     return fractions_curves, attractors_info
-end
-
-function renumber_keys_sequentially!(att_info, frac_curves) 
-    # First collect all keys:   
-    keys = Set{Int16}() # Vector{Int16}() 
-    for af in att_info 
-        for k in af
-            push!(keys,k[1]) 
-        end
-    end
-
-    # Now set up a replacement map. 
-    rmap = Dict()
-    for (j,ke) in enumerate(keys)
-       push!(rmap, ke => j)
-    end
-
-    for fs in frac_curves 
-        _swap_dict_keys!(fs, rmap)
-    end
-    for af in att_info 
-        _swap_dict_keys!(af, rmap)
-    end
-    return rmap
-end  
-
-function overwrite_dict!(old::Dict, new::Dict)
-    empty!(old)
-    for (k, v) in new
-        old[k] = v
-    end
 end
 
 function reset!(mapper::AttractorsViaRecurrences)
@@ -143,4 +112,28 @@ function reset!(mapper::AttractorsViaRecurrences)
     # because we want the next attractor to be labelled differently in case
     # it doesn't actually match to any of the new ones
     return
+end
+
+function renumber_keys_sequentially!(att_info, frac_curves)
+    # First collect all unique keys (hence using `Set`)
+    keys = Set{Int16}()
+    for af in att_info
+        for k in af
+            push!(keys,k[1])
+        end
+    end
+
+    # Now set up a replacement map
+    rmap = Dict()
+    for (j, ke) in enumerate(keys)
+       push!(rmap, ke => j)
+    end
+
+    for fs in frac_curves
+        swap_dict_keys!(fs, rmap)
+    end
+    for af in att_info
+        swap_dict_keys!(af, rmap)
+    end
+    return rmap
 end

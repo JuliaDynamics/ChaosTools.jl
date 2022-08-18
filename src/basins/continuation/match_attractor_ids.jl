@@ -1,9 +1,7 @@
+include("dict_utils.jl")
 ###########################################################################################
 # Matching attractors and key swapping business
 ###########################################################################################
-# This code is one of the most complicated pieces of code I've ever had to write.
-# It is like 50 lines of code, yet it took me 6 full hours. Shit.
-# Thanks a lot to Valentin @Seelengrab for generous help in the key swapping code.
 # TODO: allow giving in any kind of similarity function.
 """
     match_attractor_ids!(a₊::AbstractDict, a₋; metric = Euclidean(), threshold = Inf)
@@ -104,35 +102,6 @@ function replacement_map(a₊, a₋, minimal_distance_combinations, threshold)
     end
     return rmap
 end
-
-
-###########################################################################################
-# Dictionary utilities
-###########################################################################################
-"""
-    swap_dict_keys!(d::Dict, replacement_map::Dict)
-
-Swap the keys of a dictionary `d` given the `replacement_map`
-which maps old keys to new keys.
-"""
-function swap_dict_keys!(fs::Dict, rmap::Dict)
-    isempty(rmap) && return
-    cache = Tuple{keytype(fs), valtype(fs)}[]
-    for (oldkey, newkey) in rmap
-        haskey(fs, oldkey) || continue
-        tmp = pop!(fs, oldkey)
-        if !haskey(fs, newkey)
-            fs[newkey] = tmp
-        else
-            push!(cache, (newkey, tmp))
-        end
-    end
-    for (k, v) in cache
-        fs[k] = v
-    end
-    return
-end
-
 
 
 ###########################################################################################

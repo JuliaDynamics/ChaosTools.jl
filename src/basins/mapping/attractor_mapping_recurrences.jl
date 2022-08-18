@@ -430,7 +430,7 @@ function _identify_basin_of_cell!(
         if bsn_nfo.consecutive_lost > mx_chk_lost || norm(u_full_state) > horizon_limit
             relabel_visited_cell!(bsn_nfo, bsn_nfo.visited_cell, 0)
             reset_basins_counters!(bsn_nfo)
-            # problematic IC : diverges or wanders outside the defined grid
+            # problematic IC: diverges or wanders outside the defined grid
             return -1
         end
         bsn_nfo.prev_label = ic_label

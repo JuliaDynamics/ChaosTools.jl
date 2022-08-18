@@ -1,7 +1,7 @@
 export RecurrencesSeedingContinuation, basins_fractions_continuation
 # The recurrences based method is rather flexible because it works
 # in two independent steprange: it first finds attractors and then matches them.
-struct RecurrencesSeedingContinuation{A, M, S, E}
+struct RecurrencesSeedingContinuation{A, M, S, E} <: BasinsFractionContinuation
     mapper::A
     metric::M
     threshold::Float64

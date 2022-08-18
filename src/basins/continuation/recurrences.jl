@@ -66,7 +66,7 @@ function basins_fractions_continuation(
     for p in prange[2:end]
         # TODO: Make this use ProgressMeter.jl
         show_progress && @show p
-        set_parameter!(mapper.integ, pidx, p) # Same problem here
+        set_parameter!(mapper.integ, pidx, p) 
         reset!(mapper)
         # Seed initial conditions from previous attractors
         for att in values(prev_attractors)
@@ -81,15 +81,43 @@ function basins_fractions_continuation(
         fs = basins_fractions(mapper, ics; show_progress = false, N = samples_per_parameter)
         current_attractors = mapper.bsn_nfo.attractors
         # Match with previous attractors before storing anything!
-        rmap = match_attractor_ids!(current_attractors, prev_attractors; metric, threshold)
+        @show rmap = match_attractor_ids!(current_attractors, prev_attractors; metric, threshold)
+
         # Then do the remaining setup for storing and next step
         _swap_dict_keys!(fs, rmap)
         overwrite_dict!(prev_attractors, current_attractors)
         push!(fractions_curves, fs)
         push!(attractors_info, get_info(prev_attractors))
     end
+    
+    renumber_keys_sequentially!(attractors_info, fractions_curves) 
+
     return fractions_curves, attractors_info
 end
+
+function renumber_keys_sequentially!(att_info, frac_curves) 
+    # First collect all keys:   
+    keys = Set{Int16}() # Vector{Int16}() 
+    for af in att_info 
+        for k in af
+            push!(keys,k[1]) 
+        end
+    end
+
+    # Now set up a replacement map. 
+    rmap = Dict()
+    for (j,ke) in enumerate(keys)
+       push!(rmap, ke => j)
+    end
+
+    for fs in frac_curves 
+        _swap_dict_keys!(fs, rmap)
+    end
+    for af in att_info 
+        _swap_dict_keys!(af, rmap)
+    end
+    return rmap
+end  
 
 function overwrite_dict!(old::Dict, new::Dict)
     empty!(old)

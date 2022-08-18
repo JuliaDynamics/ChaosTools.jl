@@ -1,3 +1,6 @@
+# Definition of the attracting mapping API and exporting
+# At the end it also includes all files related to mapping
+
 export AttractorMapper,
     AttractorsViaRecurrences,
     AttractorsViaRecurrencesSparse,
@@ -63,7 +66,7 @@ Initial conditions to use are defined by `ics`. It can be:
   See [`statespace_sampler`](@ref) to generate such functions.
 
 The returned arguments are `fs`.
-If `ics` is a `Dataset` then the `labels` of each initial and roughly approximated
+If `ics` is a `Dataset` then the `labels` of each initial condition and roughly approximated
 attractors are also returned: `fs, labels, attractors`.
 
 The output `fs` is a dictionary whose keys are the labels given to each attractor
@@ -79,7 +82,7 @@ See [`AttractorMapper`](@ref) for all possible `mapper` types.
 * `show_progress = true`: Display a progress bar of the process.
 """
 function basins_fractions(mapper::AttractorMapper, ics::Union{AbstractDataset, Function};
-        show_progress = true, N = 1000
+        show_progress = true, N = 1000, additional_fs = Dict(),
     )
     used_dataset = ics isa AbstractDataset
     N = used_dataset ? size(ics, 1) : N
@@ -97,7 +100,10 @@ function basins_fractions(mapper::AttractorMapper, ics::Union{AbstractDataset, F
         used_dataset && (labels[i] = label)
         show_progress && next!(progress)
     end
-    ffs = Dict(k => v/N for (k, v) in fs)
+    # the non-public-API `additional_fs` is used in the continuation methods
+    additive_dict_merge!(fs, additional_fs)
+    # Transform count into fraction
+    ffs = Dict(k => v/(N+length(additional_fs)) for (k, v) in fs)
     if used_dataset
         attractors = extract_attractors(mapper, labels, ics)
         return ffs, labels, attractors
@@ -151,3 +157,10 @@ end
         @inbounds return SVector{$B, Float64}($(gens...))
     end
 end
+
+#########################################################################################
+# Includes
+#########################################################################################
+include("attractor_mapping_proximity.jl")
+include("attractor_mapping_recurrences.jl")
+include("attractor_mapping_featurizing.jl")

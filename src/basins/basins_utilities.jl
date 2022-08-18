@@ -1,5 +1,3 @@
-export basins_fractions, match_attractor_ids!, unique_attractor_ids!
-
 """
     basins_fractions(basins::Array) → fs::Dict
 Calculate the state space fraction of the basins of attraction encoded in `basins`.

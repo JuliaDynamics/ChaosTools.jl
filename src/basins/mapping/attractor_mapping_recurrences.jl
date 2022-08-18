@@ -177,7 +177,7 @@ end
 #####################################################################################
 # Definition of `BasinInfo` and initialization
 #####################################################################################
-mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray{Int16, B}}
+mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray{Int32, B}}
     basins::A # sparse or dense
     grid_steps::SVector{B, Float64}
     grid_maxima::SVector{B, Float64}
@@ -190,7 +190,7 @@ mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray{Int16, B}}
     consecutive_lost::Int
     prev_label::Int
     # TODO: Isn't `D` and `B` always equivalent...? can't we just remove `D`?
-    attractors::Dict{Int16, Dataset{D, T}}
+    attractors::Dict{Int32, Dataset{D, T}}
     visited_list::Q
 end
 
@@ -214,9 +214,9 @@ function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, sparse::Bool)
     grid_maxima = maximum.(grid)
     grid_minima = minimum.(grid)
     basins_array = if sparse
-        SparseArray{Int16}(undef, map(length, grid))
+        SparseArray{Int32}(undef, map(length, grid))
     else
-        zeros(Int16, map(length, grid))
+        zeros(Int32, map(length, grid))
     end
     bsn_nfo = BasinsInfo(
         basins_array,
@@ -226,7 +226,7 @@ function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, sparse::Bool)
         iter_f!,
         :att_search,
         2,4,0,1,0,
-        Dict{Int16,Dataset{D, eltype(get_state(integ))}}(),
+        Dict{Int32,Dataset{D, eltype(get_state(integ))}}(),
         Vector{CartesianIndex{G}}(),
     )
     reset_basins_counters!(bsn_nfo)

@@ -74,9 +74,11 @@ end
     mapper = AttractorsViaRecurrences(ds, (xg, yg),
             mx_chk_fnd_att = 3000,
             mx_chk_loc_att = 3000)
-    ps = range(0.0, 0.4; length = 10)
+    ps = range(0.0, 0.4; length = 101)
     pidx = 1
-    sampler, = statespace_sampler(; min_bounds = [-2,-2], max_bounds = [2,2])
+    sampler, = statespace_sampler(Random.MersenneTwister(1234);
+        min_bounds = [-2,-2], max_bounds = [2,2]
+    )
     continuation = RecurrencesSeedingContinuation(mapper; threshold = 0.2)
     fractions_curves, attractors_info = basins_fractions_continuation(
         continuation, ps, pidx, sampler;

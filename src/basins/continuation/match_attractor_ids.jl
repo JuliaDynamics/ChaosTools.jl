@@ -13,7 +13,7 @@ those in dictionary `a₋` get assigned the same key as in `a₋`.
 Typically the +,- mean after and before some change of parameter of a system.
 Distance in attractor space is quantified by the `metric`.
 
-Return the `replacement_map`, a dictionary mapping previous indices of `a₊` to
+Return the `replacement_map`, a dictionary mapping old keys of `a₊` to
 the new ones that they were mapped to.
 
 When finding attractors and their fractions in DynamicalSystems.jl,
@@ -35,9 +35,10 @@ consecutive two dictionaries in the vector.
 """
 function match_attractor_ids!(a₊::AbstractDict, a₋; metric = Euclidean(), threshold = Inf)
     distances = _similarity_from_distance(a₊, a₋, metric)
-    mdc = _minimal_distance_combinations(distances)
-    replacement_map = _swap_dict_keys!(a₊, a₋, mdc, threshold)
-    return replacement_map
+    mdc = minimal_distance_combinations(distances)
+    rmap = replacement_map(a₊, a₋, mdc, threshold)
+    swap_dict_keys!(a₊, rmap)
+    return rmap
 end
 
 function match_attractor_ids!(as::AbstractVector{<:AbstractDict}; kwargs...)
@@ -48,14 +49,6 @@ function match_attractor_ids!(as::AbstractVector{<:AbstractDict}; kwargs...)
 end
 
 
-
-# TODO: use a the function
-"""
-    sets_of_datasets_distance(datasets1, datasets2 [, method])
-Calculate a distance between _containers of datasets_, such as
-dictionaries or arrays with `AbstractDataset` as value.
-"""
-# above
 function _similarity_from_distance(a₊, a₋, metric::Metric = Euclidean())
     ids₊, ids₋ = keys(a₊), keys(a₋)
     distances = Dict{eltype(ids₊), Dict{eltype(ids₋), Float64}}()
@@ -68,58 +61,61 @@ function _similarity_from_distance(a₊, a₋, metric::Metric = Euclidean())
         end
         distances[i] = d
     end
-    # @show distances
     return distances
 end
 
 """
-    _minimal_distance_combinations(distances)
+    minimal_distance_combinations(distances)
 Using the distances (dict of dicts), create a vector that only keeps
 the minimum distance for each attractor. The output is a vector of
-`Tuple{Int, Int, Float64}` meaning `(oldkey, newkey, min_distance)`.
+`Tuple{Int, Int, Float64}` meaning `(oldkey, newkey, min_distance)`
+where the `newkey` is the key whose attractor has the minimum distance.
 """
-function _minimal_distance_combinations(distances)
-    minimal_distance_combinations = Tuple{Int, Int, Float64}[]
+function minimal_distance_combinations(distances)
+    min_dist_combs = Tuple{Int, Int, Float64}[]
     for i in keys(distances)
         s = distances[i] # dict with distances of i to all in "-"
         j = argmin(s)
-        push!(minimal_distance_combinations, (i, j, s[j]))
+        push!(min_dist_combs, (i, j, s[j]))
     end
-    sort!(minimal_distance_combinations; by = x -> x[3])
-    return minimal_distance_combinations
+    sort!(min_dist_combs; by = x -> x[3])
+    return min_dist_combs
 end
 
-function _swap_dict_keys!(a₊, a₋, minimal_distance_combinations, threshold)
-    replacement_map = Dict{keytype(a₊), keytype(a₋)}()
+
+"""
+    replacement_map(a₊, a₋, min_dist_combs, threshold)
+Given the output of [`minimal_distance_combinations`](@ref), generate the replacement
+map mapping old to new keys for `a₊`.
+"""
+function replacement_map(a₊, a₋, minimal_distance_combinations, threshold)
+    rmap = Dict{keytype(a₊), keytype(a₋)}()
     next_id = max(maximum(keys(a₊),), maximum(keys(a₋))) + 1
     # In the same loop we do the logic that matches keys according to distance of values,
     # but also ensures that keys that have too high of a value distance are guaranteeed
     # to have different keys.
-    cache = Tuple{keytype(a₊), valtype(a₊)}[]
     for (oldkey, newkey, mindist) in minimal_distance_combinations
         if mindist > threshold
             # The distance exceeds threshold, so we will assign a new key
             newkey = next_id
             next_id += 1
         end
-        tmp = pop!(a₊, oldkey)
-        if !haskey(a₊, newkey)
-            a₊[newkey] = tmp
-        else
-            push!(cache, (newkey, tmp))
-        end
-        replacement_map[oldkey] = newkey
+        rmap[oldkey] = newkey
     end
-    for (k, v) in cache
-        a₊[k] = v
-    end
-    return replacement_map
+    return rmap
 end
 
-# Convenience version that swaps keys of a dictionary given the replacement
-# map derived from the above version. Useful when we want to swap keys of
-# other quantities like the attractor dictionaries (e.g., fraction dinctionaries)
-function _swap_dict_keys!(fs::Dict, rmap::Dict)
+
+###########################################################################################
+# Dictionary utilities
+###########################################################################################
+"""
+    swap_dict_keys!(d::Dict, replacement_map::Dict)
+
+Swap the keys of a dictionary `d` given the `replacement_map`
+which maps old keys to new keys.
+"""
+function swap_dict_keys!(fs::Dict, rmap::Dict)
     isempty(rmap) && return
     cache = Tuple{keytype(fs), valtype(fs)}[]
     for (oldkey, newkey) in rmap
@@ -144,23 +140,23 @@ end
 ###########################################################################################
 """
 ```julia
-match_attractor_ids!(b₊::AbstractArray, b₋; threshold = Inf)
+match_basins_ids!(b₊::AbstractArray, b₋; threshold = Inf)
 ```
-An alternative way to match attractor IDs that utilizes entire basins of atttraction.
+Similar to [`match_attractor_ids!`](@ref) but operate on basin arrays instead.
+
 This method matches IDs of attractors whose basins of attraction before and after `b₋,b₊`
 have the most overlap (in pixels). This overlap is normalized in 0-1 (with 1 meaning
 100% overlap of pixels). The `threshold` in this case is compared to the inverse
 of the overlap (so, `threshold = 2` attractors that have less than 50% overlap get
 different IDs guaranteed).
 """
-function match_attractor_ids!(b₊::AbstractArray, b₋; threshold = Inf)
+function match_basins_ids!(b₊::AbstractArray, b₋; threshold = Inf)
     ids₊, ids₋ = unique(b₊), unique(b₋)
     distances = _similarity_from_overlaps(b₊, ids₊, b₋, ids₋)
-    mdc = _minimal_distance_combinations(distances)
-    a₊, a₋ = Dict(ids₊ .=> ids₊), Dict(ids₋ .=> ids₋) # dummy dicts for next function
-    replacement_map = _swap_dict_keys!(a₊, a₋, mdc, threshold)
-    replace!(b₊, replacement_map...)
-    return replacement_map
+    mdc = minimal_distance_combinations(distances)
+    rmap = replacement_map(a₊, a₋, mdc, threshold)
+    replace!(b₊, rmap...)
+    return rmap
 end
 
 function _similarity_from_overlaps(b₊, ids₊, b₋, ids₋)

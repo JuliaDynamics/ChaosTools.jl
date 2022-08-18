@@ -56,7 +56,7 @@ function basins_fractions_continuation(
     (; mapper, metric, threshold) = continuation
     # first parameter is run in isolation, as it has no prior to seed from
     set_parameter!(mapper.integ, pidx, prange[1])
-    fs = basins_fractions(mapper, ics; show_progress, N = samples_per_parameter)
+    fs = basins_fractions(mapper, ics; show_progress = false, N = samples_per_parameter)
     # At each parmaeter `p`, a dictionary mapping attractor ID to fraction is created.
     fractions_curves = [fs]
     # Furthermore some info about the attractors is stored and returned
@@ -93,13 +93,14 @@ function basins_fractions_continuation(
         )
         current_attractors = mapper.bsn_nfo.attractors
         # Match with previous attractors before storing anything!
-        @show rmap = match_attractor_ids!(current_attractors, prev_attractors; metric, threshold)
+        rmap = match_attractor_ids!(current_attractors, prev_attractors; metric, threshold)
 
         # Then do the remaining setup for storing and next step
         swap_dict_keys!(fs, rmap)
         overwrite_dict!(prev_attractors, current_attractors)
         push!(fractions_curves, fs)
         push!(attractors_info, get_info(prev_attractors))
+        show_progress && @show fs
     end
     # TODO: Enable this back once we renumber keys sequentially WITHOUT
     # duplication.

@@ -1,4 +1,4 @@
-include("dict_utils.jl")
+# Notice this file uses heavily `dict_utils.jl`!
 ###########################################################################################
 # Matching attractors and key swapping business
 ###########################################################################################

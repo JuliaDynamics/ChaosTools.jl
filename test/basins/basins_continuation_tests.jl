@@ -3,12 +3,12 @@ using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
 using Random
 
 @testset "magnetic pendulum" begin
-    d, α, ω = 0.3, 0.2, 0.
+    d, α, ω = 0.3, 0.2, 0.5
     ds = Systems.magnetic_pendulum(; d, α, ω)
     xg = yg = range(-3, 3, length = 101)
     ds = projected_integrator(ds, 1:2, [0.0, 0.0])
     mapper = AttractorsViaRecurrences(ds, (xg, yg); Δt = 1.0)
-    rr = range(1.,0., length = 100)
+    rr = range(1, 0; length = 101)
     ps = [[1, 1, γ] for γ in rr]
     pidx = :γs
     sampler, = statespace_sampler(; min_bounds = [-3,-3], max_bounds = [3,3])
@@ -21,9 +21,9 @@ using Random
 
     finalkeys = collect(keys(fractions_curves[end]))
 
-    for k in attractors_info
-        @show collect(keys(k))
-    end
+    # for k in attractors_info
+    #     @show collect(keys(k))
+    # end
 
     for (i, p) in enumerate(ps)
         γ = p[3]
@@ -34,16 +34,16 @@ using Random
         # @show k
         attk = sort!(collect(keys(attractors)))
         @test k == attk
-        # @test all(fk -> fk ∈ k, finalkeys)
+        @test all(fk -> fk ∈ k, finalkeys)
         # It is arbitrary what id we get, because the third
         # fixed point that vanishes could have any of the three ids
         # But we can test for sure how many ids we have
-        # if γ < 0.3
-        #     @test length(k) == 2
-        # else
-        #     @test length(k) == 3
-        # end
-        # @test sum(values(fs)) ≈ 1
+        if γ < 0.2
+            @test length(k) == 2
+        else
+            @test length(k) == 3
+        end
+        @test sum(values(fs)) ≈ 1
     end
     # Plot code for fractions
     # using GLMakie

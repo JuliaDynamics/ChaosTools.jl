@@ -75,10 +75,14 @@ end
 
     # This is standard henon map
     ds = Systems.henon(; b = 0.3, a = 1.4)
-    # In these arameters we go from a chaotic attractor to a period 7 orbit
-    # and we can use this to test different matching processes
-    # (because "by distance" matches the two kind of attractors already)
     ps = range(1.2, 1.25; length = 101)
+    # In these parameters we go from a chaotic attractor to a period 7 orbit at a≈1.2265
+    # (you can see this by launching our wonderful `interactive_orbitdiagram` app).
+    # So we can use this to test different matching processes
+    # (because "by distance" matches the two kind of attractors already)
+    # Notice that the length=101 is rather sensitive and depending on it, some
+    # much smaller periodic windows exist in the range. (For 101, a period-14 exists e.g.)
+    acritical = 1.2265
 
     xg = yg = range(-2.5, 2.5, length = 500)
     mapper = AttractorsViaRecurrences(ds, (xg, yg),
@@ -89,7 +93,17 @@ end
     sampler, = statespace_sampler(Random.MersenneTwister(1234);
         min_bounds = [-2,-2], max_bounds = [2,2]
     )
-    continuation = RecurrencesSeedingContinuation(mapper; threshold = 0.2)
+    distance_function = function (A, B)
+        # length of attractors within a factor of 2, then distance is ≤ 1
+        return abs(log(2, length(A)) - log(2, length(B)))
+    end
+    # notice that without this special distance function, even with a
+    # really small threshold like 0.2 we still get a "single" attractor
+    # throughout the range. Now we get one with period 14, a chaotic,
+    # and one with period 7 that spans the second half of the parameter range
+    continuation = RecurrencesSeedingContinuation(mapper;
+        threshold = 0.99, metric = distance_function
+    )
     fractions_curves, attractors_info = basins_fractions_continuation(
         continuation, ps, pidx, sampler;
         show_progress = false, samples_per_parameter = 100
@@ -108,7 +122,9 @@ end
 
     # unique keys
     unique_keys = unique!(reduce(vcat, [collect(keys(a)) for a in attractors_info]))
-
+    # We can have at most 4 attractors: initial chaotic, period 14 in the middle,
+    # chaotic again, and period 7 at the end. ALl of these should be matched to each other.
+    @test length(unique_keys) ≤ 4
 
     # Animation of henon attractors
     # using GLMakie

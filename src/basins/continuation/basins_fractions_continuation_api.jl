@@ -24,7 +24,7 @@ function basins_fractions_continuation(continuation::BasinsFractionContinuation,
     attractor_summary <: Vector{Dict{Int, <:Any}}
 end
 
-function _example()
+function _example(; kwargs...)
     # Decide the kind of dynamical system
     α = 0.2; ω = 1.0; d = 0.3
     ma = Systems.magnetic_pendulum(; α, ω, d)
@@ -37,7 +37,7 @@ function _example()
     # What parameter to continue over
     parameter = (0:0.01:1, 1) # index, range
     # Call function
-    basins_fractions_continuation(continuation, parameter; ...)
+    basins_fractions_continuation(continuation, parameter; kwargs...)
 end
 
 include("match_attractor_ids.jl")

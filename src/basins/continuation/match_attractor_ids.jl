@@ -23,8 +23,9 @@ the different parameters) with different IDs.
 `match_attractors!` tries to "match" them by modifying the attractor IDs.
 
 Distance in attractor space uses the [`datasets_sets_distances`](@ref) function,
-and hence `metric` can be whatever that function accepts, such as
-a `Metric` instance, or an arbitrary user-defined function.
+and hence the keyword `metric` can be whatever that function accepts, such as
+an actual `Metric` instance, or an arbitrary user-defined function that computes
+an arbitrary "distance" between two datasets.
 
 Additionally, you can provide a `threshold` value. If the distance between two attractors
 is larger than this `threshold`, then it is guaranteed that the attractors will get assigned

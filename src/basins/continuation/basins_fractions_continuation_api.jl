@@ -40,4 +40,5 @@ function _example()
     basins_fractions_continuation(continuation, parameter; ...)
 end
 
+include("match_attractor_ids.jl")
 include("continuation_recurrences.jl")

@@ -24,8 +24,7 @@ include("basins/basins_utilities.jl")
 include("basins/fractality_of_basins.jl")
 include("basins/tipping.jl")
 include("basins/sampler.jl")
-include("basins/continuation/match_attractor_ids.jl")
-include("basins/continuation/recurrences.jl")
+include("basins/continuation/basins_fractions_continuation_api.jl")
 
 include("dimensions/linear_regions.jl")
 include("dimensions/generalized_dim.jl")
@@ -55,6 +54,8 @@ include("chaosdetection/partially_predictable.jl")
 include("chaosdetection/testchaos01.jl")
 
 # Exports
+# TODO: It is probably better to put all exports here rather than in
+# each individual file. Or is it...? Not sure yet.
 export lyapunovspectrum, lyapunov, local_growth_rates, lyapuov_from_data
 
 

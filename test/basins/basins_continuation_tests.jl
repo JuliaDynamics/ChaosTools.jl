@@ -173,9 +173,10 @@ sampler, = statespace_sampler(Random.MersenneTwister(1234);
 mapper = AttractorsViaRecurrences(ds, grid;
 diffeq, Δt = 0.01, show_progress = false)
 
-# coexistance of periodic and chaotic, and then the periodic collapses
-# into the chaotic via a "crisis" (aka global bifurcation).
-# stable fixed point exists always throughout the parameter range.
+# coexistance of periodic and chaotic, and then the chaotic collapses
+# into the fixed point via a "crisis" (aka global bifurcation).
+# stable fixed point exists always throughout the parameter range,
+# but after the collapse, a fixed point and periodic attractor exist
 Grange = range(1.32, 1.37; length = 101)
 Gidx = 2
 # threshold = 0.01 is the ε value we give at the mapper test
@@ -214,5 +215,4 @@ record(fig, "lorenz84_test.mp4", eachindex(Grange); framerate = 4) do i
     for k in setdiff(unique_keys, collect(keys(attractors)))
         att_obs[k][] = Point2f[]; notify(att_obs[k])
     end
-
 end

@@ -154,7 +154,7 @@ end
 
 end
 
-
+# %%
 @testset "lorenz84" begin
 
 end
@@ -163,15 +163,18 @@ using OrdinaryDiffEq
 F = 6.886; G = 1.347; a = 0.255; b = 4.0
 ds = Systems.lorenz84(; F, G, a, b)
 diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9, maxiters = 1e12)
-M = 200; z = 3
+M = 400; z = 3
 xg = yg = zg = range(-z, z; length = M)
 grid = (xg, yg, zg)
 
 sampler, = statespace_sampler(Random.MersenneTwister(1234);
     min_bounds = minimum.(grid), max_bounds = maximum.(grid)
 )
-mapper = AttractorsViaRecurrences(ds, grid;
-diffeq, Δt = 0.01, show_progress = false)
+mapper = AttractorsViaRecurrencesSparse(ds, grid;
+    mx_chk_fnd_att = 100,
+    mx_chk_loc_att = 100,
+    diffeq, Δt = 0.01
+)
 
 # coexistance of periodic and chaotic, and then the chaotic collapses
 # into the fixed point via a "crisis" (aka global bifurcation).
@@ -180,10 +183,10 @@ diffeq, Δt = 0.01, show_progress = false)
 Grange = range(1.32, 1.37; length = 101)
 Gidx = 2
 # threshold = 0.01 is the ε value we give at the mapper test
-continuation = RecurrencesSeedingContinuation(mapper; threshold = 0.01)
+continuation = RecurrencesSeedingContinuation(mapper; threshold = Inf)
 fractions_curves, attractors_info = basins_fractions_continuation(
     continuation, Grange, Gidx, sampler;
-    show_progress = true, samples_per_parameter = 100
+    show_progress = true, samples_per_parameter = 1000
 )
 
 # %%

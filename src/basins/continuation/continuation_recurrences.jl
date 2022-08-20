@@ -120,7 +120,10 @@ function reset!(mapper::AttractorsViaRecurrences)
     if mapper.bsn_nfo.basins isa Array
         mapper.bsn_nfo.basins .= 0
     else
-        empty!(mapper.bsn_nfo.basins)
+        # TODO: This currently relies on SparseArrayKit.jl format, but it may
+        # be safer for us to just port the Dict hash indexing here
+        # in a file and use it. We don't care about linear algebra.
+        empty!(mapper.bsn_nfo.basins.data)
     end
     mapper.bsn_nfo.state = :att_search
     mapper.bsn_nfo.consecutive_match = 0

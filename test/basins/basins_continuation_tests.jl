@@ -202,8 +202,6 @@ axislegend(ax)
 record(fig, "lorenz84_test.mp4", eachindex(Grange); framerate = 4) do i
     p = Grange[i]
     ax.title = "p = $p"
-        # empty!(ax)
-
     # fs = fractions_curves[i]
     attractors = attractors_info[i]
     set_parameter!(ds, Gidx, p)
@@ -211,6 +209,10 @@ record(fig, "lorenz84_test.mp4", eachindex(Grange); framerate = 4) do i
         tr = trajectory(ds, 2000, att[1]; Δt = 1)
         att_obs[k][] = vec(tr[:, [1,2]])
         notify(att_obs[k])
-        # scatter!(ax, tr[:, 1], tr[:, 2]; color = colors[k], markersize = 8)
     end
+    # also ensure that attractors that don't exist are cleared
+    for k in setdiff(unique_keys, collect(keys(attractors)))
+        att_obs[k][] = Point2f[]; notify(att_obs[k])
+    end
+
 end

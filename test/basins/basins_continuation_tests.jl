@@ -128,7 +128,7 @@ end
 
     # Animation of henon attractors
     # using GLMakie
-    # fig = Figure()
+    # fig = Figure(); display(fig)
     # ax = Axis(fig[1,1]; limits = (-2,2,-1,1))
     # colors = Dict(k => Cycled(i) for (i, k) in enumerate(unique_keys))
     # display(fig)

@@ -3,13 +3,15 @@ using Test
 using DynamicalSystemsBase, DelayEmbeddings
 using StatsBase
 standardize = DelayEmbeddings.standardize
-test_value = (val, vmin, vmax) -> @test vmin <= val <= vmax
+test_value = (val, vmin, vmax) -> @test vmin ≤ val ≤ vmax
 
 ti = time()
 @testset "ChaosTools tests" begin
 
 include("basins/clustering_tests.jl")
 include("basins/attractor_mapping_tests.jl")
+include("basins/matching_attractors_tests.jl")
+# @testset "Fractions continuation" begin; include("basins/basins_continuation_tests.jl"); end
 include("basins/uncertainty_tests.jl")
 include("basins/tipping_points_tests.jl")
 include("basins/proximity_deduce_ε_tests.jl")

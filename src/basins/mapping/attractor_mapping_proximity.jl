@@ -69,7 +69,9 @@ function _deduce_ε_from_attractors(attractors, search_trees, verbose = false)
     if length(attractors) != 1
         verbose && @info("Computing minimum distance between attractors to deduce `ε`...")
         # Minimum distance between attractors
-        # TODO: This will become a function for `Dataset`
+        # notice that we do not use `dataset_distance` because
+        # we have more than two datasets and want the absolute minimum distance
+        # between one of them.
         dist, idx = [Inf], [0]
         minε = Inf
         for (k, A) in attractors

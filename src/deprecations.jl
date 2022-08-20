@@ -81,3 +81,9 @@ function molteno_dim(data; k0 = 10, α = nothing, q=1.0, base = ℯ)
 end
 
 # Remove warning for Cityblock in `lyapunov_from_data`.
+
+export match_attractors!
+function match_attractors!(args...; kwargs...)
+    @warn "`match_attractors!` is deprecated in favor of `match_attractor_ids!`."
+    return match_attractor_ids!(args...; kwargs...)
+end

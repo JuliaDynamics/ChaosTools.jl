@@ -35,10 +35,10 @@ dimensional subspace.
   consider the orbit lost outside. This number can be increased for higher accuracy.
 * `horizon_limit = 1e6`: If the norm of the integrator state reaches this
   limit we consider that the orbit diverges.
-* `sparse = false`: Use of a sparse matrix array for the detection of attractors. When 
-  the dimension of the dynamical state space is large (above 4), the array needed for the 
-  recurrence detection soon becomes too big. The use `sparse = true` allows to detect 
-  attractors in very high dimension.  
+* `sparse = false`: Use of a sparse matrix array for the detection of attractors. When
+  the dimension of the dynamical state space is large (above 4), the array needed for the
+  recurrence detection soon becomes too big. The use `sparse = true` allows to detect
+  attractors in very high dimension.
 
 ## Description
 An initial condition given to an instance of `AttractorsViaRecurrences` is iterated
@@ -90,15 +90,15 @@ end
 """
     AttractorsViaRecurrencesSparse(ds::GeneralizedDynamicalSystem, grid::Tuple; kwargs...)
 This helper function has the same interface as [`AttractorsViaRecurrences`](@ref) but propagates
-automatically the keyword argument `sparse = true`. This mode is useful for the detection 
-of attractors in high dimensional systems.  
+automatically the keyword argument `sparse = true`. This mode is useful for the detection
+of attractors in high dimensional systems.
 
-# Example 
+# Example
 ```julia
 D = 10
 ds = Systems.nld_coupled_logistic_maps(D; k = 0.02)
 grid = Tuple(range(-1.7, 1.7, length = 201) for i in 1:D)
-mapper = AttractorsViaRecurrencesSparse(ds, grid) 
+mapper = AttractorsViaRecurrencesSparse(ds, grid)
 mapper(rand(D))
 ```
 """
@@ -109,10 +109,10 @@ function AttractorsViaRecurrencesSparse(ds::GeneralizedDynamicalSystem, grid;
     return AttractorsViaRecurrences(integ, bsn_nfo, grid, kwargs)
 end
 
-function (mapper::AttractorsViaRecurrences)(u0)
+function (mapper::AttractorsViaRecurrences)(u0; show_progress = true)
     # Call low level code of `basins_of_attraction` function. Notice that in this
     # call signature the interal basins info array of the mapper is NOT updated.
-    lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0; mapper.kwargs...)
+    lab = get_label_ic!(mapper.bsn_nfo, mapper.integ, u0; show_progress, mapper.kwargs...)
     # Transform to integers indexing from odd-even indexing
     return iseven(lab) ? (lab ÷ 2) : (lab - 1) ÷ 2
 end
@@ -177,7 +177,7 @@ end
 #####################################################################################
 # Definition of `BasinInfo` and initialization
 #####################################################################################
-mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray{Int16, B}}
+mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray{Int32, B}}
     basins::A # sparse or dense
     grid_steps::SVector{B, Float64}
     grid_maxima::SVector{B, Float64}
@@ -189,7 +189,8 @@ mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray{Int16, B}}
     consecutive_match::Int
     consecutive_lost::Int
     prev_label::Int
-    attractors::Dict{Int16, Dataset{D, T}}
+    # TODO: Isn't `D` and `B` always equivalent...? can't we just remove `D`?
+    attractors::Dict{Int32, Dataset{D, T}}
     visited_list::Q
 end
 
@@ -213,9 +214,9 @@ function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, sparse::Bool)
     grid_maxima = maximum.(grid)
     grid_minima = minimum.(grid)
     basins_array = if sparse
-        SparseArray{Int16}(undef, map(length, grid))
+        SparseArray{Int32}(undef, map(length, grid))
     else
-        zeros(Int16, map(length, grid))
+        zeros(Int32, map(length, grid))
     end
     bsn_nfo = BasinsInfo(
         basins_array,
@@ -225,7 +226,7 @@ function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, sparse::Bool)
         iter_f!,
         :att_search,
         2,4,0,1,0,
-        Dict{Int16,Dataset{D, eltype(get_state(integ))}}(),
+        Dict{Int32,Dataset{D, eltype(get_state(integ))}}(),
         Vector{CartesianIndex{G}}(),
     )
     reset_basins_counters!(bsn_nfo)
@@ -365,7 +366,7 @@ function _identify_basin_of_cell!(
         if ic_label == 0
             # unlabeled box, label it with current odd label and reset counter
             bsn_nfo.basins[n] = bsn_nfo.visited_cell
-            push!(bsn_nfo.visited_list,n) # keep track of visited cells
+            push!(bsn_nfo.visited_list, n) # keep track of visited cells
             bsn_nfo.consecutive_match = 1
         elseif ic_label == bsn_nfo.visited_cell
             # hit a previously visited box with the current label, possible attractor?
@@ -429,7 +430,7 @@ function _identify_basin_of_cell!(
         if bsn_nfo.consecutive_lost > mx_chk_lost || norm(u_full_state) > horizon_limit
             relabel_visited_cell!(bsn_nfo, bsn_nfo.visited_cell, 0)
             reset_basins_counters!(bsn_nfo)
-            # problematic IC : diverges or wanders outside the defined grid
+            # problematic IC: diverges or wanders outside the defined grid
             return -1
         end
         bsn_nfo.prev_label = ic_label

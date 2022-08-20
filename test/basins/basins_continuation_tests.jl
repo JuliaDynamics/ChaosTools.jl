@@ -17,7 +17,7 @@ using Random
     # With this threshold all attractors are mapped to each other, they are within
     # distance 1 in state space.
     fractions_curves, attractors_info = basins_fractions_continuation(
-        continuation, ps, pidx, sampler; show_progress = false, samples_per_parameter = 100
+        continuation, ps, pidx, sampler; show_progress = false, samples_per_parameter = 1000
     )
 
     finalkeys = collect(keys(fractions_curves[end]))
@@ -46,19 +46,25 @@ using Random
         end
         @test sum(values(fs)) ≈ 1
     end
-    # Plot code for fractions
+    # # Plot code for fractions
     # using GLMakie
     # x = [fs[finalkeys[1]] for fs in fractions_curves]
     # y = [fs[finalkeys[2]] for fs in fractions_curves]
     # z = zeros(length(x))
-    # fig = Figure()
+    # fig = Figure(resolution = (400, 300))
     # ax = Axis(fig[1,1])
     # display(fig)
     # γs = [p[3] for p in ps]
-    # band!(ax, γs, z, x; color = :violet)
-    # band!(ax, γs, x, x .+ y; color = :blue)
-    # band!(ax, γs, x .+ y, 1; color = :red)
+    # band!(ax, γs, z, x; color = Cycled(1), label = "1")
+    # band!(ax, γs, x, x .+ y; color = Cycled(2), label  = "2")
+    # band!(ax, γs, x .+ y, 1; color = Cycled(3), label = "3")
+    # xlims!(ax, 0, 1)
     # ylims!(ax, 0, 1)
+    # ax.ylabel = "fractions"
+    # ax.xlabel = "magnet strength"
+    # axislegend(ax)
+    # Makie.save("magnetic_fracs.png", fig; px_per_unit = 4)
+
 end
 
 

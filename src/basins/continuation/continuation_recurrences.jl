@@ -1,6 +1,8 @@
-export RecurrencesSeedingContinuation, basins_fractions_continuation
+export RecurrencesSeedingContinuation
+import ProgressMeter
+
 # The recurrences based method is rather flexible because it works
-# in two independent steprange: it first finds attractors and then matches them.
+# in two independent steps: it first finds attractors and then matches them.
 struct RecurrencesSeedingContinuation{A, M, S, E} <: BasinsFractionContinuation
     mapper::A
     metric::M
@@ -51,8 +53,12 @@ function basins_fractions_continuation(
         continuation::RecurrencesSeedingContinuation, prange, pidx, ics::Function;
         samples_per_parameter = 100, show_progress = false,
     )
-    show_progress && @info "Starting basins fraction continuation."
-    show_progress && @info "p = $(prange[1])"
+    # show_progress && @info "Starting basins fraction continuation."
+    # show_progress && @info "p = $(prange[1])"
+    if show_progress
+        progress=ProgressMeter.Progress(length(prange); desc="Continuating basins fractions:")
+    end
+
     (; mapper, metric, threshold) = continuation
     # first parameter is run in isolation, as it has no prior to seed from
     set_parameter!(mapper.integ, pidx, prange[1])
@@ -67,7 +73,6 @@ function basins_fractions_continuation(
 
     # TODO: Make this use ProgressMeter.jl
     for p in prange[2:end]
-        show_progress && @show p
         set_parameter!(mapper.integ, pidx, p)
         reset!(mapper)
         # Seed initial conditions from previous attractors
@@ -83,7 +88,7 @@ function basins_fractions_continuation(
                 # We map the initial condition to an attractor, but we don't care
                 # about which attractor we go to. This is just so that the internal
                 # array of `AttractorsViaRecurrences` registers the attractors
-                label = mapper(u0; show_progress)
+                label = mapper(u0; show_progress = false)
                 seeded_fs[label] = get(seeded_fs, label, 0) + 1
             end
         end
@@ -100,7 +105,8 @@ function basins_fractions_continuation(
         overwrite_dict!(prev_attractors, current_attractors)
         push!(fractions_curves, fs)
         push!(attractors_info, get_info(prev_attractors))
-        show_progress && @show fs
+        # show_progress && @show fs
+        show_progress && next!(progress)
     end
     # TODO: Enable this back once we renumber keys sequentially WITHOUT
     # duplication.

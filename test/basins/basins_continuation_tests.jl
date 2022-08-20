@@ -153,3 +153,64 @@ end
 
 
 end
+
+
+@testset "lorenz84" begin
+
+end
+
+using OrdinaryDiffEq
+F = 6.886; G = 1.347; a = 0.255; b = 4.0
+ds = Systems.lorenz84(; F, G, a, b)
+diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9, maxiters = 1e12)
+M = 200; z = 3
+xg = yg = zg = range(-z, z; length = M)
+grid = (xg, yg, zg)
+
+sampler, = statespace_sampler(Random.MersenneTwister(1234);
+    min_bounds = minimum.(grid), max_bounds = maximum.(grid)
+)
+mapper = AttractorsViaRecurrences(ds, grid;
+diffeq, Δt = 0.01, show_progress = false)
+
+# coexistance of periodic and chaotic, and then the periodic collapses
+# into the chaotic via a "crisis" (aka global bifurcation).
+# stable fixed point exists always throughout the parameter range.
+Grange = range(1.32, 1.37; length = 101)
+Gidx = 2
+# threshold = 0.01 is the ε value we give at the mapper test
+continuation = RecurrencesSeedingContinuation(mapper; threshold = 0.01)
+fractions_curves, attractors_info = basins_fractions_continuation(
+    continuation, Grange, Gidx, sampler;
+    show_progress = true, samples_per_parameter = 100
+)
+
+# %%
+unique_keys = unique!(reduce(vcat, [collect(keys(a)) for a in attractors_info]))
+using GLMakie
+fig = Figure(); display(fig)
+ax = Axis(fig[1,1]; limits = (-1,3,-3,3))
+colors = Dict(k => Cycled(i) for (i, k) in enumerate(unique_keys))
+att_obs = Dict(k => Observable(Point2f[]) for k in unique_keys)
+for k in unique_keys
+    scatter!(ax, att_obs[k]; color = colors[k],
+    label = "$k", markersize = 8)
+end
+axislegend(ax)
+# display(fig)
+
+record(fig, "lorenz84_test.mp4", eachindex(Grange); framerate = 4) do i
+    p = Grange[i]
+    ax.title = "p = $p"
+        # empty!(ax)
+
+    # fs = fractions_curves[i]
+    attractors = attractors_info[i]
+    set_parameter!(ds, Gidx, p)
+    for (k, att) in attractors
+        tr = trajectory(ds, 2000, att[1]; Δt = 1)
+        att_obs[k][] = vec(tr[:, [1,2]])
+        notify(att_obs[k])
+        # scatter!(ax, tr[:, 1], tr[:, 2]; color = colors[k], markersize = 8)
+    end
+end

@@ -173,7 +173,7 @@ sampler, = statespace_sampler(Random.MersenneTwister(1234);
 mapper = AttractorsViaRecurrencesSparse(ds, grid;
     mx_chk_fnd_att = 100,
     mx_chk_loc_att = 100,
-    diffeq, Δt = 0.01
+    diffeq, Δt = 0.1
 )
 
 # coexistance of periodic and chaotic, and then the chaotic collapses
@@ -219,3 +219,25 @@ record(fig, "lorenz84_test.mp4", eachindex(Grange); framerate = 4) do i
         att_obs[k][] = Point2f[]; notify(att_obs[k])
     end
 end
+
+# Basins plot
+# %%
+# ps = Grange
+finalkeys = collect(keys(fractions_curves[end]))
+x = [fs[finalkeys[1]] for fs in fractions_curves]
+y = [fs[finalkeys[2]] for fs in fractions_curves]
+z = zeros(length(x))
+fig = Figure(resolution = (400, 300))
+ax = Axis(fig[1,1])
+display(fig)
+γs = Grange
+band!(ax, γs, z, x; color = Cycled(1), label = "fixed p.")
+band!(ax, γs, x, x .+ y; color = Cycled(2), label  = "limit c.")
+band!(ax, γs, x .+ y, 1; color = Cycled(3), label = "chaotic")
+xlims!(ax, γs[1], γs[end])
+ylims!(ax, 0, 1)
+ax.ylabel = "fractions"
+ax.xlabel = "G parameter"
+axislegend(ax; position = :lt)
+Makie.save("lorenz84_fracs.png", fig; px_per_unit = 4)
+negate_remove_bg("lorenz84_fracs.png")

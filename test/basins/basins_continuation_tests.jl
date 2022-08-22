@@ -163,7 +163,7 @@ using OrdinaryDiffEq
 F = 6.886; G = 1.347; a = 0.255; b = 4.0
 ds = Systems.lorenz84(; F, G, a, b)
 diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9, maxiters = 1e12)
-M = 400; z = 3
+M = 600; z = 3
 xg = yg = zg = range(-z, z; length = M)
 grid = (xg, yg, zg)
 
@@ -188,6 +188,11 @@ fractions_curves, attractors_info = basins_fractions_continuation(
     continuation, Grange, Gidx, sampler;
     show_progress = true, samples_per_parameter = 1000
 )
+
+# So if we get fractions_curves[80:90]
+# we see that just after the transition of 3 to 2 attractors,
+# we get  Dict(3 => 0.1400198609731877, 1 => 0.23535253227408143).
+# So the fractions do not sum to 1.
 
 # %%
 unique_keys = unique!(reduce(vcat, [collect(keys(a)) for a in attractors_info]))

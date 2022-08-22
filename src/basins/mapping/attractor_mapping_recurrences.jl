@@ -312,6 +312,12 @@ function get_label_ic!(bsn_nfo::BasinsInfo, integ, u0; safety_counter_max = Int(
         # on the previously found one...
         bsn_nfo.safety_counter += 1
         if bsn_nfo.safety_counter ≥ safety_counter_max
+            error(
+            """Recurrences algorithm ezceeded safety count without haulting.
+            Here are some info:\n
+            state: $(get_state(integ)),\n
+            parameters: $(get_parameters(integ)).
+            """)
             return -1
         end
 

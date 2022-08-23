@@ -8,6 +8,8 @@ using SparseArrayKit: SparseArray
 Map initial conditions to attractors by identifying attractors on the fly based on
 recurrences in the state space, as outlined by Datseris & Wagemakers[^Datseris2022].
 Works for any case encapsulated by [`GeneralizedDynamicalSystem`](@ref).
+The version [`AttractorsViaRecurrencesSparse`](@ref) should practically always be
+preferred over this one.
 
 `grid` is a tuple of ranges partitioning the state space so that a finite state
 machine can operate on top of it. For example
@@ -36,12 +38,11 @@ dimensional subspace.
 * `horizon_limit = 1e6`: If the norm of the integrator state reaches this
   limit we consider that the orbit diverges.
 * `safety_counter_max = Int(1e6)`: A safety counter that is always increasing for
-  each initial condition. Once exceeded, the label `-1` is assigned immediatelly.
-  This clauses exists to stop algorithm never haulting for innappropriately defined grids.
-* `sparse = false`: Use of a sparse matrix array for the detection of attractors. When
-  the dimension of the dynamical state space is large (above 4), the array needed for the
-  recurrence detection soon becomes too big. The use `sparse = true` allows to detect
-  attractors in very high dimension.
+  each initial condition. Once exceeded, the algorithm errors.
+  This clause exists to stop the algorithm never haulting for innappropriately defined grids,
+  were a found attractor may intersect in the same cell with a new attractor the orbit
+  traces (which leads to infinite resetting of all counters). As this check comes with a
+  performance deficit, the keyword `unsafe=true` can be set to disable it.
 
 ## Description
 An initial condition given to an instance of `AttractorsViaRecurrences` is iterated
@@ -70,6 +71,7 @@ The iteration of a given initial condition continues until one of the following 
 1. The trajectory spends `mx_chk_lost` steps outside the defined grid or the norm
    of the integrator state becomes > than `horizon_limit`: the initial
    condition is set to -1.
+1. If none of the above happens and `unsafe=true`, the algorithm will error.
 
 [^Datseris2022]:
     G. Datseris and A. Wagemakers, *Effortless estimation of basins of attraction*,
@@ -84,31 +86,27 @@ end
 
 
 function AttractorsViaRecurrences(ds::GeneralizedDynamicalSystem, grid;
-        Δt = nothing, diffeq = NamedTuple(), sparse = false, kwargs...
+        Δt = nothing, diffeq = NamedTuple(), sparse = false, unsafe = false, kwargs...
     )
-    bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq, sparse)
+    bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq, sparse, unsafe)
     return AttractorsViaRecurrences(integ, bsn_nfo, grid, kwargs)
 end
 
 """
     AttractorsViaRecurrencesSparse(ds::GeneralizedDynamicalSystem, grid::Tuple; kwargs...)
-This helper function has the same interface as [`AttractorsViaRecurrences`](@ref) but propagates
-automatically the keyword argument `sparse = true`. This mode is useful for the detection
-of attractors in high dimensional systems.
+This version is practically identical to [`AttractorsViaRecurrences`](@ref),
+with the difference that the internal representation of the grid uses a sparse array.
+In practice, it should always be preferred when searching for [`basins_fractions`](@ref).
+Only for very low dimensional systems and for computing the full
+[`basins_of_attraction`](@ref) the non-sparse version should be used.
 
-# Example
-```julia
-D = 10
-ds = Systems.nld_coupled_logistic_maps(D; k = 0.02)
-grid = Tuple(range(-1.7, 1.7, length = 201) for i in 1:D)
-mapper = AttractorsViaRecurrencesSparse(ds, grid)
-mapper(rand(D))
-```
+See the docstring of [`AttractorsViaRecurrences`](@ref) for possible keywords
+and details on the algorithm.
 """
 function AttractorsViaRecurrencesSparse(ds::GeneralizedDynamicalSystem, grid;
-        Δt = nothing, diffeq = NamedTuple(), kwargs...
+        Δt = nothing, diffeq = NamedTuple(), unsafe=false, kwargs...
     )
-    bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq, true)
+    bsn_nfo, integ = basininfo_and_integ(ds, grid, Δt, diffeq, true, unsafe)
     return AttractorsViaRecurrences(integ, bsn_nfo, grid, kwargs)
 end
 
@@ -159,7 +157,7 @@ function basins_of_attraction(mapper::AttractorsViaRecurrences; show_progress = 
     # iterating I in different ways. In this way it always starts from the edge of
     # the grid, which is the least likely location for attractors. We need to
     # iterate I either randomly or from its center.
-    for (k,ind) in enumerate(I)
+    for (k, ind) in enumerate(I)
         if basins[ind] == 0
             show_progress && ProgressMeter.update!(progress, k)
             y0 = generate_ic_on_grid(grid, ind)
@@ -193,12 +191,15 @@ mutable struct BasinsInfo{B, IF, D, T, Q, A <: AbstractArray{Int32, B}}
     consecutive_lost::Int
     prev_label::Int
     safety_counter::Int
+    unsafe::Bool
     # TODO: Isn't `D` and `B` always equivalent...? can't we just remove `D`?
     attractors::Dict{Int32, Dataset{D, T}}
     visited_list::Q
 end
 
-function basininfo_and_integ(ds::GeneralizedDynamicalSystem, grid, Δt, diffeq, sparse)
+function basininfo_and_integ(
+        ds::GeneralizedDynamicalSystem, grid, Δt, diffeq, sparse, unsafe
+    )
     integ = integrator(ds; diffeq)
     isdiscrete = isdiscretetime(integ)
     Δt = isnothing(Δt) ? automatic_Δt_basins(integ, grid) : Δt
@@ -207,11 +208,11 @@ function basininfo_and_integ(ds::GeneralizedDynamicalSystem, grid, Δt, diffeq, 
     else
         (integ) -> step!(integ, Δt)
     end
-    bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, sparse)
+    bsn_nfo = init_bsn_nfo(grid, integ, iter_f!, sparse, unsafe)
     return bsn_nfo, integ
 end
 
-function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, sparse::Bool)
+function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, sparse::Bool, unsafe::Bool)
     D = length(get_state(integ))
     G = length(grid)
     grid_steps = step.(grid)
@@ -229,7 +230,7 @@ function init_bsn_nfo(grid::Tuple, integ, iter_f!::Function, sparse::Bool)
         SVector{G, Float64}(grid_minima),
         iter_f!,
         :att_search,
-        2,4,0,1,0,0,
+        2,4,0,1,0,0,unsafe,
         Dict{Int32,Dataset{D, eltype(get_state(integ))}}(),
         Vector{CartesianIndex{G}}(),
     )
@@ -310,8 +311,8 @@ function get_label_ic!(bsn_nfo::BasinsInfo, integ, u0; safety_counter_max = Int(
         # within the same grid cell. In such a case, when starting on the second attractor
         # the trajectory will forever reset between locating a new attractor and recurring
         # on the previously found one...
-        bsn_nfo.safety_counter += 1
-        if bsn_nfo.safety_counter ≥ safety_counter_max
+        bsn_nfo.unsafe || bsn_nfo.safety_counter += 1
+        if bsn_nfo.unsafe || (bsn_nfo.safety_counter ≥ safety_counter_max)
             error(
             """Recurrences algorithm ezceeded safety count without haulting.
             Here are some info:\n

@@ -10,10 +10,11 @@ using Random
     mapper = AttractorsViaRecurrences(ds, (xg, yg); Δt = 1.0)
     rr = range(1, 0; length = 101)
     ps = [[1, 1, γ] for γ in rr]
+    ps = reverse(ps)
     pidx = :γs
     sampler, = statespace_sampler(; min_bounds = [-3,-3], max_bounds = [3,3])
 
-    continuation = RecurrencesSeedingContinuation(mapper; threshold = 0.1)
+    continuation = RecurrencesSeedingContinuation(mapper; threshold = Inf)
     # With this threshold all attractors are mapped to each other, they are within
     # distance 1 in state space.
     fractions_curves, attractors_info = basins_fractions_continuation(

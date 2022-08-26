@@ -1,5 +1,5 @@
 # Notice this file uses heavily `dict_utils.jl`!
-export match_attractor_ids!, match_basins_ids!
+export match_attractor_ids!, match_basins_ids!, replacement_map
 ###########################################################################################
 # Matching attractors and key swapping business
 ###########################################################################################
@@ -11,7 +11,9 @@ those in dictionary `a₋` get assigned the same key as in `a₋`.
 Typically the +,- mean after and before some change of parameter of a system.
 
 Return the `replacement_map`, a dictionary mapping old keys of `a₊` to
-the new ones that they were mapped to.
+the new ones that they were mapped to. You can obtain this map, without modifying
+the dictionaries, by directly calling the [`replacement_map`](@ref) function
+with the output of [`datasets_sets_distances`](@ref) for given `metric`.
 
 ## Description
 
@@ -33,8 +35,9 @@ different key in the dictionary `a₊`.
 """
 function match_attractor_ids!(a₊::AbstractDict, a₋; metric = Euclidean(), threshold = Inf)
     distances = datasets_sets_distances(a₊, a₋, metric)
-    mdc = minimal_distance_combinations(distances)
-    rmap = replacement_map(a₊, a₋, mdc, threshold)
+    # mdc = minimal_distance_combinations(distances)
+    # rmap = replacement_map(a₊, a₋, mdc, threshold)
+    rmap = replacement_map(a₊, a₋, distances, threshold)
     swap_dict_keys!(a₊, rmap)
     return rmap
 end
@@ -95,6 +98,63 @@ function replacement_map(a₊, a₋, minimal_distance_combinations, threshold)
     end
     return rmap
 end
+
+
+"""
+    replacement_map(a₊, a₋, distances, threshold) → map
+Return a dictionary mapping keys in `a₊` to new keys in `a₋`.
+"""
+function replacement_map(a₊::Dict, a₋::Dict, distances::Dict, threshold)
+    # Transform distances to sortable collection. Sorting by distance
+    # ensures we prioritize the most closest matches
+    sorted_keys_with_distances = Tuple{Int, Int, Float64}[]
+    for i in keys(distances)
+        for j in keys(distances[i])
+            push!(sorted_keys_with_distances, (i, j, distances[i][j]))
+        end
+    end
+    sort!(sorted_keys_with_distances; by = x -> x[3])
+
+    # Iterate through minimal distances, find match, and remove
+    # all remaining same indices a'la Eratosthenis sieve
+    # In the same loop we match keys according to distance of values,
+    # but also ensures that keys that have too high of a value distance are guaranteeed
+    # to have different keys, and ensure that there is unique mapping happening!
+    rmap = Dict{keytype(a₊), keytype(a₋)}()
+    next_id = max(maximum(keys(a₊)), maximum(keys(a₋))) + 1
+    done_keys₊ = keytype(a₊)[] # stores keys of a₊ already processed
+    used_keys₋ = keytype(a₋)[] # stores keys of a₋ already used
+    for (oldkey, newkey, mindist) in sorted_keys_with_distances
+        (oldkey ∈ done_keys₊ || newkey ∈ used_keys₋) && continue
+        if  mindist < threshold
+            # mapping key is alright, but now need to delete all entries with same key
+            push!(used_keys₋, newkey)
+        else
+            # The distance exceeds threshold, so we will assign a new key
+            # (notice that this assumes the sorting by distance we did above,
+            # otherwise it wouldn't work!)
+            newkey = next_id
+            next_id += 1
+        end
+        # and we also delete all entries with old key
+        # entries = findall(x -> x[1] == oldkey, sorted_keys_with_distances)
+        # deleteat!(sorted_keys_with_distances, entries)
+        push!(done_keys₊, oldkey)
+        # and assign the change in the replacement map
+        rmap[oldkey] = newkey
+    end
+
+    # if not all keys were processed, we map them to the next available integers
+    if length(done_keys₊) ≠ length(keys(a₊))
+        unprocessed = setdiff(collect(keys(a₊)), done_keys₊)
+        for oldkey in unprocessed
+            rmap[oldkey] = next_id
+            next_id += 1
+        end
+    end
+    return rmap
+end
+
 
 
 ###########################################################################################

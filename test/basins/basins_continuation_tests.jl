@@ -9,63 +9,63 @@ using Random
     ds = projected_integrator(ds, 1:2, [0.0, 0.0])
     mapper = AttractorsViaRecurrences(ds, (xg, yg); Δt = 1.0)
     rr = range(1, 0; length = 101)
-    ps = [[1, 1, γ] for γ in rr]
-    ps = reverse(ps)
+    psorig = [[1, 1, γ] for γ in rr]
     pidx = :γs
-    sampler, = statespace_sampler(; min_bounds = [-3,-3], max_bounds = [3,3])
+    for (j, ps) in enumerate((psorig, reverse(psorig)))
+        # test that both finding and removing attractor works
+        mapper = AttractorsViaRecurrences(ds, (xg, yg); Δt = 1.0)
+        sampler, = statespace_sampler(; min_bounds = [-3,-3], max_bounds = [3,3])
 
-    continuation = RecurrencesSeedingContinuation(mapper; threshold = Inf)
-    # With this threshold all attractors are mapped to each other, they are within
-    # distance 1 in state space.
-    fractions_curves, attractors_info = basins_fractions_continuation(
-        continuation, ps, pidx, sampler; show_progress = false, samples_per_parameter = 1000
-    )
+        continuation = RecurrencesSeedingContinuation(mapper; threshold = Inf)
+        # With this threshold all attractors are mapped to each other, they are within
+        # distance 1 in state space.
+        fractions_curves, attractors_info = basins_fractions_continuation(
+            continuation, ps, pidx, sampler; show_progress = false, samples_per_parameter = 1000
+        )
 
-    finalkeys = collect(keys(fractions_curves[end]))
+        # Keys of the two attractors that always exist
+        twokeys = collect(keys(fractions_curves[(j == 2 ? 1 : 101)]))
 
-    # for k in attractors_info
-    #     @show collect(keys(k))
-    # end
-
-    for (i, p) in enumerate(ps)
-        γ = p[3]
-        fs = fractions_curves[i]
-        attractors = attractors_info[i]
-        k = sort!(collect(keys(fs)))
-        @test maximum(k) ≤ 3
-        # @show k
-        attk = sort!(collect(keys(attractors)))
-        @test k == attk
-        @test all(fk -> fk ∈ k, finalkeys)
-        # It is arbitrary what id we get, because the third
-        # fixed point that vanishes could have any of the three ids
-        # But we can test for sure how many ids we have
-        if γ < 0.2
-            @test length(k) == 2
-        else
-            @test length(k) == 3
+        for (i, p) in enumerate(ps)
+            γ = p[3]
+            fs = fractions_curves[i]
+            attractors = attractors_info[i]
+            k = sort!(collect(keys(fs)))
+            @test maximum(k) ≤ 3
+            # @show k
+            attk = sort!(collect(keys(attractors)))
+            @test k == attk
+            @test all(fk -> fk ∈ k, twokeys)
+            # It is arbitrary what id we get, because the third
+            # fixed point that vanishes could have any of the three ids
+            # But we can test for sure how many ids we have
+            gammathres = j == 1 ? 0.2 : 0.21
+            if γ < gammathres
+                @test length(k) == 2
+            else
+                @test length(k) == 3
+            end
+            @test sum(values(fs)) ≈ 1
         end
-        @test sum(values(fs)) ≈ 1
+        # # Plot code for fractions
+        # using GLMakie
+        # x = [fs[finalkeys[1]] for fs in fractions_curves]
+        # y = [fs[finalkeys[2]] for fs in fractions_curves]
+        # z = zeros(length(x))
+        # fig = Figure(resolution = (400, 300))
+        # ax = Axis(fig[1,1])
+        # display(fig)
+        # γs = [p[3] for p in ps]
+        # band!(ax, γs, z, x; color = Cycled(1), label = "1")
+        # band!(ax, γs, x, x .+ y; color = Cycled(2), label  = "2")
+        # band!(ax, γs, x .+ y, 1; color = Cycled(3), label = "3")
+        # xlims!(ax, 0, 1)
+        # ylims!(ax, 0, 1)
+        # ax.ylabel = "fractions"
+        # ax.xlabel = "magnet strength"
+        # axislegend(ax)
+        # Makie.save("magnetic_fracs.png", fig; px_per_unit = 4)
     end
-    # # Plot code for fractions
-    # using GLMakie
-    # x = [fs[finalkeys[1]] for fs in fractions_curves]
-    # y = [fs[finalkeys[2]] for fs in fractions_curves]
-    # z = zeros(length(x))
-    # fig = Figure(resolution = (400, 300))
-    # ax = Axis(fig[1,1])
-    # display(fig)
-    # γs = [p[3] for p in ps]
-    # band!(ax, γs, z, x; color = Cycled(1), label = "1")
-    # band!(ax, γs, x, x .+ y; color = Cycled(2), label  = "2")
-    # band!(ax, γs, x .+ y, 1; color = Cycled(3), label = "3")
-    # xlims!(ax, 0, 1)
-    # ylims!(ax, 0, 1)
-    # ax.ylabel = "fractions"
-    # ax.xlabel = "magnet strength"
-    # axislegend(ax)
-    # Makie.save("magnetic_fracs.png", fig; px_per_unit = 4)
-
 end
 
 

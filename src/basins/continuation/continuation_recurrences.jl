@@ -11,9 +11,6 @@ struct RecurrencesSeedingContinuation{A, M, S, E} <: BasinsFractionContinuation
     info_extraction::E
 end
 
-# TODO: Allow generalized function for matching: any function that given
-# two attractors, it gives a real positive number (distance).
-
 """
     RecurrencesSeedingContinuation(mapper::AttractorsViaRecurrences; kwargs...)
 A method for [`basins_fractions_continuation`](@ref).
@@ -99,7 +96,6 @@ function basins_fractions_continuation(
         current_attractors = mapper.bsn_nfo.attractors
         # Match with previous attractors before storing anything!
         rmap = match_attractor_ids!(current_attractors, prev_attractors; metric, threshold)
-
         # Then do the remaining setup for storing and next step
         swap_dict_keys!(fs, rmap)
         overwrite_dict!(prev_attractors, current_attractors)
@@ -108,10 +104,11 @@ function basins_fractions_continuation(
         # show_progress && @show fs
         show_progress && next!(progress)
     end
-    # TODO: Enable this back once we renumber keys sequentially WITHOUT
-    # duplication.
-    # srmap = renumber_keys_sequentially!(attractors_info, fractions_curves)
-    # @show srmap
+    # Normalize keys for user convenience
+    rmap = retract_keys_to_consecutive!(fractions_curves)
+    for d in attractors_info
+        swap_dict_keys!(d, rmap)
+    end
     return fractions_curves, attractors_info
 end
 

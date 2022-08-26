@@ -48,3 +48,29 @@ function additive_dict_merge!(d1::Dict, d2::Dict)
     end
     return d1
 end
+
+
+"""
+    retract_keys_to_consecutive!(v::Vector{<:Dict}) → rmap
+Given a vector of dictionaries with varies integer keys, retract all keys so that
+consecutive integers are used. So if the dictionaries have keys 2, 3, 42, then they will
+have 1, 2, 3. The function assumes equality between keys, so even if in different
+dictionaries, all keys `1` are the same key.
+
+Return the replacement map used to replace keys in all dictionaries with
+[`replace_keys!`](@ref).
+"""
+function retract_keys_to_consecutive!(v::Vector{<:Dict})
+    unique_keys = Set(Int[])
+    for d in v
+        for k in keys(d)
+            push!(unique_keys, k)
+        end
+    end
+    unique_keys = sort!(collect(unique_keys))
+    rmap = Dict(k => i for (i, k) in enumerate(unique_keys))
+    for d in v
+        swap_dict_keys!(d, rmap)
+    end
+    return rmap
+end

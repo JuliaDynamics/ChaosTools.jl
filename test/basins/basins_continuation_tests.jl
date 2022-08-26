@@ -14,7 +14,7 @@ using Random
     pidx = :γs
     sampler, = statespace_sampler(; min_bounds = [-3,-3], max_bounds = [3,3])
 
-    continuation = RecurrencesSeedingContinuation(mapper; threshold = Inf)
+    continuation = RecurrencesSeedingContinuation(mapper; threshold = 1.)
     # With this threshold all attractors are mapped to each other, they are within
     # distance 1 in state space.
     fractions_curves, attractors_info = basins_fractions_continuation(
@@ -70,7 +70,7 @@ end
 
 
 @testset "Henon map" begin
-    # Don't know where this came from or what is happening in this parameter range
+    # Reference for the "new Henon": Shrimali, Manish Dev, et al. "The nature of attractor basins in multistable systems." International Journal of Bifurcation and Chaos 18.06 (2008): 1675-1688. https://doi.org/10.1142/S0218127408021269
     function new_henon(x, p, n)
         return SVector{2}(p[1] - x[1]^2 - (1 - p[2])*x[2],  x[1])
     end
@@ -113,7 +113,7 @@ end
     )
     fractions_curves, attractors_info = basins_fractions_continuation(
         continuation, ps, pidx, sampler;
-        show_progress = false, samples_per_parameter = 100
+        show_progress = true, samples_per_parameter = 100
     )
 
     for (i, p) in enumerate(ps)
@@ -247,3 +247,106 @@ ax.xlabel = "G parameter"
 axislegend(ax; position = :lt)
 Makie.save("lorenz84_fracs.png", fig; px_per_unit = 4)
 negate_remove_bg("lorenz84_fracs.png")
+
+
+@testset "Second Order Kuramoto Oscillators"  
+    using OrdinaryDiffEq
+    using LinearAlgebra:norm
+    using Statistics:mean
+    using Graphs
+
+    """
+        second_order_kuramoto(du, u, p::second_order_kuramoto_parameters, t)
+
+    Second order Kuramoto system on the adjacency matrix ``A_{ij} = E'_{ie} E_{ej}``.
+
+    ``\\dot{\\theta}_i = w_i``
+    ``\\dot{\\omega} = \\Omega_i - \\alpha\\omega + \\lambda\\sum_{j=1}^N A_{ij} sin(\\theta_j - \\theta_i)``
+
+    """
+
+    # We have to define a callback to wrap the phase in [-π,π]
+    function affect!(integrator)
+        uu = integrator.u
+        N = length(integrator.u)
+        for k in 1:Int(N/2)
+            if integrator.u[k] < -π
+                uu[k] = uu[k] + 2π
+                set_state!(integrator, uu)
+                u_modified!(integrator, true)
+            elseif  integrator.u[k] > π
+                uu[k] = uu[k] - 2π
+                set_state!(integrator, uu)
+                u_modified!(integrator, true)
+            end
+        end
+    end
+    function condition(u,t,integrator)
+        N = length(integrator.u)
+        for k in 1:Int(N/2)
+            if (integrator.u[k] < -π  || integrator.u[k] > π)
+                return true
+            end
+        end
+        return false
+    end
+    cb = DiscreteCallback(condition,affect!)
+
+    function second_order_kuramoto(du, u, p, t)
+        N = p[1]; drive = p[5]; damping = p[2]; coupling = p[3]; incidence = p[4];    
+        du[1:N] .= u[1 + N:2*N]
+        du[N+1:end] .= drive .- damping .* u[1 + N:2*N] .- coupling .* (incidence * sin.(incidence' * u[1:N]))
+        nothing
+    end
+
+    seed = 5386748129040267798
+    Random.seed!(seed)
+    # Set up the parameters for the network
+    N = 30 # in this case this is the number of oscillators, the system dimension is twice this value
+    g = random_regular_graph(N, 3)
+    E = incidence_matrix(g, oriented=true)
+    drive = [isodd(i) ? +1. : -1. for i = 1:N]
+    #K = 2.
+    par = second_order_kuramoto_parameters(N, 0.1, K, E, drive)
+    T = 5000.
+    ds = ContinuousDynamicalSystem(second_order_kuramoto, zeros(2*N), [N, 0.1, K, E, drive], (J,z0, p, n) -> nothing)
+    diffeq = (alg = Tsit5(), reltol = 1e-9, callback = cb, maxiters = 1e7)
+    yg = range(-12.5, 12.5; length = 30)
+    _get_rand_ic(y) = [pi*(rand(N) .- 0.5); y]
+    psys = projected_integrator(ds, N+1:2*N, _get_rand_ic; diffeq)
+    # pgrid = ntuple(x -> yg, N)
+    # # Mapping with recurrences on the grid. 
+    # mapper = AttractorsViaRecurrences(psys, pgrid; Δt = .1, diffeq, 
+    #     sparse = true,
+    #     mx_chk_fnd_att = 100,
+    #     mx_chk_loc_att = 100,
+    #     mx_chk_att = 2,
+    #     mx_chk_hit_bas = 10)
+
+    function featurizer(A, t)
+        g = mean(A) 
+        return g
+    end
+    clstrspcs = ClusteringConfig(; min_neighbors=1)
+
+    mapper = AttractorsViaFeaturizing(psys, featurizer, clstrspcs; Δt = 0.1, diffeq) 
+
+    pidx = 3 
+    ps = range(0., 10., length = 10) 
+    sampler, = statespace_sampler(Random.MersenneTwister(1234);
+        min_bounds = minimum.(pgrid),  max_bounds = maximum.(pgrid)
+    )
+    distance_function = function (A, B)
+        # Compute Euclidean distance between the average of the attractors. 
+        return norm(mean(A) - mean(B))
+    end
+    continuation = RecurrencesSeedingContinuation(mapper;
+        threshold = 0.99, metric = distance_function
+    )
+    fractions_curves, attractors_info = basins_fractions_continuation(
+        continuation, ps, pidx, sampler;
+        show_progress = true, samples_per_parameter = 100
+    )
+
+end
+

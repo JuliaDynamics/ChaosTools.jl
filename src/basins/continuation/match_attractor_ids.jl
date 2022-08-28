@@ -115,7 +115,7 @@ function replacement_map(a₊::Dict, a₋::Dict, distances::Dict, threshold)
     end
     sort!(sorted_keys_with_distances; by = x -> x[3])
 
-    # Iterate through minimal distances, find match, and remove
+    # Iterate through distances, find match with least distance, and "remove" (skip)
     # all remaining same indices a'la Eratosthenis sieve
     # In the same loop we match keys according to distance of values,
     # but also ensures that keys that have too high of a value distance are guaranteeed
@@ -124,10 +124,9 @@ function replacement_map(a₊::Dict, a₋::Dict, distances::Dict, threshold)
     next_id = max(maximum(keys(a₊)), maximum(keys(a₋))) + 1
     done_keys₊ = keytype(a₊)[] # stores keys of a₊ already processed
     used_keys₋ = keytype(a₋)[] # stores keys of a₋ already used
-    for (oldkey, newkey, mindist) in sorted_keys_with_distances
+    for (oldkey, newkey, dist) in sorted_keys_with_distances
         (oldkey ∈ done_keys₊ || newkey ∈ used_keys₋) && continue
-        if  mindist < threshold
-            # mapping key is alright, but now need to delete all entries with same key
+        if  dist < threshold
             push!(used_keys₋, newkey)
         else
             # The distance exceeds threshold, so we will assign a new key
@@ -136,11 +135,7 @@ function replacement_map(a₊::Dict, a₋::Dict, distances::Dict, threshold)
             newkey = next_id
             next_id += 1
         end
-        # and we also delete all entries with old key
-        # entries = findall(x -> x[1] == oldkey, sorted_keys_with_distances)
-        # deleteat!(sorted_keys_with_distances, entries)
         push!(done_keys₊, oldkey)
-        # and assign the change in the replacement map
         rmap[oldkey] = newkey
     end
 

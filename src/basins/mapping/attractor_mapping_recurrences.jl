@@ -40,9 +40,10 @@ dimensional subspace.
 * `safety_counter_max = Int(1e6)`: A safety counter that is always increasing for
   each initial condition. Once exceeded, the algorithm errors.
   This clause exists to stop the algorithm never haulting for innappropriately defined grids,
-  were a found attractor may intersect in the same cell with a new attractor the orbit
+  where a found attractor may intersect in the same cell with a new attractor the orbit
   traces (which leads to infinite resetting of all counters). As this check comes with a
-  performance deficit, the keyword `unsafe=true` can be set to disable it.
+  performance deficit, the keyword `unsafe=true` can be set to disable it in case the user
+  is confident the algorithm will hault.
 
 ## Description
 An initial condition given to an instance of `AttractorsViaRecurrences` is iterated
@@ -314,7 +315,9 @@ function get_label_ic!(bsn_nfo::BasinsInfo, integ, u0; safety_counter_max = Int(
         bsn_nfo.unsafe || (bsn_nfo.safety_counter += 1)
         if bsn_nfo.unsafe || (bsn_nfo.safety_counter ≥ safety_counter_max)
             error(
-            """Recurrences algorithm exceeded safety count without haulting.
+            """`AttractorsViaRecurrences` algorithm exceeded safety count without haulting.
+            It may be that the grid is not fine enough and attractors intersect in the
+            same cell, or `safety_counter_max` is not high enough for a very fine grid.
             Iteration will terminate now and exit with error.
             Here are some info on current status:\n
             state: $(get_state(integ)),\n

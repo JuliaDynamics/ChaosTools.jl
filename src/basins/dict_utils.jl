@@ -52,25 +52,37 @@ end
 
 """
     retract_keys_to_consecutive!(v::Vector{<:Dict}) → rmap
-Given a vector of dictionaries with varies integer keys, retract all keys so that
-consecutive integers are used. So if the dictionaries have keys 2, 3, 42, then they will
-have 1, 2, 3. The function assumes equality between keys, so even if in different
-dictionaries, all keys `1` are the same key.
+Given a vector of dictionaries with various positive integer keys, retract all keys so that
+consecutive integers are used. So if the dictionaries have overall keys 2, 3, 42,
+then they will transformed to have 1, 2, 3.
 
 Return the replacement map used to replace keys in all dictionaries with
-[`replace_keys!`](@ref).
+[`swap_dict_keys!`](@ref).
+
+As this function is used in attractor matching in [`basins_fractions_continuation`](@ref)
+it skips the special key `-1`.
 """
 function retract_keys_to_consecutive!(v::Vector{<:Dict})
-    unique_keys = Set(Int[])
+    ukeys = unique_keys(v)
+    ukeys = setdiff(ukeys, [-1]) # skip key -1 if it exists
+    rmap = Dict(k => i for (i, k) in enumerate(ukeys))
+    for d in v
+        swap_dict_keys!(d, rmap)
+    end
+    return rmap
+end
+
+"""
+    unique_keys(v::Vector{<:Dict})
+Given a vector of dictionaries, return a sorted vector of the unique keys
+that are present across all dictionaries.
+"""
+function unique_keys(v::Vector{<:Dict})
+    unique_keys = Set(keytype(first(v))[])
     for d in v
         for k in keys(d)
             push!(unique_keys, k)
         end
     end
-    unique_keys = sort!(collect(unique_keys))
-    rmap = Dict(k => i for (i, k) in enumerate(unique_keys))
-    for d in v
-        swap_dict_keys!(d, rmap)
-    end
-    return rmap
+    return sort!(collect(unique_keys))
 end

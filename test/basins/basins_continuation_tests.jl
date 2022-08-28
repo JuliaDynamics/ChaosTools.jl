@@ -70,7 +70,10 @@ end
 
 
 @testset "Henon map" begin
-    # Reference for the "new Henon": Shrimali, Manish Dev, et al. "The nature of attractor basins in multistable systems." International Journal of Bifurcation and Chaos 18.06 (2008): 1675-1688. https://doi.org/10.1142/S0218127408021269
+    # Reference for the "new Henon":
+    # Shrimali, Manish Dev, et al. "The nature of attractor basins in multistable systems."
+    # International Journal of Bifurcation and Chaos 18.06 (2008): 1675-1688.
+    # https://doi.org/10.1142/S0218127408021269
     function new_henon(x, p, n)
         return SVector{2}(p[1] - x[1]^2 - (1 - p[2])*x[2],  x[1])
     end
@@ -111,6 +114,11 @@ end
     continuation = RecurrencesSeedingContinuation(mapper;
         threshold = 0.99, metric = distance_function
     )
+    # TODO: Problem here. I think the new code that stores keys for the
+    # replacement map gets something wrong in the distances and doesn't
+    # actually make the period 14 a different attractor. Even though
+    # their computed lengths are much much different.
+
     fractions_curves, attractors_info = basins_fractions_continuation(
         continuation, ps, pidx, sampler;
         show_progress = true, samples_per_parameter = 100
@@ -128,122 +136,89 @@ end
     end
 
     # unique keys
-    unique_keys = unique!(reduce(vcat, [collect(keys(a)) for a in attractors_info]))
+    unique_keys = ChaosTools.unique_keys(attractors_info)
     # We can have at most 4 attractors: initial chaotic, period 14 in the middle,
     # chaotic again, and period 7 at the end. ALl of these should be matched to each other.
     @test length(unique_keys) ≤ 4
 
     # Animation of henon attractors
-    # using GLMakie
-    # fig = Figure(); display(fig)
-    # ax = Axis(fig[1,1]; limits = (-2,2,-1,1))
-    # colors = Dict(k => Cycled(i) for (i, k) in enumerate(unique_keys))
-    # display(fig)
-    # record(fig, "henon_test.mp4", eachindex(ps); framerate = 5) do i
-    #     empty!(ax)
-    #     p = ps[i]
-    #     ax.title = "p = $p"
-    #     # fs = fractions_curves[i]
-    #     attractors = attractors_info[i]
-    #     set_parameter!(ds, pidx, p)
-    #     for (k, att) in attractors
-    #         tr = trajectory(ds, 1000, att[1])
-    #         scatter!(ax, tr[:, 1], tr[:, 2]; color = colors[k])
-    #     end
-    # end
+    using GLMakie
+    fig = Figure(); display(fig)
+    ax = Axis(fig[1,1]; limits = (-2,2,-1,1))
+    colors = Dict(k => Cycled(i) for (i, k) in enumerate(unique_keys))
+    att_obs = Dict(k => Observable(Point2f[]) for k in unique_keys)
+    for k in unique_keys
+        scatter!(ax, att_obs[k]; color = colors[k],
+        label = "$k", markersize = 8)
+    end
+    axislegend(ax)
+
+    display(fig)
+
+    record(fig, "henon_test.mp4", eachindex(ps); framerate = 5) do i
+        p = ps[i]
+        ax.title = "p = $p"
+        # fs = fractions_curves[i]
+        attractors = attractors_info[i]
+        set_parameter!(ds, pidx, p)
+        for (k, att) in attractors
+            tr = trajectory(ds, 1000, att[1]; Δt = 1)
+            att_obs[k][] = vec(tr)
+            notify(att_obs[k])
+        end
+        # also ensure that attractors that don't exist are cleared
+        for k in setdiff(unique_keys, collect(keys(attractors)))
+            att_obs[k][] = Point2f[]; notify(att_obs[k])
+        end
+    end
 
 
 end
 
 # %%
 @testset "lorenz84" begin
+    using OrdinaryDiffEq
+    F = 6.886; G = 1.347; a = 0.255; b = 4.0
+    ds = Systems.lorenz84(; F, G, a, b)
+    diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9, maxiters = 1e12)
+    M = 600; z = 3
+    xg = yg = zg = range(-z, z; length = M)
+    grid = (xg, yg, zg)
+
+    sampler, = statespace_sampler(Random.MersenneTwister(1234);
+        min_bounds = minimum.(grid), max_bounds = maximum.(grid)
+    )
+    # sampler = [sampler() for i in 1:100]
+    # TODO: Whether algorithm will hault or not depends strongly
+    # on the parameters here. Can we somehow improve this so the
+    # process isn't so sensitive...?
+
+    mapper = AttractorsViaRecurrencesSparse(ds, grid;
+        mx_chk_fnd_att = 100,
+        mx_chk_loc_att = 100,
+        safety_counter_max = Int(1e8),
+        diffeq, Δt = 0.1
+    )
+
+    # coexistance of periodic and chaotic, and then the chaotic collapses
+    # into the fixed point via a "crisis" (aka global bifurcation).
+    # stable fixed point exists always throughout the parameter range,
+    # but after the collapse, a fixed point and periodic attractor exist
+    Grange = range(1.32, 1.37; length = 301)
+    Gidx = 2
+    # threshold = 0.01 is the ε value we give at the mapper test
+    continuation = RecurrencesSeedingContinuation(mapper; threshold = Inf)
+    fractions_curves, attractors_info = basins_fractions_continuation(
+        continuation, Grange, Gidx, sampler;
+        show_progress = true, samples_per_parameter = 100
+    )
+
+
+
+    unique_keys = unique!(reduce(vcat, [collect(keys(a)) for a in attractors_info]))
+    @test unique_keys == [1,2,3]
+
+    # So if we get fractions_curves[80:90]
+    # we see that just after the transition of 3 to 2 attractors
 
 end
-
-using OrdinaryDiffEq
-F = 6.886; G = 1.347; a = 0.255; b = 4.0
-ds = Systems.lorenz84(; F, G, a, b)
-diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9, maxiters = 1e12)
-M = 600; z = 3
-xg = yg = zg = range(-z, z; length = M)
-grid = (xg, yg, zg)
-
-sampler, = statespace_sampler(Random.MersenneTwister(1234);
-    min_bounds = minimum.(grid), max_bounds = maximum.(grid)
-)
-mapper = AttractorsViaRecurrencesSparse(ds, grid;
-    mx_chk_fnd_att = 100,
-    mx_chk_loc_att = 100,
-    diffeq, Δt = 0.1
-)
-
-# coexistance of periodic and chaotic, and then the chaotic collapses
-# into the fixed point via a "crisis" (aka global bifurcation).
-# stable fixed point exists always throughout the parameter range,
-# but after the collapse, a fixed point and periodic attractor exist
-Grange = range(1.32, 1.37; length = 101)
-Gidx = 2
-# threshold = 0.01 is the ε value we give at the mapper test
-continuation = RecurrencesSeedingContinuation(mapper; threshold = Inf)
-fractions_curves, attractors_info = basins_fractions_continuation(
-    continuation, Grange, Gidx, sampler;
-    show_progress = true, samples_per_parameter = 1000
-)
-
-# So if we get fractions_curves[80:90]
-# we see that just after the transition of 3 to 2 attractors,
-# we get  Dict(3 => 0.1400198609731877, 1 => 0.23535253227408143).
-# So the fractions do not sum to 1.
-
-# %%
-unique_keys = unique!(reduce(vcat, [collect(keys(a)) for a in attractors_info]))
-using GLMakie
-fig = Figure(); display(fig)
-ax = Axis(fig[1,1]; limits = (-1,3,-3,3))
-colors = Dict(k => Cycled(i) for (i, k) in enumerate(unique_keys))
-att_obs = Dict(k => Observable(Point2f[]) for k in unique_keys)
-for k in unique_keys
-    scatter!(ax, att_obs[k]; color = colors[k],
-    label = "$k", markersize = 8)
-end
-axislegend(ax)
-# display(fig)
-
-record(fig, "lorenz84_test.mp4", eachindex(Grange); framerate = 4) do i
-    p = Grange[i]
-    ax.title = "p = $p"
-    # fs = fractions_curves[i]
-    attractors = attractors_info[i]
-    set_parameter!(ds, Gidx, p)
-    for (k, att) in attractors
-        tr = trajectory(ds, 2000, att[1]; Δt = 1)
-        att_obs[k][] = vec(tr[:, [1,2]])
-        notify(att_obs[k])
-    end
-    # also ensure that attractors that don't exist are cleared
-    for k in setdiff(unique_keys, collect(keys(attractors)))
-        att_obs[k][] = Point2f[]; notify(att_obs[k])
-    end
-end
-
-# Basins plot
-# %%
-# ps = Grange
-finalkeys = collect(keys(fractions_curves[end]))
-x = [fs[finalkeys[1]] for fs in fractions_curves]
-y = [fs[finalkeys[2]] for fs in fractions_curves]
-z = zeros(length(x))
-fig = Figure(resolution = (400, 300))
-ax = Axis(fig[1,1])
-display(fig)
-γs = Grange
-band!(ax, γs, z, x; color = Cycled(1), label = "fixed p.")
-band!(ax, γs, x, x .+ y; color = Cycled(2), label  = "limit c.")
-band!(ax, γs, x .+ y, 1; color = Cycled(3), label = "chaotic")
-xlims!(ax, γs[1], γs[end])
-ylims!(ax, 0, 1)
-ax.ylabel = "fractions"
-ax.xlabel = "G parameter"
-axislegend(ax; position = :lt)
-Makie.save("lorenz84_fracs.png", fig; px_per_unit = 4)
-negate_remove_bg("lorenz84_fracs.png")

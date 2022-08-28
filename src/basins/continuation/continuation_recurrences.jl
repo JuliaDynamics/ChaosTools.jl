@@ -52,9 +52,9 @@ function basins_fractions_continuation(
     )
     # show_progress && @info "Starting basins fraction continuation."
     # show_progress && @info "p = $(prange[1])"
-    if show_progress
-        progress=ProgressMeter.Progress(length(prange); desc="Continuating basins fractions:")
-    end
+    progress = ProgressMeter.Progress(length(prange);
+        desc="Continuating basins fractions:", enabled=show_progress
+    )
 
     (; mapper, metric, threshold) = continuation
     # first parameter is run in isolation, as it has no prior to seed from
@@ -101,10 +101,9 @@ function basins_fractions_continuation(
         overwrite_dict!(prev_attractors, current_attractors)
         push!(fractions_curves, fs)
         push!(attractors_info, get_info(prev_attractors))
-        # show_progress && @show fs
-        show_progress && next!(progress)
+        next!(progress)
     end
-    # Normalize keys for user convenience
+    # Normalize to smaller available integers for user convenience
     rmap = retract_keys_to_consecutive!(fractions_curves)
     for d in attractors_info
         swap_dict_keys!(d, rmap)

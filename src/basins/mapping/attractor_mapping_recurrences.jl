@@ -312,8 +312,8 @@ function get_label_ic!(bsn_nfo::BasinsInfo, integ, u0; safety_counter_max = Int(
         # within the same grid cell. In such a case, when starting on the second attractor
         # the trajectory will forever reset between locating a new attractor and recurring
         # on the previously found one...
-        bsn_nfo.unsafe || (bsn_nfo.safety_counter += 1)
-        if bsn_nfo.unsafe || (bsn_nfo.safety_counter ≥ safety_counter_max)
+        !bsn_nfo.unsafe && (bsn_nfo.safety_counter += 1)
+        if !bsn_nfo.unsafe && (bsn_nfo.safety_counter ≥ safety_counter_max)
             error(
             """`AttractorsViaRecurrences` algorithm exceeded safety count without haulting.
             It may be that the grid is not fine enough and attractors intersect in the

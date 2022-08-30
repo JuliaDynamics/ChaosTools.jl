@@ -70,7 +70,6 @@ end
 
 
 @testset "Henon map" begin
-<<<<<<< Updated upstream
     # Reference for the "new Henon":
     # Shrimali, Manish Dev, et al. "The nature of attractor basins in multistable systems."
     # International Journal of Bifurcation and Chaos 18.06 (2008): 1675-1688.
@@ -84,19 +83,6 @@ end
     ds = DiscreteDynamicalSystem(new_henon, u0, [a,ν])
     ps = range(0.0, 0.4; length = 101)
 
-||||||| constructed merge base
-    # Reference for the "new Henon": Shrimali, Manish Dev, et al. "The nature of attractor basins in multistable systems." International Journal of Bifurcation and Chaos 18.06 (2008): 1675-1688. https://doi.org/10.1142/S0218127408021269
-    function new_henon(x, p, n)
-        return SVector{2}(p[1] - x[1]^2 - (1 - p[2])*x[2],  x[1])
-    end
-    a = 0.0
-    ν = 0.01
-    u0 = [0.0, 0.6]
-    ds = DiscreteDynamicalSystem(new_henon, u0, [a,ν])
-    ps = range(0.0, 0.4; length = 101)
-
-=======
->>>>>>> Stashed changes
     # This is standard henon map
     ds = Systems.henon(; b = 0.3, a = 1.4)
     ps = range(1.2, 1.25; length = 101)
@@ -214,7 +200,6 @@ end
         diffeq, Δt = 0.1
     )
 
-<<<<<<< Updated upstream
     # coexistance of periodic and chaotic, and then the chaotic collapses
     # into the fixed point via a "crisis" (aka global bifurcation).
     # stable fixed point exists always throughout the parameter range,
@@ -227,80 +212,8 @@ end
         continuation, Grange, Gidx, sampler;
         show_progress = true, samples_per_parameter = 100
     )
-||||||| constructed merge base
-using OrdinaryDiffEq
-F = 6.886; G = 1.347; a = 0.255; b = 4.0
-ds = Systems.lorenz84(; F, G, a, b)
-diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9, maxiters = 1e12)
-M = 600; z = 3
-xg = yg = zg = range(-z, z; length = M)
-grid = (xg, yg, zg)
-
-sampler, = statespace_sampler(Random.MersenneTwister(1234);
-    min_bounds = minimum.(grid), max_bounds = maximum.(grid)
-)
-mapper = AttractorsViaRecurrencesSparse(ds, grid;
-    mx_chk_fnd_att = 100,
-    mx_chk_loc_att = 100,
-    diffeq, Δt = 0.1
-)
-
-# coexistance of periodic and chaotic, and then the chaotic collapses
-# into the fixed point via a "crisis" (aka global bifurcation).
-# stable fixed point exists always throughout the parameter range,
-# but after the collapse, a fixed point and periodic attractor exist
-Grange = range(1.32, 1.37; length = 101)
-Gidx = 2
-# threshold = 0.01 is the ε value we give at the mapper test
-continuation = RecurrencesSeedingContinuation(mapper; threshold = Inf)
-fractions_curves, attractors_info = basins_fractions_continuation(
-    continuation, Grange, Gidx, sampler;
-    show_progress = true, samples_per_parameter = 1000
-)
-
-# So if we get fractions_curves[80:90]
-# we see that just after the transition of 3 to 2 attractors,
-# we get  Dict(3 => 0.1400198609731877, 1 => 0.23535253227408143).
-# So the fractions do not sum to 1.
-=======
-using OrdinaryDiffEq
-F = 6.886; G = 1.347; a = 0.255; b = 4.0
-ds = Systems.lorenz84(; F, G, a, b)
-diffeq = (alg = Vern9(), reltol = 1e-9, abstol = 1e-9, maxiters = 1e12)
-M = 5000; z = 3
-xg = yg = zg = range(-z, z; length = M)
-grid = (xg, yg, zg)
-
-sampler, = statespace_sampler(Random.MersenneTwister(1234);
-    min_bounds = minimum.(grid), max_bounds = maximum.(grid)
-)
-mapper = AttractorsViaRecurrencesSparse(ds, grid;
-    mx_chk_fnd_att = 100,
-    mx_chk_loc_att = 100,
-    diffeq, Δt = 0.1
-)
-
-# coexistance of periodic and chaotic, and then the chaotic collapses
-# into the fixed point via a "crisis" (aka global bifurcation).
-# stable fixed point exists always throughout the parameter range,
-# but after the collapse, a fixed point and periodic attractor exist
-Grange = range(1.32, 1.37; length = 101)
-Gidx = 2
-# threshold = 0.01 is the ε value we give at the mapper test
-continuation = RecurrencesSeedingContinuation(mapper; threshold = Inf)
-fractions_curves, attractors_info = basins_fractions_continuation(
-    continuation, Grange, Gidx, sampler;
-    show_progress = true, samples_per_parameter = 1000
-)
-
-# So if we get fractions_curves[80:90]
-# we see that just after the transition of 3 to 2 attractors,
-# we get  Dict(3 => 0.1400198609731877, 1 => 0.23535253227408143).
-# So the fractions do not sum to 1.
->>>>>>> Stashed changes
 
 
-<<<<<<< Updated upstream
 
     unique_keys = unique!(reduce(vcat, [collect(keys(a)) for a in attractors_info]))
     @test unique_keys == [1,2,3]
@@ -309,51 +222,3 @@ fractions_curves, attractors_info = basins_fractions_continuation(
     # we see that just after the transition of 3 to 2 attractors
 
 end
-||||||| constructed merge base
-# Basins plot
-# %%
-# ps = Grange
-finalkeys = collect(keys(fractions_curves[end]))
-x = [fs[finalkeys[1]] for fs in fractions_curves]
-y = [fs[finalkeys[2]] for fs in fractions_curves]
-z = zeros(length(x))
-fig = Figure(resolution = (400, 300))
-ax = Axis(fig[1,1])
-display(fig)
-γs = Grange
-band!(ax, γs, z, x; color = Cycled(1), label = "fixed p.")
-band!(ax, γs, x, x .+ y; color = Cycled(2), label  = "limit c.")
-band!(ax, γs, x .+ y, 1; color = Cycled(3), label = "chaotic")
-xlims!(ax, γs[1], γs[end])
-ylims!(ax, 0, 1)
-ax.ylabel = "fractions"
-ax.xlabel = "G parameter"
-axislegend(ax; position = :lt)
-Makie.save("lorenz84_fracs.png", fig; px_per_unit = 4)
-negate_remove_bg("lorenz84_fracs.png")
-=======
-# Basins plot
-# %%
-# ps = Grange
-finalkeys = collect(keys(fractions_curves[end]))
-x = [fs[finalkeys[1]] for fs in fractions_curves]
-y = [fs[finalkeys[2]] for fs in fractions_curves]
-z = zeros(length(x))
-fig = Figure(resolution = (400, 300))
-ax = Axis(fig[1,1])
-display(fig)
-γs = Grange
-band!(ax, γs, z, x; color = Cycled(1), label = "fixed p.")
-band!(ax, γs, x, x .+ y; color = Cycled(2), label  = "limit c.")
-band!(ax, γs, x .+ y, 1; color = Cycled(3), label = "chaotic")
-xlims!(ax, γs[1], γs[end])
-ylims!(ax, 0, 1)
-ax.ylabel = "fractions"
-ax.xlabel = "G parameter"
-axislegend(ax; position = :lt)
-Makie.save("lorenz84_fracs.png", fig; px_per_unit = 4)
-negate_remove_bg("lorenz84_fracs.png")
-
-
-
->>>>>>> Stashed changes

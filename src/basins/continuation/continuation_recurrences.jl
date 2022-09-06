@@ -64,11 +64,12 @@ function basins_fractions_continuation(
     fractions_curves = [fs]
     # Furthermore some info about the attractors is stored and returned
     prev_attractors = deepcopy(mapper.bsn_nfo.attractors)
-    get_info = attractors -> Dict(k => continuation.info_extraction(att) for (k, att) in attractors)
+    get_info = attractors -> Dict(
+        k => continuation.info_extraction(att) for (k, att) in attractors
+    )
     info = get_info(prev_attractors)
     attractors_info = [info]
 
-    # TODO: Make this use ProgressMeter.jl
     for p in prange[2:end]
         set_parameter!(mapper.integ, pidx, p)
         reset!(mapper)
@@ -104,9 +105,10 @@ function basins_fractions_continuation(
         next!(progress)
     end
     # Normalize to smaller available integers for user convenience
-    rmap = retract_keys_to_consecutive!(fractions_curves)
-    for d in attractors_info
-        swap_dict_keys!(d, rmap)
+    rmap = retract_keys_to_consecutive(fractions_curves)
+    for (da, df) in zip(attractors_info, fractions_curves)
+        swap_dict_keys!(da, rmap)
+        swap_dict_keys!(df, rmap)
     end
     return fractions_curves, attractors_info
 end
@@ -135,10 +137,10 @@ end
 
 function renumber_keys_sequentially!(att_info, frac_curves)
     # First collect all unique keys (hence using `Set`)
-    keys = Set{Int16}()
+    keys = Set{Int}()
     for af in att_info
         for k in af
-            push!(keys,k[1])
+            push!(keys, k[1])
         end
     end
 

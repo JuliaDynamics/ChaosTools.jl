@@ -1,18 +1,26 @@
 # Utility functions for managing dictionary keys that are useful
 # in continuation and attractor matching business
 # Thanks a lot to Valentin (@Seelengrab) for generous help in the key swapping code.
+# Swapping keys and ensuring that everything works "as expected" is,
+# surprising, one of the hardest things to code in ChaosTools.jl.
 
 """
     swap_dict_keys!(d::Dict, replacement_map::Dict)
 
 Swap the keys of a dictionary `d` given the `replacement_map`
-which maps old keys to new keys.
+which maps old keys to new keys. Also ensure that a swap can happen at most once,
+e.g., if input `d` has a key `4`, and `rmap = Dict(4 => 3, 3 => 2)`,
+then the key `4` will be transformed to `3` and not further to `2`.
 """
-function swap_dict_keys!(fs::Dict, rmap::Dict)
-    isempty(rmap) && return
+function swap_dict_keys!(fs::Dict, _rmap::AbstractDict)
+    isempty(_rmap) && return
+    # Transform rmap so it is sorted in decreasing order,
+    # so that doulbe swapping can't happen
+    rmap = sort!(collect(_rmap); by = x -> x[2])
     cache = Tuple{keytype(fs), valtype(fs)}[]
     for (oldkey, newkey) in rmap
         haskey(fs, oldkey) || continue
+        oldkey == newkey && continue
         tmp = pop!(fs, oldkey)
         if !haskey(fs, newkey)
             fs[newkey] = tmp
@@ -23,7 +31,7 @@ function swap_dict_keys!(fs::Dict, rmap::Dict)
     for (k, v) in cache
         fs[k] = v
     end
-    return
+    return fs
 end
 
 """
@@ -51,10 +59,10 @@ end
 
 
 """
-    retract_keys_to_consecutive!(v::Vector{<:Dict}) → rmap
+    retract_keys_to_consecutive(v::Vector{<:Dict}) → rmap
 Given a vector of dictionaries with various positive integer keys, retract all keys so that
 consecutive integers are used. So if the dictionaries have overall keys 2, 3, 42,
-then they will transformed to have 1, 2, 3.
+then they will transformed to 1, 2, 3.
 
 Return the replacement map used to replace keys in all dictionaries with
 [`swap_dict_keys!`](@ref).
@@ -62,13 +70,10 @@ Return the replacement map used to replace keys in all dictionaries with
 As this function is used in attractor matching in [`basins_fractions_continuation`](@ref)
 it skips the special key `-1`.
 """
-function retract_keys_to_consecutive!(v::Vector{<:Dict})
+function retract_keys_to_consecutive(v::Vector{<:Dict})
     ukeys = unique_keys(v)
     ukeys = setdiff(ukeys, [-1]) # skip key -1 if it exists
-    rmap = Dict(k => i for (i, k) in enumerate(ukeys))
-    for d in v
-        swap_dict_keys!(d, rmap)
-    end
+    rmap = Dict(k => i for (i, k) in enumerate(ukeys) if i != k)
     return rmap
 end
 

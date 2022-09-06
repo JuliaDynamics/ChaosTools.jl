@@ -39,7 +39,8 @@ using Random
             # It is arbitrary what id we get, because the third
             # fixed point that vanishes could have any of the three ids
             # But we can test for sure how many ids we have
-            gammathres = j == 1 ? 0.2 : 0.21
+            # (depending on where we come from we find the attractor for longer)
+            gammathres = j == 1 ? 0.2 : 0.22
             if γ < gammathres
                 @test length(k) == 2
             else
@@ -85,20 +86,17 @@ end
 
     # This is standard henon map
     ds = Systems.henon(; b = 0.3, a = 1.4)
-    ps = range(1.2, 1.25; length = 101)
+    psorig = range(1.2, 1.25; length = 101)
     # In these parameters we go from a chaotic attractor to a period 7 orbit at a≈1.2265
     # (you can see this by launching our wonderful `interactive_orbitdiagram` app).
     # So we can use this to test different matching processes
     # (because "by distance" matches the two kind of attractors already)
     # Notice that the length=101 is rather sensitive and depending on it, some
-    # much smaller periodic windows exist in the range. (For 101, a period-14 exists e.g.)
+    # much smaller periodic windows exist in the range.
+    # (For 101, a period-14 window exists in the second parameter entry)
     acritical = 1.2265
 
     xg = yg = range(-2.5, 2.5, length = 500)
-    mapper = AttractorsViaRecurrences(ds, (xg, yg),
-            mx_chk_fnd_att = 3000,
-            mx_chk_loc_att = 3000
-    )
     pidx = 1
     sampler, = statespace_sampler(Random.MersenneTwister(1234);
         min_bounds = [-2,-2], max_bounds = [2,2]
@@ -111,17 +109,17 @@ end
     # really small threshold like 0.2 we still get a "single" attractor
     # throughout the range. Now we get one with period 14, a chaotic,
     # and one with period 7 that spans the second half of the parameter range
+    mapper = AttractorsViaRecurrences(ds, (xg, yg),
+        mx_chk_fnd_att = 3000,
+        mx_chk_loc_att = 3000
+    )
     continuation = RecurrencesSeedingContinuation(mapper;
         threshold = 0.99, metric = distance_function
     )
-    # TODO: Problem here. I think the new code that stores keys for the
-    # replacement map gets something wrong in the distances and doesn't
-    # actually make the period 14 a different attractor. Even though
-    # their computed lengths are much much different.
-
+    ps = psorig
     fractions_curves, attractors_info = basins_fractions_continuation(
         continuation, ps, pidx, sampler;
-        show_progress = true, samples_per_parameter = 100
+        show_progress = false, samples_per_parameter = 100
     )
 
     for (i, p) in enumerate(ps)
@@ -137,40 +135,38 @@ end
 
     # unique keys
     unique_keys = ChaosTools.unique_keys(attractors_info)
-    # We can have at most 4 attractors: initial chaotic, period 14 in the middle,
+    # We must have 4 attractors: initial chaotic, period 14 in the middle,
     # chaotic again, and period 7 at the end. ALl of these should be matched to each other.
-    @test length(unique_keys) ≤ 4
+    @test length(unique_keys) == 4
 
-    # Animation of henon attractors
-    using GLMakie
-    fig = Figure(); display(fig)
-    ax = Axis(fig[1,1]; limits = (-2,2,-1,1))
-    colors = Dict(k => Cycled(i) for (i, k) in enumerate(unique_keys))
-    att_obs = Dict(k => Observable(Point2f[]) for k in unique_keys)
-    for k in unique_keys
-        scatter!(ax, att_obs[k]; color = colors[k],
-        label = "$k", markersize = 8)
-    end
-    axislegend(ax)
-
-    display(fig)
-
-    record(fig, "henon_test.mp4", eachindex(ps); framerate = 5) do i
-        p = ps[i]
-        ax.title = "p = $p"
-        # fs = fractions_curves[i]
-        attractors = attractors_info[i]
-        set_parameter!(ds, pidx, p)
-        for (k, att) in attractors
-            tr = trajectory(ds, 1000, att[1]; Δt = 1)
-            att_obs[k][] = vec(tr)
-            notify(att_obs[k])
-        end
-        # also ensure that attractors that don't exist are cleared
-        for k in setdiff(unique_keys, collect(keys(attractors)))
-            att_obs[k][] = Point2f[]; notify(att_obs[k])
-        end
-    end
+    # # Animation of henon attractors
+    # using GLMakie
+    # fig = Figure(); display(fig)
+    # ax = Axis(fig[1,1]; limits = (-2,2,-1,1))
+    # colors = Dict(k => Cycled(i) for (i, k) in enumerate(unique_keys))
+    # att_obs = Dict(k => Observable(Point2f[]) for k in unique_keys)
+    # for k in unique_keys
+    #     scatter!(ax, att_obs[k]; color = colors[k],
+    #     label = "$k", markersize = 8)
+    # end
+    # axislegend(ax)
+    # display(fig)
+    # record(fig, "henon_test.mp4", eachindex(ps); framerate = 5) do i
+    #     p = ps[i]
+    #     ax.title = "p = $p"
+    #     # fs = fractions_curves[i]
+    #     attractors = attractors_info[i]
+    #     set_parameter!(ds, pidx, p)
+    #     for (k, att) in attractors
+    #         tr = trajectory(ds, 1000, att[1]; Δt = 1)
+    #         att_obs[k][] = vec(tr)
+    #         notify(att_obs[k])
+    #     end
+    #     # also ensure that attractors that don't exist are cleared
+    #     for k in setdiff(unique_keys, collect(keys(attractors)))
+    #         att_obs[k][] = Point2f[]; notify(att_obs[k])
+    #     end
+    # end
 
 
 end

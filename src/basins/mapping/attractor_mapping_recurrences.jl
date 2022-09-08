@@ -20,6 +20,9 @@ dimensional subspace.
 * `Δt`: Approximate time step of the integrator, which is `1` for discrete systems.
   For continuous systems, an automatic value is calculated using
   [`automatic_Δt_basins`](@ref).
+* `Ttr = 0`: This keyword arguments allows to skip a transient before the recurrence 
+  routine begins. It is useful for some high dimensional systems to speed up the 
+  convergence to the attractor. 
 * `diffeq = NamedTuple()`: Keyword arguments propagated to [`integrator`](@ref). Only
   valid for `ContinuousDynamicalSystem`. It is recommended to choose high accuracy
   solvers for this application, e.g. `diffeq = (alg=Vern9(), reltol=1e-9, abstol=1e-9)`.
@@ -291,10 +294,13 @@ This function returns the number that matches the initial condition `u0` to an a
 
 Notice the numbering system `cell_label` is as in `_identify_basin_of_cell!`.
 """
-function get_label_ic!(bsn_nfo::BasinsInfo, integ, u0; kwargs...)
+function get_label_ic!(bsn_nfo::BasinsInfo, integ, u0; Ttr = 0, kwargs...)
     # This routine identifies the attractor using the previously defined basin.
     # reinitialize integrator
     reinit!(integ, u0)
+    if Ttr > 0
+        step!(integ, Ttr)
+    end
     reset_basins_counters!(bsn_nfo)
     cell_label = 0
 

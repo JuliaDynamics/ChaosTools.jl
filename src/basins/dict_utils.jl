@@ -1,3 +1,5 @@
+export unique_keys, swap_dict_keys!
+
 # Utility functions for managing dictionary keys that are useful
 # in continuation and attractor matching business
 # Thanks a lot to Valentin (@Seelengrab) for generous help in the key swapping code.
@@ -78,11 +80,11 @@ function retract_keys_to_consecutive(v::Vector{<:Dict})
 end
 
 """
-    unique_keys(v::Vector{<:Dict})
+    unique_keys(v::Vector{<:AbstractDict})
 Given a vector of dictionaries, return a sorted vector of the unique keys
 that are present across all dictionaries.
 """
-function unique_keys(v::Vector{<:Dict})
+function unique_keys(v)
     unique_keys = Set(keytype(first(v))[])
     for d in v
         for k in keys(d)

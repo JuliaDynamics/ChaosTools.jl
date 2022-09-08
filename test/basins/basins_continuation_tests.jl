@@ -209,10 +209,8 @@ end
         show_progress = true, samples_per_parameter = 100
     )
 
-
-
-    unique_keys = unique!(reduce(vcat, [collect(keys(a)) for a in attractors_info]))
-    @test unique_keys == [1,2,3]
+    ukeys = unique_keys(attractors_info)
+    @test ukeys == [1,2,3]
 
     # So if we get fractions_curves[80:90]
     # we see that just after the transition of 3 to 2 attractors

@@ -71,7 +71,6 @@ function replacement_map(a₊::Dict, a₋::Dict, distances::Dict, threshold)
         if  dist < threshold
             push!(used_keys₋, newkey)
         else
-            @show (oldkey, newkey, dist)
             # The distance exceeds threshold, so we will assign a new key
             # (notice that this assumes the sorting by distance we did above,
             # otherwise it wouldn't work!)

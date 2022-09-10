@@ -69,7 +69,7 @@ using Random
     end
 end
 
-
+# %%
 @testset "Henon map" begin
     # Reference for the "new Henon":
     # Shrimali, Manish Dev, et al. "The nature of attractor basins in multistable systems."

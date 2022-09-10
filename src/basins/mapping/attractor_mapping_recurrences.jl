@@ -1,5 +1,4 @@
-using SparseArrayKit: SparseArray
-
+include("sparse_arrays.jl")
 #####################################################################################
 # Type definition and documentation
 #####################################################################################
@@ -22,9 +21,9 @@ dimensional subspace.
 * `Δt`: Approximate time step of the integrator, which is `1` for discrete systems.
   For continuous systems, an automatic value is calculated using
   [`automatic_Δt_basins`](@ref).
-* `Ttr = 0`: This keyword arguments allows to skip a transient before the recurrence 
-  routine begins. It is useful for some high dimensional systems to speed up the 
-  convergence to the attractor. 
+* `Ttr = 0`: This keyword arguments allows to skip a transient before the recurrence
+  routine begins. It is useful for some high dimensional systems to speed up the
+  convergence to the attractor.
 * `diffeq = NamedTuple()`: Keyword arguments propagated to [`integrator`](@ref). Only
   valid for `ContinuousDynamicalSystem`. It is recommended to choose high accuracy
   solvers for this application, e.g. `diffeq = (alg=Vern9(), reltol=1e-9, abstol=1e-9)`.
@@ -147,8 +146,9 @@ basins, making the computation faster as the grid is processed more and more.
 function basins_of_attraction(mapper::AttractorsViaRecurrences; show_progress = true)
     basins = mapper.bsn_nfo.basins
     if basins isa SparseArray;
-        throw(ArgumentError(
-            "Sparse version is incompatible with `basins_of_attraction(mapper)`."
+        throw(ArgumentError("""
+            Sparse version of AttractorsViaRecurrences is incompatible with
+            `basins_of_attraction(mapper)`."""
         ))
     end
     grid = mapper.grid

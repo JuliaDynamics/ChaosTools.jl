@@ -17,7 +17,7 @@ then the key `4` will be transformed to `3` and not further to `2`.
 function swap_dict_keys!(fs::Dict, _rmap::AbstractDict)
     isempty(_rmap) && return
     # Transform rmap so it is sorted in decreasing order,
-    # so that doulbe swapping can't happen
+    # so that double swapping can't happen
     rmap = sort!(collect(_rmap); by = x -> x[2])
     cache = Tuple{keytype(fs), valtype(fs)}[]
     for (oldkey, newkey) in rmap

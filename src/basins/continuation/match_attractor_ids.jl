@@ -35,8 +35,6 @@ different key in the dictionary `a₊`.
 """
 function match_attractor_ids!(a₊::AbstractDict, a₋; metric = Euclidean(), threshold = Inf)
     distances = datasets_sets_distances(a₊, a₋, metric)
-    # mdc = minimal_distance_combinations(distances)
-    # rmap = replacement_map(a₊, a₋, mdc, threshold)
     rmap = replacement_map(a₊, a₋, distances, threshold)
     swap_dict_keys!(a₊, rmap)
     return rmap

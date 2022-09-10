@@ -167,8 +167,6 @@ end
     #         att_obs[k][] = Point2f[]; notify(att_obs[k])
     #     end
     # end
-
-
 end
 
 # %%
@@ -215,7 +213,6 @@ end
     ukeys = unique_keys(fractions_curves)
     @test all(k -> 1 ≤ k ≤ 4, ukeys)
 
-
     for (i, G) in enumerate(Grange)
         fs = fractions_curves[i]
         attractors = attractors_info[i]
@@ -232,6 +229,4 @@ end
             @test length(k) == 2
         end
     end
-
-
 end

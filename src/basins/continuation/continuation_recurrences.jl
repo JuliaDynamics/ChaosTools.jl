@@ -131,27 +131,3 @@ function reset!(mapper::AttractorsViaRecurrences)
     # it doesn't actually match to any of the new ones
     return
 end
-
-function renumber_keys_sequentially!(att_info, frac_curves)
-    # First collect all unique keys (hence using `Set`)
-    keys = Set{Int}()
-    for af in att_info
-        for k in af
-            push!(keys, k[1])
-        end
-    end
-
-    # Now set up a replacement map
-    rmap = Dict()
-    for (j, ke) in enumerate(keys)
-       push!(rmap, ke => j)
-    end
-
-    for fs in frac_curves
-        swap_dict_keys!(fs, rmap)
-    end
-    for af in att_info
-        swap_dict_keys!(af, rmap)
-    end
-    return rmap
-end

@@ -8,9 +8,6 @@ using OrdinaryDiffEq
 using Random
 using Statistics
 
-
-@testset "AttractorMappers" begin
-
 # Define generic testing framework
 function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         rerr = 1e-3, ferr = 1e-3, aerr = 1e-15, ε = nothing, clustering_threshold = 0.0,
@@ -107,7 +104,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
     end
 end
 
-
+# %% Actual tests
 @testset "Henon map: discrete & divergence" begin
     u0s = [1 => [0.0, 0.0], -1 => [0.0, 2.0]] #template ics
     ds = Systems.henon(zeros(2); a = 1.4, b = 0.3)
@@ -214,4 +211,3 @@ end
     test_basins(pmap, u0s, grid, expected_fs_raw, thomas_featurizer; ε = 1.0, ferr=1e-2)
 end
 
-end # Attractor mapping tests

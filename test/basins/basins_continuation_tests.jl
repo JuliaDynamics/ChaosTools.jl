@@ -184,35 +184,54 @@ end
     sampler, = statespace_sampler(Random.MersenneTwister(1234);
         min_bounds = minimum.(grid), max_bounds = maximum.(grid)
     )
-    # sampler = [sampler() for i in 1:100]
-    # TODO: Whether algorithm will hault or not depends strongly
-    # on the parameters here. Can we somehow improve this so the
-    # process isn't so sensitive...?
 
     mapper = AttractorsViaRecurrencesSparse(ds, grid;
-        mx_chk_fnd_att = 100,
-        mx_chk_loc_att = 100,
-        safety_counter_max = Int(1e8),
-        diffeq, Δt = 0.1
+        mx_chk_fnd_att = 1000,
+        mx_chk_loc_att = 1000,
+        diffeq, mx_chk_lost = 1000,
+        safety_counter_max = 1e8,
     )
+
 
     # coexistance of periodic and chaotic, and then the chaotic collapses
     # into the fixed point via a "crisis" (aka global bifurcation).
     # stable fixed point exists always throughout the parameter range,
     # but after the collapse, a fixed point and periodic attractor exist
-    Grange = range(1.32, 1.37; length = 301)
+    # If the parameter range is too refined, we have difficulties very
+    # close to the global bifucation, where a 4th attractor is identified
+    # which is exactly on top of the periodic one. I guess this happens because
+    # the cells of the periodic attractor are not all fully occupied.
+    # drastically increasing the `mx_chk_loc_att` would probably resolve that.
+    Grange = range(1.34, 1.37; length = 21)
     Gidx = 2
-    # threshold = 0.01 is the ε value we give at the mapper test
+    CRITICAL_G = 1.3616
+
     continuation = RecurrencesSeedingContinuation(mapper; threshold = Inf)
     fractions_curves, attractors_info = basins_fractions_continuation(
         continuation, Grange, Gidx, sampler;
-        show_progress = true, samples_per_parameter = 100
+        show_progress = false, samples_per_parameter = 100
     )
 
-    ukeys = unique_keys(attractors_info)
-    @test ukeys == [1,2,3]
+    ukeys = unique_keys(fractions_curves)
+    @test all(k -> 1 ≤ k ≤ 4, ukeys)
 
-    # So if we get fractions_curves[80:90]
-    # we see that just after the transition of 3 to 2 attractors
+
+    for (i, G) in enumerate(Grange)
+        fs = fractions_curves[i]
+        attractors = attractors_info[i]
+        @test sum(values(fs)) ≈ 1
+        # Test that keys are the same (-1 doesn't have attractor)
+        k = sort!(collect(keys(fs)))
+        attk = sort!(collect(keys(attractors)))
+        @test k == attk
+        # drop key -1 for trajectories that didn't converge
+
+        if G < CRITICAL_G
+            @test length(k) == 3
+        else
+            @test length(k) == 2
+        end
+    end
+
 
 end

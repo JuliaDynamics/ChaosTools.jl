@@ -1,6 +1,8 @@
-export RecurrencesSeedingContinuation, basins_fractions_continuation
+export RecurrencesSeedingContinuation
+import ProgressMeter
+
 # The recurrences based method is rather flexible because it works
-# in two independent steprange: it first finds attractors and then matches them.
+# in two independent steps: it first finds attractors and then matches them.
 struct RecurrencesSeedingContinuation{A, M, S, E} <: BasinsFractionContinuation
     mapper::A
     metric::M
@@ -8,9 +10,6 @@ struct RecurrencesSeedingContinuation{A, M, S, E} <: BasinsFractionContinuation
     seeds_from_attractor::S
     info_extraction::E
 end
-
-# TODO: Allow generalized function for matching: any function that given
-# two attractors, it gives a real positive number (distance).
 
 """
     RecurrencesSeedingContinuation(mapper::AttractorsViaRecurrences; kwargs...)
@@ -51,8 +50,12 @@ function basins_fractions_continuation(
         continuation::RecurrencesSeedingContinuation, prange, pidx, ics::Function;
         samples_per_parameter = 100, show_progress = false,
     )
-    show_progress && @info "Starting basins fraction continuation."
-    show_progress && @info "p = $(prange[1])"
+    # show_progress && @info "Starting basins fraction continuation."
+    # show_progress && @info "p = $(prange[1])"
+    progress = ProgressMeter.Progress(length(prange);
+        desc="Continuating basins fractions:", enabled=show_progress
+    )
+
     (; mapper, metric, threshold) = continuation
     # first parameter is run in isolation, as it has no prior to seed from
     set_parameter!(mapper.integ, pidx, prange[1])
@@ -61,13 +64,13 @@ function basins_fractions_continuation(
     fractions_curves = [fs]
     # Furthermore some info about the attractors is stored and returned
     prev_attractors = deepcopy(mapper.bsn_nfo.attractors)
-    get_info = attractors -> Dict(k => continuation.info_extraction(att) for (k, att) in attractors)
+    get_info = attractors -> Dict(
+        k => continuation.info_extraction(att) for (k, att) in attractors
+    )
     info = get_info(prev_attractors)
     attractors_info = [info]
 
-    # TODO: Make this use ProgressMeter.jl
     for p in prange[2:end]
-        show_progress && @show p
         set_parameter!(mapper.integ, pidx, p)
         reset!(mapper)
         # Seed initial conditions from previous attractors
@@ -83,7 +86,7 @@ function basins_fractions_continuation(
                 # We map the initial condition to an attractor, but we don't care
                 # about which attractor we go to. This is just so that the internal
                 # array of `AttractorsViaRecurrences` registers the attractors
-                label = mapper(u0; show_progress)
+                label = mapper(u0; show_progress = false)
                 seeded_fs[label] = get(seeded_fs, label, 0) + 1
             end
         end
@@ -94,18 +97,19 @@ function basins_fractions_continuation(
         current_attractors = mapper.bsn_nfo.attractors
         # Match with previous attractors before storing anything!
         rmap = match_attractor_ids!(current_attractors, prev_attractors; metric, threshold)
-
         # Then do the remaining setup for storing and next step
         swap_dict_keys!(fs, rmap)
         overwrite_dict!(prev_attractors, current_attractors)
         push!(fractions_curves, fs)
         push!(attractors_info, get_info(prev_attractors))
-        show_progress && @show fs
+        next!(progress)
     end
-    # TODO: Enable this back once we renumber keys sequentially WITHOUT
-    # duplication.
-    # srmap = renumber_keys_sequentially!(attractors_info, fractions_curves)
-    # @show srmap
+    # Normalize to smaller available integers for user convenience
+    rmap = retract_keys_to_consecutive(fractions_curves)
+    for (da, df) in zip(attractors_info, fractions_curves)
+        swap_dict_keys!(da, rmap)
+        swap_dict_keys!(df, rmap)
+    end
     return fractions_curves, attractors_info
 end
 
@@ -126,28 +130,4 @@ function reset!(mapper::AttractorsViaRecurrences)
     # because we want the next attractor to be labelled differently in case
     # it doesn't actually match to any of the new ones
     return
-end
-
-function renumber_keys_sequentially!(att_info, frac_curves)
-    # First collect all unique keys (hence using `Set`)
-    keys = Set{Int16}()
-    for af in att_info
-        for k in af
-            push!(keys,k[1])
-        end
-    end
-
-    # Now set up a replacement map
-    rmap = Dict()
-    for (j, ke) in enumerate(keys)
-       push!(rmap, ke => j)
-    end
-
-    for fs in frac_curves
-        swap_dict_keys!(fs, rmap)
-    end
-    for af in att_info
-        swap_dict_keys!(af, rmap)
-    end
-    return rmap
 end

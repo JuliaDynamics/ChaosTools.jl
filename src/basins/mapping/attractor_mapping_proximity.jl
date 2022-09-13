@@ -102,7 +102,7 @@ function _deduce_ε_from_attractors(attractors, search_trees, verbose = false)
 end
 
 
-function (mapper::AttractorsViaProximity)(u0)
+function (mapper::AttractorsViaProximity)(u0; show_progress = false)
     reinit!(mapper.integ, u0)
     maxdist = 0.0
     mapper.Ttr > 0 && step!(mapper.integ, mapper.Ttr)

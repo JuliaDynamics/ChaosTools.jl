@@ -1,17 +1,19 @@
 using ChaosTools
 using Test
-using DynamicalSystemsBase, DelayEmbeddings
+using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
 using StatsBase
 standardize = DelayEmbeddings.standardize
 test_value = (val, vmin, vmax) -> @test vmin ≤ val ≤ vmax
 
-ti = time()
-@testset "ChaosTools tests" begin
+# TODO: Make all tests use this `testfile` approach.
+testfile(file, testname) = @testset "$testname" begin; include(file); end
+
+@testset "ChaosTools" begin
 
 include("basins/clustering_tests.jl")
-include("basins/attractor_mapping_tests.jl")
-include("basins/matching_attractors_tests.jl")
-# @testset "Fractions continuation" begin; include("basins/basins_continuation_tests.jl"); end
+testfile("basins/attractor_mapping_tests.jl", "Attractor mappers")
+testfile("basins/matching_attractors_tests.jl", "Matching attractors")
+testfile("basins/basins_continuation_tests.jl", "Fractions continuation")
 include("basins/uncertainty_tests.jl")
 include("basins/tipping_points_tests.jl")
 include("basins/proximity_deduce_ε_tests.jl")
@@ -36,8 +38,3 @@ include("nlts_tests.jl")
 include("dyca_tests.jl")
 
 end
-
-ti = time() - ti
-println("\nTest took total time of:")
-println(round(ti, digits = 33), " seconds or ",
-round(ti/60, digits = 3), " minutes")

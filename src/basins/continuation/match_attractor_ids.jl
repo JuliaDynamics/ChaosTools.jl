@@ -23,12 +23,16 @@ different attractors get assigned different IDs. However
 which attractor gets which ID is somewhat arbitrary. Finding the attractors of the
 same system for slightly different parameters could label "similar" attractors (at
 the different parameters) with different IDs.
-`match_attractors!` tries to "match" them by modifying the attractor IDs.
+`match_attractors!` tries to "match" them by modifying the attractor IDs,
+i.e., the keys of the given dictionaries.
 
-Distance in attractor space uses the [`datasets_sets_distances`](@ref) function,
-and hence the keyword `metric` can be whatever that function accepts, such as
+The matching happens according to the output of the [`datasets_sets_distances`](@ref)
+function with the keyword `metric`. `metric` can be whatever that function accepts, such as
 an actual `Metric` instance, or an arbitrary user-defined function that computes
-an arbitrary "distance" between two datasets.
+an arbitrary "distance" between two datasets. Attractors are then match according to
+distance, with unique mapping. The closest attractors (before and after) are mapped to each
+other, and are removed from the matching pool, and then the next pair with least
+remaining distance is matched, and so on.
 
 Additionally, you can provide a `threshold` value. If the distance between two attractors
 is larger than this `threshold`, then it is guaranteed that the attractors will get assigned
@@ -51,7 +55,8 @@ end
 
 """
     replacement_map(a₊, a₋, distances, threshold) → rmap
-Return a dictionary mapping keys in `a₊` to new keys in `a₋`.
+Return a dictionary mapping keys in `a₊` to new keys in `a₋`,
+as explained in [`match_attractor_ids!`](@ref).
 Instead of passing dictionaries for `a₊, a₋`, you may pass their keys directly.
 """
 function replacement_map(a₊::Dict, a₋::Dict, distances::Dict, threshold)

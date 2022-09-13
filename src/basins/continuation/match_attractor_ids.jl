@@ -1,5 +1,6 @@
 # Notice this file uses heavily `dict_utils.jl`!
 export match_attractor_ids!, match_basins_ids!, replacement_map
+
 ###########################################################################################
 # Matching attractors and key swapping business
 ###########################################################################################
@@ -40,11 +41,25 @@ function match_attractor_ids!(a₊::AbstractDict, a₋; metric = Euclidean(), th
     return rmap
 end
 
+# Convenience method that isn't documented. Used in test suite.
+function match_attractor_ids!(as::Vector{<:Dict}; kwargs...)
+    for i in 1:length(as)-1
+        a₊, a₋ = as[i+1], as[i]
+        match_attractor_ids!(a₊, a₋; kwargs...)
+    end
+end
+
 """
-    replacement_map(a₊, a₋, distances, threshold) → map
+    replacement_map(a₊, a₋, distances, threshold) → rmap
 Return a dictionary mapping keys in `a₊` to new keys in `a₋`.
+Instead of passing dictionaries for `a₊, a₋`, you may pass their keys directly.
 """
 function replacement_map(a₊::Dict, a₋::Dict, distances::Dict, threshold)
+    keys₊, keys₋ = keys.((a₊, a₋))
+    replacement_map(keys₊, keys₋, distances::Dict, threshold)
+end
+
+function replacement_map(keys₊, keys₋, distances::Dict, threshold)
     # Transform distances to sortable collection. Sorting by distance
     # ensures we prioritize the closest matches
     sorted_keys_with_distances = Tuple{Int, Int, Float64}[]
@@ -60,10 +75,10 @@ function replacement_map(a₊::Dict, a₋::Dict, distances::Dict, threshold)
     # In the same loop we match keys according to distance of values,
     # but also ensure that keys that have too high of a value distance are guaranteeed
     # to have different keys, and ensure that there is unique mapping happening!
-    rmap = Dict{keytype(a₊), keytype(a₋)}()
-    next_id = max(maximum(keys(a₊)), maximum(keys(a₋))) + 1
-    done_keys₊ = keytype(a₊)[] # stores keys of a₊ already processed
-    used_keys₋ = keytype(a₋)[] # stores keys of a₋ already used
+    rmap = Dict{eltype(keys₊), eltype(keys₋)}()
+    next_id = max(maximum(keys₊), maximum(keys₋)) + 1
+    done_keys₊ = eltype(keys₊)[] # stores keys of a₊ already processed
+    used_keys₋ = eltype(keys₋)[] # stores keys of a₋ already used
     for (oldkey, newkey, dist) in sorted_keys_with_distances
         (oldkey ∈ done_keys₊ || newkey ∈ used_keys₋) && continue
         if  dist < threshold
@@ -80,8 +95,8 @@ function replacement_map(a₊::Dict, a₋::Dict, distances::Dict, threshold)
     end
 
     # if not all keys were processed, we map them to the next available integers
-    if length(done_keys₊) ≠ length(keys(a₊))
-        unprocessed = setdiff(collect(keys(a₊)), done_keys₊)
+    if length(done_keys₊) ≠ length(keys₊)
+        unprocessed = setdiff(collect(keys₊), done_keys₊)
         for oldkey in unprocessed
             rmap[oldkey] = next_id
             next_id += 1
@@ -109,8 +124,7 @@ different IDs guaranteed).
 function match_basins_ids!(b₊::AbstractArray, b₋; threshold = Inf)
     ids₊, ids₋ = unique(b₊), unique(b₋)
     distances = _similarity_from_overlaps(b₊, ids₊, b₋, ids₋)
-    mdc = minimal_distance_combinations(distances)
-    rmap = replacement_map(a₊, a₋, mdc, threshold)
+    rmap = replacement_map(ids₊, ids₋, distances, threshold)
     replace!(b₊, rmap...)
     return rmap
 end

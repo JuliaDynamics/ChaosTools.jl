@@ -9,7 +9,7 @@ export unique_keys, swap_dict_keys!
 """
     swap_dict_keys!(d::Dict, replacement_map::Dict)
 
-Swap the keys of a dictionary `d` given the `replacement_map`
+Swap the keys of a dictionary `d` given the [`replacement_map`](@ref)
 which maps old keys to new keys. Also ensure that a swap can happen at most once,
 e.g., if input `d` has a key `4`, and `rmap = Dict(4 => 3, 3 => 2)`,
 then the key `4` will be transformed to `3` and not further to `2`.
@@ -80,7 +80,7 @@ function retract_keys_to_consecutive(v::Vector{<:Dict})
 end
 
 """
-    unique_keys(v::Vector{<:AbstractDict})
+    unique_keys(v::Iterator{<:AbstractDict})
 Given a vector of dictionaries, return a sorted vector of the unique keys
 that are present across all dictionaries.
 """

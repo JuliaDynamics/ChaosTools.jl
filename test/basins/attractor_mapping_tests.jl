@@ -61,7 +61,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
             end
         end
         # `basins_of_attraction` tests
-        basins, approx_atts = basins_of_attraction(mapper, reduced_grid; show_progress = false)
+        basins, approx_atts = basins_of_attraction(mapper, reduced_grid; show_progress=false)
         @test length(size(basins)) == length(grid)
         if known
             bids = sort!(unique(basins))
@@ -85,7 +85,8 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
     @testset "Featurizing, unsupervised" begin
         clusterspecs = ClusteringConfig()
         mapper = AttractorsViaFeaturizing(ds, featurizer, clusterspecs; diffeq, Ttr = 500)
-        test_basins_fractions(mapper; err = ferr, single_u_mapping = false, known_ids = [-1, 1, 2, 3])
+        test_basins_fractions(mapper;
+        err = ferr, single_u_mapping = false, known_ids = [-1, 1, 2, 3])
     end
 
     @testset "Featurizing, supervised" begin
@@ -163,7 +164,8 @@ end
         return [A[end][1], A[end][2]]
     end
 
-    test_basins(ds, u0s, grid, expected_fs_raw, featurizer; ε = 0.01, ferr=1e-2, rerr = 1e-2, aerr = 5e-3)
+    test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
+    ε = 0.01, ferr=1e-2, rerr = 1e-2, aerr = 5e-3)
 end
 
 

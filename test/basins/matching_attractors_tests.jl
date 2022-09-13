@@ -1,8 +1,6 @@
 using Test, ChaosTools
 using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
 
-@testset "Matching attractors" begin
-
 @testset "analytic" begin
     a_befo = Dict(1 => [SVector(0.0, 0.0)], 2 => [SVector(1.0, 1.0)])
     a_befo = Dict(keys(a_befo) .=> Dataset.(values(a_befo)))
@@ -24,34 +22,42 @@ using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
         @test !haskey(a_afte, 2)
         @test a_afte[3] == Dataset([SVector(2.0, 2.0)])
     end
+    @testset "No double duplication" begin
+        rmap = Dict(4 => 3, 3 => 2)
+        a = Dict(4 => 1)
+        swap_dict_keys!(a, rmap)
+        @test haskey(a, 3)
+        @test !haskey(a, 2)
+    end
 end
 
-
-using LinearAlgebra: norm
-d, α, ω = 0.3, 0.2, 0.5
-ds = Systems.magnetic_pendulum(; d, α, ω)
-xg = yg = range(-3, 3, length = 100)
-ds = projected_integrator(ds, 1:2, [0.0, 0.0])
-mapper = AttractorsViaRecurrences(ds, (xg, yg); Δt = 1.0)
-b₋, a₋ = basins_of_attraction(mapper; show_progress = false)
-# still 3 attractors at γ3 = 0.2, but only 2 at 0.1
-@testset "magnetic pendulum γ3 $γ3" for γ3 ∈ [0.2, 0.1]
-    set_parameter!(ds, :γs, [1, 1, γ3])
+@testset "magnetic pendulum" begin
+    using LinearAlgebra: norm
+    d, α, ω = 0.3, 0.2, 0.5
+    ds = Systems.magnetic_pendulum(; d, α, ω)
+    xg = yg = range(-3, 3, length = 100)
+    ds = projected_integrator(ds, 1:2, [0.0, 0.0])
     mapper = AttractorsViaRecurrences(ds, (xg, yg); Δt = 1.0)
-    b₊, a₊ = basins_of_attraction(mapper; show_progress = false)
-    @testset "distances match" begin
-        rmap = match_attractor_ids!(a₊, a₋)
-        for k in keys(a₊)
-            dist = minimum(norm(x .- y) for x ∈ a₊[k] for y ∈ a₋[k])
-            @test dist < 0.2
+    b₋, a₋ = basins_of_attraction(mapper; show_progress = false)
+    # still 3 attractors at γ3 = 0.2, but only 2 at 0.1
+    @testset "γ3 $γ3" for γ3 ∈ [0.2, 0.1]
+        set_parameter!(ds, :γs, [1, 1, γ3])
+        mapper = AttractorsViaRecurrences(ds, (xg, yg); Δt = 1.0)
+        b₊, a₊ = basins_of_attraction(mapper; show_progress = false)
+        @testset "distances match" begin
+            rmap = match_attractor_ids!(a₊, a₋)
+            for k in keys(a₊)
+                dist = minimum(norm(x .- y) for x ∈ a₊[k] for y ∈ a₋[k])
+                @test dist < 0.2
+            end
         end
-    end
-    @testset "overlap match" begin
-        fs0 = basins_fractions(b₊)
-        rmap = match_attractor_ids!(b₊, b₋)
-        @test !isempty(rmap)
-        fs1 = basins_fractions(b₊)
-        @test sort!(collect(values(fs0))) == sort!(collect(values(fs1)))
+        @testset "overlap match" begin
+            fs0 = basins_fractions(b₊)
+            rmap = match_basins_ids!(b₊, b₋)
+            @test !isempty(rmap)
+            fs1 = basins_fractions(b₊)
+            @test sort!(collect(values(fs0))) == sort!(collect(values(fs1)))
+        end
     end
 end
 
@@ -82,5 +88,3 @@ end
     end
     @test haskey(allatts2[1], 2)
 end
-
-end # main testset

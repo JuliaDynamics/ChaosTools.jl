@@ -40,11 +40,15 @@ using Random
             # fixed point that vanishes could have any of the three ids
             # But we can test for sure how many ids we have
             # (depending on where we come from we find the attractor for longer)
-            gammathres = j == 1 ? 0.2 : 0.22
-            if γ < gammathres
+            if γ < 0.2
                 @test length(k) == 2
-            else
+            elseif γ > 0.22
                 @test length(k) == 3
+            else
+                # There is a bit of varaibility of exactly when the transition
+                # occurs, and also depends on randomness for when we get exactly 0
+                # fraction for one of the attractors
+                @test length(k) ∈ (2, 3)
             end
             @test sum(values(fs)) ≈ 1
         end
@@ -137,7 +141,8 @@ end
     unique_keys = ChaosTools.unique_keys(attractors_info)
     # We must have 4 attractors: initial chaotic, period 14 in the middle,
     # chaotic again, and period 7 at the end. ALl of these should be matched to each other.
-    @test length(unique_keys) == 4
+    # Since we retract keys, we have 1:4
+    @test unique_keys == 1:4
 
     # # Animation of henon attractors
     # using GLMakie

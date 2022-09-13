@@ -5,15 +5,15 @@ using StatsBase
 standardize = DelayEmbeddings.standardize
 test_value = (val, vmin, vmax) -> @test vmin ≤ val ≤ vmax
 
+# TODO: Make all tests use this `testfile` approach.
 testfile(file, testname) = @testset "$testname" begin; include(file); end
 
 @testset "ChaosTools" begin
 
 include("basins/clustering_tests.jl")
 testfile("basins/attractor_mapping_tests.jl", "Attractor mappers")
-include("basins/matching_attractors_tests.jl")
+testfile("basins/matching_attractors_tests.jl", "Matching attractors")
 testfile("basins/basins_continuation_tests.jl", "Fractions continuation")
-# @testset "Fractions continuation" begin; include("basins/basins_continuation_tests.jl"); end
 include("basins/uncertainty_tests.jl")
 include("basins/tipping_points_tests.jl")
 include("basins/proximity_deduce_ε_tests.jl")

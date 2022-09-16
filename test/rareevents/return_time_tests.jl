@@ -1,8 +1,7 @@
 using ChaosTools, Test, Statistics
 using ChaosTools.DynamicalSystemsBase
 
-println("\nTesting transit time statistics...")
-@testset "Transit time statistics" begin
+println("\n Return time tests...")
 
 @testset "Standard map (exact)" begin
 # INPUT
@@ -205,5 +204,4 @@ is = range(10; step = 4, length = 7)
 
 @test τ2[1] < τ[2]
 
-end
 end

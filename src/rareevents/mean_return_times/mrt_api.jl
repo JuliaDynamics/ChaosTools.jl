@@ -6,8 +6,12 @@ export exit_entry_times, transit_return, mean_return_times
 Return the mean return times `τ`, as well as the amount of returns `c`, for
 subsets of the state space of `ds` defined by `u₀, εs`.
 The `ds` is evolved for a maximum of `T` time.
-This function behaves similarly to [`exit_entry_times`](@ref) and thus see that one for
-the meaning of `u₀` and `εs`.
+
+This function is mainly a convenient wrapper around calls to [`exit_entry_times`](@ref)
+and then to [`transit_return`](@ref) and then some averaging.
+Thus see [`exit_entry_times`](@ref) for the meaning of `u₀` and `εs` and further info.
+
+# TODO: all of the following will be deleted.
 
 This function supports both discrete and continuous systems, however the optimizations
 done in discrete systems (where all nested `ε`-sets are checked at the same time),
@@ -28,11 +32,14 @@ Continuous systems allow for the following keywords:
 For continuous systems `T, i, dmin` can be vectors with same size as `εs`, to help increase
 accuracy of small `ε`.
 """
-function mean_return_times end
-
+function exit_entry_times(ds::DynamicalSystem, u0, εs, T; diffeq = NamedTuple(), kwargs...)
+    check_εs_sorting(εs, length(u0))
+    integ = integrator(ds, u0; diffeq)
+    exit_entry_times(integ, u0, εs, T)
+end
 
 """
-    exit_entry_times(ds, u₀, εs, T; diffeq = NamedTuple()) → exits, entries
+    exit_entry_times(ds::DynamicalSystem, u₀, εs, T; diffeq = NamedTuple()) → exits, entries
 Collect exit and entry times for a ball or box centered at `u₀` with radii `εs` (see below),
 in the state space of the given discrete dynamical system (function not yet available
 for continuous systems).
@@ -43,12 +50,14 @@ Use `transit_return(exits, entries)` to transform the output into transit and re
 times, and see also [`mean_return_times`](@ref) for both continuous and discrete systems.
 
 ## Description
-Transit time statistics are important for the transport properties of dynamical systems[^Meiss1997]
-and can even be connected with the fractal dimension of chaotic sets[^Boev2014].
+Transit time statistics are important for the transport properties of dynamical
+systems[^Meiss1997] and can be connected with fractal dimensions of chaotic sets[^Boev2014].
 
 The current algorithm collects exit and re-entry times to given sets in the state space,
-which are centered at `u₀` (**algorithm always starts at `u₀`** and the initial state of
-`ds` is irrelevant). `εs` is always a `Vector`.
+which are centered at the state `u₀` (**the algorithm always starts at `u₀`** and the
+initial state of `ds` is irrelevant).
+
+`εs` is always a `Vector`.
 
 The sets around `u₀` are nested hyper-spheres of radius `ε ∈ εs`, if each entry of
 `εs` is a real number. The sets can also be
@@ -56,7 +65,7 @@ hyper-rectangles (boxes), if each entry of `εs` is a vector itself.
 Then, the `i`-th box is defined by the space covered by `u0 .± εs[i]` (thus the actual
 box size is `2εs[i]`!).
 
-The reason to input multiple `εs` at once is purely for performance.
+The reason to input multiple `εs` at once is purely for performance optimizations.
 
 For discrete systems, exit time is recorded immediatelly after exitting of the set, and
 re-entry is recorded immediatelly on re-entry. This means that if an orbit needs
@@ -76,8 +85,9 @@ function exit_entry_times end
 
 
 """
-    transit_return(exits, entries) → transit, return
+    transit_return(exits, entries) → transits, returns
 Convert the output of [`exit_entry_times`](@ref) to the transit and return times.
+The outputs here are vectors of vectors just like in [`exit_entry_times`](@ref).
 """
 function transit_return(exits, entries)
     # the main reason this function exists is because entry times can be one less

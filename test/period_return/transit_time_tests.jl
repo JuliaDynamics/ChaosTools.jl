@@ -1,4 +1,5 @@
-using ChaosTools, Test, Statistics, DynamicalSystemsBase
+using ChaosTools, Test, Statistics
+using ChaosTools.DynamicalSystemsBase
 
 println("\nTesting transit time statistics...")
 @testset "Transit time statistics" begin
@@ -9,7 +10,7 @@ ds = Systems.standardmap()
 T = 10000 # maximum time
 
 # period 3 of standard map
-u0 = SVector(0.8121, 1.6243)
+u0 = SVector(0.8121, 1.6243) # for default k!
 εs = sort!([4.0, 2.0, 0.01]; rev=true)
 # radius of 4.0 covers the first 2 points of the period 3 while 2.0 covers only
 # the first point. Therefore:

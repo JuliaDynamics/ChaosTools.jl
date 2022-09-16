@@ -1,12 +1,6 @@
-# TODO: Wait a second, wouldn't mean return times be computable just from exit-entry...?
-# TODO: Move check sorting and generating integrator to the API file.
-function exit_entry_times(ds::DiscreteDynamicalSystem, u0, εs, T; diffeq = NamedTuple())
-    check_εs_sorting(εs, length(u0))
-    integ = integrator(ds, u0)
-    exit_entry_times(integ, u0, εs, T)
-end
-
+# Discrete dynamical systems (maps) implementation. Ultra fast, ultra clean.
 function exit_entry_times(integ::MDI, u0, εs, T)
+    reinit!(integ, u0)
     E = length(εs)
     pre_outside = fill(false, E)      # `true` if outside the set. Previous step.
     cur_outside = copy(pre_outside)   # `true` if outside the set. Current step.
@@ -35,25 +29,36 @@ function first_outside_index(integ::MDI, u0, εs, E)::Int
     return isnothing(i) ? E+1 : i
 end
 
+# These two functions add an entry to the exit or entry times,
+# depending on whether the current and previous "outside" statuses
 function update_exit_times!(exits, i, pre_outside, cur_outside, integ::MDI)
     @inbounds for j in i:length(pre_outside)
         cur_outside[j] && !pre_outside[j] && push!(exits[j], integ.t)
     end
 end
-
 function update_entry_times!(entries, i, pre_outside, cur_outside, integ::MDI)
     @inbounds for j in 1:i-1
         pre_outside[j] && !cur_outside[j] && push!(entries[j], integ.t)
     end
 end
 
-function mean_return_times(ds::DiscreteDynamicalSystem, u0, εs, T; diffeq = NamedTuple())
-    check_εs_sorting(εs, length(u0))
-    integ = integrator(ds, u0)
-    mean_return_times(integ, u0, εs, T)
+# Remember this is just a convenience function!
+function mean_return_times(ds::DiscreteDynamicalSystem, u0, εs, T)
+    exits, entries = exit_entry_times(ds, u0, εs, T)
+    transits, returns = transit_return(exits, entries)
+    mrt = mean.(returns)
+    ret = length.(returns)
+    return mrt, ret
 end
 
-function mean_return_times(integ::MDI, u0, εs, T)
+# Old function. It optimized the return by not collecting the transit
+# times, nor a vector of all returns, but rather an accumulated count.
+# However, I believe the code simplicity is more important.
+# Nevertheless, I am leavin the source code here in case someone needs to run
+# insane amount of computations...
+#=
+function mean_return_times(ds::DiscreteDynamicalSystem, u0, εs, Τ)
+    integ = integrator(ds, u0)
     E = length(εs)
     pre_outside = fill(false, E)      # `true` if outside the set. Previous step.
     cur_outside = copy(pre_outside)   # `true` if outside the set. Current step.
@@ -94,3 +99,4 @@ function update_entries_and_returns!(
         end
     end
 end
+=#

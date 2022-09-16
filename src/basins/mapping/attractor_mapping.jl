@@ -95,7 +95,7 @@ function basins_fractions(mapper::AttractorMapper, ics::Union{AbstractDataset, F
     # mappers as threads. Use a `threading` keyword and `deepcopy(mapper)`
     for i ∈ 1:N
         ic = _get_ic(ics, i)
-        label = mapper(ic)
+        label = mapper(ic; show_progress)
         fs[label] = get(fs, label, 0) + 1
         used_dataset && (labels[i] = label)
         show_progress && next!(progress)
@@ -144,7 +144,7 @@ corresponding to the state space partitioning indicated by `grid`.
 function basins_of_attraction(mapper::AttractorMapper, grid::Tuple; kwargs...)
     basins = zeros(Int32, map(length, grid))
     I = CartesianIndices(basins)
-    A = Dataset([generate_ic_on_grid(grid, i) for i in I])
+    A = Dataset([generate_ic_on_grid(grid, i) for i in vec(I)])
     fs, labels, attractors = basins_fractions(mapper, A; kwargs...)
     vec(basins) .= vec(labels)
     return basins, attractors

@@ -1,5 +1,6 @@
 # Notice this file uses heavily `dict_utils.jl`!
-export match_attractor_ids!, match_basins_ids!
+export match_attractor_ids!, match_basins_ids!, replacement_map
+
 ###########################################################################################
 # Matching attractors and key swapping business
 ###########################################################################################
@@ -11,7 +12,9 @@ those in dictionary `a₋` get assigned the same key as in `a₋`.
 Typically the +,- mean after and before some change of parameter of a system.
 
 Return the `replacement_map`, a dictionary mapping old keys of `a₊` to
-the new ones that they were mapped to.
+the new ones that they were mapped to. You can obtain this map, without modifying
+the dictionaries, by directly calling the [`replacement_map`](@ref) function
+with the output of [`datasets_sets_distances`](@ref) for given `metric`.
 
 ## Description
 
@@ -20,12 +23,16 @@ different attractors get assigned different IDs. However
 which attractor gets which ID is somewhat arbitrary. Finding the attractors of the
 same system for slightly different parameters could label "similar" attractors (at
 the different parameters) with different IDs.
-`match_attractors!` tries to "match" them by modifying the attractor IDs.
+`match_attractors!` tries to "match" them by modifying the attractor IDs,
+i.e., the keys of the given dictionaries.
 
-Distance in attractor space uses the [`datasets_sets_distances`](@ref) function,
-and hence the keyword `metric` can be whatever that function accepts, such as
+The matching happens according to the output of the [`datasets_sets_distances`](@ref)
+function with the keyword `metric`. `metric` can be whatever that function accepts, such as
 an actual `Metric` instance, or an arbitrary user-defined function that computes
-an arbitrary "distance" between two datasets.
+an arbitrary "distance" between two datasets. Attractors are then match according to
+distance, with unique mapping. The closest attractors (before and after) are mapped to each
+other, and are removed from the matching pool, and then the next pair with least
+remaining distance is matched, and so on.
 
 Additionally, you can provide a `threshold` value. If the distance between two attractors
 is larger than this `threshold`, then it is guaranteed that the attractors will get assigned
@@ -33,68 +40,76 @@ different key in the dictionary `a₊`.
 """
 function match_attractor_ids!(a₊::AbstractDict, a₋; metric = Euclidean(), threshold = Inf)
     distances = datasets_sets_distances(a₊, a₋, metric)
-    mdc = minimal_distance_combinations(distances)
-    rmap = replacement_map(a₊, a₋, mdc, threshold)
+    rmap = replacement_map(a₊, a₋, distances, threshold)
     swap_dict_keys!(a₊, rmap)
     return rmap
 end
 
-"""
-    match_attractor_ids!(as::AbstractVector{<:AbstractDict}; kwargs...)
-When given a vector of dictionaries, iteratively perform the above method for each
-consecutive two dictionaries in the vector.
-This method is utilized in [`basins_fractions_continuation`](@ref).
-"""
-function match_attractor_ids!(as::AbstractVector{<:AbstractDict}; kwargs...)
+# Convenience method that isn't documented. Used in test suite.
+function match_attractor_ids!(as::Vector{<:Dict}; kwargs...)
     for i in 1:length(as)-1
-        a₋ = as[i]; a₊ = as[i+1]
+        a₊, a₋ = as[i+1], as[i]
         match_attractor_ids!(a₊, a₋; kwargs...)
     end
 end
 
 """
-    minimal_distance_combinations(distances)
-Using the distances (dict of dicts), create a vector that only keeps
-the minimum distance for each attractor. The output is a vector of
-`Tuple{Int, Int, Float64}` meaning `(oldkey, newkey, min_distance)`
-where the `newkey` is the key whose attractor has the minimum distance.
-The vector is also sorted according to the distance.
+    replacement_map(a₊, a₋, distances, threshold) → rmap
+Return a dictionary mapping keys in `a₊` to new keys in `a₋`,
+as explained in [`match_attractor_ids!`](@ref).
+Instead of passing dictionaries for `a₊, a₋`, you may pass their keys directly.
 """
-function minimal_distance_combinations(distances)
-    # Here we assume that the dictionary keys are integers
-    min_dist_combs = Tuple{Int, Int, Float64}[]
-    for i in keys(distances)
-        s = distances[i] # dict with distances of i to all in "-"
-        # j is already the correct key, because `s` is a dictionary
-        j = argmin(s)
-        push!(min_dist_combs, (i, j, s[j]))
-    end
-    sort!(min_dist_combs; by = x -> x[3])
-    return min_dist_combs
+function replacement_map(a₊::Dict, a₋::Dict, distances::Dict, threshold)
+    keys₊, keys₋ = keys.((a₊, a₋))
+    replacement_map(keys₊, keys₋, distances::Dict, threshold)
 end
 
+function replacement_map(keys₊, keys₋, distances::Dict, threshold)
+    # Transform distances to sortable collection. Sorting by distance
+    # ensures we prioritize the closest matches
+    sorted_keys_with_distances = Tuple{Int, Int, Float64}[]
+    for i in keys(distances)
+        for j in keys(distances[i])
+            push!(sorted_keys_with_distances, (i, j, distances[i][j]))
+        end
+    end
+    sort!(sorted_keys_with_distances; by = x -> x[3])
 
-"""
-    replacement_map(a₊, a₋, min_dist_combs, threshold)
-Given the output of [`minimal_distance_combinations`](@ref), generate the replacement
-map mapping old to new keys for `a₊`.
-"""
-function replacement_map(a₊, a₋, minimal_distance_combinations, threshold)
-    rmap = Dict{keytype(a₊), keytype(a₋)}()
-    next_id = max(maximum(keys(a₊)), maximum(keys(a₋))) + 1
-    # In the same loop we do the logic that matches keys according to distance of values,
-    # but also ensures that keys that have too high of a value distance are guaranteeed
-    # to have different keys.
-    for (oldkey, newkey, mindist) in minimal_distance_combinations
-        if mindist > threshold
+    # Iterate through distances, find match with least distance, and "remove" (skip)
+    # all remaining same indices a'la Eratosthenis sieve
+    # In the same loop we match keys according to distance of values,
+    # but also ensure that keys that have too high of a value distance are guaranteeed
+    # to have different keys, and ensure that there is unique mapping happening!
+    rmap = Dict{eltype(keys₊), eltype(keys₋)}()
+    next_id = max(maximum(keys₊), maximum(keys₋)) + 1
+    done_keys₊ = eltype(keys₊)[] # stores keys of a₊ already processed
+    used_keys₋ = eltype(keys₋)[] # stores keys of a₋ already used
+    for (oldkey, newkey, dist) in sorted_keys_with_distances
+        (oldkey ∈ done_keys₊ || newkey ∈ used_keys₋) && continue
+        if  dist < threshold
+            push!(used_keys₋, newkey)
+        else
             # The distance exceeds threshold, so we will assign a new key
+            # (notice that this assumes the sorting by distance we did above,
+            # otherwise it wouldn't work!)
             newkey = next_id
             next_id += 1
         end
+        push!(done_keys₊, oldkey)
         rmap[oldkey] = newkey
+    end
+
+    # if not all keys were processed, we map them to the next available integers
+    if length(done_keys₊) ≠ length(keys₊)
+        unprocessed = setdiff(collect(keys₊), done_keys₊)
+        for oldkey in unprocessed
+            rmap[oldkey] = next_id
+            next_id += 1
+        end
     end
     return rmap
 end
+
 
 
 ###########################################################################################
@@ -114,8 +129,7 @@ different IDs guaranteed).
 function match_basins_ids!(b₊::AbstractArray, b₋; threshold = Inf)
     ids₊, ids₋ = unique(b₊), unique(b₋)
     distances = _similarity_from_overlaps(b₊, ids₊, b₋, ids₋)
-    mdc = minimal_distance_combinations(distances)
-    rmap = replacement_map(a₊, a₋, mdc, threshold)
+    rmap = replacement_map(ids₊, ids₋, distances, threshold)
     replace!(b₊, rmap...)
     return rmap
 end

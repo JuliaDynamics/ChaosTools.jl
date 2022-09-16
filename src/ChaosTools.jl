@@ -43,7 +43,7 @@ include("stablemotion/period.jl")
 include("stablemotion/fixedpoints.jl")
 include("stablemotion/yin.jl")
 
-include("rareevents/transit_times_statistics.jl")
+include("rareevents/mean_return_times/mrt_api.jl")
 
 include("chaosdetection/lyapunovs/lyapunovspectrum.jl")
 include("chaosdetection/lyapunovs/lyapunov.jl")

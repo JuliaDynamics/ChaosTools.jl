@@ -1,3 +1,5 @@
+# TODO: Wait a second, wouldn't mean return times be computable just from exit-entry...?
+# TODO: Move check sorting and generating integrator to the API file.
 function exit_entry_times(ds::DiscreteDynamicalSystem, u0, εs, T; diffeq = NamedTuple())
     check_εs_sorting(εs, length(u0))
     integ = integrator(ds, u0)
@@ -18,7 +20,7 @@ function exit_entry_times(integ::MDI, u0, εs, T)
         # It is guaranteed that the trajectory is thus outside all other boxes
         i = first_outside_index(integ, u0, εs, E)
         cur_outside[i:end] .= true
-        cur_outside[1:i-1] .= false
+        cur_outside[1:(i - 1)] .= false
 
         update_exit_times!(exits, i, pre_outside, cur_outside, integ)
         update_entry_times!(entries, i, pre_outside, cur_outside, integ)
@@ -27,6 +29,7 @@ function exit_entry_times(integ::MDI, u0, εs, T)
     return exits, entries
 end
 
+"Find the (index of the) outermost ε-ball the trajectory is not in."
 function first_outside_index(integ::MDI, u0, εs, E)::Int
     i = findfirst(e -> isoutside(integ.u, u0, e), εs)
     return isnothing(i) ? E+1 : i

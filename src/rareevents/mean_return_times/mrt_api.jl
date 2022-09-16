@@ -92,5 +92,6 @@ function transit_return(exits, entries)
     return transits, returns
 end
 
+include("mrt_distances_utils.jl")
 include("mrt_discrete.jl")
 include("mrt_continuous.jl")

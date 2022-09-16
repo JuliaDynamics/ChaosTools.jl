@@ -28,6 +28,7 @@ function isoutside(u, u0, ε::AbstractVector)
 end
 isoutside(u, u0, ε::Real) = euclidean(u, u0) > ε
 
+# TODO: Rename this to `signed_euclidean`.
 "Return the **signed** distance of state to ε-ball (negative means inside ball)"
 function εdistance(u, u0, ε::AbstractVector)
     m = eltype(u)(-Inf)
@@ -40,6 +41,9 @@ end
 
 εdistance(u, u0, ε::Real) = euclidean(u, u0) - ε
 
+# TODO: Why does this function exist...?
+# Can't we just call Chebyshev? Yes please.
+# Also it is probably simpler to just make 1 function with `if` statement.
 "Return the true distance of `u` from `u0` according to metric defined by `ε`."
 function distance(u, u0, ε::AbstractVector)
     m = eltype(u)(-Inf)

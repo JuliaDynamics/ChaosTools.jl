@@ -42,16 +42,8 @@ function update_entry_times!(entries, i, pre_outside, cur_outside, integ::MDI)
     end
 end
 
-# Remember this is just a convenience function!
-function mean_return_times(ds::DiscreteDynamicalSystem, u0, εs, T)
-    exits, entries = exit_entry_times(ds, u0, εs, T)
-    transits, returns = transit_return(exits, entries)
-    mrt = mean.(returns)
-    ret = length.(returns)
-    return mrt, ret
-end
-
-# Old function. It optimized the return by not collecting the transit
+# Old function. New version is just a wrapper in the api file.
+# Old function optimized the return by not collecting the transit
 # times, nor a vector of all returns, but rather an accumulated count.
 # However, I believe the code simplicity is more important.
 # Nevertheless, I am leavin the source code here in case someone needs to run

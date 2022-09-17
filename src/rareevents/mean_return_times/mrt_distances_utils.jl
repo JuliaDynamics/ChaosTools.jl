@@ -1,5 +1,5 @@
 # Utility functions for **signed** distance definitions used in mean return time estimation
-
+# if ε is Real, we have Euclidean distance. If it is Vector, we have Chebyshev.
 function check_εs_sorting(εs, L)
     correct = if εs[1] isa Real
         issorted(εs; rev = true)
@@ -28,9 +28,8 @@ function isoutside(u, u0, ε::AbstractVector)
 end
 isoutside(u, u0, ε::Real) = euclidean(u, u0) > ε
 
-# TODO: Rename this to `signed_euclidean`.
 "Return the **signed** distance of state to ε-ball (negative means inside ball)"
-function εdistance(u, u0, ε::AbstractVector)
+function signed_distance(u, u0, ε::AbstractVector)
     m = eltype(u)(-Inf)
     @inbounds for i in 1:length(u)
         m2 = abs(u[i] - u0[i]) - ε[i]
@@ -38,19 +37,8 @@ function εdistance(u, u0, ε::AbstractVector)
     end
     return m
 end
+signed_distance(u, u0, ε::Real) = euclidean(u, u0) - ε
 
-εdistance(u, u0, ε::Real) = euclidean(u, u0) - ε
-
-# TODO: Why does this function exist...?
-# Can't we just call Chebyshev? Yes please.
-# Also it is probably simpler to just make 1 function with `if` statement.
 "Return the true distance of `u` from `u0` according to metric defined by `ε`."
-function distance(u, u0, ε::AbstractVector)
-    m = eltype(u)(-Inf)
-    @inbounds for i in 1:length(u)
-        m2 = abs(u[i] - u0[i])
-        m2 > m && (m = m2)
-    end
-    return m
-end
 distance(u, u0, ε::Real) = euclidean(u, u0)
+distance(u, u0, ε::AbstractVector) = chebyshev(u, u0)

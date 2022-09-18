@@ -1,6 +1,6 @@
 # Discrete dynamical systems (maps) implementation. Ultra fast, ultra clean.
-function exit_entry_times(integ::MDI, u0, εs, T)
-    reinit!(integ, u0)
+function exit_entry_times(integ::MDI, u₀, εs, T)
+    reinit!(integ, u₀)
     E = length(εs)
     pre_outside = fill(false, E)      # `true` if outside the set. Previous step.
     cur_outside = copy(pre_outside)   # `true` if outside the set. Current step.
@@ -12,7 +12,7 @@ function exit_entry_times(integ::MDI, u0, εs, T)
 
         # here i gives the index of the largest ε-set that the trajectory is out of.
         # It is guaranteed that the trajectory is thus outside all other boxes
-        i = first_outside_index(integ, u0, εs, E)
+        i = first_outside_index(integ, u₀, εs, E)
         cur_outside[i:end] .= true
         cur_outside[1:(i - 1)] .= false
 
@@ -24,8 +24,8 @@ function exit_entry_times(integ::MDI, u0, εs, T)
 end
 
 "Find the (index of the) outermost ε-ball the trajectory is not in."
-function first_outside_index(integ::MDI, u0, εs, E)::Int
-    i = findfirst(e -> isoutside(integ.u, u0, e), εs)
+function first_outside_index(integ::MDI, u₀, εs, E)::Int
+    i = findfirst(e -> isoutside(integ.u, u₀, e), εs)
     return isnothing(i) ? E+1 : i
 end
 
@@ -49,8 +49,8 @@ end
 # Nevertheless, I am leavin the source code here in case someone needs to run
 # insane amount of computations...
 #=
-function mean_return_times(ds::DiscreteDynamicalSystem, u0, εs, Τ)
-    integ = integrator(ds, u0)
+function mean_return_times(ds::DiscreteDynamicalSystem, u₀, εs, Τ)
+    integ = integrator(ds, u₀)
     E = length(εs)
     pre_outside = fill(false, E)      # `true` if outside the set. Previous step.
     cur_outside = copy(pre_outside)   # `true` if outside the set. Current step.
@@ -61,7 +61,7 @@ function mean_return_times(ds::DiscreteDynamicalSystem, u0, εs, Τ)
 
         # here i gives the index of the largest ε-ball that the trajectory is out of.
         # It is guaranteed that the trajectory is thus outside all other boxes
-        i = first_outside_index(integ, u0, εs, E)
+        i = first_outside_index(integ, u₀, εs, E)
         cur_outside[i:end] .= true
         cur_outside[1:i-1] .= false
 

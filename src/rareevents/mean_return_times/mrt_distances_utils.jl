@@ -28,7 +28,7 @@ function isoutside(u, u0, ε::AbstractVector)
 end
 isoutside(u, u0, ε::Real) = euclidean(u, u0) > ε
 
-"Return the **signed** distance of state to ε-ball (negative means inside ball)"
+"Return the **signed** distance of state to ε-ball (negative means inside set)."
 function signed_distance(u, u0, ε::AbstractVector)
     m = eltype(u)(-Inf)
     @inbounds for i in 1:length(u)

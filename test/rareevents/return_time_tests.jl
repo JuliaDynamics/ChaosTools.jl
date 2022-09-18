@@ -171,6 +171,9 @@ avg_period = 6.0
 # We aaaalso know (by zooming in the plot) that the innermost ball is recurred exactly twice,
 # however one of the two crossings is grazing and thus likely to not be spotted by the
 # algorithm
+exits, entries = exit_entry_times(ro, u0, εs, 30avg_period; diffeq = (alg = alg,))
+
+
 τ, c = mean_return_times(ro, u0, εs, 3avg_period; diffeq = (alg = alg,), i=20)
 @test c[1] == 1
 @test c[2] == c[3] == 0

@@ -1,66 +1,91 @@
-# Continuous implementation. I've tried numerous times to use `ContinuousCallback`,
-# but it simply didn't work. Many different problems, and overall inaccuracy.
-# Furthermore, it makes for much clearer, and faster, code, if we write our own.
-# The callback pipeline is too obscure to know where things may fail.
-# I've kept the callback source code at the end of this file for future reference.
-
-ODEIntegrator = DynamicalSystemsBase.SciMLBase.DEIntegrator
-import Optim
-
 #=
+Continuous implementation. I've tried numerous times to use `ContinuousCallback`,
+but it simply didn't work. Many different problems, and overall inaccuracy.
+Furthermore, it makes for much clearer, and faster, code, if we write our own.
+The callback pipeline is too obscure to know where things may fail.
+I've kept the callback source code at the end of this file for future reference.
+
 # Algorithm description for continuous systems
 Alright, here's the plan. Trajectory is evolved iteratively via an integrator.
 At each step, we first check how far away we are from u₀. If we are too far away,
 we don't bother with any interpolation, because it is a very very costly operation.
 Furthermore, we assumed that this algorithm will typically be used with rather
-small sets. If we are close enough to the point, we then find
-the point of trajectory closest to u0 with as much accuracy as possible.
-After than, we find crossing times with linear interpolation or full-blown integrator
-interpolation and root finding (we will offer both methods).
+small sets. If we are close enough to the point, we then find intersections.
 
-Once we have the crossing times, the code is actually the same as with discrete systems.
+There are two methods to find intersections:
+1. Linear intersections. Between each integrator step, the trajectory
+   is assumed a line, and intersections with spheres are evaluated.
+2. Accurate interpolation. The integrator interpolation interface is used to find
+   the closest point to the center via optimization, and then find the crossings via
+   roo-tfinding. This is much more costly than the linear version, but as accurate
+   as possible. If the integrators take very small steps, the linear version should
+   be preferred.
+
 
 To find the closest point we do a minimization/optmization using the integrator
-interpolation. On Slack, Chris suggested to use Nlopt. The derivative choice matters,
+For minimization Chris suggested to use Nlopt (on Slack). The derivative choice matters,
 and Chris recommended AD. We can use the generic interface of Optimization.jl.
 
 However, it appears to me that the interface provided by Optim.jl for univariate functions:
 https://julianlsolvers.github.io/Optim.jl/stable/#user/minimization/#minimizing-a-univariate-function-on-a-bounded-interval
 is much simpler and seems to be exactly what we need... So that's what I'll use!
-(ALso, it is very well documented, which is kind of what we would need for source code clarity...)
+(ALso, it is very well documented, which is what we want for source code clarity)
 =#
 
-function exit_entry_times(integ::ODEIntegrator, u0, εs, T;
-        threshold_distance = _default_threshold_distance(εs),
-        rootkw = (xrtol = 1e-12, atol = 1e-12),
-        minimumkwargs = NamedTuple(),
+##########################################################################################
+# Main function
+##########################################################################################
+struct CrossingLinearIntersection end
+Base.@kwdef struct CrossingAccurateInterpolation
+    abstol::Float64 = 1e-12 # these are converted to the (different) keywords
+    reltol::Float64 = 1e-6  # that Optim.jl and Roots.jl take
+end
+
+function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
+        crossing_method = CrossingLinearIntersection(),
+        threshold_multiplier = 20,
+        threshold_distance = _default_threshold_distance(εs, threshold_multiplier),
+        debug = false,
     )
-    metric = eltype(εs) isa Real ? Euclidean() : Chebyshev()
+    metric = eltype(εs) <: Real ? Euclidean() : Chebyshev()
     E = length(εs)
     reinit!(integ, u0)
     prev_outside = fill(false, E)      # `true` if outside the set. Previous step.
-    curr_outside = copy(pre_outside)   # `true` if outside the set. Current step.
+    curr_outside = copy(prev_outside)  # `true` if outside the set. Current step.
     exits   = [eltype(integ.t)[] for _ in 1:E]
     entries = [eltype(integ.t)[] for _ in 1:E]
     tprev = integ.t
 
     while (integ.t - integ.t0) < T
         step!(integ)
-        # Check where we are right now
-        curr_distance = signed_distance(u, u0, εs[1])
+        debug && @show integ.t
+        # Check whether we are too far away from the point to bother doing anything
+        curr_distance = signed_distance(get_state(integ), u0, εs[1])
         curr_distance > threshold_distance && continue
         # Obtain mininum distance and check which is the outermost box we are out of
-        tmin, dmin = find_closest_trajectory_point(integ, u0, metric, tprev, minimumkwargs)
-        out_idx = first_outside_index(mind, εs, E)
-        if out_idx == E && all(prev_outside) # was outside, still outside. Just continue
-            continue
-        end
+        umin, tmin, dmin = closest_trajectory_point(integ, u0, metric, crossing_method)
+        debug && @show (tmin, dmin)
+        out_idx = first_outside_index(get_state(integ), u0, εs, E)
+        debug && @show out_idx
+        # if we were outside all, and still outside all, we skip
+        out_idx == 1 && all(prev_outside) && continue
         # something changed, compute state, interpolate, and update
         curr_outside[out_idx:end] .= true
         curr_outside[1:(out_idx - 1)] .= false
-        umin = integ(tmin)
-        update_exit_times!(exits, out_idx, prev_outside, curr_outside, umin, integ)
-        update_entry_times!(entries, out_idx, prev_outside, curr_outside, umin, integ)
+
+        debug && @show prev_outside
+        debug && @show curr_outside
+
+
+        # Depending on the method, different infornation is useful to find crossings
+        if crossing_method isa CrossingLinearIntersection
+            update_exits_and_entries_linear!(
+                exits, entries, integ, u0, εs, prev_outside, curr_outside
+            )
+        elseif method isa CrossingAccurateInterpolation
+            update_exit_times!(exits, out_idx, prev_outside, curr_outside, umin, integ)
+            update_entry_times!(entries, out_idx, prev_outside, curr_outside, umin, integ)
+        end
 
         # End of loop, update all `prev_` entries to `curr_`
         prev_outside .= curr_outside
@@ -71,29 +96,167 @@ function exit_entry_times(integ::ODEIntegrator, u0, εs, T;
     return exits, entries
 end
 
+##########################################################################################
+# CrossingLinearIntersection version
+##########################################################################################
+function closest_trajectory_point(integ, u0, metric, method::CrossingLinearIntersection)
+    if !(metric isa Euclidean)
+        error("Linear interpolation for crossing times only works with spheres (real `ε`).")
+    end
+    origin, endpoint = integ.uprev, integ.u
+    # from https://diego.assencio.com/?index=ec3d5dfdfc0b6a0d147a656f0af332bd
+    x = endpoint .- origin
+    x² = x ⋅ x
+    λ = ((u0 .- origin) ⋅ x) / x²
+    if λ < 0
+        umin, tmin = origin, integ.tprev
+    elseif λ > 1
+        umin, tmin = endpoint, integ.t
+    else
+        umin, tmin = origin .+ λ*x, integ.tprev + λ*(integ.t - integ.tprev)
+    end
+    dmin = euclidean(umin, u0)
+    return umin, tmin, dmin
+end
+
+function update_exits_and_entries_linear!(exits, entries, integ, u0, εs, pre_outside, cur_outside)
+    # In this method we iterate for exits and entries at the same time, because we can
+    # efficiently find both entry and exit if it happens to be within the current step
+    # Notice that in this method we also don't really use the already found time of
+    # minimum, because the actual numerical operations don't reduce even if we know it
+    origin, endpoint = integ.uprev, integ.u
+    tprev, tend = integ.tprev, integ.t
+    for j in eachindex(exits)
+        radius = εs[j]
+        inter = line_hypersphere_intersection(u0, radius, origin, endpoint)
+        isnothing(inter) && continue # no intersections for this radius
+        t1, t2 = inter # t1 is the smallest number!
+        cross1, cross2 = (0 ≤ t1 ≤ 1), (0 ≤ t2 ≤ 1)
+        if cross1 && cross2 # we cross the entire circle within the step!
+            push!(entries[j], tprev + t1*(tend - tprev))
+            push!(exits[j], tprev + t2*(tend - tprev))
+            continue # we're done now!
+        end
+        # Either one or no crossings within current time range
+        # normalize time:
+        # TODO: This logic should be improved and NOT use cur/prev outside.
+        # Ineast use if t2 is > 1 or not (this tells us which "side" of circle we are in).
+        # if cross1 # this means that we have crossed into the circle, so entry
+        #     tcross = tprev + t1*(tend - tprev)
+        #     push!(entries[j], tcross)
+        # elseif cross2 # we cross out of the circlel, so exit (entry is in the past)
+        #     tcross = tprev + t2*(tend - tprev)
+        #     push!(exits[j], tcross)
+        # else
+        #     @assert cross1 == cross2 == false
+        # end
 
 
-function update_exit_times!(exits, out_idx, pre_outside, cur_outside, integ::MDI)
+        # Previous logic:
+        if cur_outside[j] && !pre_outside[j] # we're crossing out
+            tcross = tprev + t2*(tend - tprev)
+            push!(exits[j], tcross)
+        elseif pre_outside[j] && !cur_outside[j] # we're crossing in
+            tcross = tprev + t1*(tend - tprev)
+            push!(entries[j], tcross)
+        else
+            @assert cross1 == cross2 == false
+        end
+    end
+end
+
+
+function update_exits_interpolation!(exits, out_idx, pre_outside, cur_outside, tmin, integ::MDI)
     @inbounds for j in out_idx:length(pre_outside)
         # Check if we actually exit `j` set
         cur_outside[j] && !pre_outside[j] || continue
-        # Perform interpolation to find crossing point accurately
+        # Perform rootfinding to find crossing point accurately
+
+
+        t1, t2 = line_hypersphere_intersection(center, radius, origin, endpoint)
+
+
         tcross = error("write this")
         push!(exits[j], tcross)
+        # update tmin, which now is the time to exit the previous set
     end
 end
-function update_entry_times!(entries, out_idx, pre_outside, cur_outside, integ::MDI)
-    @inbounds for j in 1:(out_idx - 1)
+function update_entries_interpolation!(entries, out_idx, pre_outside, cur_outside, integ::MDI)
+    @inbounds for j in (out_idx - 1):-1:1
         # Check if we actually enter `j` set
         pre_outside[j] && !cur_outside[j] || continue
-        # Perform interpolation to find crossing point accurately
-        # push!(entries[j], integ.t)
+        # Perform rootfinding to find crossing point accurately
         tcross = error("write this")
         push!(entries[j], tcross)
+        # update `tmin`, which now is the time to enter the next inner set
+    end
+end
+
+using LinearAlgebra: dot, normalize
+"""
+    line_hypersphere_intersection(center, radius, origin, endpoint)
+Return the intersections `t1, t2` of the line defined between `origin, endpoint` and
+the given hypersphere. `t1, t2` are normalized with 0 meaning the origin, and
+1 meaning the endpoint. If no intersections exist, return `nothing`.
+
+Uses the formulas from: https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection .
+"""
+function line_hypersphere_intersection(center, radius, origin, endpoint)
+    direction = endpoint .- origin
+    u = normalize(direction)
+    c, r, o = center, radius, origin # for formulas like Wikipedia
+    oc = o .- c
+    t = dot(u, oc)
+    ∇ = t^2 - (dot(oc, oc) - r^2)
+    ∇ ≤ 0 && return nothing
+    sq∇ = sqrt(∇)
+    return -t - sq∇, -t + sq∇
+end
+
+
+##########################################################################################
+# CrossingAccurateInterpolation version
+##########################################################################################
+import Optim
+function closest_trajectory_point(integ, u0, metric, method::CrossingAccurateInterpolation)
+    # use Optim.jl to find minimum of the function
+    f = (t) -> evaluate(metric, integ(t), u0)
+    # Then find minimum of `f` in limits `(tprev, t)`
+    optim = Optim.optimize(
+        f, tprev, integ.t, Optim.Brent();
+        store_trace=false, abs_tol = method.abstol, rel_tol = method.reltol,
+    )
+    tmin, dmin = Optim.minimizer(optim), Optim.minimum(optim)
+    return integ(tmin), tmin, dmin
+end
+
+function update_exit_times!(exits, out_idx, pre_outside, cur_outside, tmin, integ, test)
+    @inbounds for j in out_idx:length(pre_outside)
+        # Check if we actually exit `j` set
+        cur_outside[j] && !pre_outside[j] || continue
+        # Perform rootfinding to find crossing point accurately
+        tcross = error("write this")
+        push!(exits[j], tcross)
+        # update tmin, which now is the time to exit the previous set
+    end
+end
+function update_entry_times!(entries, out_idx, pre_outside, cur_outside, integ, test)
+    @inbounds for j in (out_idx - 1):-1:1
+        # Check if we actually enter `j` set
+        pre_outside[j] && !cur_outside[j] || continue
+        # Perform rootfinding to find crossing point accurately
+        tcross = error("write this")
+        push!(entries[j], tcross)
+        # update `tmin`, which now is the time to enter the next inner set
     end
 end
 
 
+
+
+##########################################################################################
+# utilities
+##########################################################################################
 
 "Find the (index of the) outermost ε-ball the trajectory is not in."
 function first_outside_index(mind::Real, εs, E = length(εs))
@@ -103,8 +266,7 @@ function first_outside_index(mind::Real, εs, E = length(εs))
 end
 
 
-function _default_threshold_distance(εs)
-    multiplier = 3
+function _default_threshold_distance(εs, multiplier = 4)
     if εs[1] isa Real
         m = maximum(εs)
     else
@@ -113,19 +275,11 @@ function _default_threshold_distance(εs)
     return m * multiplier
 end
 
-function find_closest_trajectory_point(integ, u0, metric, tprev, minimumkwargs)
-    # use Optim.jl to find minimum of the function
-    f = (t) -> evaluate(metric, integ(t), u0)
-    # Then find minimum of `f` in limits `(tprev, t)`
-    optim = Optim.optimize(
-        f, tprev, integ.t, Optim.Brent();
-        store_trace=false, minimumkwargs...
-    )
-    return Optim.minimizer(optim), Optim.minimum(optim)
-end
 
-
-
+##########################################################################################
+# old code that is left here for reference sake only (to check back on Callbacks)
+##########################################################################################
+#=
 
 using DynamicalSystemsBase.SciMLBase: ODEProblem, solve
 # TODO: Notice that the callback methods are NOT used. They have problems
@@ -301,3 +455,5 @@ function mean_return_times_single_callbacks(
     )
     return eeτc[3]/eeτc[4], round(Int, eeτc[4])
 end
+
+=#

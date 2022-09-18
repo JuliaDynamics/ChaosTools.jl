@@ -9,6 +9,8 @@ explicit keyword `diffeq` instead.
 
 @deprecate basin_fractions basins_fractions
 
+@deprecate transit_return transit_return_times
+
 # Don't export `boxregion` from `sampler.jl`
 
 export grassberger_dim

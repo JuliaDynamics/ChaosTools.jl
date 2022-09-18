@@ -1,5 +1,5 @@
 # Docstrings, includes, and exports for mean return time functionality
-export exit_entry_times, transit_return, mean_return_times
+export exit_entry_times, transit_return_times, mean_return_times
 
 """
     exit_entry_times(ds::DynamicalSystem, u₀, εs, T; diffeq = NamedTuple()) → exits, entries
@@ -9,7 +9,7 @@ for continuous systems).
 Return the exit and (re-)entry return times to the set(s), where each of these is a vector
 containing all collected times for the respective `ε`-radius set, for `ε ∈ εs`.
 
-Use `transit_return(exits, entries)` to transform the output into transit and return
+Use `transit_return_times(exits, entries)` to transform the output into transit and return
 times, and see also [`mean_return_times`](@ref) for both continuous and discrete systems.
 
 ## Description
@@ -48,23 +48,29 @@ interpolation is done to accurately record the time of exactly crossing the `ε`
 function exit_entry_times(ds::DynamicalSystem, u0, εs, T; diffeq = NamedTuple(), kwargs...)
     check_εs_sorting(εs, length(u0))
     integ = integrator(ds, u0; diffeq)
-    exit_entry_times(integ, u0, εs, T)
+    exit_entry_times(integ, u0, εs, T; kwargs...)
 end
 
 """
-    transit_return(exits, entries) → transits, returns
+    transit_return_times(exits, entries) → transits, returns
 Convert the output of [`exit_entry_times`](@ref) to the transit and return times.
 The outputs here are vectors of vectors just like in [`exit_entry_times`](@ref).
 """
-function transit_return(exits, entries)
-    # the main reason this function exists is because entry times can be one less
+function transit_return_times(exits, entries)
+    # the main reason this function exists is because entry times are most likely one less
     # than exit times. (otherwise you could just directly subtract)
     returns = [en .- view(ex, 1:length(en)) for (en, ex) in zip(entries, exits)]
     transits = similar(entries)
     for (j, (en, ex)) in enumerate(zip(entries, exits))
-        M, N = length(en), length(ex)
-        enr, exr = M == N ? (1:N-1, 2:N) : (1:M, 2:N)
-        transits[j] = view(ex, exr) .- view(en, enr)
+        enlen, exlen = length(en), length(ex)
+        # Remember, algorithm always starts from the set center. So exit is
+        # always guaranteed. So if exits are equal to entries, we need to skip first exit!
+        if exlen == enlen + 1 # typical case
+            transits[j] = view(ex, 2:exlen) .- en
+        else
+            transits[j] = view(ex, 2:exlen) .- view(en, 1:(enlen - 1))
+        end
+        # transits[j] = view(ex, x) .- en
     end
     return transits, returns
 end
@@ -103,6 +109,9 @@ accuracy of small `ε`.
 function mean_return_times(ds::DynamicalSystem, u0, εs, T; kwargs...)
     exits, entries = exit_entry_times(ds, u0, εs, T; kwargs...)
     transits, returns = transit_return(exits, entries)
+    mean_return_times(returns)
+end
+function mean_return_times(returns::AbstractVector)
     mrt = mean.(returns)
     ret = length.(returns)
     return mrt, ret

@@ -7,12 +7,12 @@ function exit_entry_times(integ::MDI, u₀, εs, T)
     exits   = [Int[] for _ in 1:E]
     entries = [Int[] for _ in 1:E]
 
-    while integ.t < T
+    while (integ.t - integ.t0) < T
         step!(integ)
 
         # here i gives the index of the largest ε-set that the trajectory is out of.
         # It is guaranteed that the trajectory is thus outside all other boxes
-        i = first_outside_index(integ, u₀, εs, E)
+        i = first_outside_index(get_state(integ), u₀, εs, E)
         cur_outside[i:end] .= true
         cur_outside[1:(i - 1)] .= false
 
@@ -24,8 +24,8 @@ function exit_entry_times(integ::MDI, u₀, εs, T)
 end
 
 "Find the (index of the) outermost ε-ball the trajectory is not in."
-function first_outside_index(integ::MDI, u₀, εs, E)::Int
-    i = findfirst(e -> isoutside(integ.u, u₀, e), εs)
+function first_outside_index(u::AbstractVector, u₀, εs, E)::Int
+    i = findfirst(e -> isoutside(u, u₀, e), εs)
     return isnothing(i) ? E+1 : i
 end
 

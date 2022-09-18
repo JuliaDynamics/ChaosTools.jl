@@ -1,5 +1,6 @@
 using ChaosTools, Test, Statistics
 using ChaosTools.DynamicalSystemsBase
+using ChaosTools.DelayEmbeddings
 
 println("\n Return time tests...")
 
@@ -121,7 +122,7 @@ end
 # %%
 # using OrdinaryDiffEq: Tsit5
 alg = DynamicalSystemsBase.DEFAULT_SOLVER
-
+diffeq = (alg = alg,)
 ro = Systems.roessler(ones(3))
 u0 = SVector(
     4.705494942754781,
@@ -133,43 +134,80 @@ avg_period = 6.0
 maxε = εs[1]
 integ = integrator(ro, u0)
 
+crossing_method =  ChaosTools.CrossingLinearIntersection()
 step!(integ)
 minimumkwargs = (iterations = 50, )
-optim = ChaosTools.find_closest_point(integ, u0, maxε, 0, minimumkwargs)
+# optim = ChaosTools.closest_trajectory_point(integ, u0, maxε, 0, minimumkwargs)
 
+
+exits, entries = exit_entry_times(ro, u0, εs, 1000.0; crossing_method)
+transits, returns = transit_return_times(exits, entries)
+mrt, ret = mean_return_times(ro, u0, εs, 1000.0; crossing_method)
+
+# Sanity tests
+@test mrt == mean.(returns)
+for j in 1:length(εs)
+    @test all(>(0), exits[j])
+    @test all(>(0), entries[j])
+    # all transits must be less than the returns (for the specific Roessler case)
+    @test all(>(0), returns[j] .- transits[j])
+    # all exits modulo the first happen after all entries
+    @test all(>(0), transits[j])
+    # return times are positive definite
+    @test all(>(0), returns[j])
+
+    @test ret[j] == lenth(entries[j])
+
+end
 
 # # Visual guidance
-# using PyPlot
-# tr = trajectory(ro, 5000, u0; alg)
-# tr0 = trajectory(ro, avg_period, u0; alg)
-# tr2 = trajectory(ro, 3avg_period, u0; alg)
-# fig, axs = subplots(1,3)
-# comb = ((1, 2), (1, 3), (2, 3))
-# for i in 1:3
-#     j, k = comb[i]
-#     ax = axs[i]
-#     # ax.plot(tr[:, j], tr[:, k], lw = 2.0, color = "C$(i-1)", alpha = 0.5, marker = "o", ms = 2)
-#     ax.plot(tr[:, j], tr[:, k], lw = 2.0, color = "C$(i-1)")
-#     ax.scatter([u0[j]], [u0[k]], s = 20, color = "k")
-#     ax.plot(tr2[:, j], tr2[:, k], color = "C4", lw = 1.0, ls = "--")
-#     ax.plot(tr0[:, j], tr0[:, k], color = "k", lw = 1.0, ls = "--")
-#     if eltype(εs[1]) <: Vector
-#         for l in 1:length(εs)
-#             rect = matplotlib.patches.Rectangle(
-#             u0[[j, k]] .- εs[l][[j, k]], 2εs[l][j], 2εs[l][k],
-#             alpha = 0.1, color = "k"
-#             )
-#             ax.add_artist(rect)
-#         end
-#     else
-#         for l in 1:length(εs)
-#             circ = matplotlib.patches.Circle(
-#                 u0[[j, k]], εs[l]; alpha = 0.1, color = "k"
-#             )
-#             ax.add_artist(circ)
-#         end
-#     end
-# end
+# %%
+using GLMakie
+using GLMakie.Makie.GeometryBasics
+
+# The integration times have been tested for default integrator!
+tr = trajectory(ro, 5000, u0; diffeq)
+tr0 = trajectory(ro, avg_period, u0; diffeq)
+tr2 = trajectory(ro,  18, u0; diffeq)
+tr3 = trajectory(ro,  53, u0; diffeq)
+# Trajectory 4 needs to show the actual integrator steps
+tr4 = SVector{3, Float64}[]
+integ = integrator(ro, u0; diffeq)
+while integ.t < 416 # from 415 to 416 you see the first crossing :)
+    step!(integ)
+    push!(tr4, get_state(integ))
+end
+tr4 = Dataset(tr4)
+# tr4 = trajectory(ro,  420, u0; diffeq)
+fig = Figure(;resolution = (1500, 500)); display(fig)
+axs = [Axis(fig[1,i]) for i in 1:3]
+comb = ((1, 2), (1, 3), (2, 3))
+for i in 1:3
+    j, k = comb[i]
+    ax = axs[i]
+    # ax.plot(tr[:, j], tr[:, k], lw = 2.0, color = "C$(i-1)", alpha = 0.5, marker = "o", ms = 2)
+    lines!(ax, tr[:, j], tr[:, k]; linewidth = 0.5, color = Cycled(1))
+    scatter!(ax, [u0[j]], [u0[k]]; markersize = 5, color = "black")
+    scatterlines!(ax, tr4[:, j], tr4[:, k]; color = "darkgreen", linewidth = 2.0, markersize = 6)
+    lines!(ax, tr3[:, j], tr3[:, k]; color = "magenta", linewidth = 2.5)
+    lines!(ax, tr2[:, j], tr2[:, k]; color = Cycled(2), linewidth = 3.0, linestyle = :dash)
+    lines!(ax, tr0[:, j], tr0[:, k]; color = "black", linewidth = 3.0, linestyle = :dashdot)
+    if eltype(εs[1]) <: Vector
+        for l in 1:length(εs)
+            # TODO: Update
+            rect = matplotlib.patches.Rectangle(
+            u0[[j, k]] .- εs[l][[j, k]], 2εs[l][j], 2εs[l][k],
+            alpha = 0.1, color = "k"
+            )
+            ax.add_artist(rect)
+        end
+    else
+        for l in 1:length(εs)
+            poly!(ax, Circle(Point2f(u0[[j, k]]...), εs[l]); color = (:red, 0.1),
+            strokecolor = :red, strokewidth = 0.5   )
+        end
+    end
+end
 
 # %%
 # We know the average period of the Roessler system. Therefore the return times

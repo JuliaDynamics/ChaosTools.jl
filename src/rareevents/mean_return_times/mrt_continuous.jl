@@ -5,6 +5,7 @@
 # I've kept the callback source code at the end of this file for future reference.
 
 ODEIntegrator = DynamicalSystemsBase.SciMLBase.DEIntegrator
+import Optim
 
 #=
 # Algorithm description for continuous systems
@@ -21,62 +22,107 @@ Once we have the crossing times, the code is actually the same as with discrete 
 
 To find the closest point we do a minimization/optmization using the integrator
 interpolation. On Slack, Chris suggested to use Nlopt. The derivative choice matters,
-and while I don't think derivative methods here would be fast, Chris recommended AD.
-In any case, I guess we can use the generic interface of Optimization.jl.
+and Chris recommended AD. We can use the generic interface of Optimization.jl.
+
+However, it appears to me that the interface provided by Optim.jl for univariate functions:
+https://julianlsolvers.github.io/Optim.jl/stable/#user/minimization/#minimizing-a-univariate-function-on-a-bounded-interval
+is much simpler and seems to be exactly what we need... So that's what I'll use!
+(ALso, it is very well documented, which is kind of what we would need for source code clarity...)
 =#
 
 function exit_entry_times(integ::ODEIntegrator, u0, εs, T;
-        i, dmin, rootkw = (xrtol = 1e-12, atol = 1e-12)
+        threshold_distance = _default_threshold_distance(εs),
+        rootkw = (xrtol = 1e-12, atol = 1e-12),
+        minimumkwargs = NamedTuple(),
     )
-
-    maxε = εs[1]
+    metric = eltype(εs) isa Real ? Euclidean() : Chebyshev()
     E = length(εs)
     reinit!(integ, u0)
-    pre_outside = fill(false, E)      # `true` if outside the set. Previous step.
-    cur_outside = copy(pre_outside)   # `true` if outside the set. Current step.
-    prev_smallest_distance = -minimum(εs[end]) # this is a real number!
-    curr_smallest_distance = prev_smallest_distance # same, but at current step
+    prev_outside = fill(false, E)      # `true` if outside the set. Previous step.
+    curr_outside = copy(pre_outside)   # `true` if outside the set. Current step.
     exits   = [eltype(integ.t)[] for _ in 1:E]
     entries = [eltype(integ.t)[] for _ in 1:E]
+    tprev = integ.t
 
-    exit = integ.t
-    τ, c = zero(exit), 0
-    isoutside = false
-    crossing(t) = signed_distance(integ(t), u0, ε)
-
-    while integ.t < T
+    while (integ.t - integ.t0) < T
         step!(integ)
-        # Check distance of uprev (because interpolation can happen only between
-        # tprev and t) and if it is "too far away", then don't bother checking crossings.
-        d = distance(integ.uprev, u0, ε)
-        d > dmin && continue
-
-        r = range(integ.tprev, integ.t; length = i)
-        dp = signed_distance(integ.uprev, u0, ε) # `≡ crossing(r[1])`, crossing of previous step
-        for j in 2:i
-            dc = crossing(r[j])
-            if dc*dp < 0 # the distances have different sign (== 0 case is dismissed)
-                tcross = Roots.find_zero(crossing, (r[j-1], r[j]), ROOTS_ALG; rootkw...)
-                if dp < 0 # here the trajectory goes from inside to outside
-                    exit = tcross
-                    break # if we get out of the box we don't check whether we go inside
-                        # again: assume in 1 step we can't cross out two times
-                else # otherwise the trajectory goes from outside to inside
-                    exit > tcross && continue # scenario where exit was not calculated
-                    τ += tcross - exit
-                    c += 1
-                    # here we don't `break` because we might cross out in the same step
-                end
-            end
-            dp = dc
+        # Check where we are right now
+        curr_distance = signed_distance(u, u0, εs[1])
+        curr_distance > threshold_distance && continue
+        # Obtain mininum distance and check which is the outermost box we are out of
+        tmin, dmin = find_closest_trajectory_point(integ, u0, metric, tprev, minimumkwargs)
+        out_idx = first_outside_index(mind, εs, E)
+        if out_idx == E && all(prev_outside) # was outside, still outside. Just continue
+            continue
         end
-        # Notice that the possibility of a trajectory going fully through the `ε`-set
-        # within one of the interpolation points is NOT considered: simply increase
-        # `interp_points` to increase accuracy and make this scenario possible.
+        # something changed, compute state, interpolate, and update
+        curr_outside[out_idx:end] .= true
+        curr_outside[1:(out_idx - 1)] .= false
+        umin = integ(tmin)
+        update_exit_times!(exits, out_idx, prev_outside, curr_outside, umin, integ)
+        update_entry_times!(entries, out_idx, prev_outside, curr_outside, umin, integ)
+
+        # End of loop, update all `prev_` entries to `curr_`
+        prev_outside .= curr_outside
+        tprev = integ.t
+        # TODO: I wonder if we can use the previous minimum distance and compare it
+        # with current one for accelerating the search...?
     end
-    return τ/c, c
+    return exits, entries
 end
 
+
+
+function update_exit_times!(exits, out_idx, pre_outside, cur_outside, integ::MDI)
+    @inbounds for j in out_idx:length(pre_outside)
+        # Check if we actually exit `j` set
+        cur_outside[j] && !pre_outside[j] || continue
+        # Perform interpolation to find crossing point accurately
+        tcross = error("write this")
+        push!(exits[j], tcross)
+    end
+end
+function update_entry_times!(entries, out_idx, pre_outside, cur_outside, integ::MDI)
+    @inbounds for j in 1:(out_idx - 1)
+        # Check if we actually enter `j` set
+        pre_outside[j] && !cur_outside[j] || continue
+        # Perform interpolation to find crossing point accurately
+        # push!(entries[j], integ.t)
+        tcross = error("write this")
+        push!(entries[j], tcross)
+    end
+end
+
+
+
+"Find the (index of the) outermost ε-ball the trajectory is not in."
+function first_outside_index(mind::Real, εs, E = length(εs))
+    i = findfirst(e -> isoutside(mind, e), εs)
+    out_idx::Int = isnothing(i) ? E+1 : i
+    return out_idx
+end
+
+
+function _default_threshold_distance(εs)
+    multiplier = 3
+    if εs[1] isa Real
+        m = maximum(εs)
+    else
+        m = 2maximum(maximum(e) for e in εs)
+    end
+    return m * multiplier
+end
+
+function find_closest_trajectory_point(integ, u0, metric, tprev, minimumkwargs)
+    # use Optim.jl to find minimum of the function
+    f = (t) -> evaluate(metric, integ(t), u0)
+    # Then find minimum of `f` in limits `(tprev, t)`
+    optim = Optim.optimize(
+        f, tprev, integ.t, Optim.Brent();
+        store_trace=false, minimumkwargs...
+    )
+    return Optim.minimizer(optim), Optim.minimum(optim)
+end
 
 
 
@@ -129,17 +175,8 @@ function exit_entry_times(ds::ContinuousDynamicalSystem, u0, εs, T;
     return exits, entries
 end
 
-function _default_dmin(εs)
-    if εs[1] isa Real
-        m = 4*maximum(εs)
-    else
-        m = 8*maximum(maximum(e) for e in εs)
-    end
-    return m
-end
-
 function mean_return_times(ds::ContinuousDynamicalSystem, u0, εs, T;
-        i=10, dmin=_default_dmin(εs), diffeq = NamedTuple(), kwargs...
+        i=10, dmin=_default_threshold_distance(εs), diffeq = NamedTuple(), kwargs...
     )
     if !isempty(kwargs)
         @warn DIFFEQ_DEP_WARN

@@ -4,120 +4,120 @@ using ChaosTools.DynamicalSystemsBase
 println("\n Return time tests...")
 
 @testset "Standard map (exact)" begin
-# INPUT
-ds = Systems.standardmap()
-T = 10000 # maximum time
+    # INPUT
+    ds = Systems.standardmap()
+    T = 10000 # maximum time
 
-# period 3 of standard map
-u0 = SVector(0.8121, 1.6243) # for default k!
-εs = sort!([4.0, 2.0, 0.01]; rev=true)
-# radius of 4.0 covers the first 2 points of the period 3 while 2.0 covers only
-# the first point. Therefore:
-# all first return times must be 1, and all second return times must be 2,
-# and 3rd must be same as second (because it doesn't matter how close are)
-exits, entries = exit_entry_times(ds, u0, εs, T)
-transits, returns = transit_return(exits, entries)
+    # period 3 of standard map
+    u0 = SVector(0.8121, 1.6243) # for default k!
+    εs = sort!([4.0, 2.0, 0.01]; rev=true)
+    # radius of 4.0 covers the first 2 points of the period 3 while 2.0 covers only
+    # the first point. Therefore:
+    # all first return times must be 1, and all second return times must be 2,
+    # and 3rd must be same as second (because it doesn't matter how close are)
+    exits, entries = exit_entry_times(ds, u0, εs, T)
+    transits, returns = transit_return(exits, entries)
 
-@test all(x -> length(x) > 5, exits)
-@test all(x -> length(x) > 5, entries)
-@test all(issorted, exits)
-@test all(issorted, entries)
-@test all(isequal(2), transits[1])
-@test all(isequal(1), transits[2])
-@test transits[2] == transits[3]
-@test all(isequal(1), returns[1])
-@test all(isequal(2), returns[2])
-@test returns[2] == returns[3]
+    @test all(x -> length(x) > 5, exits)
+    @test all(x -> length(x) > 5, entries)
+    @test all(issorted, exits)
+    @test all(issorted, entries)
+    @test all(isequal(2), transits[1])
+    @test all(isequal(1), transits[2])
+    @test transits[2] == transits[3]
+    @test all(isequal(1), returns[1])
+    @test all(isequal(2), returns[2])
+    @test returns[2] == returns[3]
 
-τ, c = mean_return_times(ds, u0, εs, T)
-@test τ == mean.(returns)
-@test length(unique(c)) == 1
-@test c[1] == T÷3 # should return exactly 1 every 3 steps.
+    τ, c = mean_return_times(ds, u0, εs, T)
+    @test τ == mean.(returns)
+    @test length(unique(c)) == 1
+    @test c[1] == T÷3 # should return exactly 1 every 3 steps.
 
-### quasiperiodic around period 3:
-u0 = SVector(0.877, 1.565)
-εs = sort!([4.0, 0.5, 0.1]; rev=true)
-exits, entries = exit_entry_times(ds, u0, εs, T)
-transits, returns = transit_return(exits, entries)
+    ### quasiperiodic around period 3:
+    u0 = SVector(0.877, 1.565)
+    εs = sort!([4.0, 0.5, 0.1]; rev=true)
+    exits, entries = exit_entry_times(ds, u0, εs, T)
+    transits, returns = transit_return(exits, entries)
 
-@test all(issorted, exits)
-@test all(issorted, entries)
-@test all(x -> length(x) > 5, exits)
-@test all(x -> length(x) > 5, entries)
+    @test all(issorted, exits)
+    @test all(issorted, entries)
+    @test all(x -> length(x) > 5, exits)
+    @test all(x -> length(x) > 5, entries)
 
-# For ε=4.0, nothing changes with the before
-@test all(isequal(1), returns[1])
-@test all(isequal(2), transits[1])
+    # For ε=4.0, nothing changes with the before
+    @test all(isequal(1), returns[1])
+    @test all(isequal(2), transits[1])
 
-# Similarly, 0.5 should be the same as before
-@test all(isequal(1), transits[2])
-@test all(isequal(2), returns[2])
+    # Similarly, 0.5 should be the same as before
+    @test all(isequal(1), transits[2])
+    @test all(isequal(2), returns[2])
 
-# But now, the third entry is different, because it has the size of the quasiperiodic
-# stability island torous
-@test returns[3] ≠ returns[2]
-@test transits[3] ≠ transits[2]
-@test any(>(3), returns[3])
-@test all(isequal(1), transits[3]) # still need only one step to exit
+    # But now, the third entry is different, because it has the size of the quasiperiodic
+    # stability island torous
+    @test returns[3] ≠ returns[2]
+    @test transits[3] ≠ transits[2]
+    @test any(>(3), returns[3])
+    @test all(isequal(1), transits[3]) # still need only one step to exit
 
-τ, c = mean_return_times(ds, u0, εs, T)
-@test τ == mean.(returns)
-@test length(unique(c)) == 2
-@test c[1] == T÷3
-@test c[2] == T÷3
-@test c[3] < T÷3
+    τ, c = mean_return_times(ds, u0, εs, T)
+    @test τ == mean.(returns)
+    @test length(unique(c)) == 2
+    @test c[1] == T÷3
+    @test c[2] == T÷3
+    @test c[3] < T÷3
 
 end
 
 @testset "Towel map (boxes)" begin
 
-to = Systems.towel()
-tr = trajectory(to, 5000; Ttr = 10)
-u0 = tr[3000]
+    to = Systems.towel()
+    tr = trajectory(to, 5000; Ttr = 10)
+    u0 = tr[3000]
 
-# With these boxes, in the first 5 steps, the trajectory enters the y and z range
-# but not the x range. Therefore it should NOT enter the box. See figure!
-εs = [
-    SVector(0.05, 0.05, 0.125),
-    SVector(0.005, 0.005, 0.025),
-]
+    # With these boxes, in the first 5 steps, the trajectory enters the y and z range
+    # but not the x range. Therefore it should NOT enter the box. See figure!
+    εs = [
+        SVector(0.05, 0.05, 0.125),
+        SVector(0.005, 0.005, 0.025),
+    ]
 
-# Visual guidance
-# using PyPlot
-# tr0 = trajectory(to, 5, u0)
-# fig, axs = subplots(1,3)
-# comb = ((1, 2), (1, 3), (2, 3))
-# for i in 1:3
-#     j, k = comb[i]
-#     ax = axs[i]
-#     ax.scatter(tr[:, j], tr[:, k], s = 2, color = "C$(i-1)")
-#     ax.scatter([u0[j]], [u0[k]], s = 20, color = "k")
-#     ax.plot(tr0[:, j], tr0[:, k], color = "k")
-#     for l in 1:length(εs)
-#         rect = matplotlib.patches.Rectangle(
-#         u0[[j, k]] .- εs[l][[j, k]], 2εs[l][j], 2εs[l][k],
-#         alpha = 0.25, color = "k"
-#         )
-#         ax.add_artist(rect)
-#     end
-# end
+    # Visual guidance
+    # using PyPlot
+    # tr0 = trajectory(to, 5, u0)
+    # fig, axs = subplots(1,3)
+    # comb = ((1, 2), (1, 3), (2, 3))
+    # for i in 1:3
+    #     j, k = comb[i]
+    #     ax = axs[i]
+    #     ax.scatter(tr[:, j], tr[:, k], s = 2, color = "C$(i-1)")
+    #     ax.scatter([u0[j]], [u0[k]], s = 20, color = "k")
+    #     ax.plot(tr0[:, j], tr0[:, k], color = "k")
+    #     for l in 1:length(εs)
+    #         rect = matplotlib.patches.Rectangle(
+    #         u0[[j, k]] .- εs[l][[j, k]], 2εs[l][j], 2εs[l][k],
+    #         alpha = 0.25, color = "k"
+    #         )
+    #         ax.add_artist(rect)
+    #     end
+    # end
 
-exits, entries = exit_entry_times(to, u0, εs, 10000)
-transits, returns = transit_return(exits, entries)
+    exits, entries = exit_entry_times(to, u0, εs, 10000)
+    transits, returns = transit_return(exits, entries)
 
-@test all(issorted, exits)
-@test all(issorted, entries)
-@test length(exits[1]) > length(exits[2])
-@test returns[1][1] > 5
-@test mean(returns[1]) < mean(returns[2])
+    @test all(issorted, exits)
+    @test all(issorted, entries)
+    @test length(exits[1]) > length(exits[2])
+    @test returns[1][1] > 5
+    @test mean(returns[1]) < mean(returns[2])
 
-τ, c = mean_return_times(to, u0, εs, 10000)
-@test τ == mean.(returns)
-@test c[1] > c[2] > 0
+    τ, c = mean_return_times(to, u0, εs, 10000)
+    @test τ == mean.(returns)
+    @test c[1] > c[2] > 0
 
 end
 #
-@testset "Continuous Roessler" begin
+# @testset "Continuous Roessler" begin
 # %%
 # using OrdinaryDiffEq: Tsit5
 alg = DynamicalSystemsBase.DEFAULT_SOLVER
@@ -130,6 +130,13 @@ u0 = SVector(
 )
 εs = sort!([1.0, 0.1, 0.01]; rev=true)
 avg_period = 6.0
+maxε = εs[1]
+integ = integrator(ro, u0)
+
+step!(integ)
+minimumkwargs = (iterations = 50, )
+optim = ChaosTools.find_closest_point(integ, u0, maxε, 0, minimumkwargs)
+
 
 # # Visual guidance
 # using PyPlot
@@ -207,4 +214,4 @@ is = range(10; step = 4, length = 7)
 
 @test τ2[1] < τ[2]
 
-end
+# end

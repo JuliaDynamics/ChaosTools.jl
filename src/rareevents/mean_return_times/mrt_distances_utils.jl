@@ -19,15 +19,19 @@ function check_εs_sorting(εs, L)
 end
 
 # Support both types of sets: balls and boxes
-"Return `true` if state is outside ε-ball"
+# TODO: Can optimize to not call `maximum(ε)` all the time
+"Return `true` if state is outside ε-ball. Can also accept pre-computed distance."
 function isoutside(u, u0, ε::AbstractVector)
     @inbounds for i in 1:length(u)
         abs(u[i] - u0[i]) > ε[i] && return true
     end
     return false
 end
+isoutside(d::Real, ε::AbstractVector) = d > maximum(ε)
 isoutside(u, u0, ε::Real) = euclidean(u, u0) > ε
+isoutside(d::Real, ε::Real) = d > ε
 
+# TODO: So far none of these is actually used anywhere:
 "Return the **signed** distance of state to ε-ball (negative means inside set)."
 function signed_distance(u, u0, ε::AbstractVector)
     m = eltype(u)(-Inf)
@@ -39,6 +43,10 @@ function signed_distance(u, u0, ε::AbstractVector)
 end
 signed_distance(u, u0, ε::Real) = euclidean(u, u0) - ε
 
-"Return the true distance of `u` from `u0` according to metric defined by `ε`."
-distance(u, u0, ε::Real) = euclidean(u, u0)
-distance(u, u0, ε::AbstractVector) = chebyshev(u, u0)
+"Return the true distance of `u` from `u0`, according to metric defined by `ε`."
+distance(u, u0, ::Real) = euclidean(u, u0)
+distance(u, u0, ::AbstractVector) = chebyshev(u, u0)
+
+"Convert the pre-computed distance to signed, according to metric defined by `ε`."
+convert_distance_to_signed(d::Real, ε::Real) = d - ε
+convert_distance_to_signed(d::Real, ε::AbstractVector) = d - maximum(ε)

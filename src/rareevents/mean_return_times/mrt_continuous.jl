@@ -55,6 +55,7 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
     exits   = [eltype(integ.t)[] for _ in 1:E]
     entries = [eltype(integ.t)[] for _ in 1:E]
     tprev = integ.t
+    maxε = _max_sets_radius(εs)
 
     while (integ.t - integ.t0) < T
         step!(integ)
@@ -67,15 +68,14 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
         debug && @show (tmin, dmin)
         out_idx = first_outside_index(get_state(integ), u0, εs, E)
         debug && @show out_idx
-        # if we were outside all, and still outside all, we skip
-        out_idx == 1 && all(prev_outside) && continue
+        # if we were outside all, and still outside all, and we don't cross, we skip
+        out_idx == 1 && all(prev_outside) && dmin < maxε && continue
         # something changed, compute state, interpolate, and update
         curr_outside[out_idx:end] .= true
         curr_outside[1:(out_idx - 1)] .= false
 
         debug && @show prev_outside
         debug && @show curr_outside
-
 
         # Depending on the method, different infornation is useful to find crossings
         if crossing_method isa CrossingLinearIntersection
@@ -215,7 +215,6 @@ end
 ##########################################################################################
 # utilities
 ##########################################################################################
-
 "Find the (index of the) outermost ε-ball the trajectory is not in."
 function first_outside_index(mind::Real, εs, E = length(εs))
     i = findfirst(e -> isoutside(mind, e), εs)
@@ -223,16 +222,9 @@ function first_outside_index(mind::Real, εs, E = length(εs))
     return out_idx
 end
 
-
-function _default_threshold_distance(εs, multiplier = 4)
-    if εs[1] isa Real
-        m = maximum(εs)
-    else
-        m = 2maximum(maximum(e) for e in εs)
-    end
-    return m * multiplier
-end
-
+_max_sets_radius(εs::Vector{<:Real}) = εs[1] # assumes sorted!
+_max_sets_radius(εs::Vector{<:AbstractVector}) = maximum(εs[1]) # assumes sorted!
+_default_threshold_distance(εs, m = 4) = m*_max_sets_radius(εs)
 
 ##########################################################################################
 # old code that is left here for reference sake only (to check back on Callbacks)

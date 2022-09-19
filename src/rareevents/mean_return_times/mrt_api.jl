@@ -2,7 +2,7 @@
 export exit_entry_times, transit_return_times, mean_return_times
 
 """
-    exit_entry_times(ds::DynamicalSystem, u₀, εs, T; diffeq = NamedTuple()) → exits, entries
+    exit_entry_times(ds::DynamicalSystem, u₀, εs, T; kwargs...) → exits, entries
 Collect exit and entry times for a ball or box centered at `u₀` with radii `εs` (see below),
 in the state space of the given discrete dynamical system (function not yet available
 for continuous systems).
@@ -12,29 +12,36 @@ containing all collected times for the respective `ε`-radius set, for `ε ∈ �
 Use `transit_return_times(exits, entries)` to transform the output into transit and return
 times, and see also [`mean_return_times`](@ref) for both continuous and discrete systems.
 
+See below for keyword arguments, valid only for continuous systems.
+
 ## Description
-Transit time statistics are important for the transport properties of dynamical
+Transit and return time statistics are important for the transport properties of dynamical
 systems[^Meiss1997] and can be connected with fractal dimensions of chaotic sets[^Boev2014].
 
 The current algorithm collects exit and re-entry times to given sets in the state space,
-which are centered at the state `u₀` (**the algorithm always starts at `u₀`** and the
-initial state of `ds` is irrelevant).
+which are centered at the state `u₀`. **The system evolution always starts from `u₀`**
+and the initial state of `ds` is irrelevant. `εs` is always a `Vector`.
 
-`εs` is always a `Vector`.
-
-The sets around `u₀` are nested hyper-spheres of radius `ε ∈ εs`, if each entry of
-`εs` is a real number. The sets can also be
-hyper-rectangles (boxes), if each entry of `εs` is a vector itself.
+### Specification of sets to return to
+If each entry of `εs` is a real number, then sets around `u₀` are nested hyper-spheres
+of radius `ε ∈ εs`. The sets can also be hyper-rectangles (boxes), if each entry of `εs`
+is a vector itself.
 Then, the `i`-th box is defined by the space covered by `u0 .± εs[i]` (thus the actual
 box size is `2εs[i]`!).
 
 The reason to input multiple `εs` at once is purely for performance optimization
 (much faster than doing each `ε` individually).
 
+### Discrete systems
+
 For discrete systems, exit time is recorded immediatelly after exitting of the set, and
 re-entry is recorded immediatelly on re-entry. This means that if an orbit needs
-1 step to leave the set and then it re-enters immediatelly on the next step, the return time
-is 1. For continuous systems high-order
+1 step to leave the set and then it re-enters immediatelly on the next step,
+the return time is 1.
+
+### Continuous systems
+TODO: Write this.
+For continuous systems high-order
 interpolation is done to accurately record the time of exactly crossing the `ε`-ball/box.
 
 [^Meiss1997]:

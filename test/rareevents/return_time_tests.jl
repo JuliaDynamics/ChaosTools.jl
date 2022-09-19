@@ -25,7 +25,7 @@ function sanity_tests(exits, entries, transits, returns, mrt, ret)
     end
 end
 
-@testset "Standard map (exact)" begin
+@testset "Standard map (spheres, exact)" begin
     # INPUT
     ds = Systems.standardmap()
     T = 10000 # maximum time
@@ -141,7 +141,7 @@ end
 
 end
 #
-@testset "Continuous Roessler" begin
+@testset "Continuous Roessler (spheres)" begin
 # %%
 # using OrdinaryDiffEq: Tsit5
 alg = DynamicalSystemsBase.DEFAULT_SOLVER
@@ -157,9 +157,9 @@ u0 = SVector(
 crossing_method =  ChaosTools.CrossingLinearIntersection()
 crossing_method =  ChaosTools.CrossingAccurateInterpolation()
 
+# exits, entries = exit_entry_times(ro, u0, εs, 100.0; crossing_method, debug=true)
 
 exits, entries = exit_entry_times(ro, u0, εs, 1000.0; crossing_method)
-exits, entries = exit_entry_times(ro, u0, εs, 1000.0; crossing_method, debug=false)
 transits, returns = transit_return_times(exits, entries)
 mrt, ret = mean_return_times(ro, u0, εs, 1000.0; crossing_method)
 
@@ -188,103 +188,96 @@ sanity_tests(exits, entries, transits, returns, mrt, ret)
 end
 
 end
+
 # # Visual guidance
 # %%
-#=
-using GLMakie
-using GLMakie.Makie.GeometryBasics
 
-# The integration times have been tested for default integrator!
-# Lengths for circles!
-tr = trajectory(ro, 2000, u0; diffeq)
-tr1 = trajectory(ro, avg_period, u0; diffeq)
-tr2 = trajectory(ro,  18, u0; diffeq)
-tr3 = trajectory(ro,  53, u0; diffeq)
-if crossing_method isa  ChaosTools.CrossingLinearIntersection
-    # Trajectory 4 needs to show the actual integrator steps
-    tr4 = SVector{3, Float64}[]
-    integ = integrator(ro, u0; diffeq)
-    while integ.t < 416 # from 415 to 416 you see the first crossing :)
-        step!(integ)
-        push!(tr4, get_state(integ))
-    end
-    tr4 = Dataset(tr4)
-else
-    tr4 = trajectory(ro, 363, u0; diffeq) # from 362 to 363 you see the first crossing :)
-end
-
-fig = Figure(;resolution = (1500, 500)); display(fig)
-axs = [Axis(fig[1,i]) for i in 1:3]
-comb = ((1, 2), (1, 3), (2, 3))
-for i in 1:3
-    j, k = comb[i]
-    ax = axs[i]
-    # ax.plot(tr[:, j], tr[:, k], lw = 2.0, color = "C$(i-1)", alpha = 0.5, marker = "o", ms = 2)
-    lines!(ax, tr[:, j], tr[:, k]; linewidth = 0.5, color = Cycled(1))
-    scatter!(ax, [u0[j]], [u0[k]]; markersize = 5, color = "black")
-    scatterlines!(ax, tr4[:, j], tr4[:, k]; color = "darkgreen", linewidth = 2.0, markersize = 6)
-    lines!(ax, tr3[:, j], tr3[:, k]; color = "magenta", linewidth = 2.5)
-    lines!(ax, tr2[:, j], tr2[:, k]; color = Cycled(2), linewidth = 3.0, linestyle = :dash)
-    lines!(ax, tr1[:, j], tr1[:, k]; color = "black", linewidth = 3.5, linestyle = :dashdot)
-    if eltype(εs[1]) <: Vector
-        for l in 1:length(εs)
-            # TODO: Update
-            rect = matplotlib.patches.Rectangle(
-            u0[[j, k]] .- εs[l][[j, k]], 2εs[l][j], 2εs[l][k],
-            alpha = 0.1, color = "k"
-            )
-            ax.add_artist(rect)
+function visual_guidance(ro, times, u0, diffeq, εs, crossing_method)
+    # The integration times have been tested for default integrator!
+    # Lengths for circles!
+    tr = trajectory(ro, times[5], u0; diffeq)
+    tr1 = trajectory(ro, times[1], u0; diffeq)
+    tr2 = trajectory(ro,  times[2], u0; diffeq)
+    tr3 = trajectory(ro,  times[3], u0; diffeq)
+    if crossing_method isa  ChaosTools.CrossingLinearIntersection
+        # Trajectory 4 needs to show the actual integrator steps
+        tr4 = SVector{3, Float64}[]
+        integ = integrator(ro, u0; diffeq)
+        while integ.t < times[4]
+            step!(integ)
+            push!(tr4, get_state(integ))
         end
+        tr4 = Dataset(tr4)
     else
+        tr4 = trajectory(ro, times[4], u0; diffeq)
+    end
+
+    fig = Figure(;resolution = (1500, 500)); display(fig)
+    axs = [Axis(fig[1,i]) for i in 1:3]
+    comb = ((1, 2), (1, 3), (2, 3))
+    for i in 1:3
+        j, k = comb[i]
+        ax = axs[i]
+        # ax.plot(tr[:, j], tr[:, k], lw = 2.0, color = "C$(i-1)", alpha = 0.5, marker = "o", ms = 2)
+        lines!(ax, tr[:, j], tr[:, k]; linewidth = 0.5, color = Cycled(1))
+        scatter!(ax, [u0[j]], [u0[k]]; markersize = 8, color = "black")
+        scatterlines!(ax, tr4[:, j], tr4[:, k]; color = "darkgreen", linewidth = 2.0, markersize = 6)
+        lines!(ax, tr3[:, j], tr3[:, k]; color = "gray", linewidth = 2.5)
+        lines!(ax, tr2[:, j], tr2[:, k]; color = Cycled(2), linewidth = 3.0, linestyle = :dash)
+        lines!(ax, tr1[:, j], tr1[:, k]; color = "black", linewidth = 3.5, linestyle = :dashdot)
         for l in 1:length(εs)
-            poly!(ax, Circle(Point2f(u0[[j, k]]...), εs[l]); color = (:red, 0.1),
-            strokecolor = :red, strokewidth = 0.5   )
+            if εs[1] isa AbstractVector
+
+                ε1, ε2 = εs[l][j], εs[l][k]
+                rect = Rect(u0[j] - ε1, u0[k] - ε2, 2ε1, 2ε2)
+                poly!(ax, rect; color = (:red, 0.1),
+                strokecolor = :red, strokewidth = 0.5   )
+
+
+                # TODO: Update
+                # rect = matplotlib.patches.Rectangle(
+                # u0[[j, k]] .- εs[l][[j, k]], 2εs[l][j], 2εs[l][k],
+                # alpha = 0.1, color = "k"
+                # )
+                # ax.add_artist(rect)
+            else
+                poly!(ax, Circle(Point2f(u0[[j, k]]...), εs[l]); color = (:red, 0.1),
+                strokecolor = :red, strokewidth = 0.5   )
+            end
         end
     end
 end
-=#
+
+if false
+    using GLMakie
+    using GLMakie.Makie.GeometryBasics
+    times = [avg_period, 18, 53, 415, 2000]
+    # 4th entry of times is important for innermost crossing
+    # from 415 to 416 you see the first crossing for linear:)
+    # from 362 to 363 you see the first crossing for interpolation :)
+    visual_guidance(ro, times, u0, diffeq, εs, crossing_method)
+end
 
 # %%
-# We know the average period of the Roessler system. Therefore the return times
-# cannot be possibly smaller than it (because u0 is in the xy plane)
-# We also know (from the plot) that the first returns after around 3 periods.
-# We aaaalso know (by zooming in the plot) that the innermost ball is recurred exactly twice,
-# however one of the two crossings is grazing and thus likely to not be spotted by the
-# algorithm
-exits, entries = exit_entry_times(ro, u0, εs, 30avg_period; diffeq = (alg = alg,))
+# # Visual guidance for in-place lorenz
+# alg = DynamicalSystemsBase.DEFAULT_SOLVER
+# lo = Systems.lorenz_iip()
+# diffeq = (alg = alg,)
 
+# u0 = SVector(
+#     -10,
+#     0,
+#     20.0,
+# )
 
-τ, c = mean_return_times(ro, u0, εs, 3avg_period; diffeq = (alg = alg,), i=20)
-@test c[1] == 1
-@test c[2] == c[3] == 0
-@test 2avg_period < τ[1] < 3avg_period
-@test issorted(c; rev=true)
+# εs = [
+#     SVector(10.0, 25, 30),
+#     SVector(1.0, 25, 30),
+#     SVector(0.1, 25, 2),
+# ]
 
-τ, c = mean_return_times(ro, u0, εs, 5000.0; diffeq = (alg = alg,), i=20)
-@test all(τ .> avg_period/2)
-@test 0 < c[3] ≤ 2
-@test issorted(c; rev=true)
+# times = [5.0, 20.0, 50.0, 100.0, 1000.0]
 
-x = sort!(MathConstants.e .^ (-4:0.5:-1); rev = true)
-Ts = 10.0 .^ range(3, 6, length = 7)
-is = range(10; step = 4, length = 7)
-τd, cd_ = mean_return_times(ro, u0, x, Ts; i=is, dmin =10.0)
-@test issorted(τd)
-@test all(z -> z > 0, cd_)
+# visual_guidance(lo, times, u0, diffeq, εs, crossing_method)
 
-# figure()
-# plot(log.(x), log.(τd); marker ="o")
-# d = -ChaosTools.slope(log.(x), log.(τd))
-# The slope of the above plot should approximate the fractal dimension
-# but I don't find this to be true unfortunately...
-
-# Test with hyper rectangles. Both same outcome because we are anyway in the flat part
-εs = [
-    SVector(0.1, 0.1, 0.5),
-    SVector(0.1, 0.1, 0.05),
-]
-τ2, c2 = mean_return_times(ro, u0, εs, 5000.0; diffeq = (alg = alg,), i=20)
-
-@test τ2[1] < τ[2]
-
-# end
+# exits, entries = exit_entry_times(ro, u0, εs, 100.0; crossing_method, debug=true)

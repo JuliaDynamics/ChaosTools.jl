@@ -63,12 +63,13 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
         curr_distance = signed_distance(get_state(integ), u0, εs[1])
         curr_distance > threshold_distance && continue
         # Obtain mininum distance and check which is the outermost box we are out of
-        umin, tmin, dmin = closest_trajectory_point(integ, u0, metric, crossing_method)
+        tmin, dmin = closest_trajectory_point(integ, u0, metric, crossing_method)
         debug && @show (tmin, dmin)
         out_idx = first_outside_index(get_state(integ), u0, εs, E)
-        debug && @show out_idx
-        # if we were outside all, and still outside all, and we don't cross, we skip
-        out_idx == 1 && all(prev_outside) && dmin < maxε && continue
+        out_idx_min = first_outside_index(dmin, εs)
+        debug && @show (out_idx, out_idx_min)
+        # if we were outside all, and min distance also outside all, we skip
+        out_idx_min == 1 && all(prev_outside) && continue
         # something changed, compute state, interpolate, and update
         curr_outside[out_idx:end] .= true
         curr_outside[1:(out_idx - 1)] .= false
@@ -84,7 +85,7 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
         elseif crossing_method isa CrossingAccurateInterpolation
             update_exits_and_entries_interpolation!(
                 exits, entries, out_idx, prev_outside, curr_outside,
-                integ, u0, εs, tmin, crossing_method, dmin
+                integ, u0, εs, tmin, crossing_method, out_idx_min
             )
         end
 
@@ -115,7 +116,7 @@ function closest_trajectory_point(integ, u0, metric, method::CrossingLinearInter
         umin, tmin = origin .+ λ*x, integ.tprev + λ*(integ.t - integ.tprev)
     end
     dmin = euclidean(umin, u0)
-    return umin, tmin, dmin
+    return tmin, dmin
 end
 
 function update_exits_and_entries_linear!(
@@ -186,12 +187,12 @@ function closest_trajectory_point(integ, u0, metric, method::CrossingAccurateInt
         store_trace=false, abs_tol = method.abstol, rel_tol = method.reltol,
     )
     tmin, dmin = Optim.minimizer(optim), Optim.minimum(optim)
-    return integ(tmin), tmin, dmin
+    return tmin, dmin
 end
 
 function update_exits_and_entries_interpolation!(
         exits, entries, out_idx, pre_outside, cur_outside,
-        integ, u0, εs, tmin0, method, dmin
+        integ, u0, εs, tmin0, method, out_idx_min
     )
     tprev, tcurr = integ.tprev, integ.t
     # The function needs three clauses: one for crossing through the entire set,
@@ -229,8 +230,7 @@ function update_exits_and_entries_interpolation!(
         tmin = tcross
     end
 
-    # Last clause: checks for crossing through the entire ball
-    out_idx_min = first_outside_index(dmin, εs)
+    # Last clause: checks for crossing through the entire set
     if out_idx_min > 1 # minimum possible distance is inside at least one set
         t1, t2 = tprev, tcurr # crossing times, will be updated later!
         @inbounds for j in 1:(out_idx_min - 1)

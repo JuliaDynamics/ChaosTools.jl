@@ -6,7 +6,7 @@ function check_εs_sorting(εs, L)
     elseif εs[1] isa AbstractVector
         @assert all(e -> length(e) == L, εs) "Boxes must have same dimension as state space!"
         for j in 1:L
-            if !issorted([εs[i][j] for i in 1:length(εs)]; rev = true)
+            if !issorted([εs[i][j] for i in eachindex(εs)]; rev = true)
                 return false
             end
         end
@@ -19,10 +19,10 @@ function check_εs_sorting(εs, L)
 end
 
 # Support both types of sets: balls and boxes
-# TODO: Can optimize to not call `maximum(ε)` all the time
-"Return `true` if state is outside ε-ball. Can also accept pre-computed distance."
+"Return `true` if state is outside ε-ball.
+Can also accept pre-computed **minimum** distance (according to metric)."
 function isoutside(u, u0, ε::AbstractVector)
-    @inbounds for i in 1:length(u)
+    @inbounds for i in eachindex(u)
         abs(u[i] - u0[i]) > ε[i] && return true
     end
     return false
@@ -31,26 +31,21 @@ isoutside(d::Real, ε::AbstractVector) = d > maximum(ε)
 isoutside(u, u0, ε::Real) = euclidean(u, u0) > ε
 isoutside(d::Real, ε::Real) = d > ε
 
-
 "Find the (index of the) outermost ε-ball the trajectory is not in."
 function first_outside_index(u::AbstractVector, u₀, εs, E = length(εs))::Int
     i = findfirst(e -> isoutside(u, u₀, e), εs)
     return isnothing(i) ? E+1 : i
 end
-
 "Find the (index of the) outermost ε-ball the distance is not in."
 function first_outside_index(d::Real, εs, E = length(εs))::Int
     i = findfirst(e -> isoutside(d, e), εs)
     return isnothing(i) ? E+1 : i
 end
 
-
-
-
 "Return the **signed** distance of state to ε-ball (negative means inside set)."
 function signed_distance(u, u0, ε::AbstractVector)
     m = eltype(u)(-Inf)
-    @inbounds for i in 1:length(u)
+    @inbounds for i in eachindex(u)
         m2 = abs(u[i] - u0[i]) - ε[i]
         m2 > m && (m = m2)
     end

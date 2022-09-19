@@ -57,7 +57,7 @@ function exit_entry_times(ds::DynamicalSystem, u0, εs, T; diffeq = NamedTuple()
     integ = integrator(ds, u0; diffeq)
     exit_entry_times(integ, u0, εs, T; kwargs...)
 end
-
+# TODO: Don't assume that we start at u0 because sets could be centered at fixed points
 """
     transit_return_times(exits, entries) → transits, returns
 Convert the output of [`exit_entry_times`](@ref) to the transit and return times.

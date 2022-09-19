@@ -155,8 +155,11 @@ u0 = SVector(
 )
 εs = sort!([1.0, 0.1, 0.01]; rev=true)
 crossing_method =  ChaosTools.CrossingLinearIntersection()
+crossing_method =  ChaosTools.CrossingAccurateInterpolation()
+
 
 exits, entries = exit_entry_times(ro, u0, εs, 1000.0; crossing_method)
+exits, entries = exit_entry_times(ro, u0, εs, 1000.0; crossing_method, debug=false)
 transits, returns = transit_return_times(exits, entries)
 mrt, ret = mean_return_times(ro, u0, εs, 1000.0; crossing_method)
 
@@ -168,20 +171,19 @@ sanity_tests(exits, entries, transits, returns, mrt, ret)
     for j in 1:3
         t = 2εs[j]/10
         # State space speed is about 1/10th the state space distance for Roessler
-        @test exits[j][1] ≈ t/2
+        @test exits[j][1] ≈ t/2  (atol=1e-2)
         @test all(<(2t), transits[j])
         # all transits must be less than the returns (for the specific Roessler case)
         @test all(>(0), returns[j] .- transits[j])
     end
     # See plotting for the following
     @test length(returns[3]) == 1
-
+    @test 16 < returns[1][1] < 18
+    @test 52 < returns[2][1] < 54
     if crossing_method isa  ChaosTools.CrossingLinearIntersection
-        @test 16 < returns[1][1] < 18
-        @test 52 < returns[2][1] < 54
         @test 415 < returns[3][1] < 416
     else
-        # test
+        @test 362 < returns[3][1] < 363
     end
 end
 
@@ -208,7 +210,7 @@ if crossing_method isa  ChaosTools.CrossingLinearIntersection
     end
     tr4 = Dataset(tr4)
 else
-    tr4 = trajectory(ro, 420, u0; diffeq)
+    tr4 = trajectory(ro, 363, u0; diffeq) # from 362 to 363 you see the first crossing :)
 end
 
 fig = Figure(;resolution = (1500, 500)); display(fig)

@@ -54,7 +54,6 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
     curr_outside = copy(prev_outside)  # `true` if outside the set. Current step.
     exits   = [eltype(integ.t)[] for _ in 1:E]
     entries = [eltype(integ.t)[] for _ in 1:E]
-    tprev = integ.t
     maxε = _max_sets_radius(εs)
 
     while (integ.t - integ.t0) < T
@@ -82,14 +81,14 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
             update_exits_and_entries_linear!(
                 exits, entries, integ, u0, εs, prev_outside, curr_outside
             )
-        elseif method isa CrossingAccurateInterpolation
-            update_exit_times!(exits, out_idx, prev_outside, curr_outside, umin, integ)
-            update_entry_times!(entries, out_idx, prev_outside, curr_outside, umin, integ)
+        elseif crossing_method isa CrossingAccurateInterpolation
+            update_exits_and_entries_interpolation!(
+                exits, entries, out_idx, prev_outside, curr_outside,
+                integ, u0, εs, tmin, crossing_method, dmin
+            )
         end
 
-        # End of loop, update all `prev_` entries to `curr_`
         prev_outside .= curr_outside
-        tprev = integ.t
         # TODO: I wonder if we can use the previous minimum distance and compare it
         # with current one for accelerating the search...?
     end
@@ -119,7 +118,9 @@ function closest_trajectory_point(integ, u0, metric, method::CrossingLinearInter
     return umin, tmin, dmin
 end
 
-function update_exits_and_entries_linear!(exits, entries, integ, u0, εs, pre_outside, cur_outside)
+function update_exits_and_entries_linear!(
+        exits, entries, integ, u0, εs, pre_outside, cur_outside
+    )
     # In this method we iterate for exits and entries at the same time, because we can
     # efficiently find both entry and exit if it happens to be within the current step
     # Notice that in this method we also don't really use the already found time of
@@ -175,38 +176,83 @@ end
 ##########################################################################################
 # CrossingAccurateInterpolation version
 ##########################################################################################
-import Optim
+import Optim, Roots
 function closest_trajectory_point(integ, u0, metric, method::CrossingAccurateInterpolation)
     # use Optim.jl to find minimum of the function
     f = (t) -> evaluate(metric, integ(t), u0)
     # Then find minimum of `f` in limits `(tprev, t)`
     optim = Optim.optimize(
-        f, tprev, integ.t, Optim.Brent();
+        f, integ.tprev, integ.t, Optim.Brent();
         store_trace=false, abs_tol = method.abstol, rel_tol = method.reltol,
     )
     tmin, dmin = Optim.minimizer(optim), Optim.minimum(optim)
     return integ(tmin), tmin, dmin
 end
 
-function update_exit_times!(exits, out_idx, pre_outside, cur_outside, tmin, integ, test)
-    @inbounds for j in out_idx:length(pre_outside)
+function update_exits_and_entries_interpolation!(
+        exits, entries, out_idx, pre_outside, cur_outside,
+        integ, u0, εs, tmin0, method, dmin
+    )
+    tprev, tcurr = integ.tprev, integ.t
+    # The function needs three clauses: one for crossing through the entire set,
+    # one for crossing the exits only, and one for crossing the entries only.
+
+    # Crossing out; we are iterating from smallest set to larger, to update tmin!
+    tmin = tmin0
+    @inbounds for j in length(pre_outside):-1:out_idx
         # Check if we actually exit `j` set
         cur_outside[j] && !pre_outside[j] || continue
         # Perform rootfinding to find crossing point accurately
-        tcross = error("write this")
+        crossing = (t) -> signed_distance(integ(t), u0, εs[j])
+        tcross = Roots.find_zero(
+            crossing, (tmin, tcurr), Roots.A42();
+            atol = method.abstol, rtol = method.reltol
+        )
         push!(exits[j], tcross)
-        # update tmin, which now is the time to exit the previous set
+        # update tmin, which now is the time to exit the previous inner set
+        tmin = tcross
     end
-end
-function update_entry_times!(entries, out_idx, pre_outside, cur_outside, integ, test)
-    @inbounds for j in (out_idx - 1):-1:1
+
+    # Crossing in; we are iterating from largest set to smallest, to update tmin!
+    tmin = tmin0
+    @inbounds for j in 1:(out_idx - 1)
         # Check if we actually enter `j` set
         pre_outside[j] && !cur_outside[j] || continue
         # Perform rootfinding to find crossing point accurately
-        tcross = error("write this")
+        crossing = (t) -> signed_distance(integ(t), u0, εs[j])
+        tcross = Roots.find_zero(
+            crossing, (tprev, tmin), Roots.A42();
+            atol = method.abstol, rtol = method.reltol
+        )
         push!(entries[j], tcross)
-        # update `tmin`, which now is the time to enter the next inner set
+        # update `tmin`, which now is the time to enter the previous outer set
+        tmin = tcross
     end
+
+    # Last clause: checks for crossing through the entire ball
+    out_idx_min = first_outside_index(dmin, εs)
+    if out_idx_min > 1 # minimum possible distance is inside at least one set
+        t1, t2 = tprev, tcurr # crossing times, will be updated later!
+        @inbounds for j in 1:(out_idx_min - 1)
+            pre_outside[j] && cur_outside[j] || continue # ensure that we are for sure out
+            # Find first crossing in
+            crossing = (t) -> signed_distance(integ(t), u0, εs[j])
+            tcross = Roots.find_zero(
+                crossing, (t1, tmin0), Roots.A42();
+                atol = method.abstol, rtol = method.reltol
+            )
+            push!(entries[j], tcross)
+            t1 = tcross
+            # Find crossing out
+            tcross = Roots.find_zero(
+                crossing, (tmin0, t2), Roots.A42();
+                atol = method.abstol, rtol = method.reltol
+            )
+            push!(exits[j], tcross)
+            t2 = tcross
+        end
+    end
+
 end
 
 

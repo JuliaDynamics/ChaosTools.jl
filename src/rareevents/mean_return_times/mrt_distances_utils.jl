@@ -31,7 +31,22 @@ isoutside(d::Real, ε::AbstractVector) = d > maximum(ε)
 isoutside(u, u0, ε::Real) = euclidean(u, u0) > ε
 isoutside(d::Real, ε::Real) = d > ε
 
-# TODO: So far none of these is actually used anywhere:
+
+"Find the (index of the) outermost ε-ball the trajectory is not in."
+function first_outside_index(u::AbstractVector, u₀, εs, E = length(εs))::Int
+    i = findfirst(e -> isoutside(u, u₀, e), εs)
+    return isnothing(i) ? E+1 : i
+end
+
+"Find the (index of the) outermost ε-ball the distance is not in."
+function first_outside_index(d::Real, εs, E = length(εs))::Int
+    i = findfirst(e -> isoutside(d, e), εs)
+    return isnothing(i) ? E+1 : i
+end
+
+
+
+
 "Return the **signed** distance of state to ε-ball (negative means inside set)."
 function signed_distance(u, u0, ε::AbstractVector)
     m = eltype(u)(-Inf)
@@ -43,6 +58,7 @@ function signed_distance(u, u0, ε::AbstractVector)
 end
 signed_distance(u, u0, ε::Real) = euclidean(u, u0) - ε
 
+# TODO: So far none of these is actually used anywhere:
 "Return the true distance of `u` from `u0`, according to metric defined by `ε`."
 distance(u, u0, ::Real) = euclidean(u, u0)
 distance(u, u0, ::AbstractVector) = chebyshev(u, u0)

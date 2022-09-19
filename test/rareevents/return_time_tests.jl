@@ -4,6 +4,27 @@ using ChaosTools.DelayEmbeddings
 
 println("\n Return time tests...")
 
+function sanity_tests(exits, entries, transits, returns, mrt, ret)
+    @testset "Sanity tests" begin
+        @test mrt == mean.(returns)
+        for j in 1:length(εs)
+            @test all(>(0), exits[j])
+            @test all(>(0), entries[j])
+            # entries and exits must differ by at most 1 at their length
+            lenen = length(entries[j])
+            lenex = length(exits[j])
+            @test lenex == lenen || (lenex == lenen + 1)
+            # all exits modulo the first happen after all entries
+            @test all(>(0), transits[j])
+            # return times are positive definite
+            @test all(>(0), returns[j])
+            @test ret[j] == length(entries[j])
+        end
+        # it should take longer to enter smaller sets
+        @test all(≥(0), diff(mrt))
+    end
+end
+
 @testset "Standard map (exact)" begin
     # INPUT
     ds = Systems.standardmap()
@@ -18,6 +39,9 @@ println("\n Return time tests...")
     # and 3rd must be same as second (because it doesn't matter how close are)
     exits, entries = exit_entry_times(ds, u0, εs, T)
     transits, returns = transit_return(exits, entries)
+    τ, c = mean_return_times(ds, u0, εs, T)
+
+    sanity_tests(exits, entries, transits, returns, τ, c)
 
     @test all(x -> length(x) > 5, exits)
     @test all(x -> length(x) > 5, entries)
@@ -30,7 +54,6 @@ println("\n Return time tests...")
     @test all(isequal(2), returns[2])
     @test returns[2] == returns[3]
 
-    τ, c = mean_return_times(ds, u0, εs, T)
     @test τ == mean.(returns)
     @test length(unique(c)) == 1
     @test c[1] == T÷3 # should return exactly 1 every 3 steps.
@@ -85,7 +108,7 @@ end
 
     # Visual guidance
     # using PyPlot
-    # tr0 = trajectory(to, 5, u0)
+    # tr1 = trajectory(to, 5, u0)
     # fig, axs = subplots(1,3)
     # comb = ((1, 2), (1, 3), (2, 3))
     # for i in 1:3
@@ -93,7 +116,7 @@ end
     #     ax = axs[i]
     #     ax.scatter(tr[:, j], tr[:, k], s = 2, color = "C$(i-1)")
     #     ax.scatter([u0[j]], [u0[k]], s = 20, color = "k")
-    #     ax.plot(tr0[:, j], tr0[:, k], color = "k")
+    #     ax.plot(tr1[:, j], tr1[:, k], color = "k")
     #     for l in 1:length(εs)
     #         rect = matplotlib.patches.Rectangle(
     #         u0[[j, k]] .- εs[l][[j, k]], 2εs[l][j], 2εs[l][k],
@@ -118,67 +141,76 @@ end
 
 end
 #
-# @testset "Continuous Roessler" begin
+@testset "Continuous Roessler" begin
 # %%
 # using OrdinaryDiffEq: Tsit5
 alg = DynamicalSystemsBase.DEFAULT_SOLVER
 diffeq = (alg = alg,)
 ro = Systems.roessler(ones(3))
+avg_period = 6.0
 u0 = SVector(
     4.705494942754781,
     -10.221120945130545,
     0.06186563933318555
 )
 εs = sort!([1.0, 0.1, 0.01]; rev=true)
-avg_period = 6.0
-maxε = εs[1]
-integ = integrator(ro, u0)
-
 crossing_method =  ChaosTools.CrossingLinearIntersection()
-step!(integ)
-minimumkwargs = (iterations = 50, )
-# optim = ChaosTools.closest_trajectory_point(integ, u0, maxε, 0, minimumkwargs)
-
 
 exits, entries = exit_entry_times(ro, u0, εs, 1000.0; crossing_method)
 transits, returns = transit_return_times(exits, entries)
 mrt, ret = mean_return_times(ro, u0, εs, 1000.0; crossing_method)
 
-# Sanity tests
-@test mrt == mean.(returns)
-for j in 1:length(εs)
-    @test all(>(0), exits[j])
-    @test all(>(0), entries[j])
-    # all transits must be less than the returns (for the specific Roessler case)
-    @test all(>(0), returns[j] .- transits[j])
-    # all exits modulo the first happen after all entries
-    @test all(>(0), transits[j])
-    # return times are positive definite
-    @test all(>(0), returns[j])
+sanity_tests(exits, entries, transits, returns, mrt, ret)
 
-    @test ret[j] == lenth(entries[j])
+# Tests specific to this exact configuration of Roessler, with integrator
+# and initial condition fixed. It uses the "visual guidance" contained below!
+@testset "Specific tests" begin
+    for j in 1:3
+        t = 2εs[j]/10
+        # State space speed is about 1/10th the state space distance for Roessler
+        @test exits[j][1] ≈ t/2
+        @test all(<(2t), transits[j])
+        # all transits must be less than the returns (for the specific Roessler case)
+        @test all(>(0), returns[j] .- transits[j])
+    end
+    # See plotting for the following
+    @test length(returns[3]) == 1
 
+    if crossing_method isa  ChaosTools.CrossingLinearIntersection
+        @test 16 < returns[1][1] < 18
+        @test 52 < returns[2][1] < 54
+        @test 415 < returns[3][1] < 416
+    else
+        # test
+    end
 end
 
+end
 # # Visual guidance
 # %%
+#=
 using GLMakie
 using GLMakie.Makie.GeometryBasics
 
 # The integration times have been tested for default integrator!
-tr = trajectory(ro, 5000, u0; diffeq)
-tr0 = trajectory(ro, avg_period, u0; diffeq)
+# Lengths for circles!
+tr = trajectory(ro, 2000, u0; diffeq)
+tr1 = trajectory(ro, avg_period, u0; diffeq)
 tr2 = trajectory(ro,  18, u0; diffeq)
 tr3 = trajectory(ro,  53, u0; diffeq)
-# Trajectory 4 needs to show the actual integrator steps
-tr4 = SVector{3, Float64}[]
-integ = integrator(ro, u0; diffeq)
-while integ.t < 416 # from 415 to 416 you see the first crossing :)
-    step!(integ)
-    push!(tr4, get_state(integ))
+if crossing_method isa  ChaosTools.CrossingLinearIntersection
+    # Trajectory 4 needs to show the actual integrator steps
+    tr4 = SVector{3, Float64}[]
+    integ = integrator(ro, u0; diffeq)
+    while integ.t < 416 # from 415 to 416 you see the first crossing :)
+        step!(integ)
+        push!(tr4, get_state(integ))
+    end
+    tr4 = Dataset(tr4)
+else
+    tr4 = trajectory(ro, 420, u0; diffeq)
 end
-tr4 = Dataset(tr4)
-# tr4 = trajectory(ro,  420, u0; diffeq)
+
 fig = Figure(;resolution = (1500, 500)); display(fig)
 axs = [Axis(fig[1,i]) for i in 1:3]
 comb = ((1, 2), (1, 3), (2, 3))
@@ -191,7 +223,7 @@ for i in 1:3
     scatterlines!(ax, tr4[:, j], tr4[:, k]; color = "darkgreen", linewidth = 2.0, markersize = 6)
     lines!(ax, tr3[:, j], tr3[:, k]; color = "magenta", linewidth = 2.5)
     lines!(ax, tr2[:, j], tr2[:, k]; color = Cycled(2), linewidth = 3.0, linestyle = :dash)
-    lines!(ax, tr0[:, j], tr0[:, k]; color = "black", linewidth = 3.0, linestyle = :dashdot)
+    lines!(ax, tr1[:, j], tr1[:, k]; color = "black", linewidth = 3.5, linestyle = :dashdot)
     if eltype(εs[1]) <: Vector
         for l in 1:length(εs)
             # TODO: Update
@@ -208,6 +240,7 @@ for i in 1:3
         end
     end
 end
+=#
 
 # %%
 # We know the average period of the Roessler system. Therefore the return times

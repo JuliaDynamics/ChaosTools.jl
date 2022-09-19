@@ -138,21 +138,6 @@ function update_exits_and_entries_linear!(exits, entries, integ, u0, εs, pre_ou
             continue # we're done now!
         end
         # Either one or no crossings within current time range
-        # normalize time:
-        # TODO: This logic should be improved and NOT use cur/prev outside.
-        # Ineast use if t2 is > 1 or not (this tells us which "side" of circle we are in).
-        # if cross1 # this means that we have crossed into the circle, so entry
-        #     tcross = tprev + t1*(tend - tprev)
-        #     push!(entries[j], tcross)
-        # elseif cross2 # we cross out of the circlel, so exit (entry is in the past)
-        #     tcross = tprev + t2*(tend - tprev)
-        #     push!(exits[j], tcross)
-        # else
-        #     @assert cross1 == cross2 == false
-        # end
-
-
-        # Previous logic:
         if cur_outside[j] && !pre_outside[j] # we're crossing out
             tcross = tprev + t2*(tend - tprev)
             push!(exits[j], tcross)
@@ -162,33 +147,6 @@ function update_exits_and_entries_linear!(exits, entries, integ, u0, εs, pre_ou
         else
             @assert cross1 == cross2 == false
         end
-    end
-end
-
-
-function update_exits_interpolation!(exits, out_idx, pre_outside, cur_outside, tmin, integ::MDI)
-    @inbounds for j in out_idx:length(pre_outside)
-        # Check if we actually exit `j` set
-        cur_outside[j] && !pre_outside[j] || continue
-        # Perform rootfinding to find crossing point accurately
-
-
-        t1, t2 = line_hypersphere_intersection(center, radius, origin, endpoint)
-
-
-        tcross = error("write this")
-        push!(exits[j], tcross)
-        # update tmin, which now is the time to exit the previous set
-    end
-end
-function update_entries_interpolation!(entries, out_idx, pre_outside, cur_outside, integ::MDI)
-    @inbounds for j in (out_idx - 1):-1:1
-        # Check if we actually enter `j` set
-        pre_outside[j] && !cur_outside[j] || continue
-        # Perform rootfinding to find crossing point accurately
-        tcross = error("write this")
-        push!(entries[j], tcross)
-        # update `tmin`, which now is the time to enter the next inner set
     end
 end
 

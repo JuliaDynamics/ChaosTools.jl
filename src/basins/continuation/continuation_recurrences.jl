@@ -48,7 +48,7 @@ end
 
 function basins_fractions_continuation(
         continuation::RecurrencesSeedingContinuation, prange, pidx, ics::Function;
-        samples_per_parameter = 100, show_progress = false,
+        samples_per_parameter = 100, show_progress = true,
     )
     # show_progress && @info "Starting basins fraction continuation."
     # show_progress && @info "p = $(prange[1])"

@@ -21,7 +21,7 @@ end
 
 """
     AttractorsViaFeaturizing(
-        ds::DynamicalSystem, featurizer::Function, 
+        ds::DynamicalSystem, featurizer::Function,
         clusterconfig = ClusteringConfig(); kwargs...
     )
 
@@ -85,9 +85,11 @@ function Base.show(io::IO, mapper::AttractorsViaFeaturizing)
     return
 end
 
+ValidICS = Union{AbstractDataset, Function}
+
 # We need to extend the general `basins_fractions`, because the clustering method
 # cannot map individual initial conditions to attractors
-function basins_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
+function basins_fractions(mapper::AttractorsViaFeaturizing, ics::ValidICS;
         show_progress = true, N = 1000
     )
     feature_array = extract_features(mapper, ics; show_progress, N)
@@ -101,7 +103,7 @@ function basins_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
     end
 end
 
-function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
+function extract_features(mapper::AttractorsViaFeaturizing, ics::ValidICS;
     show_progress = true, N = 1000)
 
     N = (typeof(ics) <: Function)  ? N : size(ics, 1) # number of actual ICs

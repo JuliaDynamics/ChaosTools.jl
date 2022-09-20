@@ -13,7 +13,7 @@ testfile(file, testname) = @testset "$testname" begin; include(file); end
 include("basins/clustering_tests.jl")
 testfile("basins/attractor_mapping_tests.jl", "Attractor mappers")
 testfile("basins/matching_attractors_tests.jl", "Matching attractors")
-testfile("basins/basins_continuation_tests.jl", "Fractions continuation")
+testfile("basins/recurrences_continuation_tests.jl", "Recurrences continuation")
 include("basins/uncertainty_tests.jl")
 include("basins/tipping_points_tests.jl")
 include("basins/proximity_deduce_ε_tests.jl")

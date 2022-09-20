@@ -195,7 +195,6 @@ end
         safety_counter_max = 1e8,
     )
 
-
     # coexistance of periodic and chaotic, and then the chaotic collapses
     # into the fixed point via a "crisis" (aka global bifurcation).
     # stable fixed point exists always throughout the parameter range,

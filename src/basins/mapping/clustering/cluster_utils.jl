@@ -85,7 +85,7 @@ calculates the clusters to calculate the silhouettes. Therefore, it is more opti
 already save that cluster as you iterate to find the optimal radius, which this function
 does.
 """
-function findcluster_optimal_radius_dbscan_silhouette(features, min_neighbors, metric; num_attempts_radius=200)
+function findcluster_optimal_radius_dbscan_silhouette(features, min_neighbors, metric; num_attempts_radius=50)
     feat_ranges = maximum(features, dims=2)[:,1] .- minimum(features, dims=2)[:,1];
     ϵ_grid = range(minimum(feat_ranges)/num_attempts_radius, minimum(feat_ranges), length=num_attempts_radius)
 

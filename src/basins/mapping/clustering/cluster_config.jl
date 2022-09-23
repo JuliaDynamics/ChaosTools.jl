@@ -45,7 +45,7 @@ which is unsupervised, see Description below.
   clusters. 
   The `elbow` method chooses the the radius according to the elbow (knee,
   highest-derivative method) and is quicker, though possibly leads to worse clustering.
-* `num_attempts_radius = 200` (unsupervised method with silhouettes): number of radii that
+* `num_attempts_radius = 50` (unsupervised method with silhouettes): number of radii that
   the `optimal_radius_method` will try out in its iterative procedure. Higher values
   increase the accuracy of clustering, though not necessarily much, while always reducing
   speed. 
@@ -108,7 +108,7 @@ function ClusteringConfig(; templates::Union{Nothing, Dict} = nothing,
         clust_method_norm=Euclidean(), clustering_threshold = 0.0, min_neighbors = 10,
         clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN",
         rescale_features=true, optimal_radius_method="silhouettes",
-        num_attempts_radius=200
+        num_attempts_radius=50
     )
     return ClusteringConfig(
         templates, clust_method_norm, clust_method,

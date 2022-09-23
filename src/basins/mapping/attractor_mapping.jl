@@ -95,7 +95,6 @@ function basins_fractions(mapper::AttractorMapper, ics::Union{AbstractDataset, F
     # mappers as threads. Use a `threading` keyword and `deepcopy(mapper)`
     for i ∈ 1:N
         ic = _get_ic(ics, i)
-        # println("ic = $ic")
         label = mapper(ic; show_progress)
         fs[label] = get(fs, label, 0) + 1
         used_dataset && (labels[i] = label)

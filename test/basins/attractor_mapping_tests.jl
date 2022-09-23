@@ -83,7 +83,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         test_basins_fractions(mapper; err = rerr)
     end
     @testset "Featurizing, unsupervised" begin
-        for optimal_radius_method in ["silhouettes", "silhouettes_original", "silhouettes_optim"]
+        for optimal_radius_method in ["silhouettes", "silhouettes_optim"]
             clusterspecs = ClusteringConfig(num_attempts_radius=20, optimal_radius_method=optimal_radius_method)
             mapper = AttractorsViaFeaturizing(ds, featurizer, clusterspecs; diffeq, Ttr = 500)
             test_basins_fractions(mapper;

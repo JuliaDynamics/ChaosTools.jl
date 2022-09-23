@@ -42,9 +42,9 @@ which is unsupervised, see Description below.
   `num_attempts_radius` (see its entry below). The alternative methods are:
   - `silhouettes_optim`: finds the optimal radius through a more efficient
   search implemented by `Optim.jl`. It's faster than the default with the same accuracy. 
-  - `silhouettes_original`: is the implementation of the original algorithm,
-  shared by the authors of [^Stender2021]. It maximizes the minimum silhouette values of
-  clusters. 
+  - `silhouettes_original`: is the implementation of the original algorithm, shared by the
+  authors of [^Stender2021]. It maximizes the minimum, instead of average, silhouette
+  values of clusters. Typically is less accurate than the other methods. 
   - `elbow`, or `knee`: chooses the the radius according to the elbow (knee,
   highest-derivative method) and is quicker, though generally leading to worse clustering.
 * `num_attempts_radius = 50` (unsupervised method with silhouettes): number of radii that

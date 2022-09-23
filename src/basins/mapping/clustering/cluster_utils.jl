@@ -47,7 +47,7 @@ function optimal_radius_dbscan_silhouette_original(features, min_neighbors, metr
         class_labels = cluster_assignment(clusters, features)
         if length(clusters) ≠ 1 # silhouette undefined if only one cluster
             sils = silhouettes(class_labels, dists)
-            s_grid[i] = mean(sils) #TODO should be minimum to be original version!
+            s_grid[i] = minimum(sils) 
         else
             s_grid[i] = 0; # considers single-cluster solution on the midpoint (following Wikipedia)
         end
@@ -62,7 +62,7 @@ Find the optimal radius ε of a point neighborhood to use in DBSCAN, the unsuper
 method for `AttractorsViaFeaturizing`. The basic idea is to iteratively search for the radius that
 leads to the best clustering, as characterized by quantifiers known as silhouettes.
 """
-function optimal_radius_dbscan_silhouette(features, min_neighbors, metric; num_attempts_radius=200)
+function optimal_radius_dbscan_silhouette(features, min_neighbors, metric; num_attempts_radius=50)
     feat_ranges = maximum(features, dims=2)[:,1] .- minimum(features, dims=2)[:,1];
     ϵ_grid = range(minimum(feat_ranges)/num_attempts_radius, minimum(feat_ranges), length=num_attempts_radius)
     s_grid = zeros(size(ϵ_grid)) # average silhouette values (which we want to maximize)

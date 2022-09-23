@@ -19,20 +19,16 @@ using Test
     attractors = Dict(1:length(a) .=> Dataset.(a; warn = false));
 
     ## Unsupervised
-    correcterrors = [0, 0.01, 0.01, 0, 0.0, 0, 0.1, 0.1] #error is dist to center of cluster (cloud of features)
     clusterspecs = ClusteringConfig(; min_neighbors=1,  rescale_features=false)
-    clust_labels, clust_errors = cluster_datasets(featurizer, [], attractors, clusterspecs)
+    clust_labels = cluster_datasets(featurizer, [], attractors, clusterspecs)
     @test clust_labels == correctlabels
-    @test round.(clust_errors, digits=2) == correcterrors
 
     ## Supervised
-    correcterrors = [0, 0.01, 0.01, 0.1, 0.1, 0, 0.0, 0.2] #now error is dist to template
     t = map(x->featurizer(x, []), attractor_pool)
     template_labels = [i for i ∈ eachindex(attractor_pool)]
     correctlabels = [1, 1, 1, -1, -1, 1, 3, -1]; #for threshold at 0.1
     templates = Dict(template_labels.=> t)
     clusterspecs = ClusteringConfig(; templates, min_neighbors=1, rescale_features=false, clustering_threshold=0.1)
-    clust_labels, clust_errors = cluster_datasets(featurizer, [], attractors, clusterspecs)
+    clust_labels = cluster_datasets(featurizer, [], attractors, clusterspecs)
     @test clust_labels == correctlabels
-    @test round.(clust_errors, digits=2) == correcterrors
 end

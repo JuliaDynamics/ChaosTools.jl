@@ -83,7 +83,7 @@ function test_basins(ds, u0s, grid, expected_fs_raw, featurizer;
         test_basins_fractions(mapper; err = rerr)
     end
     @testset "Featurizing, unsupervised" begin
-        clusterspecs = ClusteringConfig()
+        clusterspecs = ClusteringConfig(num_attempts_radius=20)
         mapper = AttractorsViaFeaturizing(ds, featurizer, clusterspecs; diffeq, Ttr = 500)
         test_basins_fractions(mapper;
         err = ferr, single_u_mapping = false, known_ids = [-1, 1, 2, 3])

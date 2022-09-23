@@ -91,7 +91,7 @@ function basins_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
         show_progress = true, N = 1000
     )
     feature_array = extract_features(mapper, ics; show_progress, N)
-    cluster_labels,  = cluster_features(feature_array, mapper.cluster_config)
+    cluster_labels  = cluster_features(feature_array, mapper.cluster_config)
     fs = basins_fractions(cluster_labels) # Vanilla fractions method with Array input
     if typeof(ics) <: AbstractDataset
         attractors = extract_attractors(mapper, cluster_labels, ics)

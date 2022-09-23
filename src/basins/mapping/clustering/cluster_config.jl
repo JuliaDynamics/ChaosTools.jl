@@ -164,7 +164,7 @@ function cluster_features_distances(features, cluster_specs)
     end
     matlabels_to_dictlabels = Dict(1:length(keys(cluster_specs.templates)).=>keys(cluster_specs.templates))
     cluster_user_labels = replace(cluster_labels, matlabels_to_dictlabels...) #cluster_user_labels[i] is the label of template nearest to feature i (i-th column of features matrix)
-    return cluster_user_labels, cluster_errors
+    return cluster_user_labels
 end
 
 """

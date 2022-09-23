@@ -10,15 +10,14 @@ These features are typically extracted from trajectories/datasets in
 
 The clustering is done in the function [`cluster_features`](@ref).
 
-The default clustering method is that used in [^Stender2021]
-which is unsupervised, see Description below.
+The default clustering method is an improvement over existing literature, see Description.
 
 ## Keyword arguments
 * `templates = nothing`: Enables supervised version, see below. If given, must be a
-   Dictionary of cluster labels to cluster features. The labels must be of `Int` type,
-   and the features are `Vector`s representing a cluster (which can be an attractor, for
-   instance). The label `-1` is reserved for invalid trajectories, which either diverge or 
-   whose clustering failed.
+  `Dict` of cluster labels to cluster features. The labels must be of `Int` type,
+  and the features are `Vector`s representing a cluster (which can be an attractor, for
+  instance). The label `-1` is reserved for invalid trajectories, which either diverge or
+  whose clustering failed.
 * `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors (i.e. of
   similar features) each feature needs to have in order to be considered in a cluster (fewer
   than this, it is labeled as an outlier, `-1`).
@@ -34,23 +33,25 @@ which is unsupervised, see Description below.
 * `rescale_features = true`: (unsupervised method): if true, rescale each dimension of the
   extracted features separately into the range `[0,1]`. This typically leads to
   more accurate clustering.
-* `optimal_radius_method = "silhouettes"` (unsupervised method): the method used to
-  determine the optimal radius for clustering features in the unsupervised method. The
-  "silhouettes" method chooses the radius that maximizes the average silhouette values of
-  clusters, and is an iterative optimization procedure that may take some time to execute.
-  To increase speed, the number of radii iterated through can be reduced by decreasing
-  `num_attempts_radius` (see its entry below). Alternative methods are:
-    - "silhouettes_optim": finds the optimal radius through a more efficient search
-    implemented by `Optim.jl`. It's faster than the default with the same accuracy; 
-    - "silhouettes_original": is the implementation of the original algorithm, shared by
+* `optimal_radius_method::String = "silhouettes_optim"`: the method used to
+  determine the optimal radius for clustering features in the unsupervised method.
+  Possible values are:
+  - `"silhouettes_mean"`: chooses the radius that maximizes the mean silhouette values of
+    clusters, and is an iterative optimization procedure that may take some time to execute.
+    To increase speed, the number of radii iterated through can be reduced by decreasing
+    `num_attempts_radius` (see its entry below).
+  - `"silhouettes_optim"`: finds the optimal radius through an optimization via Optim.jl.
+    It's than `"silhouettes_mean"` and with the same accuracy.
+  - `"silhouettes_original"`: is the implementation of the original algorithm, shared by
     the authors of [^Stender2021]. It maximizes the minimum, instead of average, silhouette
-    values of clusters. Typically is less accurate than the other methods;
-    -  "elbow", or "knee": chooses the the radius according to the elbow (knee,
+    values of clusters. Less accurate, and slower, than the other methods. It is only
+    included here for completeness.
+  - `"elbow"`: chooses the the radius according to the elbow (a.k.a. knee,
     highest-derivative method) and is quicker, though generally leading to worse clustering.
 * `num_attempts_radius = 50` (unsupervised method with silhouettes): number of radii that
   the `optimal_radius_method` will try out in its iterative procedure. Higher values
   increase the accuracy of clustering, though not necessarily much, while always reducing
-  speed. 
+  speed.
 
 ## Description
 The trajectory `X`, which may for instance be an attractor, is transformed into a vector
@@ -109,7 +110,7 @@ end
 function ClusteringConfig(; templates::Union{Nothing, Dict} = nothing,
         clust_method_norm=Euclidean(), clustering_threshold = 0.0, min_neighbors = 10,
         clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN",
-        rescale_features=true, optimal_radius_method="silhouettes",
+        rescale_features=true, optimal_radius_method="silhouettes_mean",
         num_attempts_radius=50
     )
     return ClusteringConfig(
@@ -203,25 +204,31 @@ Finds the cluster labels for each of the optimal radius methods. The labels are 
 """
 function _get_clusterlabels(features, min_neighbors, metric, optimal_radius_method,
     num_attempts_radius)
-    if optimal_radius_method == "silhouette" || optimal_radius_method == "silhouettes"
-        cluster_labels = findcluster_optimal_radius_dbscan_silhouette(features, min_neighbors, metric; num_attempts_radius)
-    elseif optimal_radius_method == "silhouette_original" || optimal_radius_method == "silhouettes_original"
-        ϵ_optimal = optimal_radius_dbscan_silhouette_original(features, min_neighbors, metric; num_attempts_radius)
+    if optimal_radius_method == "silhouettes_mean"
+        cluster_labels = findcluster_optimal_radius_dbscan_silhouette(
+            features, min_neighbors, metric; num_attempts_radius
+        )
+    elseif optimal_radius_method == "silhouettes_original"
+        ϵ_optimal = optimal_radius_dbscan_silhouette_original(
+            features, min_neighbors, metric; num_attempts_radius
+        )
         clusters = dbscan(features, ϵ_optimal; min_neighbors)
         clusters, sizes = sort_clusters_calc_size(clusters)
         cluster_labels = cluster_assignment(clusters, features; include_boundary=false)
-    elseif optimal_radius_method == "silhouette_optim" || optimal_radius_method == "silhouettes_optim"
-        ϵ_optimal = optimal_radius_dbscan_silhouette_optim(features, min_neighbors, metric; num_attempts_radius)
+    elseif optimal_radius_method == "silhouettes_optim"
+        ϵ_optimal = optimal_radius_dbscan_silhouette_optim(
+            features, min_neighbors, metric; num_attempts_radius
+        )
         dists = pairwise(metric, features)
         dbscanresult = dbscan(dists, ϵ_optimal, min_neighbors)
         cluster_labels = cluster_assignment(dbscanresult)
-    elseif optimal_radius_method == "elbow" || optimal_radius_method == "knee"
+    elseif optimal_radius_method == "knee"
         ϵ_optimal = optimal_radius_dbscan_elbow(features, min_neighbors, metric)
         dists = pairwise(metric, features)
         dbscanresult = dbscan(dists, ϵ_optimal, min_neighbors)
         cluster_labels = cluster_assignment(dbscanresult)
     else
-        error("Unkown optimal_radius_method.")
+        error("Unkown `optimal_radius_method`.")
     end
     return cluster_labels
 end

@@ -47,7 +47,7 @@ function optimal_radius_dbscan_silhouette_original(features, min_neighbors, metr
         class_labels = cluster_assignment(clusters, features)
         if length(clusters) ≠ 1 # silhouette undefined if only one cluster
             sils = silhouettes(class_labels, dists)
-            s_grid[i] = minimum(sils) 
+            s_grid[i] = minimum(sils)
         else
             s_grid[i] = 0; # considers single-cluster solution on the midpoint (following Wikipedia)
         end
@@ -119,7 +119,7 @@ function silhouettes_from_distances(ϵ, dists; min_neighbors)
 end
 
 function cluster_assignment(dbscanresult)
-    labels = dbscanresult.assignments 
+    labels = dbscanresult.assignments
     return replace!(labels, 0=>-1)
 end
 
@@ -129,20 +129,20 @@ function silhouettes_new(dbscanresult::DbscanResult, dists::AbstractMatrix)
     if length(clusters) == 1 return zeros(length(clusters[1])) end #all points in the same cluster -> sil = 0
     sils = zeros(length(labels))
     outsideclusters = findall(x->x==0, labels)
-    for (idx_c, cluster) in enumerate(clusters) 
+    for (idx_c, cluster) in enumerate(clusters)
         @inbounds for i in cluster
-            a = sum(@view dists[i, cluster])/(length(cluster)-1) #dists should be organized s.t. dist[i, cluster] i= dist from i to idxs in cluster 
+            a = sum(@view dists[i, cluster])/(length(cluster)-1) #dists should be organized s.t. dist[i, cluster] i= dist from i to idxs in cluster
             b = _calcb!(i, idx_c, dists, clusters, labels, outsideclusters)
             sils[i] = (b-a)/(max(a,b))
         end
     end
-    return sils 
+    return sils
 end
 
 function _calcb!(i, idx_c_i, dists, clusters, labels, outsideclusters)
     min_dist_to_clstr = typemax(eltype(dists))
     for (idx_c, cluster) in enumerate(clusters)
-        if idx_c == idx_c_i continue end 
+        if idx_c == idx_c_i continue end
         dist_to_clstr = mean(@view dists[cluster,i]) #mean distance to other clusters
         if dist_to_clstr < min_dist_to_clstr min_dist_to_clstr = dist_to_clstr end
     end
@@ -150,7 +150,7 @@ function _calcb!(i, idx_c_i, dists, clusters, labels, outsideclusters)
     for (idx_p, point) in enumerate(outsideclusters)
         dist_to_pts = dists[point, i] #distance to points outside clusters
         if dist_to_pts < min_dist_to_pts min_dist_to_pts = dist_to_pts  end
-    end 
+    end
     b = min(min_dist_to_clstr, min_dist_to_pts)
 end
 
@@ -168,11 +168,11 @@ function optimal_radius_dbscan_elbow(features, min_neighbors, metric)
 end
 
 function optimal_radius_dbscan(features, min_neighbors, metric, optimal_radius_method, num_attempts_radius)
-    if optimal_radius_method == "silhouette" || optimal_radius_method == "silhouettes"
+    if optimal_radius_method == "silhouettes_mean"
         ϵ_optimal = optimal_radius_dbscan_silhouette(features, min_neighbors, metric; num_attempts_radius)
-    elseif optimal_radius_method == "silhouette_original" || optimal_radius_method == "silhouettes_original"
+    elseif optimal_radius_method == "silhouettes_original"
         ϵ_optimal = optimal_radius_dbscan_silhouette_original(features, min_neighbors, metric; num_attempts_radius)
-    elseif optimal_radius_method == "elbow" || optimal_radius_method == "knee"
+    elseif optimal_radius_method == "elbow"
         ϵ_optimal = optimal_radius_dbscan_elbow(features, min_neighbors, metric)
     else
         error("Unkown optimal_radius_method.")

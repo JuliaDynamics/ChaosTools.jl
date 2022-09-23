@@ -102,6 +102,22 @@ function findcluster_optimal_radius_dbscan_silhouette(features, min_neighbors, m
     return optimalcluster_labels
 end
 
+function optimal_radius_dbscan_silhouette_optim(features, min_neighbors, metric; num_attempts_radius=50)
+    feat_ranges = maximum(features, dims=2)[:,1] .- minimum(features, dims=2)[:,1];
+
+    # vary ϵ to find the best radius (which will maximize the mean sillhoute), and already save the clusters
+    dists = pairwise(metric, features)
+    f = (ϵ) -> ChaosTools.silhouettes_from_distances(ϵ, dists; min_neighbors)
+    opt = Optim.optimize(f, minimum(feat_ranges)/100, minimum(feat_ranges); iterations=num_attempts_radius)
+    ϵ_optimal = Optim.minimizer(opt)
+end
+
+function silhouettes_from_distances(ϵ, dists; min_neighbors)
+    clusters = dbscan(dists, ϵ, min_neighbors)
+    sils = silhouettes_new(clusters, dists)
+    return -mean(sils)
+end
+
 function cluster_assignment(dbscanresult)
     labels = dbscanresult.assignments 
     return replace!(labels, 0=>-1)

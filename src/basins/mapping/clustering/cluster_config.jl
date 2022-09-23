@@ -208,10 +208,15 @@ function _get_clusterlabels(features, min_neighbors, metric, optimal_radius_meth
         clusters = dbscan(features, ϵ_optimal; min_neighbors)
         clusters, sizes = sort_clusters_calc_size(clusters)
         cluster_labels = cluster_assignment(clusters, features; include_boundary=false)
+    elseif optimal_radius_method == "silhouette_optim" || optimal_radius_method == "silhouettes_optim"
+        ϵ_optimal = optimal_radius_dbscan_silhouette_optim(features, min_neighbors, metric; num_attempts_radius)
+        dists = pairwise(metric, features)
+        dbscanresult = dbscan(dists, ϵ_optimal, min_neighbors)
+        cluster_labels = cluster_assignment(dbscanresult)
     elseif optimal_radius_method == "elbow" || optimal_radius_method == "knee"
         ϵ_optimal = optimal_radius_dbscan_elbow(features, min_neighbors, metric)
         dists = pairwise(metric, features)
-        dbscanresult = dbscan(dists, ϵ_grid[i], min_neighbors)
+        dbscanresult = dbscan(dists, ϵ_optimal, min_neighbors)
         cluster_labels = cluster_assignment(dbscanresult)
     else
         error("Unkown optimal_radius_method.")

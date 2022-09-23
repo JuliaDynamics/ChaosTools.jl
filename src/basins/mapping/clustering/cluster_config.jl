@@ -38,13 +38,15 @@ which is unsupervised, see Description below.
   determine the optimal radius for clustering features in the unsupervised method. The
   `silhouettes` method chooses the radius that maximizes the average silhouette values of
   clusters, and is an iterative optimization procedure that may take some time to execute.
-  To increase speed, one can reduce the number of radii iterated through by reducing 
-  `num_attempts_radius` (see below).
-  The "silhouettes_original" method is the implementation of the original algorithm, 
-  shared by the authors of [^Stender2021]. It maximizes the minimum silhouette values of 
+  To increase speed, the number of radii iterated through can be reduced by decreasing
+  `num_attempts_radius` (see its entry below). The alternative methods are:
+  - `silhouettes_optim`: finds the optimal radius through a more efficient
+  search implemented by `Optim.jl`. It's faster than the default with the same accuracy. 
+  - `silhouettes_original`: is the implementation of the original algorithm,
+  shared by the authors of [^Stender2021]. It maximizes the minimum silhouette values of
   clusters. 
-  The `elbow` method chooses the the radius according to the elbow (knee,
-  highest-derivative method) and is quicker, though possibly leads to worse clustering.
+  - `elbow`, or `knee`: chooses the the radius according to the elbow (knee,
+  highest-derivative method) and is quicker, though generally leading to worse clustering.
 * `num_attempts_radius = 50` (unsupervised method with silhouettes): number of radii that
   the `optimal_radius_method` will try out in its iterative procedure. Higher values
   increase the accuracy of clustering, though not necessarily much, while always reducing

@@ -38,21 +38,21 @@ The default clustering method is an improvement over existing literature, see De
   Possible values are:
   - `"silhouettes"`: Performs a linear (sequential) search for the radius that maximizes a
     statistic of the silhouette values of clusters (typically the mean). This can be chosen
-    with `statistic_silhouette`. The linear search may take some time to finish. To
+    with `silhouette_statistic`. The linear search may take some time to finish. To
     increase speed, the number of radii iterated through can be reduced by decreasing
     `num_attempts_radius` (see its entry below).
-  - `"silhouettes_optim"`: Same as `"silhouettes"` but performs an optimized search via Optim.jl.
-    It's faster than `"silhouettes"` and with the same accuracy.
+  - `"silhouettes_optim"`: Same as `"silhouettes"` but performs an optimized search via
+    Optim.jl. It's faster than `"silhouettes"` and with the same accuracy.
   - `"elbow"`: chooses the the radius according to the elbow (a.k.a. knee,
     highest-derivative method) and is quicker, though generally leading to worse clustering.
 * `num_attempts_radius = 50` (unsupervised method with silhouettes): number of radii that
   the `optimal_radius_method` will try out in its iterative procedure. Higher values
   increase the accuracy of clustering, though not necessarily much, while always reducing
   speed.
-* `statistic_silhouette::Function = mean` (unsupervised method with silhouettes): statistic (e.g.
-  mean or minimum) of the silhouettes that is maximized in the "optimal" clustering. The original
-  implementation, by the authors of [^Stender2021], used the `minimum` of the silhouettes, and
-  typically performs less accurately.
+* `silhouette_statistic::Function = mean` (unsupervised method with silhouettes): statistic
+  (e.g. mean or minimum) of the silhouettes that is maximized in the "optimal" clustering.
+  The original implementation in [^Stender2021] used the `minimum` of the silhouettes, and
+  typically performs less accurately than the `mean`.
 
 ## Description
 The trajectory `X`, which may for instance be an attractor, is transformed into a vector
@@ -106,20 +106,25 @@ mutable struct ClusteringConfig{A, M}
     rescale_features::Bool
     optimal_radius_method::String
     num_attempts_radius::Int
-    statistic_silhouette::Function
+    silhouette_statistic::Function
 end
 
 function ClusteringConfig(; templates::Union{Nothing, Dict} = nothing,
         clust_method_norm=Euclidean(), clustering_threshold = 0.0, min_neighbors = 10,
         clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN",
         rescale_features=true, optimal_radius_method="silhouettes_optim",
-        num_attempts_radius=50, statistic_silhouette=mean
+        num_attempts_radius=50,
     )
+    silhouette_statistic = if optimal_radius_method == "silhouettes_mean"
+        mean
+    else
+        minimum
+    end
     return ClusteringConfig(
         templates, clust_method_norm, clust_method,
         Float64(clustering_threshold), min_neighbors,
         rescale_features, optimal_radius_method,
-        num_attempts_radius, statistic_silhouette
+        num_attempts_radius, silhouette_statistic
     )
 end
 
@@ -129,7 +134,7 @@ include("cluster_utils.jl")
 # Clustering classification functions
 #####################################################################################
 """
-    cluster_features(features, cluster_specs::ClusteringConfig)
+    cluster_features(features, cc::ClusteringConfig)
 Cluster the given `features::Vector{<:AbstractVector}`,
 according to given [`ClusteringConfig`](@ref).
 Return `cluster_labels, cluster_errors`, which respectively contain, for each feature, the labels
@@ -137,38 +142,41 @@ Return `cluster_labels, cluster_errors`, which respectively contain, for each fe
 The error is the distance from the feature to (i) the cluster, in the supervised method
 or (ii) to the center of the cluster, in the unsupervised method.
 """
-function cluster_features(features::Vector{<:AbstractVector}, cluster_specs::ClusteringConfig)
+function cluster_features(features::Vector{<:AbstractVector}, cc::ClusteringConfig)
     # All methods require the features in a matrix format
     f = reduce(hcat, features) # Convert to Matrix from Vector{Vector}
     f = float.(f)
-    if !isnothing(cluster_specs.templates)
-        cluster_features_distances(f, cluster_specs)
+    if !isnothing(cc.templates)
+        cluster_features_distances(f, cc)
     else
         cluster_features_clustering(
-            f, cluster_specs.min_neighbors, cluster_specs.clust_method_norm,
-            cluster_specs.rescale_features, cluster_specs.optimal_radius_method,
-            cluster_specs.num_attempts_radius, cluster_specs.statistic_silhouette
+            f, cc.min_neighbors, cc.clust_method_norm,
+            cc.rescale_features, cc.optimal_radius_method,
+            cc.num_attempts_radius, cc.silhouette_statistic
         )
     end
 end
 
 # Supervised method: closest attractor template in feature space
-function cluster_features_distances(features, cluster_specs)
-    templates = float.(reduce(hcat, [cluster_specs.templates[i] for i ∈ keys(cluster_specs.templates)] ) ) #puts each vector into a column, with the ordering based on the order given in keys(d)
-    if !(cluster_specs.clust_method == "kNN" ||
-         cluster_specs.clust_method == "kNN_thresholded")
+function cluster_features_distances(features, cc::ClusteringConfig)
+    #puts each vector into a column, with the ordering based on the order given in keys(d)
+    templates = float.(reduce(hcat, [cc.templates[i] for i ∈ keys(cc.templates)]))
+    if !(cc.clust_method == "kNN" ||
+         cc.clust_method == "kNN_thresholded")
         error("Incorrect clustering mode for \"supervised\" method.")
     end
-    template_tree = searchstructure(KDTree, templates, cluster_specs.clust_method_norm)
+    template_tree = searchstructure(KDTree, templates, cc.clust_method_norm)
     cluster_labels, cluster_errors = bulksearch(template_tree, features, NeighborNumber(1))
     cluster_labels = reduce(vcat, cluster_labels) # make it a vector
-    cluster_errors = reduce(vcat, cluster_errors)
-    if cluster_specs.clust_method == "kNN_thresholded"
+    if cc.clust_method == "kNN_thresholded"
+        cluster_errors = reduce(vcat, cluster_errors)
         # Make label -1 if error bigger than threshold
-        cluster_labels[cluster_errors .≥ cluster_specs.clustering_threshold] .= -1
+        cluster_labels[cluster_errors .≥ cc.clustering_threshold] .= -1
     end
-    matlabels_to_dictlabels = Dict(1:length(keys(cluster_specs.templates)).=>keys(cluster_specs.templates))
-    cluster_user_labels = replace(cluster_labels, matlabels_to_dictlabels...) #cluster_user_labels[i] is the label of template nearest to feature i (i-th column of features matrix)
+    matlabels_to_dictlabels = Dict(1:length(keys(cc.templates)) .=> keys(cc.templates))
+    # cluster_user_labels[i] is the label of template nearest to feature i
+    # (i-th column of features matrix)
+    cluster_user_labels = replace(cluster_labels, matlabels_to_dictlabels...)
     return cluster_user_labels
 end
 
@@ -184,9 +192,9 @@ end
 
 # Unsupervised method: clustering in feature space
 function cluster_features_clustering(
-    features, min_neighbors, metric, rescale_features, optimal_radius_method,
-    num_attempts_radius, statistic_silhouette
-)
+        features, min_neighbors, metric, rescale_features, optimal_radius_method,
+        num_attempts_radius, silhouette_statistic
+    )
     # needed because dbscan, as implemented, needs to receive as input a matrix D x N
     # such that D < N
     dimfeats, nfeats = size(features)
@@ -197,9 +205,13 @@ function cluster_features_clustering(
     if rescale_features
         features = mapslices(_rescale!, features; dims=2)
     end
-    ϵ_optimal = optimal_radius_dbscan(features, min_neighbors, metric, optimal_radius_method,
-    num_attempts_radius, statistic_silhouette)
-    dists = pairwise(metric, features); dbscanresult = dbscan(dists, ϵ_optimal, min_neighbors)
+    # These functions are called from cluster_utils.jl
+    ϵ_optimal = optimal_radius_dbscan(
+        features, min_neighbors, metric, optimal_radius_method,
+        num_attempts_radius, silhouette_statistic
+    )
+    dists = pairwise(metric, features)
+    dbscanresult = dbscan(dists, ϵ_optimal, min_neighbors)
     cluster_labels = cluster_assignment(dbscanresult)
     return cluster_labels
 end

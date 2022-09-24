@@ -10,7 +10,7 @@ testfile(file, testname) = @testset "$testname" begin; include(file); end
 
 @testset "ChaosTools" begin
 
-include("basins/clustering_tests.jl")
+testfile("basins/clustering_tests.jl", "Clustering tests (analytic)")
 testfile("basins/attractor_mapping_tests.jl", "Attractor mappers")
 testfile("basins/matching_attractors_tests.jl", "Matching attractors")
 testfile("basins/basins_continuation_tests.jl", "Fractions continuation")

@@ -259,7 +259,7 @@ if false
 end
 
 # %%
-# # Visual guidance for in-place lorenz
+# # Visual guidance for in-place lorenz with rectangles
 # alg = DynamicalSystemsBase.DEFAULT_SOLVER
 # lo = Systems.lorenz_iip()
 # diffeq = (alg = alg,)

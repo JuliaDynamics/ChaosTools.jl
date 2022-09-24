@@ -53,12 +53,3 @@ function signed_distance(u, u0, ε::AbstractVector)
     return m
 end
 signed_distance(u, u0, ε::Real) = euclidean(u, u0) - ε
-
-# TODO: So far none of these is actually used anywhere:
-"Return the true distance of `u` from `u0`, according to metric defined by `ε`."
-distance(u, u0, ::Real) = euclidean(u, u0)
-distance(u, u0, ::AbstractVector) = chebyshev(u, u0)
-
-"Convert the pre-computed distance to signed, according to metric defined by `ε`."
-convert_distance_to_signed(d::Real, ε::Real) = d - ε
-convert_distance_to_signed(d::Real, ε::AbstractVector) = d - maximum(ε)

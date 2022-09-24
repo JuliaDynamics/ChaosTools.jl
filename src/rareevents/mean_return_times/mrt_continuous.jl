@@ -5,22 +5,7 @@ Furthermore, it makes for much clearer, and faster, code, if we write our own.
 The callback pipeline is too obscure to know where things may fail.
 I've kept the callback source code at the end of this file for future reference.
 
-# Algorithm description for continuous systems
-Alright, here's the plan. Trajectory is evolved iteratively via an integrator.
-At each step, we first check how far away we are from u₀. If we are too far away,
-we don't bother with any interpolation, because it is a very very costly operation.
-Furthermore, we assumed that this algorithm will typically be used with rather
-small sets. If we are close enough to the point, we then find intersections.
-
-There are two methods to find intersections:
-1. Linear intersections. Between each integrator step, the trajectory
-   is assumed a line, and intersections with spheres are evaluated.
-2. Accurate interpolation. The integrator interpolation interface is used to find
-   the closest point to the center via optimization, and then find the crossings via
-   roo-tfinding. This is much more costly than the linear version, but as accurate
-   as possible. If the integrators take very small steps, the linear version should
-   be preferred.
-
+The docstring of `exit_entry_times` describes how the current setup works.
 
 To find the closest point we do a minimization/optmization using the integrator
 For minimization Chris suggested to use Nlopt (on Slack). The derivative choice matters,
@@ -35,7 +20,10 @@ is much simpler and seems to be exactly what we need... So that's what I'll use!
 ##########################################################################################
 # Main function
 ##########################################################################################
+"Specification for continuous systems in [`exit_entry_times`](@ref)."
 struct CrossingLinearIntersection end
+
+"Specification for continuous systems in [`exit_entry_times`](@ref)."
 Base.@kwdef struct CrossingAccurateInterpolation
     abstol::Float64 = 1e-12 # these are converted to the (different) keywords
     reltol::Float64 = 1e-6  # that Optim.jl and Roots.jl take
@@ -43,13 +31,19 @@ end
 
 function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
         crossing_method = CrossingLinearIntersection(),
-        threshold_multiplier = 20,
+        threshold_multiplier = Inf, # This is an undocumented keyword
         threshold_distance = _default_threshold_distance(εs, threshold_multiplier),
-        debug = false,
     )
     metric = eltype(εs) <: Real ? Euclidean() : Chebyshev()
+    if metric isa Chebyshev
+        error("""
+        Hyper-rectangles are not yet supported in continous systems. If you need this,
+        please make a PR that tests, and corrects, the distance logic with hyper-rectangles!
+        """)
+        # The code will error or do wonky stuff with rectangles, I haven't had the time
+        # to test it thoroughly...
+    end
     E = length(εs)
-    reinit!(integ, u0)
     prev_outside = fill(false, E)      # `true` if outside the set. Previous step.
     curr_outside = copy(prev_outside)  # `true` if outside the set. Current step.
     exits   = [eltype(integ.t)[] for _ in 1:E]
@@ -57,26 +51,19 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
 
     while (integ.t - integ.t0) < T
         step!(integ)
-        debug && @show integ.t
         # Check whether we are too far away from the point to bother doing anything
-        curr_distance = signed_distance(get_state(integ), u0, εs[1])
+        curr_distance = evaluate(metric, get_state(integ), u0)
         curr_distance > threshold_distance && continue
         # Obtain mininum distance and check which is the outermost box we are out of
         tmin, dmin = closest_trajectory_point(integ, u0, metric, crossing_method)
-        debug && @show (tmin, dmin)
         out_idx = first_outside_index(get_state(integ), u0, εs, E)
         out_idx_min = first_outside_index(dmin, εs)
-        debug && @show (out_idx, out_idx_min)
         # if we were outside all, and min distance also outside all, we skip
         out_idx_min == 1 && all(prev_outside) && continue
         # something changed, compute state, interpolate, and update
         curr_outside[out_idx:end] .= true
         curr_outside[1:(out_idx - 1)] .= false
-
-        debug && @show prev_outside
-        debug && @show curr_outside
-
-        # Depending on the method, different infornation is useful to find crossings
+        # Depending on the method, different information is used to find crossings
         if crossing_method isa CrossingLinearIntersection
             update_exits_and_entries_linear!(
                 exits, entries, integ, u0, εs, prev_outside, curr_outside

@@ -1,13 +1,14 @@
 # Docstrings, includes, and exports for mean return time functionality
 export exit_entry_times, transit_return_times, mean_return_times
+export CrossingLinearIntersection, CrossingAccurateInterpolation
 
 """
     exit_entry_times(ds::DynamicalSystem, u₀, εs, T; kwargs...) → exits, entries
 Collect exit and entry times for a ball or box centered at `u₀` with radii `εs` (see below),
-in the state space of the given discrete dynamical system (function not yet available
-for continuous systems).
+in the state space of the given dynamical system (discrete or continuous).
 Return the exit and (re-)entry return times to the set(s), where each of these is a vector
 containing all collected times for the respective `ε`-radius set, for `ε ∈ εs`.
+The dynamical system is evolved up to `T` total time.
 
 Use `transit_return_times(exits, entries)` to transform the output into transit and return
 times, and see also [`mean_return_times`](@ref) for both continuous and discrete systems.
@@ -28,6 +29,8 @@ of radius `ε ∈ εs`. The sets can also be hyper-rectangles (boxes), if each e
 is a vector itself.
 Then, the `i`-th box is defined by the space covered by `u0 .± εs[i]` (thus the actual
 box size is `2εs[i]`!).
+In the future, state space sets will be specified more conveniently and
+a single argument `sets` will be given instead of `u₀, εs`.
 
 The reason to input multiple `εs` at once is purely for performance optimization
 (much faster than doing each `ε` individually).
@@ -40,9 +43,30 @@ re-entry is recorded immediatelly on re-entry. This means that if an orbit needs
 the return time is 1.
 
 ### Continuous systems
-TODO: Write this.
-For continuous systems high-order
-interpolation is done to accurately record the time of exactly crossing the `ε`-ball/box.
+For continuous systems, a steppable integrator supporting interpolation is used.
+The way to specify how to estimate exit and entry times is via the keyword `crossing_method`
+whose values can be:
+1. `CrossingLinearIntersection()`: Linear interpolation is used between integrator steps
+   and the intersection between lines and spheres is used to find the crossing times.
+2. `CrossingAccurateInterpolation(; abstol=1e-12, reltol=1e-6)`: Extremely accurate high
+   order interpolation is used between integrator steps. First, a minimization with Optim.jl
+   finds the minimum distance of the trajectory to the set center. Then, Roots.jl is used
+   to find the exact crossing point (within the given tolerances).
+
+Clearly, `CrossingAccurateInterpolation` is much more accurate than
+`CrossingLinearIntersection`, but also much slower. However, the smaller the steps
+the integrator takes (in case some very high accuracy solver is used), the closer
+the linear interpolation gets to the accurate version.
+Benchmarks are advised for the individual specific case the algorithm is applied at,
+in order to choose the best method.
+
+The keyword `threshold_distance = Inf` provides a means to skip the interpolation check,
+if the current state of the integrator is too far from the set center.
+If the distance of the current state of the integrator is `threshold_distance` or more
+distance away from the set center, attempts to interpolate are skipped.
+By default `threshold_distance = Inf` and hence this never happens.
+Typically you'd want this to be 10-100 times the distance the trajectory covers
+at an average integrator step.
 
 [^Meiss1997]:
     Meiss, J. D. *Average exit time for volume-preserving maps*,
@@ -54,10 +78,15 @@ interpolation is done to accurately record the time of exactly crossing the `ε`
 """
 function exit_entry_times(ds::DynamicalSystem, u0, εs, T; diffeq = NamedTuple(), kwargs...)
     check_εs_sorting(εs, length(u0))
+    # TODO: Improve the algorithm so that starting within u0 is not mandatory.
+    # Useful because `u0` can often be a fixed point.
+    # The logic that needs to change is first `transit_return_times` and then
+    # to actually check in `exit_entry_times` if we start inside the set,
+    # and thus set the `prev_outside` accordingly.
     integ = integrator(ds, u0; diffeq)
     exit_entry_times(integ, u0, εs, T; kwargs...)
 end
-# TODO: Don't assume that we start at u0 because sets could be centered at fixed points
+
 """
     transit_return_times(exits, entries) → transits, returns
 Convert the output of [`exit_entry_times`](@ref) to the transit and return times.
@@ -88,30 +117,9 @@ Return the mean return times `τ`, as well as the amount of returns `c`, for
 subsets of the state space of `ds` defined by `u₀, εs`.
 The `ds` is evolved for a maximum of `T` time.
 
-This function is mainly a convenient wrapper around calls to [`exit_entry_times`](@ref)
+This function is a convenience wrapper around calls to [`exit_entry_times`](@ref)
 and then to [`transit_return`](@ref) and then some averaging.
 Thus see [`exit_entry_times`](@ref) for the meaning of `u₀` and `εs` and further info.
-
-# TODO: all of the following will be deleted.
-
-This function supports both discrete and continuous systems, however the optimizations
-done in discrete systems (where all nested `ε`-sets are checked at the same time),
-are not done here yet, which leads to disproportionally lower performance since
-each `ε`-related set is checked individually from start.
-
-Continuous systems allow for the following keywords:
-
-* `i=10` How many points to interpolate the trajectory in-between steps to find
-  candidate crossing regions.
-* `dmin` If the trajectory is at least `dmin` distance away from `u0`,
-  the algorithm that checks for crossings of the `ε`-set is not initiated.
-  By default obtains the a value 4 times as large as the radius of the maximum ε-set.
-* `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
-  `init` of DifferentialEquations.jl.
-  See [`trajectory`](@ref) for examples. Only valid for continuous systems.
-
-For continuous systems `T, i, dmin` can be vectors with same size as `εs`, to help increase
-accuracy of small `ε`.
 """
 function mean_return_times(ds::DynamicalSystem, u0, εs, T; kwargs...)
     exits, entries = exit_entry_times(ds, u0, εs, T; kwargs...)

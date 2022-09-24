@@ -39,7 +39,8 @@ end
 "Find the (index of the) outermost ε-ball the distance is not in."
 function first_outside_index(d::Real, εs, E = length(εs))::Int
     i = findfirst(e -> isoutside(d, e), εs)
-    return isnothing(i) ? E+1 : i
+    out_idx::Int = isnothing(i) ? E+1 : i
+    return out_idx
 end
 
 "Return the **signed** distance of state to ε-ball (negative means inside set)."

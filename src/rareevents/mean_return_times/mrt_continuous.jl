@@ -54,7 +54,6 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
     curr_outside = copy(prev_outside)  # `true` if outside the set. Current step.
     exits   = [eltype(integ.t)[] for _ in 1:E]
     entries = [eltype(integ.t)[] for _ in 1:E]
-    maxε = _max_sets_radius(εs)
 
     while (integ.t - integ.t0) < T
         step!(integ)
@@ -235,7 +234,7 @@ function update_exits_and_entries_interpolation!(
         t1, t2 = tprev, tcurr # crossing times, will be updated later!
         @inbounds for j in 1:(out_idx_min - 1)
             pre_outside[j] && cur_outside[j] || continue # ensure that we are for sure out
-            # Find first crossing in
+            # First find crossing in
             crossing = (t) -> signed_distance(integ(t), u0, εs[j])
             tcross = Roots.find_zero(
                 crossing, (t1, tmin0), Roots.A42();
@@ -243,7 +242,7 @@ function update_exits_and_entries_interpolation!(
             )
             push!(entries[j], tcross)
             t1 = tcross
-            # Find crossing out
+            # Then find crossing out
             tcross = Roots.find_zero(
                 crossing, (tmin0, t2), Roots.A42();
                 atol = method.abstol, rtol = method.reltol
@@ -252,22 +251,11 @@ function update_exits_and_entries_interpolation!(
             t2 = tcross
         end
     end
-
 end
-
-
-
 
 ##########################################################################################
 # utilities
 ##########################################################################################
-"Find the (index of the) outermost ε-ball the trajectory is not in."
-function first_outside_index(mind::Real, εs, E = length(εs))
-    i = findfirst(e -> isoutside(mind, e), εs)
-    out_idx::Int = isnothing(i) ? E+1 : i
-    return out_idx
-end
-
 _max_sets_radius(εs::Vector{<:Real}) = εs[1] # assumes sorted!
 _max_sets_radius(εs::Vector{<:AbstractVector}) = maximum(εs[1]) # assumes sorted!
 _default_threshold_distance(εs, m = 4) = m*_max_sets_radius(εs)

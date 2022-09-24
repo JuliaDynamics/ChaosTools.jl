@@ -7,7 +7,7 @@ println("\n Return time tests...")
 function sanity_tests(exits, entries, transits, returns, mrt, ret)
     @testset "Sanity tests" begin
         @test mrt == mean.(returns)
-        for j in 1:length(εs)
+        for j in eachindex(exits)
             @test all(>(0), exits[j])
             @test all(>(0), entries[j])
             # entries and exits must differ by at most 1 at their length
@@ -140,9 +140,9 @@ end
     @test c[1] > c[2] > 0
 
 end
-#
-@testset "Continuous Roessler (spheres)" begin
+
 # %%
+@testset "Continuous Roessler (spheres)" begin
 # using OrdinaryDiffEq: Tsit5
 alg = DynamicalSystemsBase.DEFAULT_SOLVER
 diffeq = (alg = alg,)

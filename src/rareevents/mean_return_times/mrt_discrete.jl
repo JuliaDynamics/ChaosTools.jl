@@ -41,11 +41,11 @@ end
 function first_return_time(integ::MDI, u₀, ε, T; show_progress = false, kwargs...)
     isout = false
     prog = ProgressMeter.Progress(T; desc="Exit-entry times:", enabled=show_progress)
-    t0 = integ.t
     while !isout
         step!(integ)
         isout = isoutside(get_state(integ), u₀, ε)
     end
+    t0 = integ.t # so to not count the exit step as well.
     while (integ.t - t0) < T
         step!(integ)
         ProgressMeter.update!(prog, integ.t - t0)

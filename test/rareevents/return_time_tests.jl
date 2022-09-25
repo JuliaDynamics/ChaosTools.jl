@@ -4,10 +4,14 @@ using ChaosTools.DelayEmbeddings
 
 println("\n Return time tests...")
 
-function sanity_tests(exits, entries, transits, returns, mrt, ret)
+function sanity_tests(exits, entries, transits, returns, mrt, ret, frt)
     @testset "Sanity tests" begin
         @test mrt == mean.(returns)
+        @test returns[end][1] ≤ frt ≤ 1.05returns[end][1] # for discrete systems it's exact
         for j in eachindex(exits)
+            @test issorted(exits[j])
+            @test issorted(entries[j])
+
             @test all(>(0), exits[j])
             @test all(>(0), entries[j])
             # entries and exits must differ by at most 1 at their length
@@ -40,8 +44,9 @@ end
     exits, entries = exit_entry_times(ds, u0, εs, T)
     transits, returns = transit_return(exits, entries)
     τ, c = mean_return_times(ds, u0, εs, T)
+    frt = first_return_time(ds, u0, εs[end], T)
 
-    sanity_tests(exits, entries, transits, returns, τ, c)
+    sanity_tests(exits, entries, transits, returns, τ, c, frt)
 
     @test all(x -> length(x) > 5, exits)
     @test all(x -> length(x) > 5, entries)
@@ -125,12 +130,13 @@ end
     #         ax.add_artist(rect)
     #     end
     # end
-
-    exits, entries = exit_entry_times(to, u0, εs, 10000)
+    T = 10000
+    exits, entries = exit_entry_times(to, u0, εs, T)
     transits, returns = transit_return(exits, entries)
+    τ, c = mean_return_times(to, u0, εs, T)
+    frt = first_return_time(to, u0, εs[end], T)
+    sanity_tests(exits, entries, transits, returns, τ, c, frt)
 
-    @test all(issorted, exits)
-    @test all(issorted, entries)
     @test length(exits[1]) > length(exits[2])
     @test returns[1][1] > 5
     @test mean(returns[1]) < mean(returns[2])
@@ -155,17 +161,19 @@ u0 = SVector(
 )
 εs = sort!([1.0, 0.1, 0.01]; rev=true)
 
-@testset "crossing_method=$(crossing_method)" for crossing_method in (
+@testset "$(nameof(typeof(crossing_method)))" for crossing_method in (
     ChaosTools.CrossingLinearIntersection(),
     ChaosTools.CrossingAccurateInterpolation())
 
 # exits, entries = exit_entry_times(ro, u0, εs, 100.0; crossing_method, debug=true)
 
-exits, entries = exit_entry_times(ro, u0, εs, 1000.0; crossing_method, show_progress=false)
+T = 1000.0
+exits, entries = exit_entry_times(ro, u0, εs, T; crossing_method, show_progress=false)
 transits, returns = transit_return_times(exits, entries)
-mrt, ret = mean_return_times(ro, u0, εs, 1000.0; crossing_method)
+mrt, ret = mean_return_times(ro, u0, εs, T; crossing_method)
+frt = first_return_time(ro, u0, εs[end], T; crossing_method)
 
-sanity_tests(exits, entries, transits, returns, mrt, ret)
+sanity_tests(exits, entries, transits, returns, mrt, ret, frt)
 
 # Tests specific to this exact configuration of Roessler, with integrator
 # and initial condition fixed. It uses the "visual guidance" contained below!

@@ -1,5 +1,5 @@
 # Docstrings, includes, and exports for mean return time functionality
-export exit_entry_times, transit_return_times, mean_return_times
+export exit_entry_times, transit_return_times, mean_return_times, first_return_time
 export CrossingLinearIntersection, CrossingAccurateInterpolation
 
 """
@@ -150,7 +150,7 @@ The only differences here are:
 function first_return_time(ds::DynamicalSystem, u0, ε, T; diffeq = NamedTuple(), kwargs...)
     check_εs_sorting([ε], length(u0))
     integ = integrator(ds, u0; diffeq)
-    first_return_time(integ, u0, εs, T; kwargs...)
+    first_return_time(integ, u0, ε, T; kwargs...)
 end
 
 include("mrt_distances_utils.jl")

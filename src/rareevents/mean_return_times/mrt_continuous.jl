@@ -113,7 +113,7 @@ function update_exits_and_entries_linear!(
     # Notice that in this method we also don't really use the already found time of
     # minimum, because the actual numerical operations don't reduce even if we know it
     origin, endpoint = integ.uprev, integ.u
-    tprev, tend = integ.tprev, integ.t
+    tprev, tcurr = integ.tprev, integ.t
     for j in eachindex(exits)
         radius = εs[j]
         inter = line_hypersphere_intersection(u0, radius, origin, endpoint)
@@ -121,19 +121,15 @@ function update_exits_and_entries_linear!(
         t1, t2 = inter # t1 is the smallest number!
         cross1, cross2 = (0 ≤ t1 ≤ 1), (0 ≤ t2 ≤ 1)
         if cross1 && cross2 # we cross the entire circle within the step!
-            push!(entries[j], tprev + t1*(tend - tprev))
-            push!(exits[j], tprev + t2*(tend - tprev))
-            continue # we're done now!
-        end
+            push!(entries[j], tprev + t1*(tcurr - tprev))
+            push!(exits[j], tprev + t2*(tcurr - tprev))
         # Either one or no crossings within current time range
-        if cur_outside[j] && !pre_outside[j] # we're crossing out
-            tcross = tprev + t2*(tend - tprev)
-            push!(exits[j], tcross)
-        elseif pre_outside[j] && !cur_outside[j] # we're crossing in
-            tcross = tprev + t1*(tend - tprev)
-            push!(entries[j], tcross)
-        else
-            @assert cross1 == cross2 == false
+        elseif cross2 # we're crossing out
+            # @assert cur_outside[j] && !pre_outside[j] # this is de facto true
+            push!(exits[j], tprev + t2*(tcurr - tprev))
+        elseif cross1 # we're crossing in
+            # @assert pre_outside[j] && !cur_outside[j] # this is de facto true
+            push!(entries[j], tprev + t1*(tcurr - tprev))
         end
     end
 end
@@ -149,14 +145,14 @@ Uses the formulas from: https://en.wikipedia.org/wiki/Line%E2%80%93sphere_inters
 """
 function line_hypersphere_intersection(center, radius, origin, endpoint)
     direction = endpoint .- origin
-    u = normalize(direction)
-    c, r, o = center, radius, origin # for formulas like Wikipedia
+    c, r, o, u = center, radius, origin, direction # for formulas like Wikipedia
+    unorm2 = dot(u, u)
     oc = o .- c
-    t = dot(u, oc)
-    ∇ = t^2 - (dot(oc, oc) - r^2)
+    x = dot(u, oc)
+    ∇ = x^2 - unorm2*(dot(oc, oc) - r^2)
     ∇ ≤ 0 && return nothing
     sq∇ = sqrt(∇)
-    return -t - sq∇, -t + sq∇
+    return (-x - sq∇, -x + sq∇) ./ unorm2
 end
 
 

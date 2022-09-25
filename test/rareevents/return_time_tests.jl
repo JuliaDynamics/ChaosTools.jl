@@ -154,12 +154,14 @@ u0 = SVector(
     0.06186563933318555
 )
 εs = sort!([1.0, 0.1, 0.01]; rev=true)
-crossing_method =  ChaosTools.CrossingLinearIntersection()
-crossing_method =  ChaosTools.CrossingAccurateInterpolation()
+
+@testset "crossing_method=$(crossing_method)" for crossing_method in (
+    ChaosTools.CrossingLinearIntersection(),
+    ChaosTools.CrossingAccurateInterpolation())
 
 # exits, entries = exit_entry_times(ro, u0, εs, 100.0; crossing_method, debug=true)
 
-exits, entries = exit_entry_times(ro, u0, εs, 1000.0; crossing_method)
+exits, entries = exit_entry_times(ro, u0, εs, 1000.0; crossing_method, show_progress=false)
 transits, returns = transit_return_times(exits, entries)
 mrt, ret = mean_return_times(ro, u0, εs, 1000.0; crossing_method)
 
@@ -187,6 +189,7 @@ sanity_tests(exits, entries, transits, returns, mrt, ret)
     end
 end
 
+end
 end
 
 # # Visual guidance

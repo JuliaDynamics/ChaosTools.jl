@@ -35,3 +35,25 @@ function update_entry_times!(entries, i, prev_outside, curr_outside, t::Int)
         prev_outside[j] && !curr_outside[j] && push!(entries[j], t)
     end
 end
+
+
+
+function first_return_time(integ::MDI, u₀, ε, T; show_progress = false, kwargs...)
+    isout = false
+    prog = ProgressMeter.Progress(T; desc="Exit-entry times:", enabled=show_progress)
+    t0 = integ.t
+    while !isout
+        step!(integ)
+        isout = isoutside(get_state(integ), u₀, ε)
+    end
+    while (integ.t - t0) < T
+        step!(integ)
+        ProgressMeter.update!(prog, integ.t - t0)
+        isout = isoutside(get_state(integ), u₀, ε)
+        if !isout
+            ProgressMeter.finish!(prog)
+            return integ.t - t0
+        end
+    end
+    return NaN # in case it didn't return up to the max time
+end

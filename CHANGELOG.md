@@ -2,12 +2,14 @@
 This is a **huge release**!!!
 
 ## Rare events
+- New dedicated folder structure and functionality targeting rare events in ChaosTools.jl.
 - Source code for `exit_entry_times` has been completely overhauled and is now
   much much clearer.
 - Algorithm for `exit_entry_times` for continuous systems has been re-written from
   scratch, and is now much more accurate, and much faster. Two ways are provided
   for finding crossings: linear intersections and high order interpolation.
 - `mean_return_times` is now just a wrapper function.
+- New function `first_return_time`.
 
 ## Finding attractors
 - New attractor mapping algorithm `AttractorsViaRecurrencesSparse` that uses sparse arrays to find attractors of arbitrarily high dimensional dynamical systems, eliminating the main drawback of `AttractorsViaRecurrences`.

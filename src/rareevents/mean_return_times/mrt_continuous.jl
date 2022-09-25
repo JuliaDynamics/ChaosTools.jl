@@ -55,6 +55,7 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
     t0 = integ.t
     while (integ.t - t0) < T
         step!(integ)
+        ProgressMeter.update!(prog, round(Int, integ.t - t0))
         # Check whether we are too far away from the point to bother doing anything
         # TODO: I wonder if we can use the previous minimum distance and compare it
         # with current one for accelerating the search...?
@@ -80,12 +81,51 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
                 integ, u0, εs, tmin, crossing_method, out_idx_min
             )
         end
-
         prev_outside .= curr_outside
-        ProgressMeter.update!(prog, round(Int, integ.t - t0))
     end
     ProgressMeter.finish!(prog)
     return exits, entries
+end
+
+function first_return_time(integ::AbstractODEIntegrator, u0, ε, T;
+        crossing_method = CrossingLinearIntersection(),
+        show_progress = true,
+    )
+    metric = ε isa Real ? Euclidean() : Chebyshev()
+    if metric isa Chebyshev
+        error("""
+        Hyper-rectangles are not yet supported in continous systems. If you need this,
+        please make a PR that tests, and corrects, the distance logic with hyper-rectangles!
+        """)
+        # The code will error or do wonky stuff with rectangles, I haven't had the time
+        # to test it thoroughly...
+    end
+
+    prog = ProgressMeter.Progress(
+        round(Int, T); desc="First return time:", enabled=show_progress
+    )
+    t0 = integ.t
+    # First step until exiting the set
+    tmin, dmin = t0, zero(eltype(get_state(integ)))
+    isout = false
+    while !isout
+        step!(integ)
+        tmin, dmin = closest_trajectory_point(integ, u0, metric, crossing_method)
+        isout = isoutside(dmin, ε)
+    end
+    # Now iterate until we are back in the set again
+    while (integ.t - t0) < T
+        step!(integ)
+        ProgressMeter.update!(prog, round(Int, integ.t - t0))
+        # Obtain mininum distance and check if we are out the box
+        tmin, dmin = closest_trajectory_point(integ, u0, metric, crossing_method)
+        isout = isoutside(dmin, ε)
+        if !isout
+            ProgressMeter.finish!(prog)
+            return tmin - t0
+        end
+    end
+    return NaN # in case it didn't return during time `T`
 end
 
 ##########################################################################################

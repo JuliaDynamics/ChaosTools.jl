@@ -16,7 +16,7 @@ https://julianlsolvers.github.io/Optim.jl/stable/#user/minimization/#minimizing-
 is much simpler and seems to be exactly what we need... So that's what I'll use!
 (ALso, it is very well documented, which is what we want for source code clarity)
 =#
-
+import ProgressMeter
 ##########################################################################################
 # Main function
 ##########################################################################################
@@ -33,6 +33,7 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
         crossing_method = CrossingLinearIntersection(),
         threshold_multiplier = Inf, # This is an undocumented keyword
         threshold_distance = _default_threshold_distance(εs, threshold_multiplier),
+        show_progress = true,
     )
     metric = eltype(εs) <: Real ? Euclidean() : Chebyshev()
     if metric isa Chebyshev
@@ -48,10 +49,16 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
     curr_outside = copy(prev_outside)  # `true` if outside the set. Current step.
     exits   = [eltype(integ.t)[] for _ in 1:E]
     entries = [eltype(integ.t)[] for _ in 1:E]
-
-    while (integ.t - integ.t0) < T
+    prog = ProgressMeter.Progress(
+        round(Int, T); desc="Exit-entry times:", enabled=show_progress
+    )
+    t0 = integ.t
+    while (integ.t - t0) < T
         step!(integ)
+        ProgressMeter.update!(prog, round(Int, integ.t - t0))
         # Check whether we are too far away from the point to bother doing anything
+        # TODO: I wonder if we can use the previous minimum distance and compare it
+        # with current one for accelerating the search...?
         curr_distance = evaluate(metric, get_state(integ), u0)
         curr_distance > threshold_distance && continue
         # Obtain mininum distance and check which is the outermost box we are out of
@@ -74,12 +81,51 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
                 integ, u0, εs, tmin, crossing_method, out_idx_min
             )
         end
-
         prev_outside .= curr_outside
-        # TODO: I wonder if we can use the previous minimum distance and compare it
-        # with current one for accelerating the search...?
     end
+    ProgressMeter.finish!(prog)
     return exits, entries
+end
+
+function first_return_time(integ::AbstractODEIntegrator, u0, ε, T;
+        crossing_method = CrossingLinearIntersection(),
+        show_progress = true,
+    )
+    metric = ε isa Real ? Euclidean() : Chebyshev()
+    if metric isa Chebyshev
+        error("""
+        Hyper-rectangles are not yet supported in continous systems. If you need this,
+        please make a PR that tests, and corrects, the distance logic with hyper-rectangles!
+        """)
+        # The code will error or do wonky stuff with rectangles, I haven't had the time
+        # to test it thoroughly...
+    end
+
+    prog = ProgressMeter.Progress(
+        round(Int, T); desc="First return time:", enabled=show_progress
+    )
+    t0 = integ.t
+    # First step until exiting the set
+    tmin, dmin = t0, zero(eltype(get_state(integ)))
+    isout = false
+    while !isout
+        step!(integ)
+        tmin, dmin = closest_trajectory_point(integ, u0, metric, crossing_method)
+        isout = isoutside(dmin, ε)
+    end
+    # Now iterate until we are back in the set again
+    while (integ.t - t0) < T
+        step!(integ)
+        ProgressMeter.update!(prog, round(Int, integ.t - t0))
+        # Obtain mininum distance and check if we are out the box
+        tmin, dmin = closest_trajectory_point(integ, u0, metric, crossing_method)
+        isout = isoutside(dmin, ε)
+        if !isout
+            ProgressMeter.finish!(prog)
+            return tmin - t0
+        end
+    end
+    return NaN # in case it didn't return during time `T`
 end
 
 ##########################################################################################
@@ -113,7 +159,7 @@ function update_exits_and_entries_linear!(
     # Notice that in this method we also don't really use the already found time of
     # minimum, because the actual numerical operations don't reduce even if we know it
     origin, endpoint = integ.uprev, integ.u
-    tprev, tend = integ.tprev, integ.t
+    tprev, tcurr = integ.tprev, integ.t
     for j in eachindex(exits)
         radius = εs[j]
         inter = line_hypersphere_intersection(u0, radius, origin, endpoint)
@@ -121,19 +167,15 @@ function update_exits_and_entries_linear!(
         t1, t2 = inter # t1 is the smallest number!
         cross1, cross2 = (0 ≤ t1 ≤ 1), (0 ≤ t2 ≤ 1)
         if cross1 && cross2 # we cross the entire circle within the step!
-            push!(entries[j], tprev + t1*(tend - tprev))
-            push!(exits[j], tprev + t2*(tend - tprev))
-            continue # we're done now!
-        end
+            push!(entries[j], tprev + t1*(tcurr - tprev))
+            push!(exits[j], tprev + t2*(tcurr - tprev))
         # Either one or no crossings within current time range
-        if cur_outside[j] && !pre_outside[j] # we're crossing out
-            tcross = tprev + t2*(tend - tprev)
-            push!(exits[j], tcross)
-        elseif pre_outside[j] && !cur_outside[j] # we're crossing in
-            tcross = tprev + t1*(tend - tprev)
-            push!(entries[j], tcross)
-        else
-            @assert cross1 == cross2 == false
+        elseif cross2 # we're crossing out
+            # @assert cur_outside[j] && !pre_outside[j] # this is de facto true
+            push!(exits[j], tprev + t2*(tcurr - tprev))
+        elseif cross1 # we're crossing in
+            # @assert pre_outside[j] && !cur_outside[j] # this is de facto true
+            push!(entries[j], tprev + t1*(tcurr - tprev))
         end
     end
 end
@@ -149,14 +191,14 @@ Uses the formulas from: https://en.wikipedia.org/wiki/Line%E2%80%93sphere_inters
 """
 function line_hypersphere_intersection(center, radius, origin, endpoint)
     direction = endpoint .- origin
-    u = normalize(direction)
-    c, r, o = center, radius, origin # for formulas like Wikipedia
+    c, r, o, u = center, radius, origin, direction # for formulas like Wikipedia
+    unorm2 = dot(u, u)
     oc = o .- c
-    t = dot(u, oc)
-    ∇ = t^2 - (dot(oc, oc) - r^2)
+    x = dot(u, oc)
+    ∇ = x^2 - unorm2*(dot(oc, oc) - r^2)
     ∇ ≤ 0 && return nothing
     sq∇ = sqrt(∇)
-    return -t - sq∇, -t + sq∇
+    return (-x - sq∇, -x + sq∇) ./ unorm2
 end
 
 
@@ -172,6 +214,8 @@ function closest_trajectory_point(integ, u0, metric, method::CrossingAccurateInt
         f, integ.tprev, integ.t, Optim.Brent();
         store_trace=false, abs_tol = method.abstol, rel_tol = method.reltol,
     )
+    # You can show `Optim.iterations(optim)` to get an idea of convergence.
+    # @show Optim.iterations(optim)
     tmin, dmin = Optim.minimizer(optim), Optim.minimum(optim)
     return tmin, dmin
 end

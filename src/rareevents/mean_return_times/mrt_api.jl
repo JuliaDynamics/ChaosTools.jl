@@ -136,14 +136,12 @@ end
 """
     first_return_time(ds::DynamicalSystem, u0, ε, T; diffeq = NamedTuple(), kwargs...) → t
 Return the first return time `t` to the set centered at `u0` with radius `ε` for the given
-dynamical system. This function operates on the same principles as
+dynamical system. Time evolution of `ds` always starts from `u0`.
+
+This function operates on the same principles as
 [`exit_entry_times`](@ref), so see that docstring for more info.
-
-Time evolution of `ds` always starts from `u0`.
-
 The only differences here are:
-1. If the system did not come `ε`-close enough to the set within time `T`,
-   then `NaN` is returned.
+1. If the system did not return to the set within time `T`, then `NaN` is returned.
 2. For continuous systems, the exact returned time is from start of time evolution,
    up to the time to get closest back to `u0`, provided that this is at least `ε`-close.
 """

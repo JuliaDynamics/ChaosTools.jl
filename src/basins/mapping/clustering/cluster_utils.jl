@@ -150,6 +150,7 @@ Find the optimal radius ϵ of a point neighborhood for use in DBSCAN through the
 (knee method, highest derivative method).
 """
 function optimal_radius_dbscan_elbow(features, min_neighbors, metric)
+    if min_neighbors ≤ 1 @error("Minimum number of neighbors must be strictly greater than one for the elbow method.") end
     tree = searchstructure(KDTree, features, metric)
     neighbors, distances = bulksearch(tree, features, NeighborNumber(min_neighbors))
     meandistances = map(x->mean(x[2:end]), distances) #remove first element, which is dist to the element itself (:=0)

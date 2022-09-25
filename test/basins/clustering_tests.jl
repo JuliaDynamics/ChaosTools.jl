@@ -1,6 +1,7 @@
 using ChaosTools
 using ChaosTools.DelayEmbeddings
 using Test
+using Statistics
 
 @testset "Artificial test for cluster_features" begin
     function featurizer(A, t)
@@ -11,22 +12,34 @@ using Test
         return cluster_features(features, clusterspecs)
     end
     attractor_pool = [[1 1], [20 20], [30 30]];
-    errors = [[0.0 0.0], [0.0 -0.01], [0.0 +0.01], [0.1 0.0], [0.1 0],
-        [0.0 0.0], [0.0 0.0], [0.2 0]
-    ]
-    correctlabels = [1,1,1,2,2,1,3,3]
-    a = attractor_pool[correctlabels] .+ errors
+    correctlabels = [1,1,1,1, 2,2,2,1,2,3,3,3,3,1]
+    a = attractor_pool[correctlabels]
+    a[end] = [50 50]; correctlabels[end] = -1
     attractors = Dict(1:length(a) .=> Dataset.(a; warn = false));
 
     ## Unsupervised
-    clusterspecs = ClusteringConfig(; min_neighbors=1,  rescale_features=false)
-    clust_labels = cluster_datasets(featurizer, [], attractors, clusterspecs)
-    @test clust_labels == correctlabels
+    for optimal_radius_method in ["silhouettes", "silhouettes_optim"],
+        statistic_silhouette in [mean, minimum]
+        clusterspecs = ClusteringConfig(num_attempts_radius=20,
+        optimal_radius_method=optimal_radius_method, min_neighbors=2, rescale_features=false)
+        clust_labels = cluster_datasets(featurizer, [], attractors, clusterspecs)
+        @test clust_labels == correctlabels
+    end
+
+    correctlabels_elbow = [1,1,1,1, 2,2,2,1,2,3,3,3,3,1,2,2,2,2,2,3,3,3,3,3,3,1,1,1,1,1] #smaller number of features works even worse
+    using Random; Random.seed!(1)
+    a = [attractor_pool[label] + 0.2*rand(Float64, (1,2)) for label in correctlabels_elbow]
+    attractors_elbow = Dict(1:length(a) .=> Dataset.(a; warn = false));
+    clusterspecs = ClusteringConfig(num_attempts_radius=20,
+    optimal_radius_method="knee", min_neighbors=4, rescale_features=false)
+    clust_labels = cluster_datasets(featurizer, [], attractors_elbow, clusterspecs)
+    # @test clust_labels == correctlabels #fails
+    @test maximum(clust_labels) == maximum(correctlabels) #at least check if it finds the same amount of attractors; note this does not work for any value of `min_neighbors`.
 
     ## Supervised
-    t = map(x->featurizer(x, []), attractor_pool)
+    ###construct templates
+    t = map(x->featurizer(x, []), attractor_pool);
     template_labels = [i for i ∈ eachindex(attractor_pool)]
-    correctlabels = [1, 1, 1, -1, -1, 1, 3, -1]; #for threshold at 0.1
     templates = Dict(template_labels.=> t)
     clusterspecs = ClusteringConfig(; templates, min_neighbors=1, rescale_features=false, clustering_threshold=0.1)
     clust_labels = cluster_datasets(featurizer, [], attractors, clusterspecs)

@@ -41,10 +41,13 @@ The default clustering method is an improvement over existing literature, see De
     with `statistic_silhouette`. The linear search may take some time to finish. To
     increase speed, the number of radii iterated through can be reduced by decreasing
     `num_attempts_radius` (see its entry below).
-  - `"silhouettes_optim"`: Same as `"silhouettes"` but performs an optimized search via Optim.jl.
-    It's faster than `"silhouettes"` and with the same accuracy.
+  - `"silhouettes_optim"`: Same as `"silhouettes"` but performs an optimized search via
+    Optim.jl. It's faster than `"silhouettes"`, with typically the same accuracy (the
+    search here is not guaranteed to always find the global maximum, though it typically
+    gets close).
   - `"elbow"`: chooses the the radius according to the elbow (a.k.a. knee,
-    highest-derivative method) and is quicker, though generally leading to worse clustering.
+    highest-derivative method) and is quicker, though generally leading to worse
+    clustering. It requires that `min_neighbors` > 1.
 * `num_attempts_radius = 50` (unsupervised method with silhouettes): number of radii that
   the `optimal_radius_method` will try out in its iterative procedure. Higher values
   increase the accuracy of clustering, though not necessarily much, while always reducing

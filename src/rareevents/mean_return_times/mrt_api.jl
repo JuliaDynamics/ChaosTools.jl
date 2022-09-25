@@ -124,7 +124,7 @@ Thus see [`exit_entry_times`](@ref) for the meaning of `u₀` and `εs` and furt
 """
 function mean_return_times(ds::DynamicalSystem, u0, εs, T; kwargs...)
     exits, entries = exit_entry_times(ds, u0, εs, T; kwargs...)
-    transits, returns = transit_return(exits, entries)
+    transits, returns = transit_return_times(exits, entries)
     mean_return_times(returns)
 end
 function mean_return_times(returns::AbstractVector)

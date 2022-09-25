@@ -40,7 +40,7 @@ end
 
 function first_return_time(integ::MDI, u₀, ε, T; show_progress = false, kwargs...)
     isout = false
-    prog = ProgressMeter.Progress(T; desc="Exit-entry times:", enabled=show_progress)
+    prog = ProgressMeter.Progress(T; desc="First return time:", enabled=show_progress)
     while !isout
         step!(integ)
         isout = isoutside(get_state(integ), u₀, ε)

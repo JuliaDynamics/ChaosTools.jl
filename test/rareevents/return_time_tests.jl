@@ -187,12 +187,13 @@ sanity_tests(exits, entries, transits, returns, mrt, ret, frt)
         @test all(>(0), returns[j] .- transits[j])
     end
     # See plotting for the following
-    @test length(returns[3]) == 1
     @test 16 < returns[1][1] < 18
     @test 52 < returns[2][1] < 54
     if crossing_method isa  ChaosTools.CrossingLinearIntersection
+        @test length(returns[3]) ∈ (1, 2) # depends on computer which one
         @test 415 < returns[3][1] < 416
     else
+        @test length(returns[3]) == 1
         @test 362 < returns[3][1] < 363
     end
 end

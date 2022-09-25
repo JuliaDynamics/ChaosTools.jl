@@ -214,6 +214,8 @@ function closest_trajectory_point(integ, u0, metric, method::CrossingAccurateInt
         f, integ.tprev, integ.t, Optim.Brent();
         store_trace=false, abs_tol = method.abstol, rel_tol = method.reltol,
     )
+    # You can show `Optim.iterations(optim)` to get an idea of convergence.
+    # @show Optim.iterations(optim)
     tmin, dmin = Optim.minimizer(optim), Optim.minimum(optim)
     return tmin, dmin
 end

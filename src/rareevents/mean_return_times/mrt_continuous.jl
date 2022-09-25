@@ -16,7 +16,7 @@ https://julianlsolvers.github.io/Optim.jl/stable/#user/minimization/#minimizing-
 is much simpler and seems to be exactly what we need... So that's what I'll use!
 (ALso, it is very well documented, which is what we want for source code clarity)
 =#
-
+import ProgressMeter
 ##########################################################################################
 # Main function
 ##########################################################################################
@@ -33,6 +33,7 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
         crossing_method = CrossingLinearIntersection(),
         threshold_multiplier = Inf, # This is an undocumented keyword
         threshold_distance = _default_threshold_distance(εs, threshold_multiplier),
+        show_progress = true,
     )
     metric = eltype(εs) <: Real ? Euclidean() : Chebyshev()
     if metric isa Chebyshev
@@ -48,10 +49,15 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
     curr_outside = copy(prev_outside)  # `true` if outside the set. Current step.
     exits   = [eltype(integ.t)[] for _ in 1:E]
     entries = [eltype(integ.t)[] for _ in 1:E]
-
-    while (integ.t - integ.t0) < T
+    prog = ProgressMeter.Progress(
+        round(Int, T); desc="Exit-entry times:", enabled=show_progress
+    )
+    t0 = integ.t
+    while (integ.t - t0) < T
         step!(integ)
         # Check whether we are too far away from the point to bother doing anything
+        # TODO: I wonder if we can use the previous minimum distance and compare it
+        # with current one for accelerating the search...?
         curr_distance = evaluate(metric, get_state(integ), u0)
         curr_distance > threshold_distance && continue
         # Obtain mininum distance and check which is the outermost box we are out of
@@ -76,9 +82,9 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
         end
 
         prev_outside .= curr_outside
-        # TODO: I wonder if we can use the previous minimum distance and compare it
-        # with current one for accelerating the search...?
+        ProgressMeter.update!(prog, round(Int, integ.t - t0))
     end
+    ProgressMeter.finish!(prog)
     return exits, entries
 end
 

@@ -4,16 +4,17 @@ export CrossingLinearIntersection, CrossingAccurateInterpolation
 
 """
     exit_entry_times(ds::DynamicalSystem, u₀, εs, T; kwargs...) → exits, entries
-Collect exit and entry times for a ball or box centered at `u₀` with radii `εs` (see below),
+Collect exit and entry times for balls or boxes centered at `u₀` with radii `εs`,
 in the state space of the given dynamical system (discrete or continuous).
 Return the exit and (re-)entry return times to the set(s), where each of these is a vector
 containing all collected times for the respective `ε`-radius set, for `ε ∈ εs`.
 The dynamical system is evolved up to `T` total time.
 
 Use `transit_return_times(exits, entries)` to transform the output into transit and return
-times, and see also [`mean_return_times`](@ref) for both continuous and discrete systems.
+times, and see also [`mean_return_times`](@ref).
 
-See below for keyword arguments, valid only for continuous systems.
+The keyword `show_progress` displays a progress bar. It is `false` for discrete and
+`true` for continuous systems by default.
 
 ## Description
 Transit and return time statistics are important for the transport properties of dynamical
@@ -51,12 +52,12 @@ whose values can be:
 2. `CrossingAccurateInterpolation(; abstol=1e-12, reltol=1e-6)`: Extremely accurate high
    order interpolation is used between integrator steps. First, a minimization with Optim.jl
    finds the minimum distance of the trajectory to the set center. Then, Roots.jl is used
-   to find the exact crossing point (within the given tolerances).
+   to find the exact crossing point. The tolerances are given to both procedures.
 
 Clearly, `CrossingAccurateInterpolation` is much more accurate than
 `CrossingLinearIntersection`, but also much slower. However, the smaller the steps
 the integrator takes (in case some very high accuracy solver is used), the closer
-the linear interpolation gets to the accurate version.
+the linear intersection gets to the accurate version.
 Benchmarks are advised for the individual specific case the algorithm is applied at,
 in order to choose the best method.
 

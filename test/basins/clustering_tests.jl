@@ -18,12 +18,13 @@ using Statistics
     attractors = Dict(1:length(a) .=> Dataset.(a; warn = false));
 
     ## Unsupervised
-    for optimal_radius_method in ["silhouettes_mean", "silhouettes_optim"]
-        # statistic_silhouette in [mean, minimum]
-        clusterspecs = ClusteringConfig(num_attempts_radius=20,
-        optimal_radius_method=optimal_radius_method, min_neighbors=2, rescale_features=false)
-        clust_labels = cluster_datasets(featurizer, [], attractors, clusterspecs)
-        @test clust_labels == correctlabels
+    for optimal_radius_method in ["silhouettes", "silhouettes_optim"]
+        for silhouette_statistic in [mean, minimum]
+            clusterspecs = ClusteringConfig(num_attempts_radius=20, silhouette_statistic,
+            optimal_radius_method=optimal_radius_method, min_neighbors=2, rescale_features=false)
+            clust_labels = cluster_datasets(featurizer, [], attractors, clusterspecs)
+            @test clust_labels == correctlabels
+        end
     end
 
     correctlabels_knee = [1,1,1,1, 2,2,2,1,2,3,3,3,3,1,2,2,2,2,2,3,3,3,3,3,3,1,1,1,1,1] #smaller number of features works even worse

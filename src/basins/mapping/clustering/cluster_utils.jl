@@ -66,9 +66,9 @@ end
 #####################################################################################
 function optimal_radius_dbscan(features, min_neighbors, metric, optimal_radius_method,
     num_attempts_radius, silhouette_statistic)
-    if optimal_radius_method == "silhouettes_mean"
+    if optimal_radius_method == "silhouettes"
         ϵ_optimal = optimal_radius_dbscan_silhouette(
-            features, min_neighbors, metric; num_attempts_radius, silhouette_statistic
+            features, min_neighbors, metric, num_attempts_radius, silhouette_statistic
         )
     elseif optimal_radius_method == "silhouettes_optim"
         ϵ_optimal = optimal_radius_dbscan_silhouette_optim(
@@ -88,8 +88,8 @@ clustering method for `AttractorsViaFeaturizing`. Iteratively search
 for the radius that leads to the best clustering, as characterized by quantifiers known as
 silhouettes. Does a linear (sequential) search.
 """
-function optimal_radius_dbscan_silhouette(features, min_neighbors, metric;
-        num_attempts_radius=50, silhouette_statistic=mean
+function optimal_radius_dbscan_silhouette(features, min_neighbors, metric,
+        num_attempts_radius, silhouette_statistic
     )
     feat_ranges = maximum(features, dims=2)[:,1] .- minimum(features, dims=2)[:,1];
     ϵ_grid = range(

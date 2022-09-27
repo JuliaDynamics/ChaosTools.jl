@@ -11,6 +11,7 @@ using DynamicalSystemsBase: DS, DDS, CDS
 using DynamicalSystemsBase: MDI, TDI
 using DynamicalSystemsBase: stateeltype
 using DynamicalSystemsBase.SciMLBase: AbstractODEIntegrator, u_modified!, DEIntegrator
+using Optim
 DEI = DEIntegrator
 
 include("orbitdiagrams/discrete_diagram.jl")
@@ -38,11 +39,12 @@ include("dimensions/takens_best_estimate.jl")
 include("dimreduction/broomhead_king.jl")
 include("dimreduction/dyca.jl")
 
-include("period_return/periodic_points.jl")
-include("period_return/period.jl")
-include("period_return/transit_times_statistics.jl")
-include("period_return/fixedpoints.jl")
-include("period_return/yin.jl")
+include("stablemotion/periodic_points.jl")
+include("stablemotion/period.jl")
+include("stablemotion/fixedpoints.jl")
+include("stablemotion/yin.jl")
+
+include("rareevents/mean_return_times/mrt_api.jl")
 
 include("chaosdetection/lyapunovs/lyapunovspectrum.jl")
 include("chaosdetection/lyapunovs/lyapunov.jl")

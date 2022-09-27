@@ -1,14 +1,31 @@
 # 2.10
-- New function `basins_fractions_continuation` that calculates basins fractions and how these change versus a parameter (given a continuation method)
-- New basins fraction continuation method `RecurrencesSeededContinuation` that utilizes a brand new algorithm to continuate basins fractions of arbitrary systems.
-- `match_attractor_ids!` has been fully overhauled to be more flexible, allow more ways to match, and also allow arbitrary user-defined ways to match.
-- New function `match_basins_ids!` for matching the output of `basins_of_attraction`.
-- New exported functions `swap_dict_keys!, unique_keys, replacement_map` used in code that matches attractors and could be useful to front-end users.
+This is a **huge release**!!!
+
+## Rare events
+- New dedicated folder structure and functionality targeting rare events in ChaosTools.jl.
+- Source code for `exit_entry_times` has been completely overhauled and is now
+  much much clearer.
+- Algorithm for `exit_entry_times` for continuous systems has been re-written from
+  scratch, and is now much more accurate, and much faster. Two ways are provided
+  for finding crossings: linear intersections and high order interpolation.
+- `mean_return_times` is now just a wrapper function.
+- New function `first_return_time`.
+
+## Finding attractors
 - New attractor mapping algorithm `AttractorsViaRecurrencesSparse` that uses sparse arrays to find attractors of arbitrarily high dimensional dynamical systems, eliminating the main drawback of `AttractorsViaRecurrences`.
 - Clustering (used in `AttractorsViaFeaturizing`) has been completely overhauled. Now, a `ClusteringConfig` instances must be created and then passed on to `AttractorsViaFeaturizing`.
 - `AttractorsViaFeaturizing` no longer has keywords about clustering.
-- A new function `cluster_features` is exposed to the user.
+- A new function `cluster_features` is exported to the public API.
 - Added a new clause in automatic `ε` estimation in `AttractorsViaProximity` for when there is only a single attractor passed in by the user.
+
+## Basin fractions continuation
+- New function `basins_fractions_continuation` that calculates basins fractions and how these change versus a parameter (given a continuation method)
+- New basins fraction continuation method `RecurrencesSeededContinuation` that utilizes a brand new algorithm to continuate basins fractions of arbitrary systems.
+- `match_attractor_ids!` has been fully overhauled to be more flexible, allow more ways to match, and also allow arbitrary user-defined ways to match.
+- New function `match_basins_ids!` for matching the output of basins_of_attraction`.
+- New exported functions `swap_dict_keys!, unique_keys, replacement_map` used in code that matches attractors and could be useful to front-end users.
+
+## Misc
 - Improved the documentation of chaos detection methods overall.
 - Increased the default amount of `c` in `testchaos01`.
 

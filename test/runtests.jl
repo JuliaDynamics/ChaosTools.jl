@@ -10,7 +10,7 @@ testfile(file, testname) = @testset "$testname" begin; include(file); end
 
 @testset "ChaosTools" begin
 
-include("basins/clustering_tests.jl")
+testfile("basins/clustering_tests.jl", "Clustering tests (analytic)")
 testfile("basins/attractor_mapping_tests.jl", "Attractor mappers")
 testfile("basins/matching_attractors_tests.jl", "Matching attractors")
 testfile("basins/recurrences_continuation_tests.jl", "Recurrences continuation")
@@ -30,7 +30,8 @@ include("chaosdetection/01test.jl")
 include("period_return/periodicity_tests.jl")
 include("period_return/period_tests.jl")
 include("period_return/yin_tests.jl")
-# include("period_return/transit_time_tests.jl")
+
+testfile("rareevents/return_time_tests.jl", "Return times")
 
 include("dimensions/entropydim.jl")
 include("dimensions/correlationdim.jl")

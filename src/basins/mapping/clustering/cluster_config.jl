@@ -1,5 +1,5 @@
 using Distances, Clustering, Distributions
-export ClusterConfig, cluster_features
+export ClusteringConfig, cluster_features
 
 """
     ClusteringConfig(; kwargs...)
@@ -18,10 +18,7 @@ The default clustering method is an improvement over existing literature, see De
   and the features are `Vector`s representing a cluster (which can be an attractor, for
   instance). The label `-1` is reserved for invalid trajectories, which either diverge or
   whose clustering failed.
-* `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors (i.e. of
-  similar features) each feature needs to have in order to be considered in a cluster (fewer
-  than this, it is labeled as an outlier, `-1`).
-* `clust_method_norm = Euclidean()`: metric to be used in the clustering.
+### Supervised method
 * `clustering_threshold = 0.0`: Maximum allowed distance between a feature and the cluster
   center for it to be considered inside the cluster. Only used when `clust_method =
   "kNN_thresholded"`.
@@ -30,9 +27,14 @@ The default clustering method is an improvement over existing literature, see De
   used. If `"kNN_thresholded"`, a subsequent step is taken, which considers as unclassified
   (label `-1`) the features whose distance to the nearest template is above the
   `clustering_threshold`.
-* `rescale_features = true`: (unsupervised method): if true, rescale each dimension of the
+### Unsupervised method
+* `rescale_features = true`: if true, rescale each dimension of the
   extracted features separately into the range `[0,1]`. This typically leads to
   more accurate clustering.
+* `min_neighbors = 10`: (unsupervised method only) minimum number of neighbors (i.e. of
+  similar features) each feature needs to have in order to be considered in a cluster (fewer
+  than this, it is labeled as an outlier, `-1`).
+* `clust_method_norm = Euclidean()`: metric to be used in the clustering.
 * `optimal_radius_method::String = "silhouettes_optim"`: the method used to
   determine the optimal radius for clustering features in the unsupervised method.
   Possible values are:
@@ -48,14 +50,19 @@ The default clustering method is an improvement over existing literature, see De
   - `"knee"`: chooses the the radius according to the knee (a.k.a. elbow,
     highest-derivative method) and is quicker, though generally leading to much worse
     clustering. It requires that `min_neighbors` > 1.
-* `num_attempts_radius = 100` (unsupervised method with silhouettes): number of radii that
+### Keywords for optimal radius estimation
+* `num_attempts_radius = 100`: number of radii that
   the `optimal_radius_method` will try out in its iterative procedure. Higher values
   increase the accuracy of clustering, though not necessarily much, while always reducing
   speed.
-* `silhouette_statistic::Function = mean` (unsupervised method with silhouettes): statistic
+* `silhouette_statistic::Function = mean`: statistic
   (e.g. mean or minimum) of the silhouettes that is maximized in the "optimal" clustering.
   The original implementation in [^Stender2021] used the `minimum` of the silhouettes, and
   typically performs less accurately than the `mean`.
+* `max_used_features = 0`: if not `0`, it should be an `Int` denoting the max
+  amount of features to be used when finding the optimal radius. Useful when clustering
+  a very large number of features (e.g., high accuracy estimation of fractions of basins
+  of attraction).
 
 ## Description
 The trajectory `X`, which may for instance be an attractor, is transformed into a vector
@@ -110,19 +117,20 @@ mutable struct ClusteringConfig{A, M}
     optimal_radius_method::String
     num_attempts_radius::Int
     silhouette_statistic::Function
+    max_used_features::Int
 end
 
 function ClusteringConfig(; templates::Union{Nothing, Dict} = nothing,
         clust_method_norm=Euclidean(), clustering_threshold = 0.0, min_neighbors = 10,
         clust_method = clustering_threshold > 0 ? "kNN_thresholded" : "kNN",
         rescale_features=true, optimal_radius_method="silhouettes_optim",
-        num_attempts_radius=100, silhouette_statistic = mean,
+        num_attempts_radius=100, silhouette_statistic = mean, max_used_features = 0,
     )
     return ClusteringConfig(
         templates, clust_method_norm, clust_method,
         Float64(clustering_threshold), min_neighbors,
         rescale_features, optimal_radius_method,
-        num_attempts_radius, silhouette_statistic
+        num_attempts_radius, silhouette_statistic, max_used_features
     )
 end
 
@@ -150,7 +158,7 @@ function cluster_features(features::Vector{<:AbstractVector}, cc::ClusteringConf
         cluster_features_clustering(
             f, cc.min_neighbors, cc.clust_method_norm,
             cc.rescale_features, cc.optimal_radius_method,
-            cc.num_attempts_radius, cc.silhouette_statistic
+            cc.num_attempts_radius, cc.silhouette_statistic, cc.max_used_features,
         )
     end
 end
@@ -191,7 +199,7 @@ end
 # Unsupervised method: clustering in feature space
 function cluster_features_clustering(
         features, min_neighbors, metric, rescale_features, optimal_radius_method,
-        num_attempts_radius, silhouette_statistic
+        num_attempts_radius, silhouette_statistic, max_used_features
     )
     # needed because dbscan, as implemented, needs to receive as input a matrix D x N
     # such that D < N
@@ -204,8 +212,13 @@ function cluster_features_clustering(
         features = mapslices(_rescale!, features; dims=2)
     end
     # These functions are called from cluster_utils.jl
+    features_for_optimal = if max_used_features == 0
+        features
+    else
+        StatsBase.sample(features, minimum(length(features), max_used_features); replace = false)
+    end
     ϵ_optimal = optimal_radius_dbscan(
-        features, min_neighbors, metric, optimal_radius_method,
+        features_for_optimal, min_neighbors, metric, optimal_radius_method,
         num_attempts_radius, silhouette_statistic
     )
     dists = pairwise(metric, features)

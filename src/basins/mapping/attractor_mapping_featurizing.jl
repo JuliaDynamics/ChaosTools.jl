@@ -21,7 +21,7 @@ end
 
 """
     AttractorsViaFeaturizing(
-        ds::DynamicalSystem, featurizer::Function, 
+        ds::DynamicalSystem, featurizer::Function,
         clusterconfig = ClusteringConfig(); kwargs...
     )
 
@@ -48,10 +48,10 @@ at least some basic idea about what attractors to expect in order to pick the ri
 features, in contrast to [`AttractorsViaRecurrences`](@ref).
 
 Once the features are extracted, they are clustered using
-[`ClusterConfig`](@ref), so see that docstring for more details on the clustering.
+[`ClusteringConfig`](@ref), so see that docstring for more details on the clustering.
 Each cluster is considered one attractor.
 
-If `templates` are provided to [`ClusterConfig`](@ref), then a supervised version is used,
+If `templates` are provided to [`ClusteringConfig`](@ref), then a supervised version is used,
 and the functionality is similar to [`AttractorsViaProximity`](@ref). Generally speaking, the
 [`AttractorsViaProximity`](@ref) is superior. However, if the dynamical system has extremely
 high-dimensionality, there may be reasons to use the supervised method of this featurizing

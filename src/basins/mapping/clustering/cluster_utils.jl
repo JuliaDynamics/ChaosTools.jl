@@ -154,6 +154,9 @@ function optimal_radius_dbscan_knee(features, min_neighbors, metric)
     return ϵ_optimal
 end
 
+
+# The following function is left here for reference. It is not used anywhere in the code.
+# It is the original implementation we have written based on the bSTAB paper.
 """
 Find the optimal radius ε of a point neighborhood to use in DBSCAN, the unsupervised clustering
 method for `AttractorsViaFeaturizing`. The basic idea is to iteratively search for the radius that

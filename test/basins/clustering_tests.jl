@@ -20,7 +20,7 @@ using Statistics
     ## Unsupervised
     for optimal_radius_method in ["silhouettes", "silhouettes_optim"]
         for silhouette_statistic in [mean, minimum]
-            clusterspecs = ClusteringConfig(num_attempts_radius=20, silhouette_statistic,
+            clusterspecs = ClusteringConfig(; num_attempts_radius=20, silhouette_statistic,
             optimal_radius_method=optimal_radius_method, min_neighbors=2, rescale_features=false)
             clust_labels = cluster_datasets(featurizer, [], attractors, clusterspecs)
             @test clust_labels == correctlabels
@@ -35,7 +35,6 @@ using Statistics
     min_neighbors=4, rescale_features=false)
     clust_labels = cluster_datasets(featurizer, [], attractors_knee, clusterspecs)
     # @test clust_labels == correctlabels #fails
-
     @test maximum(clust_labels) == maximum(correctlabels) #at least check if it finds the same amount of attractors; note this does not work for any value of `min_neighbors`.
 
     ## Supervised

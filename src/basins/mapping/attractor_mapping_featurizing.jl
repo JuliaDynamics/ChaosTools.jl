@@ -21,7 +21,7 @@ end
 
 """
     AttractorsViaFeaturizing(
-        ds::DynamicalSystem, featurizer::Function, 
+        ds::DynamicalSystem, featurizer::Function,
         clusterconfig = ClusteringConfig(); kwargs...
     )
 
@@ -48,10 +48,10 @@ at least some basic idea about what attractors to expect in order to pick the ri
 features, in contrast to [`AttractorsViaRecurrences`](@ref).
 
 Once the features are extracted, they are clustered using
-[`ClusterConfig`](@ref), so see that docstring for more details on the clustering.
+[`ClusteringConfig`](@ref), so see that docstring for more details on the clustering.
 Each cluster is considered one attractor.
 
-If `templates` are provided to [`ClusterConfig`](@ref), then a supervised version is used,
+If `templates` are provided to [`ClusteringConfig`](@ref), then a supervised version is used,
 and the functionality is similar to [`AttractorsViaProximity`](@ref). Generally speaking, the
 [`AttractorsViaProximity`](@ref) is superior. However, if the dynamical system has extremely
 high-dimensionality, there may be reasons to use the supervised method of this featurizing
@@ -91,7 +91,7 @@ function basins_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
         show_progress = true, N = 1000
     )
     feature_array = extract_features(mapper, ics; show_progress, N)
-    cluster_labels,  = cluster_features(feature_array, mapper.cluster_config)
+    cluster_labels  = cluster_features(feature_array, mapper.cluster_config)
     fs = basins_fractions(cluster_labels) # Vanilla fractions method with Array input
     if typeof(ics) <: AbstractDataset
         attractors = extract_attractors(mapper, cluster_labels, ics)

@@ -6,7 +6,8 @@ standardize = DelayEmbeddings.standardize
 test_value = (val, vmin, vmax) -> @test vmin ≤ val ≤ vmax
 
 # TODO: Make all tests use this `testfile` approach.
-testfile(file, testname) = @testset "$testname" begin; include(file); end
+defaultname(file) = uppercasefirst(replace(splitext(basename(file))[1], '_' => ' '))
+testfile(file, testname=defaultname(file)) = @testset "$testname" begin; include(file); end
 
 @testset "ChaosTools" begin
 
@@ -35,6 +36,7 @@ testfile("rareevents/return_time_tests.jl", "Return times")
 
 include("dimensions/entropydim.jl")
 include("dimensions/correlationdim.jl")
+testfile("dimensions/higuchi.jl")
 include("nlts_tests.jl")
 include("dyca_tests.jl")
 

@@ -35,6 +35,7 @@ include("fractaldim/correlationsum_fixedmass.jl")
 include("fractaldim/molteno.jl")
 include("fractaldim/kaplanyorke.jl")
 include("fractaldim/takens_best_estimate.jl")
+include("fractaldim/higuchi.jl")
 
 include("dimreduction/broomhead_king.jl")
 include("dimreduction/dyca.jl")

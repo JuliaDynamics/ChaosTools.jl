@@ -1,8 +1,11 @@
 export higuchi
 
-# Super duper inefficient version, but quickly coding it for now
+# Super duper inefficient version, but quickly coding it for now.
+# I am certain that there can be algorithmic optimizations, as it feels like
+# operations are repetead in all these nested loops...
 # Also I made my own estimate for good k values that scales them logarithmically
 # as we do in our fractal dimension paper. Higuchi doesn't describe this.
+
 """
     higuchi(x::AbstractVector [, ks])
 Calculate the Higuchi dimension[^Higuchi1988] of the graph of `x`.

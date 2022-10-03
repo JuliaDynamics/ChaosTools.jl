@@ -9,7 +9,7 @@ This is a **huge release**!!!
   scratch, and is now much more accurate, and much faster. Two ways are provided
   for finding crossings: linear intersections and high order interpolation.
 - `mean_return_times` is now just a wrapper function.
-- New function `first_return_time`.
+- New function `first_return_times` for efficiently computing only the first time to return to sets.
 
 ## Finding attractors
 - New attractor mapping algorithm `AttractorsViaRecurrencesSparse` that uses sparse arrays to find attractors of arbitrarily high dimensional dynamical systems, eliminating the main drawback of `AttractorsViaRecurrences`.
@@ -25,7 +25,8 @@ This is a **huge release**!!!
 - New function `match_basins_ids!` for matching the output of basins_of_attraction`.
 - New exported functions `swap_dict_keys!, unique_keys, replacement_map` used in code that matches attractors and could be useful to front-end users.
 
-## Misc
+## Other
+- New method for fractal dimension: `higuchi`
 - Improved the documentation of chaos detection methods overall.
 - Increased the default amount of `c` in `testchaos01`.
 

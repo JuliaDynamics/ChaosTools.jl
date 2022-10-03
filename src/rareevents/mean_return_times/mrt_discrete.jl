@@ -1,7 +1,10 @@
 # Discrete dynamical systems (maps) implementation. Ultra fast, ultra clean.
 import ProgressMeter
-function exit_entry_times(integ::MDI, u₀, εs, T; show_progress = false, kwargs...)
+function exit_entry_times(integ::MDI, u₀, εs, T; show_progress = false,
+    internal_max_counter = Inf, kwargs...)
     E = length(εs)
+    # TODO: Simply adjusting the initial value of `prev_outside` according to
+    # arbitrary `u0` will allow this algorithm to work for any starting poing of integrator.
     prev_outside = fill(false, E)      # `true` if outside the set. Previous step.
     curr_outside = copy(prev_outside)  # `true` if outside the set. Current step.
     exits   = [Int[] for _ in 1:E]
@@ -19,6 +22,10 @@ function exit_entry_times(integ::MDI, u₀, εs, T; show_progress = false, kwarg
         update_entry_times!(entries, i, prev_outside, curr_outside, integ.t)
         prev_outside .= curr_outside
         ProgressMeter.update!(prog, integ.t - t0)
+        if all(ex -> length(ex) ≥ internal_max_counter, exits) &&
+            all(en -> length(en) ≥ internal_max_counter, entries)
+            break # This clause exists only for `first_return_times` function.
+        end
     end
     return exits, entries
 end
@@ -38,22 +45,14 @@ end
 
 
 
-function first_return_time(integ::MDI, u₀, ε, T; show_progress = false, kwargs...)
-    isout = false
-    prog = ProgressMeter.Progress(T; desc="First return time:", enabled=show_progress)
-    while !isout
-        step!(integ)
-        isout = isoutside(get_state(integ), u₀, ε)
-    end
-    t0 = integ.t # so to not count the exit step as well.
-    while (integ.t - t0) < T
-        step!(integ)
-        ProgressMeter.update!(prog, integ.t - t0)
-        isout = isoutside(get_state(integ), u₀, ε)
-        if !isout
-            ProgressMeter.finish!(prog)
-            return integ.t - t0
-        end
-    end
-    return NaN # in case it didn't return up to the max time
+function first_return_times(integ::MDI, u₀, εs, T; show_progress = false, kwargs...)
+    # TODO: I'm lazy and I'm coding this by calling the normal algorithm.
+    # A bit inneficient, maybe in the future someone can write a full version here...
+    exits, entries = exit_entry_times(
+        integ, u₀, εs, T; show_progress = false,
+        internal_max_counter = 1
+    )
+    transits, returns = transit_return_times(exits, entries)
+    rtimes = [r[1] for r in returns]
+    return rtimes
 end

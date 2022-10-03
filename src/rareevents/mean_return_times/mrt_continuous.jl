@@ -87,11 +87,13 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
     return exits, entries
 end
 
-function first_return_time(integ::AbstractODEIntegrator, u0, ε, T;
+function first_return_times(integ::AbstractODEIntegrator, u0, εs, T;
         crossing_method = CrossingLinearIntersection(),
         show_progress = true,
     )
-    metric = ε isa Real ? Euclidean() : Chebyshev()
+
+    maxε, j = εs[1], 1 # j is the index of the outermost set we haven't returned yet
+    metric = maxε isa Real ? Euclidean() : Chebyshev()
     if metric isa Chebyshev
         error("""
         Hyper-rectangles are not yet supported in continous systems. If you need this,
@@ -102,16 +104,17 @@ function first_return_time(integ::AbstractODEIntegrator, u0, ε, T;
     end
 
     prog = ProgressMeter.Progress(
-        round(Int, T); desc="First return time:", enabled=show_progress
+        round(Int, T); desc="First return times:", enabled=show_progress
     )
     t0 = integ.t
+    rtimes = zeros(eltype(t0), length(εs))
     # First step until exiting the set
     tmin, dmin = t0, zero(eltype(get_state(integ)))
     isout = false
     while !isout
         step!(integ)
         tmin, dmin = closest_trajectory_point(integ, u0, metric, crossing_method)
-        isout = isoutside(dmin, ε)
+        isout = isoutside(dmin, maxε)
     end
     # Now iterate until we are back in the set again
     while (integ.t - t0) < T
@@ -119,13 +122,21 @@ function first_return_time(integ::AbstractODEIntegrator, u0, ε, T;
         ProgressMeter.update!(prog, round(Int, integ.t - t0))
         # Obtain mininum distance and check if we are out the box
         tmin, dmin = closest_trajectory_point(integ, u0, metric, crossing_method)
-        isout = isoutside(dmin, ε)
-        if !isout
-            ProgressMeter.finish!(prog)
-            return tmin - t0
+        isout = isoutside(dmin, maxε)
+        while !isout
+            rtimes[j] = tmin - t0
+            j += 1 # encoded the first return, now we continue into the deeper level
+            if j > length(εs)
+                @goto finish # goes to the `@label` below
+            end
+            maxε = εs[j]
+            # We check the next set in the same loop in case we entered deeper than 1 level
+            isout = isoutside(dmin, maxε)
         end
     end
-    return NaN # in case it didn't return during time `T`
+    @label finish
+    ProgressMeter.finish!(prog)
+    return rtimes
 end
 
 ##########################################################################################

@@ -9,7 +9,7 @@ This is a **huge release**!!!
   scratch, and is now much more accurate, and much faster. Two ways are provided
   for finding crossings: linear intersections and high order interpolation.
 - `mean_return_times` is now just a wrapper function.
-- New function `first_return_time`.
+- New function `first_return_times` for efficiently computing only the first time to return to sets.
 
 ## Finding attractors
 - New attractor mapping algorithm `AttractorsViaRecurrencesSparse` that uses sparse arrays to find attractors of arbitrarily high dimensional dynamical systems, eliminating the main drawback of `AttractorsViaRecurrences`.

@@ -46,9 +46,9 @@ end
     exits, entries = exit_entry_times(ds, u0, εs, T)
     transits, returns = transit_return(exits, entries)
     τ, c = mean_return_times(ds, u0, εs, T)
-    frt = first_return_time(ds, u0, εs[end], T)
+    frts = first_return_times(ds, u0, εs, T)
 
-    sanity_tests(exits, entries, transits, returns, τ, c, frt)
+    sanity_tests(exits, entries, transits, returns, τ, c, frts)
 
     @test all(x -> length(x) > 5, exits)
     @test all(x -> length(x) > 5, entries)
@@ -136,8 +136,8 @@ end
     exits, entries = exit_entry_times(to, u0, εs, T)
     transits, returns = transit_return(exits, entries)
     τ, c = mean_return_times(to, u0, εs, T)
-    frt = first_return_time(to, u0, εs[end], T)
-    sanity_tests(exits, entries, transits, returns, τ, c, frt)
+    frts = first_return_times(to, u0, εs[end], T)
+    sanity_tests(exits, entries, transits, returns, τ, c, frts)
 
     @test length(exits[1]) > length(exits[2])
     @test returns[1][1] > 5

@@ -136,8 +136,6 @@ function first_return_times(integ::AbstractODEIntegrator, u0, εs, T;
     end
     @label finish
     ProgressMeter.finish!(prog)
-    # in case it didn't return during time `T`
-    rtimes[j:end] .= NaN
     return rtimes
 end
 

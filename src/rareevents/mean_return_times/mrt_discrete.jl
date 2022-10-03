@@ -38,22 +38,33 @@ end
 
 
 
-function first_return_time(integ::MDI, u₀, ε, T; show_progress = false, kwargs...)
+function first_return_times(integ::MDI, u₀, εs, T; show_progress = false, kwargs...)
+    prog = ProgressMeter.Progress(T; desc="First return times:", enabled=show_progress)
     isout = false
-    prog = ProgressMeter.Progress(T; desc="First return time:", enabled=show_progress)
+    maxε = εs[1]
+    rtimes = zeros(Int, length(εs))
     while !isout
         step!(integ)
-        isout = isoutside(get_state(integ), u₀, ε)
+        isout = isoutside(get_state(integ), u₀, maxε)
     end
     t0 = integ.t # so to not count the exit step as well.
+
     while (integ.t - t0) < T
         step!(integ)
         ProgressMeter.update!(prog, integ.t - t0)
-        isout = isoutside(get_state(integ), u₀, ε)
-        if !isout
-            ProgressMeter.finish!(prog)
-            return integ.t - t0
+        isout = isoutside(get_state(integ), u₀, maxε)
+        while !isout
+            rtimes[j] = integ.t - t0
+            j += 1 # encoded the first return, now we continue into the deeper level
+            if j > length(εs)
+                @goto finish # goes to the `@label` below
+            end
+            maxε = εs[j]
+            # We check the next set in the same loop in case we entered deeper than 1 level
+            isout = isoutside(get_state(integ), u₀, maxε)
         end
     end
-    return NaN # in case it didn't return up to the max time
+    @label finish
+    ProgressMeter.finish!(prog)
+    return rtimes
 end

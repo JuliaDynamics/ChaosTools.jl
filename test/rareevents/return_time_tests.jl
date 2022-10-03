@@ -7,7 +7,6 @@ println("\n Return time tests...")
 function sanity_tests(exits, entries, transits, returns, mrt, ret, frt)
     @testset "Sanity tests" begin
         @test mrt == mean.(returns)
-        @test returns[end][1] ≤ frt ≤ 1.05returns[end][1] # for discrete systems it's exact
         for j in eachindex(exits)
             @test issorted(exits[j])
             @test issorted(entries[j])
@@ -23,6 +22,9 @@ function sanity_tests(exits, entries, transits, returns, mrt, ret, frt)
             # return times are positive definite
             @test all(>(0), returns[j])
             @test ret[j] == length(entries[j])
+            # First return times match what's found by exts and entropies
+            # for discrete systems the equality is exact
+            @test returns[j][1] ≤ frt[j] ≤ 1.05returns[j][1]
         end
         # it should take longer to enter smaller sets
         @test all(≥(0), diff(mrt))
@@ -171,7 +173,7 @@ T = 1000.0
 exits, entries = exit_entry_times(ro, u0, εs, T; crossing_method, show_progress=false)
 transits, returns = transit_return_times(exits, entries)
 mrt, ret = mean_return_times(ro, u0, εs, T; crossing_method)
-frt = first_return_time(ro, u0, εs[end], T; crossing_method)
+frt = first_return_times(ro, u0, εs, T; crossing_method)
 
 sanity_tests(exits, entries, transits, returns, mrt, ret, frt)
 

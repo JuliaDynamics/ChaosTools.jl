@@ -1,5 +1,5 @@
 # Docstrings, includes, and exports for mean return time functionality
-export exit_entry_times, transit_return_times, mean_return_times, first_return_time
+export exit_entry_times, transit_return_times, mean_return_times, first_return_times
 export CrossingLinearIntersection, CrossingAccurateInterpolation
 
 """
@@ -134,21 +134,21 @@ function mean_return_times(returns::AbstractVector)
 end
 
 """
-    first_return_time(ds::DynamicalSystem, u0, ε, T; diffeq = NamedTuple(), kwargs...) → t
-Return the first return time `t` to the set centered at `u0` with radius `ε` for the given
+    first_return_times(ds::DynamicalSystem, u0, εs, T; diffeq = NamedTuple(), kwargs...) → t
+Return the first return times `t` to the sets centered at `u0` with radii `εs` for the given
 dynamical system. Time evolution of `ds` always starts from `u0`.
 
 This function operates on the same principles as
-[`exit_entry_times`](@ref), so see that docstring for more info.
+[`exit_entry_times`](@ref), so see that docstring for more info on `u0, εs`.
 The only differences here are:
-1. If the system did not return to the set within time `T`, then `NaN` is returned.
+1. If the system did not return to the set within time `T`, then `0` is returned.
 2. For continuous systems, the exact returned time is from start of time evolution,
    up to the time to get closest back to `u0`, provided that this is at least `ε`-close.
 """
-function first_return_time(ds::DynamicalSystem, u0, ε, T; diffeq = NamedTuple(), kwargs...)
-    check_εs_sorting([ε], length(u0))
+function first_return_times(ds::DynamicalSystem, u0, εs, T; diffeq = NamedTuple(), kwargs...)
+    check_εs_sorting(εs, length(u0))
     integ = integrator(ds, u0; diffeq)
-    first_return_time(integ, u0, ε, T; kwargs...)
+    first_return_times(integ, u0, εs, T; kwargs...)
 end
 
 include("mrt_distances_utils.jl")

@@ -136,7 +136,7 @@ end
     exits, entries = exit_entry_times(to, u0, εs, T)
     transits, returns = transit_return(exits, entries)
     τ, c = mean_return_times(to, u0, εs, T)
-    frts = first_return_times(to, u0, εs[end], T)
+    frts = first_return_times(to, u0, εs, T)
     sanity_tests(exits, entries, transits, returns, τ, c, frts)
 
     @test length(exits[1]) > length(exits[2])

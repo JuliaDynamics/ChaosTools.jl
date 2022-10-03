@@ -1,7 +1,10 @@
 # Discrete dynamical systems (maps) implementation. Ultra fast, ultra clean.
 import ProgressMeter
-function exit_entry_times(integ::MDI, u₀, εs, T; show_progress = false, kwargs...)
+function exit_entry_times(integ::MDI, u₀, εs, T; show_progress = false,
+    internal_max_counter = Inf, kwargs...)
     E = length(εs)
+    # TODO: Simply adjusting the initial value of `prev_outside` according to
+    # arbitrary `u0` will allow this algorithm to work for any starting poing of integrator.
     prev_outside = fill(false, E)      # `true` if outside the set. Previous step.
     curr_outside = copy(prev_outside)  # `true` if outside the set. Current step.
     exits   = [Int[] for _ in 1:E]
@@ -19,6 +22,10 @@ function exit_entry_times(integ::MDI, u₀, εs, T; show_progress = false, kwarg
         update_entry_times!(entries, i, prev_outside, curr_outside, integ.t)
         prev_outside .= curr_outside
         ProgressMeter.update!(prog, integ.t - t0)
+        if all(ex -> length(ex) ≥ internal_max_counter, exits) &&
+            all(en -> length(en) ≥ internal_max_counter, entries)
+            break # This clause exists only for `first_return_times` function.
+        end
     end
     return exits, entries
 end
@@ -39,32 +46,13 @@ end
 
 
 function first_return_times(integ::MDI, u₀, εs, T; show_progress = false, kwargs...)
-    prog = ProgressMeter.Progress(T; desc="First return times:", enabled=show_progress)
-    isout = false
-    maxε = εs[1]
-    rtimes = zeros(Int, length(εs))
-    while !isout
-        step!(integ)
-        isout = isoutside(get_state(integ), u₀, maxε)
-    end
-    t0 = integ.t # so to not count the exit step as well.
-
-    while (integ.t - t0) < T
-        step!(integ)
-        ProgressMeter.update!(prog, integ.t - t0)
-        isout = isoutside(get_state(integ), u₀, maxε)
-        while !isout
-            rtimes[j] = integ.t - t0
-            j += 1 # encoded the first return, now we continue into the deeper level
-            if j > length(εs)
-                @goto finish # goes to the `@label` below
-            end
-            maxε = εs[j]
-            # We check the next set in the same loop in case we entered deeper than 1 level
-            isout = isoutside(get_state(integ), u₀, maxε)
-        end
-    end
-    @label finish
-    ProgressMeter.finish!(prog)
+    # TODO: I'm lazy and I'm coding this by calling the normal algorithm.
+    # A bit inneficient, maybe in the future someone can write a full version here...
+    exits, entries = exit_entry_times(
+        integ, u₀, εs, T; show_progress = false,
+        internal_max_counter = 1
+    )
+    transits, returns = transit_return_times(exits, entries)
+    rtimes = [r[1] for r in returns]
     return rtimes
 end

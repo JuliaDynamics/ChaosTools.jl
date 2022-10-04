@@ -16,6 +16,7 @@ This is a **huge release**!!!
 - Clustering (used in `AttractorsViaFeaturizing`) has been completely overhauled. Now, a `ClusteringConfig` instances must be created and then passed on to `AttractorsViaFeaturizing`.
 - `AttractorsViaFeaturizing` no longer has keywords about clustering.
 - A new function `cluster_features` is exported to the public API.
+- Multithreading is now an option in `AttractorsViaFeaturizing`. It is enabled by default.
 - Added a new clause in automatic `ε` estimation in `AttractorsViaProximity` for when there is only a single attractor passed in by the user.
 
 ## Basin fractions continuation

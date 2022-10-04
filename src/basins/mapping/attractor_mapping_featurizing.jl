@@ -120,7 +120,7 @@ function extract_features_single(
     )
     N = (typeof(ics) <: Function)  ? N : size(ics, 1) # number of actual ICs
     feature_array = Vector{Vector{Float64}}(undef, N)
-    progress = ProgressMeter.Progress(N, "Integrating trajectories:"; enable=show_progress)
+    progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:", enabled=show_progress)
     for i ∈ 1:N
         ic = _get_ic(ics,i)
         feature_array[i] = features(mapper.integ, ic, mapper)
@@ -140,7 +140,7 @@ function extract_features_threaded(
     integs = [deepcopy(mapper.integ) for i in 1:(Threads.nthreads() - 1)]
     pushfirst!(integs, mapper.integ)
     feature_array = Vector{Vector{Float64}}(undef, N)
-    progress = ProgressMeter.Progress(N, "Integrating trajectories:"; enable=show_progress)
+    progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:", enabled=show_progress)
     Threads.@threads for i ∈ 1:N
         integ = integs[Threads.threadid()]
         ic = _get_ic(ics, i)

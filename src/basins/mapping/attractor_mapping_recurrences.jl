@@ -320,15 +320,14 @@ function get_label_ic!(bsn_nfo::BasinsInfo, integ, u0; safety_counter_max = Int(
         # on the previously found one...
         bsn_nfo.unsafe || (bsn_nfo.safety_counter += 1)
         if bsn_nfo.unsafe || (bsn_nfo.safety_counter ≥ safety_counter_max)
-            error(
-            """`AttractorsViaRecurrences` algorithm exceeded safety count without haulting.
+            @warn  """`AttractorsViaRecurrences` algorithm exceeded safety count without haulting.
             It may be that the grid is not fine enough and attractors intersect in the
             same cell, or `safety_counter_max` is not high enough for a very fine grid.
             Iteration will terminate now and exit with error.
             Here are some info on current status:\n
             state: $(get_state(integ)),\n
             parameters: $(get_parameters(integ)).
-            """)
+            """
             return -1
         end
 

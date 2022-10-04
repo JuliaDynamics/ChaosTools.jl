@@ -40,7 +40,7 @@ dimensional subspace.
 * `horizon_limit = 1e6`: If the norm of the integrator state reaches this
   limit we consider that the orbit diverges.
 * `safety_counter_max = Int(1e6)`: A safety counter that is always increasing for
-  each initial condition. Once exceeded, the algorithm errors.
+  each initial condition. Once exceeded, the algorithm assigns `-1` and throws a warning.
   This clause exists to stop the algorithm never haulting for innappropriately defined grids,
   where a found attractor may intersect in the same cell with a new attractor the orbit
   traces (which leads to infinite resetting of all counters). As this check comes with a
@@ -320,15 +320,15 @@ function get_label_ic!(bsn_nfo::BasinsInfo, integ, u0; safety_counter_max = Int(
         # on the previously found one...
         bsn_nfo.unsafe || (bsn_nfo.safety_counter += 1)
         if bsn_nfo.unsafe || (bsn_nfo.safety_counter ≥ safety_counter_max)
-            error(
-            """`AttractorsViaRecurrences` algorithm exceeded safety count without haulting.
+            @warn  """
+            `AttractorsViaRecurrences` algorithm exceeded safety count without haulting.
             It may be that the grid is not fine enough and attractors intersect in the
             same cell, or `safety_counter_max` is not high enough for a very fine grid.
             Iteration will terminate now and exit with error.
             Here are some info on current status:\n
             state: $(get_state(integ)),\n
             parameters: $(get_parameters(integ)).
-            """)
+            """
             return -1
         end
 

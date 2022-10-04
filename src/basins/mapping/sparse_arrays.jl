@@ -45,14 +45,12 @@ Base.size(a::SparseArray) = a.dims
 # Indexing
 #########################################################################################
 @inline function Base.getindex(a::SparseArray{T,N}, I::CartesianIndex{N}) where {T,N}
-    @boundscheck checkbounds(a, I)
     return get(a.data, I, zero(T))
 end
 Base.@propagate_inbounds Base.getindex(a::SparseArray{T,N}, I::Vararg{Int,N}) where {T,N} =
                                         getindex(a, CartesianIndex(I))
 
 @inline function Base.setindex!(a::SparseArray{T,N}, v, I::CartesianIndex{N}) where {T,N}
-    @boundscheck checkbounds(a, I)
     if v != zero(v)
         a.data[I] = v
     else

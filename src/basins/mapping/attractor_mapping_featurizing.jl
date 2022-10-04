@@ -162,5 +162,5 @@ end
 function extract_attractors(mapper::AttractorsViaFeaturizing, labels, ics)
     uidxs = unique(i -> labels[i], 1:length(labels))
     return Dict(labels[i] => trajectory(mapper.integ, mapper.total, ics[i];
-    Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq) for i in uidxs if i ≠ -1)
+    Ttr = mapper.Ttr, Δt = mapper.Δt) for i in uidxs if i ≠ -1)
 end

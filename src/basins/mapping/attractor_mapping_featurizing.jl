@@ -7,16 +7,15 @@ include("clustering/cluster_config.jl")
 #####################################################################################
 # AttractorMapper API
 #####################################################################################
-struct AttractorsViaFeaturizing{DS<:GeneralizedDynamicalSystem, C<:ClusteringConfig, T, K, A,
-    F} <: AttractorMapper
-    ds::DS
+struct AttractorsViaFeaturizing{I, C<:ClusteringConfig, T, A, F} <: AttractorMapper
+    integ::I
     featurizer::F
     cluster_config::C
     Ttr::T
     Δt::T
     total::T
-    diffeq::K
     attractors_ic::A
+    threaded::Bool
 end
 
 """
@@ -64,21 +63,26 @@ representation of features.
 """
 function AttractorsViaFeaturizing(ds::GeneralizedDynamicalSystem, featurizer::Function,
     cluster_config::ClusteringConfig = ClusteringConfig(); T=100, Ttr=100, Δt=1,
-    diffeq = NamedTuple(), attractors_ic::Union{AbstractDataset, Nothing}=nothing)
+    diffeq = NamedTuple(), attractors_ic::Union{AbstractDataset, Nothing}=nothing,
+    threaded = false)
     if ds isa ContinuousDynamicalSystem
         T, Ttr, Δt = float.((T, Ttr, Δt))
     end
+    # We put an integrator into the mapper. For parallelization, this is deepcopied.
+    # Notice that if `ds` is already an integrator, both `integrator` and `trajectory`
+    # still work as expected.
     return AttractorsViaFeaturizing(
-        ds, featurizer, cluster_config, Ttr, Δt, T, diffeq, attractors_ic
+        integrator(ds; diffeq), featurizer, cluster_config, Ttr, Δt, T,
+        attractors_ic, threaded
     )
 end
 
 DynamicalSystemsBase.get_rule_for_print(m::AttractorsViaFeaturizing) =
-get_rule_for_print(m.ds)
+get_rule_for_print(m.integ)
 
 function Base.show(io::IO, mapper::AttractorsViaFeaturizing)
     ps = generic_mapper_print(io, mapper)
-    println(io, rpad(" type: ", ps), nameof(typeof(mapper.ds)))
+    println(io, rpad(" type: ", ps), nameof(typeof(mapper.integ)))
     println(io, rpad(" Ttr: ", ps), mapper.Ttr)
     println(io, rpad(" Δt: ", ps), mapper.Δt)
     println(io, rpad(" T: ", ps), mapper.total)
@@ -101,28 +105,55 @@ function basins_fractions(mapper::AttractorsViaFeaturizing, ics::Union{AbstractD
     end
 end
 
-function extract_features(mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
-    show_progress = true, N = 1000)
-
-    N = (typeof(ics) <: Function)  ? N : size(ics, 1) # number of actual ICs
-
-    feature_array = Vector{Vector{Float64}}(undef, N)
-    if show_progress
-        progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:")
+# TODO: This functionality should be a generic parallel evolving function...
+function extract_features(mapper::AttractorsViaFeaturizing, args...; kwargs...)
+    if !(mapper.threaded)
+        extract_features_single(mapper, args...; kwargs...)
+    else
+        extract_features_threaded(mapper, args...; kwargs...)
     end
-    # TODO: We can multi-thread this, but we need to make it so that integrators
-    # are deepcopied (i.e., if mapper has a stroboscopic map)
+end
+
+function extract_features_single(
+        mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
+        show_progress = true, N = 1000
+    )
+    N = (typeof(ics) <: Function)  ? N : size(ics, 1) # number of actual ICs
+    feature_array = Vector{Vector{Float64}}(undef, N)
+    progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:", enabled=show_progress)
     for i ∈ 1:N
         ic = _get_ic(ics,i)
-        feature_array[i] = extract_features(mapper, ic)
-        show_progress && ProgressMeter.next!(progress)
+        feature_array[i] = features(mapper.integ, ic, mapper)
+        ProgressMeter.next!(progress)
     end
     return feature_array
 end
 
-function extract_features(mapper::AttractorsViaFeaturizing, u0::AbstractVector{<:Real})
-    A = trajectory(mapper.ds, mapper.total, u0;
-        Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq)
+# TODO: We need an alternative to deep copying integrators that efficiently
+# initialzes integrators for any given kind of system. But that can be done
+# later in the DynamicalSystems.jl 3.0 rework.
+function extract_features_threaded(
+        mapper::AttractorsViaFeaturizing, ics::Union{AbstractDataset, Function};
+        show_progress = true, N = 1000
+    )
+    N = (typeof(ics) <: Function)  ? N : size(ics, 1) # number of actual ICs
+    integs = [deepcopy(mapper.integ) for i in 1:(Threads.nthreads() - 1)]
+    pushfirst!(integs, mapper.integ)
+    feature_array = Vector{Vector{Float64}}(undef, N)
+    progress = ProgressMeter.Progress(N; desc = "Integrating trajectories:", enabled=show_progress)
+    Threads.@threads for i ∈ 1:N
+        integ = integs[Threads.threadid()]
+        ic = _get_ic(ics, i)
+        feature_array[i] = features(integ, ic, mapper)
+        ProgressMeter.next!(progress)
+    end
+    return feature_array
+end
+
+function features(integ, u0::AbstractVector{<:Real}, mapper)
+    # Notice that this uses the low-level interface of `trajectory` that works
+    # given an integrator
+    A = trajectory(integ, mapper.total, u0; Ttr = mapper.Ttr, Δt = mapper.Δt)
     t = (mapper.Ttr):(mapper.Δt):(mapper.total+mapper.Ttr)
     feature = mapper.featurizer(A, t)
     return feature
@@ -130,6 +161,6 @@ end
 
 function extract_attractors(mapper::AttractorsViaFeaturizing, labels, ics)
     uidxs = unique(i -> labels[i], 1:length(labels))
-    return Dict(labels[i] => trajectory(mapper.ds, mapper.total, ics[i];
-    Ttr = mapper.Ttr, Δt = mapper.Δt, diffeq = mapper.diffeq) for i in uidxs if i ≠ -1)
+    return Dict(labels[i] => trajectory(mapper.integ, mapper.total, ics[i];
+    Ttr = mapper.Ttr, Δt = mapper.Δt) for i in uidxs if i ≠ -1)
 end

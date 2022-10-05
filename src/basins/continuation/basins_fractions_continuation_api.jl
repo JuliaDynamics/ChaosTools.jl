@@ -7,11 +7,12 @@ export basins_fractions_continuation
 abstract type BasinsFractionContinuation end
 
 """
-    basins_fractions_continuation(continuation, parameter, ics; kwargs...)
+    basins_fractions_continuation(continuation, prange, pidx, ics; kwargs...)
 The given `continuation` contains a reference to a dynamical system,
 as well as how to find its attractors. I.e., it contains an [`AttractorMapper`](@ref).
 Given this `continuation`, the basin fractions of the dynamical system,
-and continuate them across the given `parameter`. `ics` is as in [`basins_fractions`](@ref),
+and continuate them across the parameter range `prange`, for the parameter of the
+system with index `pidx`. `ics` is as in [`basins_fractions`](@ref),
 i.e., it must be a function generating random initial conditions.
 
 Current continuation methods are:

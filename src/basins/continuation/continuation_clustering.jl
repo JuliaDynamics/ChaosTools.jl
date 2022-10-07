@@ -36,7 +36,7 @@ function basins_fractions_continuation(
     # Collect features
     for (i, p) in enumerate(prange)
         set_parameter!(mapper.integ, pidx, p)
-        current_features = extract_features(mapper, ics; show_progress, N = spp)
+        current_features = extract_features_threaded(mapper, ics; show_progress, N = spp)
         features[((i - 1)*spp + 1):i*spp] .= current_features
         next!(progress)
     end
@@ -47,7 +47,8 @@ function basins_fractions_continuation(
     Dk = [ sum(abs.(x .- y)) for x in features, y in features]
 
     # use parameter distance weight (w is the weight for one parameter only)
-    par_array = kron(prange, ones(spp))
+    # Parameter range is rescaled from 0 to 1.
+    par_array = kron(range(0,1,length(prange)), ones(spp))
     for k in 1:length(par_array)
         for j in 1:length(par_array)
             Dk[k,j] += w*abs(par_array[k] - par_array[j])

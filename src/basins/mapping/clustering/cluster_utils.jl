@@ -99,8 +99,8 @@ function optimal_radius_dbscan_silhouette(features, min_neighbors, metric,
     s_grid = zeros(size(ϵ_grid)) # silhouette statistic values (which we want to maximize)
 
     # vary ϵ to find the best one (which will maximize the mean sillhoute)
+    dists = pairwise(metric, features)
     for i in eachindex(ϵ_grid)
-        dists = pairwise(metric, features)
         clusters = dbscan(dists, ϵ_grid[i], min_neighbors)
         sils = silhouettes_new(clusters, dists)
         s_grid[i] = silhouette_statistic(sils)

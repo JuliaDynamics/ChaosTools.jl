@@ -40,25 +40,37 @@ function basins_fractions_continuation(
         features[((i - 1)*spp + 1):i*spp] .= current_features
         next!(progress)
     end
-    # TODO: Here we can have an additional step that adds the parameter value to features,
-    # or configures different way to cluster weighted by parameter values
 
-    # Construct basic distance matrix
-    Dk = [ sum(abs.(x .- y)) for x in features, y in features]
+    # Construct distance matrix
+    cc = mapper.cluster_config
+    metric = cc.clust_method_norm
+    dists = pairwise(metric, features)
 
     # use parameter distance weight (w is the weight for one parameter only)
     # Parameter range is rescaled from 0 to 1.
     par_array = kron(range(0,1,length(prange)), ones(spp))
     for k in 1:length(par_array)
         for j in 1:length(par_array)
-            Dk[k,j] += w*abs(par_array[k] - par_array[j])
+            dists[k,j] += w*metric(par_array[k],par_array[j])
         end
     end
 
     # Cluster them
-    db_res = dbscan(Dk, 5, round(Int, 5))
-    cluster_labels = db_res.assignments
-    # cluster_labels, = cluster_features(features, mapper.cluster_config)
+    f = reduce(hcat, features) # Convert to Matrix from Vector{Vector}
+    f = float.(f)
+    features_for_optimal = if cc.max_used_features == 0
+        f
+    else
+        StatsBase.sample(f, minimum(length(features), cc.max_used_features); replace = false)
+    end 
+    @show ϵ_optimal = optimal_radius_dbscan(
+        features_for_optimal, cc.min_neighbors, metric, cc.optimal_radius_method,
+        cc.num_attempts_radius, cc.silhouette_statistic
+    )
+    dbscanresult = dbscan(dists, ϵ_optimal, cc.min_neighbors)
+    cluster_labels = cluster_assignment(dbscanresult)
+
+
 
     # And finally collect/group stuff into their dictionaries
     fractions_curves = Vector{Dict{Int, Float64}}(undef, n)

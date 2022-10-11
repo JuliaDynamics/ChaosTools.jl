@@ -2,6 +2,30 @@ export ClusteringAcrossParametersContinuation
 import ProgressMeter
 
 # TODO: Make this into a struct
+"""
+
+    ClusteringAcrossParametersContinuation(mapper::AttractorsViaFeaturizing; kwargs...)
+A method for [`basins_fractions_continuation`](@ref). This method computes the Features accross a range of parameters before performing a clustering into classes using a special metric, see [^Gelbrecht2020]. 
+
+The method takes as an input a `mapper` that maps initial conditions to attractors using the featurizing method [^Stender2021]. See [`AttractorMapper`](@ref) for how to use the `mapper`.
+
+## Keyword Arguments
+- `prange` Range of parameters
+- `pidx` Number or symbol of the parameter to chabge in the array of parameters of the dynamical system. 
+- `ics` Sampler function to generate initial conditions to sample. 
+- `samples_per_parameter` Number of samples per parameter
+- `par_weight`: This is the weight that ponderates the distance matrix according the parameter distance between two features. 
+
+## Description
+
+[^Gelbrecht2020]:
+    Gelbrecht, M., Kurths, J., & Hellmann, F. (2020). Monte Carlo basin bifurcation
+    analysis. New Journal of Physics, 22(3), 033032.
+
+[^Stender2021]:
+    Stender & Hoffmann, [bSTAB: an open-source software for computing the basin
+    stability of multi-stable dynamical systems](https://doi.org/10.1007/s11071-021-06786-5)
+"""
 function ClusteringAcrossParametersContinuation(
         mapper::AttractorsViaFeaturizing;
         info_extraction = mean_across_features
@@ -21,9 +45,11 @@ function mean_across_features(fs)
     return means ./ N
 end
 
+
+
 function basins_fractions_continuation(
         continuation::NamedTuple, prange, pidx, ics::Function;
-        samples_per_parameter = 100, show_progress = true, w = 1
+        samples_per_parameter = 100, show_progress = true, par_weight = 1
     )
     spp, n = samples_per_parameter, length(prange)
     (; mapper, info_extraction) = continuation
@@ -51,7 +77,7 @@ function basins_fractions_continuation(
     par_array = kron(range(0,1,length(prange)), ones(spp))
     for k in 1:length(par_array)
         for j in 1:length(par_array)
-            dists[k,j] += w*metric(par_array[k],par_array[j])
+            dists[k,j] += par_weight*metric(par_array[k],par_array[j])
         end
     end
 

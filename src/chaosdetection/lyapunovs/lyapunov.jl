@@ -157,7 +157,25 @@ function λdist(integ::AbstractODEIntegrator{Alg, IIP, Vector{S}}) where {Alg, I
     return norm(integ.u[1] - integ.u[2])
 end
 
-function rescale!(integ, a)
+function isinplace(integ::AbstractODEIntegrator{Alg, IIP, S}) where {Alg, IIP, S}
+    return IIP
+end
+function isinplace(integ::MinimalDiscreteIntegrator{IIP, S}) where {IIP, S}
+    return IIP
+end
+
+function rescale_iip!(integ, a)
+    get_state(integ, 2) .= get_state(integ, 1) .+ (get_state(integ, 2) .- get_state(integ, 1)) ./ a
+end
+function rescale_oop(integ, a)
     r = get_state(integ, 1) .+ (get_state(integ, 2) .- get_state(integ, 1)) ./ a
     set_state!(integ, r, 2)
+end
+function rescale!(integ, a)
+    iip = isinplace(integ)
+    if iip
+        rescale_iip!(integ, a)
+    else
+        rescale_oop(integ, a)
+    end
 end

@@ -157,26 +157,7 @@ function λdist(integ::AbstractODEIntegrator{Alg, IIP, Vector{S}}) where {Alg, I
     return norm(integ.u[1] - integ.u[2])
 end
 
-# Rescales:
-function rescale!(integ::MinimalDiscreteIntegrator{true, Vector{S}}, a) where {S<:SVector}
-    integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
-    u_modified!(integ, true)
-end
-function rescale!(integ::MinimalDiscreteIntegrator{true, Vector{S}}, a) where {S<:Vector}
-    @. integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
-    u_modified!(integ, true)
-end
-function rescale!(integ::AbstractODEIntegrator{Alg, IIP, M}, a) where {Alg, IIP, M<:Matrix}
-    for i in 1:size(integ.u)[1]
-        integ.u[i, 2] = integ.u[i,1] + (integ.u[i,2] - integ.u[i,1])/a
-    end
-    u_modified!(integ, true)
-end
-function rescale!(integ::AbstractODEIntegrator{Alg, IIP, Vector{S}}, a) where {Alg, IIP, S<:Vector}
-    @. integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
-    u_modified!(integ, true)
-end
-function rescale!(integ::AbstractODEIntegrator{Alg, IIP, Vector{S}}, a) where {Alg, IIP, S<:SVector}
-    integ.u[2] = integ.u[1] + (integ.u[2] - integ.u[1])/a
-    u_modified!(integ, true)
+function rescale!(integ, a)
+    r = get_state(integ, 1) .+ (get_state(integ, 2) .- get_state(integ, 1)) ./ a
+    set_state!(integ, r, 2)
 end

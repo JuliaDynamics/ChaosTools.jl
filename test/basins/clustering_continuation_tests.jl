@@ -1,5 +1,6 @@
 using Test, ChaosTools
 using ChaosTools.DynamicalSystemsBase, ChaosTools.DelayEmbeddings
+using DynamicalSystems:genentropy
 using Random
 
 using OrdinaryDiffEq

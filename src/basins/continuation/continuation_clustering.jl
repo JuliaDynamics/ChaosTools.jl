@@ -89,14 +89,12 @@ function basins_fractions_continuation(
     else
         StatsBase.sample(f, minimum(length(features), cc.max_used_features); replace = false)
     end 
-    @show ϵ_optimal = optimal_radius_dbscan(
+    ϵ_optimal = optimal_radius_dbscan(
         features_for_optimal, cc.min_neighbors, metric, cc.optimal_radius_method,
         cc.num_attempts_radius, cc.silhouette_statistic
     )
     dbscanresult = dbscan(dists, ϵ_optimal, cc.min_neighbors)
     cluster_labels = cluster_assignment(dbscanresult)
-
-
 
     # And finally collect/group stuff into their dictionaries
     fractions_curves = Vector{Dict{Int, Float64}}(undef, n)

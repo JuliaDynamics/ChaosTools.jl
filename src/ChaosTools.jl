@@ -17,15 +17,6 @@ DEI = DEIntegrator
 include("orbitdiagrams/discrete_diagram.jl")
 include("orbitdiagrams/produce_orbitdiagram.jl")
 
-include("basins/dict_utils.jl")
-include("basins/mapping/attractor_mapping.jl")
-include("basins/basins_of_attraction.jl")
-include("basins/basins_utilities.jl")
-include("basins/fractality_of_basins.jl")
-include("basins/tipping.jl")
-include("basins/sampler.jl")
-include("basins/continuation/basins_fractions_continuation_api.jl")
-
 include("fractaldim/linear_regions.jl")
 include("fractaldim/generalized_dim.jl")
 include("fractaldim/correlationsum_vanilla.jl")

@@ -15,7 +15,6 @@ using Optim
 DEI = DEIntegrator
 
 include("orbitdiagrams/discrete_diagram.jl")
-include("orbitdiagrams/poincare.jl")
 include("orbitdiagrams/produce_orbitdiagram.jl")
 
 include("basins/dict_utils.jl")

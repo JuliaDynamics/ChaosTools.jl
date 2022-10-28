@@ -1,3 +1,5 @@
+export produce_orbitdiagram
+
 """
 ```julia
 produce_orbitdiagram(

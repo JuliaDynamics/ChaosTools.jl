@@ -1,6 +1,7 @@
-# 2.10
+# main
+**The following will become the 3.0 - Major release.**
 
-## Refactoring
+## Refactoring/removal
 - All functionality related to attractors and basins of attraction has been moved to a new package Attractors.jl. The `fixedpoints` function has been moved there as well.
 - All functionality related to Poincare maps has been moved to DynamicalSystemsBase.jl
 - The state space samplers have been moved to DelayEmbeddings.jl

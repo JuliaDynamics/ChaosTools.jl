@@ -1,7 +1,7 @@
 name = "ChaosTools"
 uuid = "608a59af-f2a3-5ad4-90b4-758bdf3122a7"
 repo = "https://github.com/JuliaDynamics/ChaosTools.jl.git"
-version = "2.10.0"
+version = "3.0.0"
 
 [deps]
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
@@ -37,7 +37,7 @@ DynamicalSystemsBase = "2.9.0"
 Entropies = "1"
 ForwardDiff = "0.8, 0.9, 0.10"
 IntervalRootFinding = "0.5.9"
-LombScargle = "0.4, 0.5, 1.0"
+LombScargle = "1"
 Neighborhood = "0.2.2"
 Optim = "1.7"
 ProgressMeter = "1.7"

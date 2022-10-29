@@ -11,14 +11,6 @@ testfile(file, testname=defaultname(file)) = @testset "$testname" begin; include
 
 @testset "ChaosTools" begin
 
-testfile("basins/clustering_tests.jl", "Clustering tests (analytic)")
-testfile("basins/attractor_mapping_tests.jl", "Attractor mappers")
-testfile("basins/matching_attractors_tests.jl", "Matching attractors")
-testfile("basins/basins_continuation_tests.jl", "Fractions continuation")
-include("basins/uncertainty_tests.jl")
-include("basins/tipping_points_tests.jl")
-include("basins/proximity_deduce_ε_tests.jl")
-
 include("orbitdiagrams/orbitdiagram_tests.jl")
 include("orbitdiagrams/poincare_tests.jl")
 

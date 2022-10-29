@@ -1,30 +1,20 @@
-# 2.10
-This is a **huge release**!!!
+# main
+**The following will become the 3.0 - Major release.**
+
+## Refactoring/removal
+- All functionality related to attractors and basins of attraction (e.g., `AttractorMapper`, `basins_fractions`) has been moved to a new package Attractors.jl. Notice that functions such as `fixedpoints` and `periodicorbits` stay in ChaosTools.jl because they aren't only about attractors; they also find unstable fixed points and/or periodic orbits.
+- All functionality related to Poincare maps has been moved to DynamicalSystemsBase.jl
+- The state space samplers have been moved to StateSpaceSets.jl
 
 ## Rare events
-- New dedicated folder structure and functionality targeting rare events in ChaosTools.jl.
+- New dedicated folder structure and functionality targeting rare events in ChaosTools.jl. If it becomes extensive, it can be split off to a different package.
 - Source code for `exit_entry_times` has been completely overhauled and is now
   much much clearer.
 - Algorithm for `exit_entry_times` for continuous systems has been re-written from
   scratch, and is now much more accurate, and much faster. Two ways are provided
-  for finding crossings: linear intersections and high order interpolation.
+  for finding crossings: linear intersections and high order interpolation via optimization.
 - `mean_return_times` is now just a wrapper function.
 - New function `first_return_times` for efficiently computing only the first time to return to sets.
-
-## Finding attractors
-- New attractor mapping algorithm `AttractorsViaRecurrencesSparse` that uses sparse arrays to find attractors of arbitrarily high dimensional dynamical systems, eliminating the main drawback of `AttractorsViaRecurrences`.
-- Clustering (used in `AttractorsViaFeaturizing`) has been completely overhauled. Now, a `ClusteringConfig` instances must be created and then passed on to `AttractorsViaFeaturizing`.
-- `AttractorsViaFeaturizing` no longer has keywords about clustering.
-- A new function `cluster_features` is exported to the public API.
-- Multithreading is now an option in `AttractorsViaFeaturizing`. It is enabled by default.
-- Added a new clause in automatic `ε` estimation in `AttractorsViaProximity` for when there is only a single attractor passed in by the user.
-
-## Basin fractions continuation
-- New function `basins_fractions_continuation` that calculates basins fractions and how these change versus a parameter (given a continuation method)
-- New basins fraction continuation method `RecurrencesSeededContinuation` that utilizes a brand new algorithm to continuate basins fractions of arbitrary systems.
-- `match_attractor_ids!` has been fully overhauled to be more flexible, allow more ways to match, and also allow arbitrary user-defined ways to match.
-- New function `match_basins_ids!` for matching the output of basins_of_attraction`.
-- New exported functions `swap_dict_keys!, unique_keys, replacement_map` used in code that matches attractors and could be useful to front-end users.
 
 ## Other
 - New method for fractal dimension: `higuchi`

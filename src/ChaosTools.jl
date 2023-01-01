@@ -4,7 +4,7 @@ Tools for the exploration of chaos and nonlinear dynamics
 module ChaosTools
 
 using DelayEmbeddings
-using Entropies
+using ComplexityMeasures
 using DynamicalSystemsBase
 
 using DynamicalSystemsBase: DS, DDS, CDS

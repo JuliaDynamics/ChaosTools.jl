@@ -26,9 +26,6 @@ include("period_return/yin_tests.jl")
 
 testfile("rareevents/return_time_tests.jl", "Return times")
 
-include("dimensions/entropydim.jl")
-include("dimensions/correlationdim.jl")
-testfile("dimensions/higuchi.jl")
 include("nlts_tests.jl")
 include("dyca_tests.jl")
 

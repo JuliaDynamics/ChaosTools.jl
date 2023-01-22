@@ -5,6 +5,7 @@
 - All functionality related to attractors and basins of attraction (e.g., `AttractorMapper`, `basins_fractions`) has been moved to a new package Attractors.jl. Notice that functions such as `fixedpoints` and `periodicorbits` stay in ChaosTools.jl because they aren't only about attractors; they also find unstable fixed points and/or periodic orbits.
 - All functionality related to Poincare maps has been moved to DynamicalSystemsBase.jl
 - The state space samplers have been moved to StateSpaceSets.jl
+- All fractal dimension related functionality has been moved to a new package FractalDimensions.jl. This includes the functionality for finding linear regions and fitting them.
 
 ## Rare events
 - New dedicated folder structure and functionality targeting rare events in ChaosTools.jl. If it becomes extensive, it can be split off to a different package.

@@ -26,7 +26,7 @@ using ComplexityMeasures
 include("chaosdetection/lyapunovs/lyapunov.jl")
 include("chaosdetection/lyapunovs/lyapunov_from_data.jl")
 include("chaosdetection/lyapunovs/lyapunovspectrum.jl")
-# include("chaosdetection/lyapunovs/local_growth_rates.jl")
+include("chaosdetection/lyapunovs/local_growth_rates.jl")
 # include("chaosdetection/gali.jl")
 # include("chaosdetection/expansionentropy.jl")
 # include("chaosdetection/partially_predictable.jl")

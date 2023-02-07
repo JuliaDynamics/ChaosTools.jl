@@ -123,7 +123,7 @@ function expansionentropy_sample(system::DynamicalSystem, sampler, restraining;
         reinit!(t_integ, u, t_identity; t0 = t_integ.t0 + Ttr)
         for i ∈ 1:steps # Evolve the sample point for the duration [t0, t0+steps*Δt]
             step!(t_integ, Δt, true)
-            u = get_state(t_integ)
+            u = current_state(t_integ)
             !restraining(u) && break # Stop the integration if the orbit leaves the region.
             Df = get_deviations(t_integ)
             M[i] += maximalexpansion(Df)

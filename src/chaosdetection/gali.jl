@@ -17,7 +17,7 @@ a matrix with its columns being the deviation vectors (then
   iteration is terminated.
 * `Δt = 1` : Time-step between deviation vector normalizations. For continuous
   systems this is approximate.
-* `u0` : Initial state for the system. Defaults to `get_state(ds)`.
+* `u0` : Initial state for the system. Defaults to `current_state(ds)`.
 * `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
   `init` of DifferentialEquations.jl.
   See [`trajectory`](@ref) for examples. Only valid for continuous systems.
@@ -78,7 +78,7 @@ gali(ds::DS, tmax::Real, k::Int; kwargs...) =
     gali(ds, tmax, orthonormal(dimension(ds), k); kwargs...)
 
 function gali(ds::DS{IIP, S, D}, tmax::Real, Q0::AbstractMatrix;
-    threshold = 1e-12, Δt = 1, u0 = get_state(ds),
+    threshold = 1e-12, Δt = 1, u0 = current_state(ds),
     diffeq = NamedTuple(), kwargs...) where {IIP, S, D}
 
     if !isempty(kwargs)

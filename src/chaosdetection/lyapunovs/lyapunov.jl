@@ -5,15 +5,16 @@
     lyapunov(ds::DynamicalSystem, Τ; kwargs...) -> λ
 
 Calculate the maximum Lyapunov exponent `λ` using a method due to Benettin [^Benettin1976],
-which simply
-evolves two neighboring trajectories (one called "given" and one called "test")
+which simply evolves two neighboring trajectories (one called "given" and one called "test")
 while constantly rescaling the test one.
-`T`  denotes the total time of evolution (should be `Int` for discrete systems).
+
+`T`  denotes the total time of evolution (should be `Int` for discrete time systems).
 
 See also [`lyapunovspectrum`](@ref), [`local_growth_rates`](@ref).
 
-## Keyword Arguments
-* `u0 = get_state(ds)` : Initial condition.
+## Keyword arguments
+
+* `u0 = current_state(ds)` : Initial condition.
 * `Ttr = 0` : Extra "transient" time to evolve the trajectories before
   starting to measure the expontent. Should be `Int` for discrete systems.
 * `d0 = 1e-9` : Initial & rescaling distance between the two neighboring trajectories.
@@ -64,7 +65,7 @@ lyapunov(pinteg, T, Ttr, Δt, d0, ut, lt)
 [^Benettin1976]: G. Benettin *et al.*, Phys. Rev. A **14**, pp 2338 (1976)
 """
 function lyapunov(ds::DS, T;
-        u0 = get_state(ds),
+        u0 = current_state(ds),
         Ttr = 0,
         d0=1e-9,
         upper_threshold = 1e-6,

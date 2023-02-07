@@ -18,7 +18,7 @@ a pre-initialized matrix `Q0` whose columns are initial deviation vectors (then
 See also [`lyapunov`](@ref), [`local_growth_rates`](@ref).
 
 ## Keyword Arguments
-* `u0 = get_state(ds)` : State to start from.
+* `u0 = current_state(ds)` : State to start from.
 * `Ttr = 0` : Extra "transient" time to evolve the system before application of the
   algorithm. Should be `Int` for discrete systems. Both the system and the
   deviation vectors are evolved for this time.
@@ -66,7 +66,7 @@ lyapunovspectrum(ds::DS, N, k::Int = dimension(ds); kwargs...) =
 lyapunovspectrum(ds, N, orthonormal(dimension(ds), k); kwargs...)
 
 function lyapunovspectrum(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix;
-        Ttr::Real = 0, Δt::Real = 1, u0 = get_state(ds), show_progress = false,
+        Ttr::Real = 0, Δt::Real = 1, u0 = current_state(ds), show_progress = false,
         diffeq = NamedTuple(), kwargs...
     ) where {IIP, S, D}
 
@@ -127,7 +127,7 @@ lyapunovspectrum(ds::DiscreteDynamicalSystem{IIP, T, 1}, a...; kw...) where {IIP
 error("For discrete 1D systems, only method with state type = number is implemented.")
 
 function lyapunovspectrum(ds::DDS{false, T, 1}, N; Ttr = 0) where {T}
-    x = get_state(ds); f = ds.f
+    x = current_state(ds); f = ds.f
     p = ds.p; t0 = ds.t0
     if Ttr > 0
         for i in t0:(Ttr+t0)
@@ -169,7 +169,7 @@ lyapunovspectrum_convergence(ds::DS, N, k::Int = dimension(ds); kwargs...) =
 lyapunovspectrum_convergence(ds, N, orthonormal(dimension(ds), k); kwargs...)
 
 function lyapunovspectrum_convergence(ds::DS{IIP, S, D}, N, Q0::AbstractMatrix;
-        Ttr::Real = 0, Δt::Real = 1, u0 = get_state(ds), show_progress = false, diffeq...
+        Ttr::Real = 0, Δt::Real = 1, u0 = current_state(ds), show_progress = false, diffeq...
     ) where {IIP, S, D}
 
     @warn "This function is deprecated."
@@ -223,7 +223,7 @@ lyapunovspectrum_convergence(ds::DiscreteDynamicalSystem{IIP, T, 1}, a...; kw...
 error("For discrete 1D systems, only method with state type = number is implemented.")
 
 function lyapunovspectrum_convergence(ds::DDS{false, T, 1}, N; Ttr = 0) where {T}
-    x = get_state(ds); f = ds.f
+    x = current_state(ds); f = ds.f
     p = ds.p; t0 = ds.t0
     if Ttr > 0
         for i in t0:(Ttr+t0)

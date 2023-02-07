@@ -46,7 +46,7 @@ function local_growth_rates(ds::DynamicalSystem, points;
             g0 = norm(Q0)
             reinit!(pinteg, states)
             step!(pinteg, Δt, true)
-            g = norm(get_state(pinteg, 2) .- get_state(pinteg, 1))
+            g = norm(current_state(pinteg, 2) .- current_state(pinteg, 1))
             λlocal[i, j] = log(g/g0) / (pinteg.t - pinteg.t0)
         end
     end

@@ -3,9 +3,11 @@ Tools for the exploration of chaos and nonlinear dynamics
 """
 module ChaosTools
 
-using DelayEmbeddings
+using Reexport
+
+@reexport using DelayEmbeddings
 using ComplexityMeasures
-using DynamicalSystemsBase
+@reexport using DynamicalSystemsBase
 
 
 # include("orbitdiagrams/discrete_diagram.jl")

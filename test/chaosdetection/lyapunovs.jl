@@ -30,7 +30,6 @@ p0_cont = [0.1, -0.4]
     rule = IIP ? trivial_rule_iip : trivial_rule
     p0 = IDT ? p0_disc : p0_cont
     lyapunovs = IDT ? log.(p0) : p0
-    Jf = IIP ? trivial_jac_iip : trivial_jac
 
     ds = SystemType(rule, u0, p0)
 
@@ -39,10 +38,19 @@ p0_cont = [0.1, -0.4]
 
     @test isapprox(λmax, lyapunovs[1]; atol = 0, rtol = 0.05)
 
-    # tands = TangentDynamicalSystem(ds; J = Jf)
+    @testset "tangent IAD=$(IAD)" for IAD in (true, false)
+        if IAD
+            Jf = IIP ? trivial_jac_iip : trivial_jac
+            tands = TangentDynamicalSystem(ds; J = Jf)
+            spec = lyapunovspectrum(tands, 100; Δt = 1)
+        else
+            spec = lyapunovspectrum(ds, 100; Δt = 1)
+        end
 
-    # test_dynamical_system(tands, u0, p0; idt=IDT, iip=IIP, test_trajectory = false)
-    # tangent_space_test(tands, lyapunovs)
+        @test isapprox(spec[1], lyapunovs[1]; atol = 0, rtol = 1e-3)
+        @test isapprox(spec[2], lyapunovs[2]; atol = 0, rtol = 1e-3)
+    end
+
 end
 
 @testset "Negative λ, continuous" begin

@@ -35,7 +35,7 @@ p0_cont = [0.1, -0.4]
     ds = SystemType(rule, u0, p0)
 
     # Be careful here to not integrate too long because states become infinite
-    λmax = lyapunov(ds, 100; Δt = 1)
+    λmax = lyapunov(ds, 100; Δt = 1, d0 = 1e-3)
 
     @test isapprox(λmax, lyapunovs[1]; atol = 0, rtol = 0.05)
 

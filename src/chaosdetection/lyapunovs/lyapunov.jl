@@ -57,8 +57,7 @@ function lyapunov(ds::DynamicalSystem, T;
     # initialize parallel
     states = [u0, inittest(u0, d0)]
     pds = ParallelDynamicalSystem(ds, states)
-    λ = lyapunov(pds, T; d0, kwargs...)
-    return λ
+    return lyapunov(pds, T; d0, kwargs...)
 end
 
 inittest_default(D) = (state1, d0) -> state1 .+ d0/sqrt(D)

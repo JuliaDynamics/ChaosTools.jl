@@ -28,9 +28,19 @@ include("chaosdetection/lyapunovs/lyapunov_from_data.jl")
 include("chaosdetection/lyapunovs/lyapunovspectrum.jl")
 include("chaosdetection/lyapunovs/local_growth_rates.jl")
 include("chaosdetection/gali.jl")
-# include("chaosdetection/expansionentropy.jl")
+include("chaosdetection/expansionentropy.jl")
 # include("chaosdetection/partially_predictable.jl")
 # include("chaosdetection/testchaos01.jl")
+
+# Copy linear regression from FractalDimensions.jl
+import Statistics
+function ChaosTools.linreg(x::AbstractVector, y::AbstractVector)
+    mx = Statistics.mean(x)
+    my = Statistics.mean(y)
+    b = Statistics.covm(x, mx, y, my)/Statistics.varm(x, mx)
+    a = my - b*mx
+    return a, b
+end
 
 include("deprecations.jl")
 

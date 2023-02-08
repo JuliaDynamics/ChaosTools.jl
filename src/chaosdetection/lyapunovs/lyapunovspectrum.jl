@@ -49,7 +49,7 @@ yielding the lyapunov exponent spectrum.
     Datseris & Parlitz 2022, _Nonlinear Dynamics: A Concise Introduction Interlaced with Code_,
     [Springer Nature, Undergrad. Lect. Notes In Physics](https://doi.org/10.1007/978-3-030-91032-7)
 """
-function lyapunovspectrum(ds::AnalyticRuleSystem, N, k = dimension(ds); u0 = current_state(ds), kwargs...)
+function lyapunovspectrum(ds::CoreAnalyticSystem, N, k = dimension(ds); u0 = current_state(ds), kwargs...)
     tands = TangentDynamicalSystem(ds; k, u0)
     λ = lyapunovspectrum(tands, N; kwargs...)
     return λ

@@ -1,7 +1,5 @@
 using ChaosTools, Test
 
-println("\nTesting expansion entropy...")
-@testset "Expansion entropy" begin
 
 @testset "maximalexpansion" begin
 @test ChaosTools.maximalexpansion(

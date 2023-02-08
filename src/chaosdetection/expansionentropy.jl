@@ -62,7 +62,7 @@ function expansionentropy(ds::CoreAnalyticSystem, sampler, restraining; kwargs..
         times = times[1:i-1]
         means = means[1:i-1]
     end
-    slope = _linreg(times, means)[2]
+    slope = ChaosTools.linreg(times, means)[2]
     return times, means, slope
 end
 

@@ -1,15 +1,5 @@
 using ChaosTools, Test
 
-# Copy linear regression from FractalDimensions.jl
-import Statistics
-function _linreg(x::AbstractVector, y::AbstractVector)
-    mx = Statistics.mean(x)
-    my = Statistics.mean(y)
-    b = Statistics.covm(x, mx, y, my)/Statistics.varm(x, mx)
-    a = my - b*mx
-    return a, b
-end
-
 # Creation of a trivial system with one coordinate going to infinity
 # and the other to zero. Lyapunov exponents are known analytically
 trivial_rule(x, p, n) = SVector{2}(p[1]*x[1], p[2]*x[2])
@@ -81,7 +71,7 @@ end
         R = embed(x, 4, 1)
         E = lyapunov_from_data(R, ks,
         refstates = 1:1000, distance=di, ntype=meth)
-        λ = _linreg(ks, E)[2]
+        λ = ChaosTools.linreg(ks, E)[2]
         @test 0.3 < λ < 0.5
     end
 end

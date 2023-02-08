@@ -30,7 +30,7 @@ include("chaosdetection/lyapunovs/local_growth_rates.jl")
 include("chaosdetection/gali.jl")
 include("chaosdetection/expansionentropy.jl")
 # include("chaosdetection/partially_predictable.jl")
-# include("chaosdetection/testchaos01.jl")
+include("chaosdetection/testchaos01.jl")
 
 # Copy linear regression from FractalDimensions.jl
 import Statistics

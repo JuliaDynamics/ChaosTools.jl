@@ -54,7 +54,7 @@ non-chaotic systems (where ``H`` fluctuates strongly around 0).
 
 [^Hunt2015]: Hunt & Ott, ‘Defining Chaos’, [Chaos 25.9 (2015)](https://doi.org/10/gdtkcf)
 """
-function expansionentropy(ds::CoreAnalyticSystem, sampler, restraining; kwargs...)
+function expansionentropy(ds::CoreDynamicalSystem, sampler, restraining; kwargs...)
     times, means, stds = expansionentropy_batch(ds, sampler, restraining; kwargs...)
     if any(isnan, stds)
         i = findfirst(isnan, stds)

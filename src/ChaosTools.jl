@@ -34,7 +34,7 @@ include("chaosdetection/expansionentropy.jl")
 
 # Copy linear regression from FractalDimensions.jl
 import Statistics
-function ChaosTools.linreg(x::AbstractVector, y::AbstractVector)
+function linreg(x::AbstractVector, y::AbstractVector)
     mx = Statistics.mean(x)
     my = Statistics.mean(y)
     b = Statistics.covm(x, mx, y, my)/Statistics.varm(x, mx)

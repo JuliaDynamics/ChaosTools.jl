@@ -81,18 +81,18 @@ Run [`expansionentropy_sample`](@ref) `batch` times, and return
 
 Accepts the same arguments as `expansionentropy`.
 """
-function expansionentropy_batch(system, sampler, restraining; J = nothing, batches=100, steps=40, kwargs...)
+function expansionentropy_batch(ds, sampler, restraining; Δt = 1, J = nothing, batches=100, steps=40, kwargs...)
     means = fill(NaN, steps)
     stds = fill(NaN, steps)
     # eesamples[k, t] = The k-th sample of expansion entropy from t0 to (t0 + t)
     eesamples = zeros(batches, steps)
-    tands = TangentDynamicalSystem(system; J)
     times = initial_time(ds) .+ Δt .* (1:steps)
+    tands = TangentDynamicalSystem(ds; J)
 
     # Collect all the samples
     for k in 1:batches
         eesamples[k, :] = expansionentropy_sample(
-            tands, sampler, restraining; steps, kwargs...
+            tands, sampler, restraining; steps, Δt, kwargs...
         )
     end
 

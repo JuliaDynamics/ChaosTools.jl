@@ -1,6 +1,5 @@
 using ChaosTools
 using Test
-using OrdinaryDiffEq: Vern9
 
 @testset "standard map" begin
     @inbounds function standardmap_rule(x, par, n)
@@ -27,7 +26,12 @@ using OrdinaryDiffEq: Vern9
     end
 end
 
+DO_EXTENSIVE_TESTS = get(ENV, "CHAOSTOOLS_EXTENSIVE_TESTS", "false") == "true"
+
+if DO_EXTENSIVE_TESTS
 @testset "Henon-Helies" begin
+    using OrdinaryDiffEq: Vern9
+
     @inbounds function henonheiles_rule(du, u, p, t)
         du[1] = u[3]
         du[2] = u[4]
@@ -79,4 +83,5 @@ end
             @test g[end] ≤ 1e-12
         end
     end
+end
 end

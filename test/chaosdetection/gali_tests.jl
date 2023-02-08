@@ -21,7 +21,7 @@ using OrdinaryDiffEq: Vern9
         @test t[end] < 1000
     end
     @testset "regular" begin
-        g, t = ChaosTools.gali(ds, 1000, k; u0 =  [π, rand()])
+        g, t = ChaosTools.gali(ds, 1000, k; u0 =  [π, 0.01])
         @test t[end] == 1000
         @test g[end] > 1/1000
     end

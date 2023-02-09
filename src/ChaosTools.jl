@@ -46,6 +46,8 @@ include("chaosdetection/expansionentropy.jl")
 include("chaosdetection/partially_predictable.jl")
 include("chaosdetection/testchaos01.jl")
 
+include("eva/Base_function.jl")
+
 # Exports
 # TODO: It is probably better to put all exports here rather than in
 # each individual file. Or is it...? Not sure yet.

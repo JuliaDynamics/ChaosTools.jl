@@ -1,6 +1,6 @@
 using LinearAlgebra
 using Random: Xoshiro
-using Distributions: Exponential, Geometric
+using Distributions: Exponential, Geometric, UnivariateDistribution
 using Statistics: mean
 export predictability
 

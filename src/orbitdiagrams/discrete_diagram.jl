@@ -1,5 +1,4 @@
-export orbitdiagram
-export produce_orbitdiagram
+export orbitdiagram, produce_orbitdiagram
 import ProgressMeter
 
 """
@@ -33,19 +32,19 @@ See also [`produce_orbitdiagram`](@ref).
   or a vector of states, so that a specific state is used for each parameter.
 - `Ttr::Int = 10`: Each orbit is evolved for `Ttr` first before saving output.
 - `ulims = (-Inf, Inf)`: only record system states within `ulims`
-  (only valid if `i isa Int`). Iteration continues until
-  `n` states fall within `ulims`.
+  (only valid if `i isa Int`). Iteration continues until `n` states fall within `ulims`.
 - `show_progress = false`: Display a progress bar (counting the parameter values).
+- `periods = nothing`: Only valid if `ds isa StroboscopicMap`. If given, it must be a
+  a container with same layout as `pvalues`. Provides a value for the `period` for each
+  parameter value. Useful in case the orbit diagram is produced versus a driving frequency.
 """
 function orbitdiagram(
-        ds::DynamicalSystem, idxs, p_index, pvalues; kwargs...
+        ds::DynamicalSystem, idxs, p_index, pvalues; n::Int = 100, kwargs...
     )
 
     i = idxs isa Int ? idxs : SVector{length(idxs), Int}(idxs...)
-    !isnothing(ulims) && i isa SVector && error("If `i` is a vector, you can't use `ulims`.")
-
     output = initialize_od_output(current_state(ds), i, n, length(pvalues))
-    fill_orbitdiagram!(output, ds, i, pvalues, p_index; kwargs...)
+    fill_orbitdiagram!(output, ds, i, pvalues, p_index; n, kwargs...)
     return output
 end
 
@@ -57,18 +56,31 @@ function initialize_od_output(u::S, i::SVector, n, l) where {S}
     return [Vector{typeof(s)}(undef, n) for k in 1:l]
 end
 
-function fill_orbitdiagram!(output, ds, i, pvalues, p_index; show_progress = false,
+function fill_orbitdiagram!(output, ds::DynamicalSystem, i, pvalues, p_index;
         n::Int = 100, Ttr::Int = 10, u0 = nothing, Δt = 1, ulims = nothing,
+        show_progress = false, periods = nothing,
     )
+
+    # Sanity check
+    if u0 isa AbstractVector{<:AbstractVector}
+        length(u0) != length(pvalues) && error("Need length(u0) == length(pvalues)")
+    end
+
     progress = ProgressMeter.Progress(length(pvalues);
         desc = "Orbit diagram: ", dt = 1.0, enabled = show_progress
     )
 
-    for (j, p) in enumerate(pvalues)
+    for (j, pidx) in enumerate(eachindex(pvalues))
+        p = pvalues[pidx]
+        # reset to current parameter/state/Ttr
         set_parameter!(ds, p_index, p)
+        if !isnothing(periods) && ds isa StroboscopicMap
+            set_period!(ds, periods[pidx])
+        end
         st = orbitdiagram_starting_state(u0, j)
         reinit!(ds, st)
         Ttr > 0 && step!(ds, Ttr)
+        # collect `n` states
         if i isa AbstractVector || isnothing(ulims) # if-clause gets compiled away
             @inbounds for k in 1:n
                 step!(ds, Δt)
@@ -119,7 +131,7 @@ See [^DatserisParlitz2022] chapter 4 for a discussion on why making a map is use
     Datseris & Parlitz 2022, _Nonlinear Dynamics: A Concise Introduction Interlaced with Code_,
     [Springer Nature, Undergrad. Lect. Notes In Physics](https://doi.org/10.1007/978-3-030-91032-7)
 """
-function produce_orbitdiagram(ds::CoupledODEs, args...; kwargs...)
+function produce_orbitdiagram(ds::CoupledODEs, P, args...; kwargs...)
     if P isa Union{Tuple, AbstractVector}
         map = PoincareMap(ds, P)
     elseif P isa Real

@@ -32,6 +32,11 @@ ENV["JULIA_DEBUG"] = "Documenter"
 
 CHAOSTOOLS_PAGES = [
     "index.md",
+    "chaos_detection.md",
+    "lyapunovs.md",
+    "nlts.md",
+    "orbitdiagram.md",
+    "periodicity.md",
 ]
 include("style.jl")
 
@@ -46,7 +51,7 @@ makedocs(
     ),
     sitename = "ChaosTools.jl",
     authors = "George Datseris",
-    pages = FRACTALDIMENSION_PAGES,
+    pages = CHAOSTOOLS_PAGES,
     doctest = false,
     draft = false,
 )

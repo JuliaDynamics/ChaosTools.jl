@@ -112,13 +112,13 @@ function transit_return_times(exits, entries)
         else
             transits[j] = view(ex, 2:exlen) .- view(en, 1:(enlen - 1))
         end
-        # transits[j] = view(ex, x) .- en
     end
     return transits, returns
 end
 
 """
     mean_return_times(ds::DynamicalSystem, u₀, εs, T; kwargs...) → τ, c
+
 Return the mean return times `τ`, as well as the amount of returns `c`, for
 subsets of the state space of `ds` defined by `u₀, εs`.
 The `ds` is evolved for a maximum of `T` time.

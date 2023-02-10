@@ -1,4 +1,5 @@
 using ChaosTools, Test
+import Statistics
 
 # Creation of a trivial system with one coordinate going to infinity
 # and the other to zero. Lyapunov exponents are known analytically

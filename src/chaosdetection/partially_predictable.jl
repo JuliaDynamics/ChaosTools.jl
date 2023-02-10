@@ -77,7 +77,8 @@ function predictability(ds::CoreDynamicalSystem;
         ν_threshold = 0.5, C_threshold = 0.5,
     )
 
-    error("this function has not yet been updated to DynamicalSystems.jl v3.0")
+    error("This function has not yet been updated to DynamicalSystems.jl v3.0.
+    Please consider a Pull Request :) (very easy!)")
 
     rng = Xoshiro()
     λ_max < 0 && return :REG, 1.0, 1.0

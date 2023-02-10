@@ -16,7 +16,7 @@ using ComplexityMeasures
 
 include("timeevolution/orbitdiagram.jl")
 
-# include("dimreduction/broomhead_king.jl")
+include("dimreduction/broomhead_king.jl")
 # include("dimreduction/dyca.jl")
 
 # include("stablemotion/periodic_points.jl")

@@ -19,9 +19,10 @@ include("timeevolution/orbitdiagram.jl")
 include("dimreduction/broomhead_king.jl")
 # include("dimreduction/dyca.jl")
 
-# include("stablemotion/periodic_points.jl")
+include("stability/fixedpoints.jl")
+include("periodicity/period.jl")
+# include("periodicity/periodic_points.jl")
 # include("stablemotion/period.jl")
-include("stablemotion/fixedpoints.jl")
 # include("stablemotion/yin.jl")
 
 # include("rareevents/mean_return_times/mrt_api.jl")

@@ -21,9 +21,8 @@ include("dimreduction/broomhead_king.jl")
 
 include("stability/fixedpoints.jl")
 include("periodicity/period.jl")
-# include("periodicity/periodic_points.jl")
-# include("stablemotion/period.jl")
-# include("stablemotion/yin.jl")
+include("periodicity/yin.jl")
+include("periodicity/periodicorbits.jl")
 
 # include("rareevents/mean_return_times/mrt_api.jl")
 

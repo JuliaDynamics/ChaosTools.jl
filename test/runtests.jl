@@ -23,7 +23,7 @@ include("chaosdetection/01test.jl")
 testfile("chaosdetection/expansionentropy.jl")
 
 include("stability/fixedpoints.jl")
-# include("period_return/periodicity_tests.jl")
+include("periodicity/periodicorbits.jl")
 # include("period_return/period_tests.jl")
 # include("period_return/yin_tests.jl")
 

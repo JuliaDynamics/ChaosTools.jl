@@ -1,4 +1,4 @@
-using StatsBase
+using Statistics: mean
 import DSP
 import DSP: Periodograms
 import LombScargle
@@ -39,8 +39,8 @@ These methods are faster, but some are error-prone.
   signal). The keyword `ϵ = 0.2` (`\\epsilon`) means that `1-ϵ` counts as "1" for the AC.
 
 - `:yin`: The YIN algorithm. An autocorrelation-based method to estimate the fundamental
-period of the signal. See the original paper [^CheveigneYIN2002] or the implementation
-[`yin`](@ref).
+  period of the signal. See the original paper [^CheveigneYIN2002] or the implementation
+  [`yin`](@ref).
 
 [^CheveigneYIN2002]: De Cheveigné, A., & Kawahara, H. (2002). YIN, a fundamental frequency estimator for
 speech and music. The Journal of the Acoustical Society of America, 111(4), 1917-1930.

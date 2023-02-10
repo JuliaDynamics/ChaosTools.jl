@@ -1,15 +1,13 @@
 export yin
 
 """
-    yin(sig::Vector, sr::Int; w_len::Int = 512, f_step::Int = 256, f0_min = 100, f0_max = 500,
-        harmonic_threshold = 0.1, 
-        difference_function::Function = difference_function_original, kwargs...) -> F0s, frame_times
+    yin(sig::Vector, sr::Int; kwargs...) -> F0s, frame_times
 
-Estimates the fundamental frequency (F0) of the signal `sig` using the YIN algorithm [^1].
-The signal `sig` is a vector of points uniformly sampled at a rate `sr`.  
-
+Estimate the fundamental frequency (F0) of the signal `sig` using the YIN algorithm [^1].
+The signal `sig` is a vector of points uniformly sampled at a rate `sr`.
 
 ## Keyword arguments
+
 * `w_len`: size of the analysis window [samples == number of points]
 * `f_step`: size of the lag between two consecutive frames [samples == number of points]
 * `f0_min`: Minimum fundamental frequency that can be detected [linear frequency]
@@ -29,7 +27,7 @@ fundamental period `τ0` of that frame.
 
 More precisely, the algorithm first computes the cumulative mean normalized difference
 function (MNDF) between two windows of a frame for several candidate periods `τ` ranging
-from `τ_min=sr/f0_max` to `τ_max=sr/f0_min`. The MNDF is defined as 
+from `τ_min=sr/f0_max` to `τ_max=sr/f0_min`. The MNDF is defined as
 ```math
 d_t^\\prime(\\tau) = \\begin{cases}
         1 & \\text{if} ~ \\tau=0 \\\\
@@ -58,15 +56,17 @@ is in Hertz.
 [^CheveigneYIN2002]: De Cheveigné, A., & Kawahara, H. (2002). YIN, a fundamental frequency estimator for
 speech and music. The Journal of the Acoustical Society of America, 111(4), 1917-1930.
 """
-function yin(sig::Vector, sr::Int; w_len::Int = 512, f_step::Int = 256, f0_min = 100, 
-    f0_max = 500, harmonic_threshold = 0.1, 
+function yin(sig::Vector, sr::Int; w_len::Int = 512, f_step::Int = 256, f0_min = 100,
+    f0_max = 500, harmonic_threshold = 0.1,
     difference_function::Function = difference_function_original, kwargs...)
+
+    error("`yin` is currently not tested. Please contribute tests via a PR.")
 
     τ_min = floor(Int64, sr / f0_max)
     τ_max = floor(Int64, sr / f0_min)
 
     frame_times = range(1, length(sig) - w_len - τ_max, step=f_step)  # time values for start of  each analysis window
-    # times = frame_times ./ eltype(sig)(sr)  
+    # times = frame_times ./ eltype(sig)(sr)
 
     F0s = zeros(Float64, length(frame_times))
 
@@ -78,7 +78,6 @@ function yin(sig::Vector, sr::Int; w_len::Int = 512, f_step::Int = 256, f0_min =
         idx_localminimum = absolute_threshold(y_refined, τ_min, τ_max, harmonic_threshold)
         τ0 = τ_refined[idx_localminimum]
         F0s[i] = sr / τ0
-
     end
     return  F0s, frame_times
 end
@@ -95,7 +94,7 @@ function difference_function_original(x, W, τmax)
     df = zeros(eltype(x), τmax+1) #df corresponds to τ values from 0 to τ_max
     for τ in 1:τmax
         for j in 1:W
-            df[τ+1] += (x[j] - x[j + τ]) ^ 2 
+            df[τ+1] += (x[j] - x[j + τ]) ^ 2
         end
     end
     return df
@@ -142,21 +141,21 @@ function absolute_threshold(localminima, τ_min, τ_max, harmonic_threshold=0.1)
             return idx
         end
     end
-    return argmin(localminima)  
+    return argmin(localminima)
 end
 
 """
 Calculates the parabolic (quadratic) interpolation for all the indixes of `y` given in
 idxs_interpolate, and returns the coordinates of the respective parabola's minimum.
-Assumes space all adjacent x values of `y` is 1. 
+Assumes space all adjacent x values of `y` is 1.
 """
 function parabolic_interpolation(y, idxs_interpolate)
-    #separate x into triplets [x1,x2,x3]. 
+    #separate x into triplets [x1,x2,x3].
     x1 = @view y[idxs_interpolate .- 1]
     x2 = @view y[idxs_interpolate]
     x3 = @view y[idxs_interpolate .+ 1]
     #calculate the vertix coordinates (xv, yv) for each triplet
-    a = @. (x1 - 2x2 + x3)/2 
+    a = @. (x1 - 2x2 + x3)/2
     b = @. (x3 - x1) / 2
     xv = @. -b/2a
     yv = @. x2 - (b^2 /4a)

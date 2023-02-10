@@ -4,8 +4,9 @@ export CrossingLinearIntersection, CrossingAccurateInterpolation
 
 """
     exit_entry_times(ds::DynamicalSystem, u₀, εs, T; kwargs...) → exits, entries
+
 Collect exit and entry times for balls or boxes centered at `u₀` with radii `εs`,
-in the state space of the given dynamical system (discrete or continuous).
+in the state space of the given dynamical system.
 Return the exit and (re-)entry return times to the set(s), where each of these is a vector
 containing all collected times for the respective `ε`-radius set, for `ε ∈ εs`.
 The dynamical system is evolved up to `T` total time.
@@ -17,6 +18,7 @@ The keyword `show_progress` displays a progress bar. It is `false` for discrete 
 `true` for continuous systems by default.
 
 ## Description
+
 Transit and return time statistics are important for the transport properties of dynamical
 systems[^Meiss1997] and can be connected with fractal dimensions of chaotic sets[^Boev2014].
 
@@ -25,6 +27,7 @@ which are centered at the state `u₀`. **The system evolution always starts fro
 and the initial state of `ds` is irrelevant. `εs` is always a `Vector`.
 
 ### Specification of sets to return to
+
 If each entry of `εs` is a real number, then sets around `u₀` are nested hyper-spheres
 of radius `ε ∈ εs`. The sets can also be hyper-rectangles (boxes), if each entry of `εs`
 is a vector itself.
@@ -36,14 +39,15 @@ a single argument `sets` will be given instead of `u₀, εs`.
 The reason to input multiple `εs` at once is purely for performance optimization
 (much faster than doing each `ε` individually).
 
-### Discrete systems
+### Discrete time systems
 
 For discrete systems, exit time is recorded immediatelly after exitting of the set, and
 re-entry is recorded immediatelly on re-entry. This means that if an orbit needs
 1 step to leave the set and then it re-enters immediatelly on the next step,
 the return time is 1.
 
-### Continuous systems
+### Continuous time systems
+
 For continuous systems, a steppable integrator supporting interpolation is used.
 The way to specify how to estimate exit and entry times is via the keyword `crossing_method`
 whose values can be:
@@ -79,6 +83,7 @@ at an average integrator step.
 """
 function exit_entry_times(ds::DynamicalSystem, u0, εs, T; diffeq = NamedTuple(), kwargs...)
     check_εs_sorting(εs, length(u0))
+    error("Not yet updated to DynamicalSystems.jl v3.0!")
     # TODO: Improve the algorithm so that starting within u0 is not mandatory.
     # Useful because `u0` can often be a fixed point.
     # The logic that needs to change is first `transit_return_times` and then

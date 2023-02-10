@@ -3,8 +3,10 @@
 #####################################################################################
 import LinearAlgebra
 export broomhead_king
+
 """
     broomhead_king(s::AbstractVector, d::Int) -> U, S, Vtr
+
 Return the Broomhead-King coordinates of a timeseries `s`
 by performing `svd` on high-dimensional embedding if `s` with dimension `d` with
 minimum delay.

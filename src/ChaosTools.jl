@@ -14,8 +14,7 @@ using ComplexityMeasures
 @reexport using DynamicalSystemsBase
 
 
-include("orbitdiagrams/discrete_diagram.jl")
-# include("orbitdiagrams/produce_orbitdiagram.jl")
+include("timeevolution/orbitdiagram.jl")
 
 # include("dimreduction/broomhead_king.jl")
 # include("dimreduction/dyca.jl")

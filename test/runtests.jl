@@ -14,8 +14,7 @@ testfile(file, testname=defaultname(file)) = @testset "$testname" begin; include
 
 @testset "ChaosTools" begin
 
-# include("orbitdiagrams/orbitdiagram_tests.jl")
-# include("orbitdiagrams/poincare_tests.jl")
+include("timeevolution/orbitdiagram.jl")
 
 testfile("chaosdetection/lyapunovs.jl")
 testfile("chaosdetection/gali.jl")
@@ -29,7 +28,8 @@ tesfile("chaosdetection/expansionentropy.jl")
 
 # testfile("rareevents/return_time_tests.jl", "Return times")
 
-# include("nlts_tests.jl")
-# include("dyca_tests.jl")
+testfile("dimreduction/broomhead_king.jl")
+# TODO: simplify and make faster this:
+# testfile("dimreduction/dyca.jl")
 
 end

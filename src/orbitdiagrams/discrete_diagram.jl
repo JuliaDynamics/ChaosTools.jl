@@ -1,5 +1,6 @@
 export orbitdiagram
 export produce_orbitdiagram
+import ProgressMeter
 
 """
     orbitdiagram(ds::DynamicalSystem, i, p_index, pvalues; kwargs...) → od
@@ -19,21 +20,22 @@ Else `od` is a vector of vectors of vectors.
 Each entry od `od` are the points at each parameter value,
 so that `length(od) == length(pvalues)`.
 
+See also [`produce_orbitdiagram`](@ref).
+
 ## Keyword arguments
 
-* `n::Int = 100`: Amount of points to save for each parameter value.
-* `Δt = 1`: Stepping time between saving points.
-* `u0 = nothing`: Specify an initial state. If `nothing`, the previous state after each
+- `n::Int = 100`: Amount of points to save for each parameter value.
+- `Δt = 1`: Stepping time between saving points.
+- `u0 = nothing`: Specify an initial state. If `nothing`, the previous state after each
   parameter is used to seed the new initial condition at the new parameter
   (with the very first state being the system's state). This makes convergence to the
   attractor faster, necessitating smaller `Ttr`. Otherwise `u0` can be a standard state,
   or a vector of states, so that a specific state is used for each parameter.
-* `Ttr::Int = 10`: Each orbit is evolved for `Ttr` first before saving output.
-* `ulims = (-Inf, Inf)`: only record system states within `ulims`
+- `Ttr::Int = 10`: Each orbit is evolved for `Ttr` first before saving output.
+- `ulims = (-Inf, Inf)`: only record system states within `ulims`
   (only valid if `i isa Int`). Iteration continues until
   `n` states fall within `ulims`.
-
-See also [`poincaresos`](@ref) and [`produce_orbitdiagram`](@ref).
+- `show_progress = false`: Display a progress bar (counting the parameter values).
 """
 function orbitdiagram(
         ds::DynamicalSystem, idxs, p_index, pvalues; kwargs...
@@ -55,9 +57,13 @@ function initialize_od_output(u::S, i::SVector, n, l) where {S}
     return [Vector{typeof(s)}(undef, n) for k in 1:l]
 end
 
-function fill_orbitdiagram!(output, ds, i, pvalues, p_index;
+function fill_orbitdiagram!(output, ds, i, pvalues, p_index; show_progress = false,
         n::Int = 100, Ttr::Int = 10, u0 = nothing, Δt = 1, ulims = nothing,
     )
+    progress = ProgressMeter.Progress(length(pvalues);
+        desc = "Orbit diagram: ", dt = 1.0, enabled = show_progress
+    )
+
     for (j, p) in enumerate(pvalues)
         set_parameter!(ds, p_index, p)
         st = orbitdiagram_starting_state(u0, j)
@@ -79,6 +85,7 @@ function fill_orbitdiagram!(output, ds, i, pvalues, p_index;
                 end
             end
         end
+        ProgressMeter.update!(progress, j)
     end
     return output
 end

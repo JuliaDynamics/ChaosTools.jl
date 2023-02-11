@@ -17,14 +17,14 @@ using ComplexityMeasures
 include("timeevolution/orbitdiagram.jl")
 
 include("dimreduction/broomhead_king.jl")
-# include("dimreduction/dyca.jl")
+include("dimreduction/dyca.jl")
 
 include("stability/fixedpoints.jl")
 include("periodicity/period.jl")
 include("periodicity/yin.jl")
 include("periodicity/periodicorbits.jl")
 
-# include("rareevents/mean_return_times/mrt_api.jl")
+include("rareevents/mean_return_times/mrt_api.jl")
 
 include("chaosdetection/lyapunovs/lyapunov.jl")
 include("chaosdetection/lyapunovs/lyapunov_from_data.jl")

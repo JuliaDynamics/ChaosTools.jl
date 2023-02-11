@@ -32,11 +32,12 @@ ENV["JULIA_DEBUG"] = "Documenter"
 
 CHAOSTOOLS_PAGES = [
     "index.md",
+    "orbitdiagram.md",
     "lyapunovs.md",
     "chaos_detection.md",
     "dimreduction.md",
-    "orbitdiagram.md",
     "periodicity.md",
+    "rareevents.md",
 ]
 include("style.jl")
 

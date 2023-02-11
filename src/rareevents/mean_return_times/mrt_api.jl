@@ -83,7 +83,7 @@ at an average integrator step.
 """
 function exit_entry_times(ds::DynamicalSystem, u0, εs, T; diffeq = NamedTuple(), kwargs...)
     check_εs_sorting(εs, length(u0))
-    error("Not yet updated to DynamicalSystems.jl v3.0!")
+    error("Not yet updated to DynamicalSystems.jl v3.0 but easy to do (PRs welcomed)!")
     # TODO: Improve the algorithm so that starting within u0 is not mandatory.
     # Useful because `u0` can often be a fixed point.
     # The logic that needs to change is first `transit_return_times` and then
@@ -156,6 +156,6 @@ function first_return_times(ds::DynamicalSystem, u0, εs, T; diffeq = NamedTuple
     first_return_times(integ, u0, εs, T; kwargs...)
 end
 
-include("mrt_distances_utils.jl")
-include("mrt_discrete.jl")
-include("mrt_continuous.jl")
+# include("mrt_distances_utils.jl")
+# include("mrt_discrete.jl")
+# include("mrt_continuous.jl")

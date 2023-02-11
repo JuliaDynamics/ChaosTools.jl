@@ -49,8 +49,8 @@ yielding the lyapunov exponent spectrum.
     Datseris & Parlitz 2022, _Nonlinear Dynamics: A Concise Introduction Interlaced with Code_,
     [Springer Nature, Undergrad. Lect. Notes In Physics](https://doi.org/10.1007/978-3-030-91032-7)
 """
-function lyapunovspectrum(ds::CoreDynamicalSystem, N, k = dimension(ds); u0 = current_state(ds), kwargs...)
-    tands = TangentDynamicalSystem(ds; k, u0)
+function lyapunovspectrum(ds::CoreDynamicalSystem, N, k = dimension(ds); kwargs...)
+    tands = TangentDynamicalSystem(ds; k)
     λ = lyapunovspectrum(tands, N; kwargs...)
     return λ
 end
@@ -64,9 +64,11 @@ calling [`reinit!`](@ref) to `tands`.
 
 Also use this method if you have a hand-coded Jacobian to pass when creating `tands`.
 """
-function lyapunovspectrum(tands::TangentDynamicalSystem, N;
-        Δt::Real = 1, Ttr::Real = 0, show_progress = false
+function lyapunovspectrum(tands::TangentDynamicalSystem, N::Int;
+        Δt::Real = 1, Ttr::Real = 0, show_progress = false,
+        u0 = current_state(tands),
     )
+    reinit!(tands, u0)
     progress = ProgressMeter.Progress(N;
         desc = "Lyapunov Spectrum: ", dt = 1.0, enabled = show_progress
     )

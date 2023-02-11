@@ -1,6 +1,5 @@
 using ChaosTools, Test, Statistics
 using ChaosTools.DynamicalSystemsBase
-using ChaosTools.DelayEmbeddings
 
 println("\n Return time tests...")
 

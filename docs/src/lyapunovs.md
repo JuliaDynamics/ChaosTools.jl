@@ -1,59 +1,5 @@
 # Lyapunov Exponents
-Lyapunov exponents measure exponential rates of separation of nearby trajectories in the flow of a dynamical system. The [Wikipedia](https://en.wikipedia.org/wiki/Lyapunov_exponent) and the [Scholarpedia](http://www.scholarpedia.org/article/Lyapunov_exponent) entries have a lot of valuable information about the history and usage of these quantities.
-
-!!! info "Performance depends on the solver"
-    Notice that the performance of functions that use `ContinuousDynamicalSystem`s depend crucially on the chosen solver. Please see the documentation page on [Choosing a solver](@ref) for an in-depth discussion.
-
-## Concept of the Lyapunov exponent
-Before providing the documentation of the offered functionality, it is good to demonstrate exactly *what* are the Lyapunov exponents.
-
-For chaotic systems, nearby trajectories separate in time exponentially fast (while for stable systems they come close exponentially fast). This happens at least for small separations, and is demonstrated in the following sketch:
-
-![](lyapunov.png).
-
-In this sketch ``\lambda`` is the maximum Lyapunov exponent (and in general a system has as many exponents as its dimensionality).
-
-Let's demonstrate these concepts using a real system, the Hénon map:
-```math
-\begin{aligned}
-x_{n+1} &= 1 - ax_n^2 + y_n \\
-y_{n+1} &= bx_n
-\end{aligned}
-```
-Let's get a trajectory
-```@example MAIN
-using DynamicalSystems, CairoMakie
-henon = Systems.henon()
-tr1 = trajectory(henon, 100)
-summary(tr1)
-```
-and create one more trajectory that starts very close to the first one
-```@example MAIN
-u2 = get_state(henon) + (1e-9 * ones(dimension(henon)))
-tr2 = trajectory(henon, 100, u2)
-summary(tr2)
-```
-
-We now want to demonstrate how the distance between these two trajectories increases with time:
-```@example MAIN
-using LinearAlgebra: norm
-
-fig = Figure()
-
-# Plot the x-coordinate of the two trajectories:
-ax1 = Axis(fig[1,1]; ylabel = "x")
-lines!(ax1, tr1[:, 1]; color = Cycled(1))
-lines!(ax1, tr2[:, 1]; color = (Main.COLORS[2], 0.5))
-hidexdecorations!(ax1; grid = false)
-
-# Plot their distance in a semilog plot:
-ax2 = Axis(fig[2,1]; ylabel = "d", xlabel = "n", yscale = log)
-d = [norm(tr1[i] - tr2[i]) for i in 1:length(tr2)]
-lines!(ax2, d; color = Cycled(3))
-fig
-```
-
-The *initial* slope of the `d` vs `n` plot (before the curve saturates) is approximately the maximum Lyapunov exponent!
+Lyapunov exponents measure exponential rates of separation of nearby trajectories in the flow of a dynamical system. The concept of these exponents is best explained in Chapter 3 of [Nonlinear Dynamics](https://link.springer.com/book/10.1007/978-3-030-91032-7), Datseris & Parlitz, Springer 2022. The explanations of the chapter directly utilize the code of the functions in this page.
 
 ## Lyapunov Spectrum
 
@@ -62,41 +8,80 @@ exponents of a system:
 ```@docs
 lyapunovspectrum
 ```
----
-As you can see, the documentation string is detailed and self-contained. For example,
-the Lyapunov spectrum of the [folded towel map](http://www.scholarpedia.org/article/Hyperchaos)
-is calculated as:
-```@example MAIN
-using DynamicalSystems
 
-ds = Systems.towel()
-λλ = lyapunovspectrum(ds, 10000)
-```
-Similarly, for a continuous system, e.g. the Lorenz system, you would do:
+### Example
+For example, the Lyapunov spectrum of the [folded towel map](http://www.scholarpedia.org/article/Hyperchaos) is calculated as:
+
 ```@example MAIN
-lor = Systems.lorenz(ρ = 32.0) #this is not the original parameter!
-λλ = lyapunovspectrum(lor, 10000, Δt = 0.1)
+using ChaosTools
+function towel_rule(x, p, n)
+    @inbounds x1, x2, x3 = x[1], x[2], x[3]
+    SVector( 3.8*x1*(1-x1) - 0.05*(x2+0.35)*(1-2*x3),
+    0.1*( (x2+0.35)*(1-2*x3) - 1 )*(1 - 1.9*x1),
+    3.78*x3*(1-x3)+0.2*x2 )
+end
+function towel_jacob(x, p, n)
+    row1 = SVector(3.8*(1 - 2x[1]), -0.05*(1-2x[3]), 0.1*(x[2] + 0.35))
+    row2 = SVector(-0.19((x[2] + 0.35)*(1-2x[3]) - 1),  0.1*(1-2x[3])*(1-1.9x[1]),  -0.2*(x[2] + 0.35)*(1-1.9x[1]))
+    row3 = SVector(0.0,  0.2,  3.78(1-2x[3]))
+    return vcat(row1', row2', row3')
+end
+
+ds = DeterministicIteratedMap(towel_rule, [0.085, -0.121, 0.075], nothing)
+tands = TangentDynamicalSystem(ds; J = towel_jacob)
+
+λλ = lyapunovspectrum(tands, 10000)
+```
+
+`lyapunovspectrum` also works for continuous time systems and will auto-generate a Jacobian function if one is not give. For example,
+
+```@example MAIN
+function lorenz_rule(u, p, t)
+    σ = p[1]; ρ = p[2]; β = p[3]
+    du1 = σ*(u[2]-u[1])
+    du2 = u[1]*(ρ-u[3]) - u[2]
+    du3 = u[1]*u[2] - β*u[3]
+    return SVector{3}(du1, du2, du3)
+end
+
+lor = CoupledODEs(lorenz_rule, fill(10.0, 3), [10, 32, 8/3])
+λλ = lyapunovspectrum(lor, 10000; Δt = 0.1)
 ```
 
 `lyapunovspectrum` is also very fast:
 ```julia
 using BenchmarkTools
-ds = Systems.towel()
-@btime lyapunovspectrum($ds, 2000);
+ds = DeterministicIteratedMap(towel_rule, [0.085, -0.121, 0.075], nothing)
+tands = TangentDynamicalSystem(ds; J = towel_jacob)
+
+@btime lyapunovspectrum($tands, 10000)
 ```
 ```
-  237.226 μs (45 allocations: 4.27 KiB)
+  966.500 μs (10 allocations: 576 bytes) # on my laptop
 ```
 
-Here is an example of plotting the exponents of the Hénon map for various parameters:
+Here is an example of using [`reinit!`](@ref) to fastly iterate over different parameter values, and parallelize via `Threads`, to compute the exponents over a given parameter range.
+
+
 ```@example MAIN
-using DynamicalSystems, CairoMakie
+using ChaosTools, GLMakie
 
-he = Systems.henon()
-as = 0.8:0.005:1.225; λs = zeros(length(as), 2)
-for (i, a) in enumerate(as)
-    set_parameter!(he, 1, a)
-    λs[i, :] .= lyapunovspectrum(he, 10000; Ttr = 500)
+henon_rule(x, p, n) = SVector{2}(1.0 - p[1]*x[1]^2 + x[2], p[2]*x[1])
+henon_jacob(x, p, n) = SMatrix{2,2}(-2*p[1]*x[1], p[2], 1.0, 0.0)
+ds = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3])
+tands = TangentDynamicalSystem(ds; J = henon_jacob)
+
+as = 0.8:0.005:1.225;
+λs = zeros(length(as), 2)
+
+# Since `DynamicalSystem`s are mutable, we need to copy to parallelize
+systems = [deepcopy(tands) for _ in 1:Threads.nthreads()-1]
+pushfirst!(systems, tands)
+
+Threads.@threads for i in eachindex(as)
+    system = systems[Threads.threadid()]
+    set_parameter!(system, 1, as[i])
+    λs[i, :] .= lyapunovspectrum(system, 10000; Ttr = 500)
 end
 
 fig = Figure()
@@ -107,39 +92,36 @@ end
 fig
 ```
 
-
-
 ## Maximum Lyapunov Exponent
+
 It is possible to get only the maximum Lyapunov exponent simply by giving
-`1` as the third argument of [`lyapunovspectrum`](@ref). However, there is a second algorithm that allows you to do the same thing, which is offered by the function `lyapunov`:
+`1` as the third argument of [`lyapunovspectrum`](@ref). However, there is a second algorithm that calculates the maximum exponent:
+
 ```@docs
 lyapunov
 ```
----
+
 For example:
 ```@example MAIN
-using DynamicalSystems
-henon = Systems.henon()
-λ = lyapunov(henon, 10000, d0 = 1e-7, upper_threshold = 1e-4, Ttr = 100)
+using ChaosTools
+henon_rule(x, p, n) = SVector{2}(1.0 - p[1]*x[1]^2 + x[2], p[2]*x[1])
+henon = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3])
+λ = lyapunov(henon, 10000; d0 = 1e-7, d0_upper = 1e-4, Ttr = 100)
 ```
 
-The same is done for continuous systems:
-```@example MAIN
-lor = Systems.lorenz(ρ = 32)
-λ = lyapunov(lor, 10000.0, Δt = 10.0, Ttr = 100.0)
-```
 
 ## Local Growth Rates
 ```@docs
 local_growth_rates
 ```
+
 Here is a simple example using the Henon map
 ```@example MAIN
-using DynamicalSystems
+using ChaosTools
 using Statistics, CairoMakie
 
 ds = Systems.henon()
-points = trajectory(ds, 2000; Ttr = 100)
+points = trajectory(ds, 2000; Ttr = 100)[1]
 
 λlocal = local_growth_rates(ds, points; Δt = 1)
 
@@ -153,16 +135,17 @@ fig
 
 
 ## Lyapunov exponent from data
+
 ```@docs
 lyapunov_from_data
 ```
 
 ### Example
 ```@example MAIN
-using DynamicalSystems, CairoMakie
+using ChaosTools, CairoMakie
 
 ds = Systems.henon()
-data = trajectory(ds, 100000)
+data = trajectory(ds, 10_000)[1]
 x = data[:, 1] # fake measurements for the win!
 
 ks = 1:20
@@ -178,7 +161,7 @@ for (i, di) in enumerate([Euclidean(), Cityblock()])
         E = lyapunov_from_data(R, ks;
         refstates = ℜ, distance = di, ntype = ntype)
         Δt = 1
-        λ = linear_region(ks.*Δt, E)[2]
+        λ = ChaosTools.linreg(ks.*Δt, E)[2]
         # gives the linear slope, i.e. the Lyapunov exponent
         lines!(ax, ks .- 1, E .- E[1], label = "D=$D, λ=$(round(λ, digits = 3))")
     end
@@ -191,12 +174,20 @@ fig
 The process for continuous systems works identically with discrete, but one must be
 a bit more thoughtful when choosing parameters. The following example helps the users get familiar with the process:
 ```@example MAIN
-using DynamicalSystems, CairoMakie
+using ChaosTools, CairoMakie
 
-ds = Systems.lorenz()
+function lorenz_rule(u, p, t)
+    σ = p[1]; ρ = p[2]; β = p[3]
+    du1 = σ*(u[2]-u[1])
+    du2 = u[1]*(ρ-u[3]) - u[2]
+    du3 = u[1]*u[2] - β*u[3]
+    return SVector{3}(du1, du2, du3)
+end
+
+ds = CoupledODEs(lorenz_rule, fill(10.0, 3), [10, 32, 8/3])
 # create a timeseries of 1 dimension
 Δt = 0.05
-x = trajectory(ds, 1000.0; Δt)[:, 1]
+x = trajectory(ds, 1000.0; Ttr = 10, Δt)[1][:, 1]
 ```
 
 We know that we have to use much bigger `ks` than `1:20`, because this is a continuous case! (See reference given in `lyapunov_from_dataspectrum`)
@@ -207,8 +198,9 @@ and in fact it is even better to not increment the `ks` one by one but instead d
 ```@example MAIN
 ks2 = 0:4:200
 ```
-Now we plot some example computations
+Now we plot some example computations using delay embeddings to "reconstruct" the chaotic attractor
 ```@example MAIN
+using DelayEmbeddings: embed
 fig = Figure()
 ax = Axis(fig[1,1]; xlabel="k (0.05×t)", ylabel="E - E(0)")
 ntype = NeighborNumber(5) #5 nearest neighbors of each state
@@ -217,11 +209,11 @@ for d in [4, 8], τ in [7, 15]
     r = embed(x, d, τ)
 
     # E1 = lyapunov_from_data(r, ks1; ntype)
-    # λ1 = linear_region(ks1 .* Δt, E1)[2]
+    # λ1 = ChaosTools.linreg(ks1 .* Δt, E1)[2]
     # plot(ks1,E1.-E1[1], label = "dense, d=$(d), τ=$(τ), λ=$(round(λ1, 3))")
 
     E2 = lyapunov_from_data(r, ks2; ntype)
-    λ2 = linear_region(ks2 .* Δt, E2)[2]
+    λ2 = ChaosTools.linreg(ks2 .* Δt, E2)[2]
     lines!(ks2, E2.-E2[1]; label = "d=$(d), τ=$(τ), λ=$(round(λ2, digits = 3))")
 end
 axislegend(ax)
@@ -231,3 +223,4 @@ fig
 
 As you can see, using `τ = 15` is not a great choice! The estimates with
 `τ = 7` though are very good (the actual value is around `λ ≈ 0.89...`).
+Notice that above a linear regression was done over the whole curves, which doesn't make sense. One should identify a linear scaling region and extract the slope of that one. The function `linear_region` from [FractalDimensions.jl](https://github.com/JuliaDynamics/FractalDimensions.jl) does this!

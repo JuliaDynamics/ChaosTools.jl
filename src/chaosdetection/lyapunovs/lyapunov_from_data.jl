@@ -69,7 +69,7 @@ function lyapunov_from_data(R::AbstractDataset{D, T}, ks;
         distance = FirstElement(), ntype = NeighborNumber(1),
     ) where {D, T}
 
-    @assert all(k -> 1 ≤ k ≤ length(R), ks) "Invalid time range `ks`."
+    @assert all(k -> 0 ≤ k ≤ length(R), ks) "Invalid time range `ks`."
     timethres = length(R) - ks[end]
     if maximum(refstates) > timethres
         erstr = "Maximum index of reference states is > length(R) - ks[end]. "

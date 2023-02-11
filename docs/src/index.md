@@ -23,6 +23,7 @@ As many docstrings in ChaosTools.jl point to the different `DynamicalSystem` typ
 - [`TangentDynamicalSystem`](@ref)
 - [`ParallelDynamicalSystem`](@ref)
 - [`ProjectedDynamicalSystem`](@ref)
+- [`reinit!`](@ref)
 
 ```@docs
 DynamicalSystem
@@ -34,4 +35,5 @@ PoincareMap
 TangentDynamicalSystem
 ParallelDynamicalSystem
 ProjectedDynamicalSystem
+reinit!(::DynamicalSystem, args...; kwargs...)
 ```

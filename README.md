@@ -13,3 +13,5 @@ It can be used as a standalone package, or as part of
 To install it, run `import Pkg; Pkg.add("ChaosTools")`.
 
 All further information is provided in the documentation, which you can either find [online](https://juliadynamics.github.io/ChaosTools.jl/dev/) or build locally by running the `docs/make.jl` file.
+
+_ChaosTools.jl is the jack-of-all-trades package of the DynamicalSystems.jl library: methods that are not extensive enough to be a standalone package are added here. You should see the full DynamicalSystems.jl library for other packages that may contain functionality you are looking for but did not find in ChaosTools.jl._

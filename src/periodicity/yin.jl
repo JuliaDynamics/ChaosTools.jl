@@ -60,8 +60,6 @@ function yin(sig::Vector, sr::Int; w_len::Int = 512, f_step::Int = 256, f0_min =
     f0_max = 500, harmonic_threshold = 0.1,
     difference_function::Function = difference_function_original, kwargs...)
 
-    error("`yin` is currently not tested. Please contribute tests via a PR.")
-
     τ_min = floor(Int64, sr / f0_max)
     τ_max = floor(Int64, sr / f0_min)
 

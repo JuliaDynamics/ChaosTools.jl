@@ -40,7 +40,7 @@ These methods are faster, but some are error-prone.
 
 - `:yin`: The YIN algorithm. An autocorrelation-based method to estimate the fundamental
   period of the signal. See the original paper [^CheveigneYIN2002] or the implementation
-  [`yin`](@ref).
+  [`yin`](@ref). Sampling rate is taken as `sr = 1/mean(diff(t))` if not given.
 
 [^CheveigneYIN2002]: De Cheveigné, A., & Kawahara, H. (2002). YIN, a fundamental frequency estimator for
 speech and music. The Journal of the Acoustical Society of America, 111(4), 1917-1930.
@@ -87,7 +87,7 @@ function estimate_period(v, method, t = 0:length(v)-1; kwargs...)
                 elseif method == :autocorrelation || method == :ac
                     _ac_period(v, t; kwargs...)
                 elseif method == :yin
-                    sr = get(kwargs, :sr, 22050)
+                    sr = get(kwargs, :sr, round(Int, (1/statistics.mean(diff(t)))))
                     f0s, _ = yin(v, sr; kwargs...)
                     1/mean(f0s)
                 end

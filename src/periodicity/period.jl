@@ -87,7 +87,7 @@ function estimate_period(v, method, t = 0:length(v)-1; kwargs...)
                 elseif method == :autocorrelation || method == :ac
                     _ac_period(v, t; kwargs...)
                 elseif method == :yin
-                    sr = get(kwargs, :sr, round(Int, (1/statistics.mean(diff(t)))))
+                    sr = get(kwargs, :sr, round(Int, (1/mean(diff(t)))))
                     f0s, _ = yin(v, sr; kwargs...)
                     1/mean(f0s)
                 end

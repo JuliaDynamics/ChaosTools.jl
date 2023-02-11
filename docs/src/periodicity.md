@@ -4,26 +4,39 @@
 ```@docs
 fixedpoints
 ```
-A rather simple example of the fixed points can be demonstrated using E.g., the Lorenz-63 system, whose fixed points can be easily calculated analytically to be
+
+A rather simple example of the fixed points can be demonstrated using E.g., the Lorenz-63 system, whose fixed points can be calculated analytically to be
 the following three
 ```math
 (0,0,0) \\
 \left( \sqrt{\beta(\rho-1)}, \sqrt{\beta(\rho-1)}, \rho-1 \right) \\
-\left( -\sqrt{\beta(\rho-1)}, -\sqrt{\beta(\rho-1)}, \rho-1 \right) \\ 
+\left( -\sqrt{\beta(\rho-1)}, -\sqrt{\beta(\rho-1)}, \rho-1 \right) \\
 ```
 
 So, let's calculate
 ```@example MAIN
-using DynamicalSystems
+using ChaosTools
+
+function lorenz_rule(u, p, t)
+    σ = p[1]; ρ = p[2]; β = p[3]
+    du1 = σ*(u[2]-u[1])
+    du2 = u[1]*(ρ-u[3]) - u[2]
+    du3 = u[1]*u[2] - β*u[3]
+    return SVector{3}(du1, du2, du3)
+end
+function lorenz_jacob(u, p, t)
+    σ, ρ, β = p
+    return SMatrix{3,3}(-σ, ρ - u[3], u[2], σ, -1, u[1], 0, -u[1], -β)
+end
+
 ρ, β = 30.0, 10/3
-ds = Systems.lorenz(; ρ, β)
+lorenz = CoupledODEs(lorenz_rule, 10ones(3), [10.0, ρ, β])
 # Define the box within which to find fixed points:
-x = -20..20
-y = -20..20
-z = 0.0..40
+x = y = interval(-20, 20)
+z = interval(0, 40)
 box = x × y × z
 
-fp, eigs, stable = fixedpoints(ds, box)
+fp, eigs, stable = fixedpoints(lorenz, box, lorenz_jacob)
 fp
 ```
 and compare this with the analytic ones:
@@ -39,6 +52,7 @@ lorenzfp(ρ, β)
 ```
 
 ## Stable and Unstable Periodic Orbits of Maps
+
 Chaotic behavior
 of low dimensional dynamical systems is affected by the position and the stability properties of the [periodic orbits](http://www.scholarpedia.org/article/Unstable_periodic_orbits) of a dynamical system.
 
@@ -62,9 +76,16 @@ We will also only use one `λ` value, and a 21×21 density of initial conditions
 
 First, initialize everything
 ```@example MAIN
-using DynamicalSystems
+using ChaosTools
 
-ds = Systems.standardmap()
+function standardmap_rule(x, k, n)
+    theta = x[1]; p = x[2]
+    p += k[1]*sin(theta)
+    theta += p
+    return SVector(mod2pi(theta), mod2pi(p))
+end
+
+standardmap = DeterministicIteratedMap(standardmap_rule, rand(2), [1.0])
 xs = range(0, stop = 2π, length = 11); ys = copy(xs)
 ics = [SVector{2}(x,y) for x in xs for y in ys]
 
@@ -77,13 +98,15 @@ indss = [[1,2]] # <- must be container of vectors!
 λs = 0.005 # <- only this allowed to not be vector (could also be vector)
 
 orders = [2, 3, 4, 5, 6, 8]
-ALLFP = Dataset{2, Float64}[];
+ALLFP = Dataset{2, Float64}[]
+
+standardmap
 ```
 Then, do the necessary computations for all orders
 
 ```@example MAIN
 for o in orders
-    FP = periodicorbits(ds, o, ics, λs, indss, singss)
+    FP = periodicorbits(standardmap, o, ics, λs, indss, singss)
     push!(ALLFP, FP)
 end
 ```
@@ -92,10 +115,10 @@ Plot the phase space of the standard map
 ```@example MAIN
 using CairoMakie
 iters = 1000
-dataset = trajectory(ds, iters)
+dataset = trajectory(standardmap, iters)[1]
 for x in xs
     for y in ys
-        append!(dataset, trajectory(ds, iters, SVector{2}(x, y)))
+        append!(dataset, trajectory(standardmap, iters, [x, y])[1])
     end
 end
 
@@ -122,11 +145,10 @@ axislegend(ax)
 fig
 ```
 
-Okay, this output is great, and we can easily tell that it is correct for many reasons:
+Okay, this output is great, and we can tell that it is correct because:
 
-1. It is the same [fig. 12 of this publication](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.92.012914).
-2. Fixed points of order $n$ are also fixed points of order $2n, 3n, 4n, ...$
-3. Besides fixed points of previous orders, *original* fixed points of
+1. Fixed points of order $n$ are also fixed points of order $2n, 3n, 4n, ...$
+2. Besides fixed points of previous orders, *original* fixed points of
    order $n$ come in (possible multiples of) $2n$-sized pairs (see e.g. order 5).
    This is a direct consequence of the Poincaré–Birkhoff theorem.
 
@@ -140,13 +162,12 @@ The figure below summarizes this:
 ```@docs
 estimate_period
 yin
-ChaosTools.difference_function_original
 ```
 
 ### Example
 Here we will use a modified FitzHugh-Nagumo system that results in periodic behavior, and then try to estimate its period. First, let's see the trajectory:
 ```@example MAIN
-using DynamicalSystems, CairoMakie
+using ChaosTools, CairoMakie
 
 function FHN(u, p, t)
     e, b, g = p
@@ -159,13 +180,12 @@ end
 g, e, b  = 0.8, 0.04, 0.0
 p0 = [e, b, g]
 
-fhn = ContinuousDynamicalSystem(FHN, SVector(-2, -0.6667), p0)
+fhn = CoupledODEs(FHN, SVector(-2, -0.6667), p0)
 T, Δt = 1000.0, 0.1
-v = trajectory(fhn, T; Δt)[:, 1]
-t = 0:Δt:T
+X, t = trajectory(fhn, T; Δt)
+v = X[:, 1]
 
-fig, ax = lines(0:Δt:T, v)
-fig
+lines(t, v)
 ```
 
 Examining the figure, one can see that the period of the system is around `91` time units. To estimate it numerically let's use some of the methods:
@@ -179,5 +199,5 @@ estimate_period(v, :periodogram, t)
 estimate_period(v, :zerocrossing, t)
 ```
 ```@example MAIN
-estimate_period(v, :yin, t; sr=round(Int, (1/Δt)), f0_min=0.01)
+estimate_period(v, :yin, t; f0_min=0.01)
 ```

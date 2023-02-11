@@ -60,7 +60,7 @@ tands = TangentDynamicalSystem(ds; J = towel_jacob)
   966.500 μs (10 allocations: 576 bytes) # on my laptop
 ```
 
-Here is an example of using [`reinit!`](@ref) to fastly iterate over different parameter values, and parallelize via `Threads`, to compute the exponents over a given parameter range.
+Here is an example of using [`reinit!`](@ref) to efficiently iterate over different parameter values, and parallelize via `Threads`, to compute the exponents over a given parameter range.
 
 
 ```@example MAIN
@@ -192,11 +192,11 @@ x = trajectory(ds, 1000.0; Ttr = 10, Δt)[1][:, 1]
 
 We know that we have to use much bigger `ks` than `1:20`, because this is a continuous case! (See reference given in `lyapunov_from_dataspectrum`)
 ```@example MAIN
-ks1 = 0:200
+ks1 = 0:150
 ```
 and in fact it is even better to not increment the `ks` one by one but instead do
 ```@example MAIN
-ks2 = 0:4:200
+ks2 = 0:4:150
 ```
 Now we plot some example computations using delay embeddings to "reconstruct" the chaotic attractor
 ```@example MAIN
@@ -216,7 +216,7 @@ for d in [4, 8], τ in [7, 15]
     λ2 = ChaosTools.linreg(ks2 .* Δt, E2)[2]
     lines!(ks2, E2.-E2[1]; label = "d=$(d), τ=$(τ), λ=$(round(λ2, digits = 3))")
 end
-axislegend(ax)
+axislegend(ax; position = :lt)
 ax.title = "Continuous Reconstruction Lyapunov"
 fig
 ```

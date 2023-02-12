@@ -4,9 +4,7 @@ repo = "https://github.com/JuliaDynamics/ChaosTools.jl.git"
 version = "3.0.0"
 
 [deps]
-Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
-ComplexityMeasures = "ab4b797d-85ee-42ba-b621-05d793b346a2"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -22,18 +20,15 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
-StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
-Clustering = "0.14"
 Combinatorics = "0.7, 1"
 DSP = "0.6, 0.7"
 Distances = "0.7, 0.8, 0.9, 0.10"
 Distributions = "0.21, 0.22, 0.23, 0.24, 0.25"
 DynamicalSystemsBase = "3"
-ComplexityMeasures = "2"
 IntervalRootFinding = "0.5.9"
 LombScargle = "1"
 Neighborhood = "0.2.2"
@@ -42,17 +37,5 @@ ProgressMeter = "1.7"
 Reexport = "1"
 Roots = "0.7, 0.8, 1.0, 2"
 SpecialFunctions = "0.10, 1, 2"
-StaticArrays = "0.11, 0.12.0, 1.0"
-StatsBase = "0.24.0, 0.32, 0.33"
+StatsBase = "0.33"
 julia = "1.5"
-
-[extras]
-DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
-Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[targets]
-test = ["LinearAlgebra", "Test", "OrdinaryDiffEq", "DelimitedFiles", "Downloads", "Random"]

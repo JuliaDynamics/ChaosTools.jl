@@ -19,8 +19,6 @@ Else `od` is a vector of vectors of vectors.
 Each entry od `od` are the points at each parameter value,
 so that `length(od) == length(pvalues)` and `length(od[j]) == n, ∀ j`.
 
-See also [`produce_orbitdiagram`](@ref).
-
 ## Keyword arguments
 
 - `n::Int = 100`: Amount of points to save for each parameter value.
@@ -41,7 +39,6 @@ See also [`produce_orbitdiagram`](@ref).
 function orbitdiagram(
         ds::DynamicalSystem, idxs, p_index, pvalues; n::Int = 100, kwargs...
     )
-
     i = idxs isa Int ? idxs : SVector{length(idxs), Int}(idxs...)
     output = initialize_od_output(current_state(ds), i, n, length(pvalues))
     fill_orbitdiagram!(output, ds, i, pvalues, p_index; n, kwargs...)

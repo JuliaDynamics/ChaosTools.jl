@@ -1,4 +1,3 @@
-using StaticArrays
 using Combinatorics: permutations, multiset_permutations
 using Random: randperm
 

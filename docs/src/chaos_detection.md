@@ -108,7 +108,6 @@ tands = TangentDynamicalSystem(ds; J = standardmap_jacob)
 # Collect initial conditions
 dens = 101
 θs = ps = range(0, stop = 2π, length = dens)
-ds = Systems.standardmap(k = k)
 ics = vec(SVector{2, Float64}.(Iterators.product(θs, ps)))
 # Initialize as many systems as threads
 systems = [deepcopy(tands) for _ in 1:Threads.nthreads()-1]
@@ -122,7 +121,7 @@ Threads.@threads for i in eachindex(ics)
     regularity[i] = gali(system, 500)[2][end]
 end
 # Visualize
-fig, ax, hm = scatter(ics; color = regularity)
+fig, ax, sc = scatter(ics; color = regularity)
 Colorbar(fig[1,2], sc; label = "regularity")
 fig
 ```

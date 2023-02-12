@@ -15,7 +15,7 @@ The signal `sig` is a vector of points uniformly sampled at a rate `sr`.
 * `harmonic_threshold`: Threshold of detection. The algorithm returns the first minimum of
   the CMNDF function below this threshold.
 * `diffference_function`: The difference function to be used (by default
-  [`ChaosTools.difference_function_original`](@ref)).
+  `ChaosTools.difference_function_original`).
 
 ## Description
 The YIN algorithm [^CheveigneYIN2002] estimates the signal's fundamental frequency `F0` by basically
@@ -83,7 +83,7 @@ end
 """
     difference_function_original(x, W, τmax) -> df
 Computes the difference function of `x`. `W` is the window size, and `τmax` is the maximum
-    period. This corresponds to equation (6) in [^1]:
+period. This corresponds to equation (6) in [^CheveigneYIN2002]:
 ```math
 d_t(\\tau) = \\sum_{j=1}^W (x_j - x_{j+\\tau})^2
 ```
@@ -100,7 +100,7 @@ end
 
 """
 Compute cumulative mean normalized difference function (CMND), starting from the difference
-    function `df`. This corresponds to equation (8) in [1]
+function `df`. This corresponds to equation (8).
 """
 function cumulative_mean_normalized_difference_function(df)
     N = length(df)
@@ -162,7 +162,7 @@ end
 
 """
 Quickly written version for finding local minima by comparing first neighbors only.
-#TODO: More detailed implementations available in Peaks.jl or Iamges.jl, maybe this should
+#TODO: More detailed implementations available in Peaks.jl or Images.jl, maybe this should
 be replaced by them.
 """
 function local_minima(x)

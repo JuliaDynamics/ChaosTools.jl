@@ -2,6 +2,11 @@
 
 **The following will become the 3.0 - Major release.**
 
+## Breaking
+- All `diffeq` keywords to all functions have been removed as per update to DynamicalSystems v3.0. Arguments to DifferentialEquations.jl solvers are now given in system construction when making a `CoupledODEs` (previously `ContinuousDynamicalSystem`).
+- The dependency list of ChaosTools.jl has been reduced by half; many things that used to be exported from here are no longer (see refactoring).
+- Low-level call signatures have been adjusted to fit DynamicalSystems.jl v3.0
+
 ## Refactoring/removal
 - All functionality related to attractors and basins of attraction (e.g., `AttractorMapper`, `basins_fractions`) has been moved to a new package Attractors.jl. Notice that functions such as `fixedpoints` and `periodicorbits` stay in ChaosTools.jl because they aren't only about attractors; they also find unstable fixed points and/or periodic orbits.
 - All functionality related to Poincare maps has been moved to DynamicalSystemsBase.jl
@@ -9,7 +14,7 @@
 - All fractal dimension related functionality has been moved to a new package FractalDimensions.jl. This includes the functionality for finding linear regions and fitting them.
 
 ## Rare events
-- New dedicated folder structure and functionality targeting rare events in ChaosTools.jl. If it becomes extensive, it can be split off to a different package.
+- New dedicated folder structure and functionality targeting rare events in ChaosTools.jl. If it becomes extensive, it can be split off to a new package.
 - Source code for `exit_entry_times` has been completely overhauled and is now
   much much clearer.
 - Algorithm for `exit_entry_times` for continuous systems has been re-written from
@@ -19,8 +24,7 @@
 - New function `first_return_times` for efficiently computing only the first time to return to sets.
 
 ## Other
-- New method for fractal dimension: `higuchi`
-- Improved the documentation of chaos detection methods overall.
+- ChaosTools.jl now has its own documentation as per DynamicalSystems.jl v3.0.
 - Increased the default amount of `c` in `testchaos01`.
 
 # 2.9

@@ -23,8 +23,8 @@ function gissinger_rule(u, p, t)
     return SVector{3}(du1, du2, du3)
 end
 
-gissinger = CoupledODEs(gissinger_rule, ones(3), [0.12, 0.1, 0.9])
-X, t = trajectory(ds, 500.0; Ttr = 10, Δt = 0.05)
+gissinger = CoupledODEs(gissinger_rule, ones(3), [0.112, 0.1, 0.9])
+X, t = trajectory(gissinger, 1000.0; Ttr = 100, Δt = 0.1)
 x = X[:, 1]
 
 L = length(x)

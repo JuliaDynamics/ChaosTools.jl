@@ -1,4 +1,5 @@
 using Statistics: mean
+using StatsBase: autocor
 import DSP
 import DSP: Periodograms
 import LombScargle

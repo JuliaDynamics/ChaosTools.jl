@@ -81,3 +81,5 @@ fig, ax = scatter(x, y; axis = (xlabel = L"T", ylabel = L"u_1"),
 ylims!(ax, -1, 1)
 fig
 ```
+
+_Pro tip: to actually make Fig. 9.2 you'd have to do two modifications: first, pass `periods = Trange ./ 2`, so that points are recorded every half period. Then, at the very end, do `y[2:2:end] .= -y[2:2:end]` so that the symmetric orbits are recorded as well_

@@ -64,7 +64,7 @@ Here is an example of using [`reinit!`](@ref) to efficiently iterate over differ
 
 
 ```@example MAIN
-using ChaosTools, GLMakie
+using ChaosTools, CairoMakie
 
 henon_rule(x, p, n) = SVector{2}(1.0 - p[1]*x[1]^2 + x[2], p[2]*x[1])
 henon_jacob(x, p, n) = SMatrix{2,2}(-2*p[1]*x[1], p[2], 1.0, 0.0)
@@ -138,41 +138,12 @@ fig
 
 ```@docs
 lyapunov_from_data
+NeighborNumber
+WithinRange
 ```
 
-### Example
-```@example MAIN
-using ChaosTools, CairoMakie
-
-ds = Systems.henon()
-data = trajectory(ds, 10_000)[1]
-x = data[:, 1] # fake measurements for the win!
-
-ks = 1:20
-ℜ = 1:10000
-fig = Figure(figsize=(500,500))
-
-for (i, di) in enumerate([Euclidean(), Cityblock()])
-    ax = Axis(fig[1, i]; title = "Distance: $(di)", fontsize = 18)
-    ntype = NeighborNumber(2)
-
-    for D in [2, 4, 7]
-        R = embed(x, D, 1)
-        E = lyapunov_from_data(R, ks;
-        refstates = ℜ, distance = di, ntype = ntype)
-        Δt = 1
-        λ = ChaosTools.linreg(ks.*Δt, E)[2]
-        # gives the linear slope, i.e. the Lyapunov exponent
-        lines!(ax, ks .- 1, E .- E[1], label = "D=$D, λ=$(round(λ, digits = 3))")
-    end
-    axislegend(ax)
-end
-fig
-```
-
-### Case of a Continuous system
-The process for continuous systems works identically with discrete, but one must be
-a bit more thoughtful when choosing parameters. The following example helps the users get familiar with the process:
+Let's apply the method to a timeseries from a continuous time system. In this case, one must be a bit more thoughtful when choosing parameters.
+The following example helps the users get familiar with the process:
 ```@example MAIN
 using ChaosTools, CairoMakie
 
@@ -190,13 +161,10 @@ ds = CoupledODEs(lorenz_rule, fill(10.0, 3), [10, 32, 8/3])
 x = trajectory(ds, 1000.0; Ttr = 10, Δt)[1][:, 1]
 ```
 
-We know that we have to use much bigger `ks` than `1:20`, because this is a continuous case! (See reference given in `lyapunov_from_dataspectrum`)
+From prior knowledge of the system, we know we need to use `k` up to about `150`.
+However, due to the dense time sampling, we don't have to compute for every `k` in the range `0:150`. Instead, we can use
 ```@example MAIN
-ks1 = 0:150
-```
-and in fact it is even better to not increment the `ks` one by one but instead do
-```@example MAIN
-ks2 = 0:4:150
+ks = 0:4:150
 ```
 Now we plot some example computations using delay embeddings to "reconstruct" the chaotic attractor
 ```@example MAIN
@@ -212,9 +180,9 @@ for d in [4, 8], τ in [7, 15]
     # λ1 = ChaosTools.linreg(ks1 .* Δt, E1)[2]
     # plot(ks1,E1.-E1[1], label = "dense, d=$(d), τ=$(τ), λ=$(round(λ1, 3))")
 
-    E2 = lyapunov_from_data(r, ks2; ntype)
-    λ2 = ChaosTools.linreg(ks2 .* Δt, E2)[2]
-    lines!(ks2, E2.-E2[1]; label = "d=$(d), τ=$(τ), λ=$(round(λ2, digits = 3))")
+    E2 = lyapunov_from_data(r, ks; ntype)
+    λ2 = ChaosTools.linreg(ks .* Δt, E2)[2]
+    lines!(ks, E2.-E2[1]; label = "d=$(d), τ=$(τ), λ=$(round(λ2, digits = 3))")
 end
 axislegend(ax; position = :lt)
 ax.title = "Continuous Reconstruction Lyapunov"

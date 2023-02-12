@@ -8,11 +8,7 @@ module ChaosTools
 end ChaosTools
 
 using Reexport
-
-@reexport using DelayEmbeddings
-using ComplexityMeasures
 @reexport using DynamicalSystemsBase
-
 
 include("timeevolution/orbitdiagram.jl")
 

@@ -84,7 +84,7 @@ end
 function to_root_f(ds::DeterministicIteratedMap, p, o::Int)
     f = dynamic_rule(ds)
     u -> begin
-        v = copy(u) # copy is free for StaticArrays
+        v = copy(u) # copy is free for `SVector`
         for _ in 1:o
             v = f(v, p, 0)
         end

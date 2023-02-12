@@ -11,7 +11,7 @@ using ChaosTools, Test
     return SVector(theta, p)
 end
 ds = DeterministicIteratedMap(standardmap_rule, [0.001, 0.008], [1.0])
-ds = Systems.standardmap(k = 0.9)
+
 cs = range(0.1, π-0.1, length = 20)
 @testset "chaotic" begin
     cha = trajectory(ds, 10000)[1][:, 1]

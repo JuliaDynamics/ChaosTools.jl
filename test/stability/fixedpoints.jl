@@ -71,7 +71,7 @@ end
 
     stabil(σ, β) = σ*(σ+β+3)/(σ-β-1)
 
-    ds = Systems.CoupledODEs(lorenz_rule, zeros(3), [10, 22, 8/3])
+    ds = CoupledODEs(lorenz_rule, zeros(3), [10, 22, 8/3])
     afps = lorenzfp(22,8/3)
 
     @testset "J=$(J)" for J in (nothing, lorenz_jacob)

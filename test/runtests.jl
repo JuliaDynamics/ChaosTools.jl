@@ -1,16 +1,20 @@
 # Additional tests may be run in this test suite according to an environment variable
-# `ATTRACTORS_EXTENSIVE_TESTS` which can be true or false.
+# `CHAOSTOOLS_EXTENSIVE_TESTS` which can be true or false.
 # If false, a small, but representative subset of tests is used.
 
 # ENV["CHAOSTOOLS_EXTENSIVE_TESTS"] = true or false (set externally)
 
-
 using ChaosTools
 using Test
+
 DO_EXTENSIVE_TESTS = get(ENV, "CHAOSTOOLS_EXTENSIVE_TESTS", "false") == "true"
 
+function testfile(file, testname=defaultname(file))
+    println("running test file $(file)")
+    @testset "$testname" begin; include(file); end
+    return
+end
 defaultname(file) = uppercasefirst(replace(splitext(basename(file))[1], '_' => ' '))
-testfile(file, testname=defaultname(file)) = @testset "$testname" begin; include(file); end
 
 @testset "ChaosTools" begin
 
@@ -24,8 +28,7 @@ testfile("chaosdetection/expansionentropy.jl")
 
 include("stability/fixedpoints.jl")
 include("periodicity/periodicorbits.jl")
-# include("period_return/period_tests.jl")
-# include("period_return/yin_tests.jl")
+include("periodicity/period.jl")
 
 # testfile("rareevents/return_time_tests.jl", "Return times")
 

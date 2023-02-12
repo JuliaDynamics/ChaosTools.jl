@@ -47,14 +47,9 @@ end
     Ttr = 500
 
     ds = CoupledODEs(lorenz_rule, recursivecopy(u0), p)
-    od1 = produce_orbitdiagram(deepcopy(ds), plane, i, parameter, pvalues; n, Ttr)
+    pmap = PoincareMap(ds, plane; rootkw = (xrtol = 1e-12, atol = 1e-12))
+    od1 = orbitdiagram(pmap, i, parameter, pvalues; n, Ttr)
 
-    pmap = PoincareMap(ds, plane)
-    od2 = orbitdiagram(pmap, i, parameter, pvalues; n, Ttr)
-
-    @test od1 == od2
-
-    # TODO: We have a problem here. Don't know why!
     for j in eachindex(od1)
         @test all(x -> abs(x) < 1e-3, od1[j])
     end

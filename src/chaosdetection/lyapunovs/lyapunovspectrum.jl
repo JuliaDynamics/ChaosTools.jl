@@ -70,7 +70,7 @@ function lyapunovspectrum(tands::TangentDynamicalSystem, N::Int;
     )
     reinit!(tands, u0)
     progress = ProgressMeter.Progress(N;
-        desc = "Lyapunov Spectrum: ", dt = 1.0, enabled = show_progress
+        desc = "Lyapunov spectrum: ", dt = 1.0, enabled = show_progress
     )
     B = copy(current_deviations(tands)) # for use in buffered QR
     if Ttr > 0 # This is useful to start orienting the deviation vectors

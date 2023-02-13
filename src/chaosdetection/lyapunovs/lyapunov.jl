@@ -13,6 +13,7 @@ See also [`lyapunovspectrum`](@ref), [`local_growth_rates`](@ref).
 
 ## Keyword arguments
 
+* `show_progress = false`: Display a progress bar of the process.
 * `u0 = initial_state(ds)`: Initial condition.
 * `Ttr = 0`: Extra "transient" time to evolve the trajectories before
   starting to measure the expontent. Should be `Int` for discrete systems.
@@ -71,6 +72,10 @@ calling [`reinit!`](@ref) to `pds`.
 """
 function lyapunov(pds::ParallelDynamicalSystem, T;
         Ttr = 0, Δt = 1, d0 = λdist(pds), d0_upper = d0*1e+3, d0_lower = d0*1e-3,
+        show_progress = false,
+    )
+    progress = ProgressMeter.Progress(round(Int, T);
+        desc = "Lyapunov exponent: ", dt = 1.0, enabled = show_progress
     )
     # transient
     while current_time(pds) - initial_time(pds) < Ttr
@@ -88,6 +93,13 @@ function lyapunov(pds::ParallelDynamicalSystem, T;
     # Perform algorithm
     while current_time(pds) < t0 + T
         d = λdist(pds)
+        if !(d0_lower ≤ d ≤ d0_upper)
+            error(
+                "After rescaling, the distance of reference and test states "*
+                "was not `d0_lower ≤ d ≤ d0_upper` as expected. "*
+                "Perhaps you are using a dynamical system where the algorithm doesn't work."
+            )
+        end
         # evolve until rescaling
         while d0_lower ≤ d ≤ d0_upper
             step!(pds, Δt)
@@ -98,6 +110,7 @@ function lyapunov(pds::ParallelDynamicalSystem, T;
         a = d/d0
         λ += log(a)
         λrescale!(pds, a)
+        ProgressMeter.update!(progress, round(Int, current_time(pds)))
     end
     # Do final rescale, in case no other happened
     d = λdist(pds)
@@ -117,12 +130,13 @@ function λdist(ds::ParallelDynamicalSystem)
     return sqrt(d)
 end
 
+# TODO: Would be nice to generalize this so that it can accept a user-defined function
 function λrescale!(pds::ParallelDynamicalSystem, a)
     u1 = current_state(pds, 1)
     u2 = current_state(pds, 2)
-    if ismutable(u2)
+    if ismutable(u2) # if mutable we assume `Array`
         @. u2 = u1 + (u2 - u1)/a
-    else
+    else # if not mutable we assume `SVector`
         u2 = @. u1 + (u2 - u1)/a
     end
     set_state!(pds, u2, 2)

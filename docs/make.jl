@@ -7,7 +7,7 @@ Downloads.download(
 )
 include("apply_style.jl")
 
-using ChaosTools
+using ChaosTools, Neighborhood
 
 CHAOSTOOLS_PAGES = [
     "index.md",
@@ -20,7 +20,7 @@ CHAOSTOOLS_PAGES = [
 ]
 
 makedocs(
-    modules = [ChaosTools, DynamicalSystemsBase],
+    modules = [ChaosTools, DynamicalSystemsBase, Neighborhood],
     format = Documenter.HTML(
         prettyurls = CI,
         assets = [

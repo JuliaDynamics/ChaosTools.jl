@@ -150,7 +150,8 @@ We will create something similar to figure 2 of the paper, but for the Hénon ma
 ```@example MAIN
 fig = Figure()
 ax = Axis(fig[1,1]; xlabel = L"a", ylabel = L"x")
-he = Systems.henon()
+henon_rule(x, p, n) = SVector{2}(1.0 - p[1]*x[1]^2 + x[2], p[2]*x[1])
+he = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3])
 as = 0.8:0.01:1.225
 od = orbitdiagram(he, 1, 1, as; n = 2000, Ttr = 2000)
 colors = Dict(:REG => "blue", :PPC => "green", :SC => "red")

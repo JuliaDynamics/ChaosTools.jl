@@ -120,10 +120,11 @@ Here is a simple example using the Henon map
 using ChaosTools
 using Statistics, CairoMakie
 
-ds = Systems.henon()
-points = trajectory(ds, 2000; Ttr = 100)[1]
+henon_rule(x, p, n) = SVector{2}(1.0 - p[1]*x[1]^2 + x[2], p[2]*x[1])
+he = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3])
+points = trajectory(he, 2000; Ttr = 100)[1]
 
-λlocal = local_growth_rates(ds, points; Δt = 1)
+λlocal = local_growth_rates(he, points; Δt = 1)
 
 λmeans = mean(λlocal; dims = 2)
 λstds = std(λlocal; dims = 2)

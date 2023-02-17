@@ -5,3 +5,4 @@ docs/build
 Manifest.toml
 *.css
 *.scss
+*style.jl

@@ -31,6 +31,7 @@ The DynamicalSystems.jl v3 changelog summarizes the highlights. Here we will lis
 - ChaosTools.jl now has its own documentation as per DynamicalSystems.jl v3.0.
 - More examples have been placed that also better highlight how to parallelize.
 - Increased the default amount of `c` in `testchaos01`.
+- Tests have been overhauled and never use predefined systems (which is a really bad practice when it comes to testing)
 
 # 2.9
 * Improved the `AttractorsViaFeaturizing` algorithm by improving the method for finding the optimal radius used in the clustering. This consisted in (i) maximizing the average silhouette values, instead of minimum (slight improvement), (ii) min-max rescaling the features for the clustering (big improvement); (iii) adding an alternative method ,called elbow method, that is faster but worse at clustering.

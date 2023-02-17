@@ -90,7 +90,7 @@ stays below it, for a (sufficiently) big $k$.
 
 For example, we utilize parallel integration of `TangentDynamicalSystem` to compute $GALI$ for many initial conditions and produce a color-coded map of regular and chaotic orbits of the standard map.
 
-The following is an example of advanced usage (see [Advanced documentation](@ref)):
+The following is an example of advanced usage:
 ```@example MAIN
 using ChaosTools, CairoMakie
 # Initialize `TangentDynamicalSystem`

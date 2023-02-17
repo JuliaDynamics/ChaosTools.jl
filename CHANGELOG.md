@@ -1,6 +1,9 @@
 # main
 
-**The following will become the 3.0 - Major release.**
+# v3.0
+
+Major release part of the DynamicalSystems.jl v3.
+The DynamicalSystems.jl v3 changelog summarizes the highlights. Here we will list all changes to _this specific package_.
 
 ## Breaking
 - All `diffeq` keywords to all functions have been removed as per update to DynamicalSystems v3.0. Arguments to DifferentialEquations.jl solvers are now given in system construction when making a `CoupledODEs` (previously `ContinuousDynamicalSystem`).
@@ -23,8 +26,10 @@
 - `mean_return_times` is now just a wrapper function.
 - New function `first_return_times` for efficiently computing only the first time to return to sets.
 
-## Other
+## Other enhancements
+- `orbitdiagram` is a completely generic function that works for any kind of `DynamicalSystem`. `produce_orbitdiagram` is deprecated as it is now practically useless.
 - ChaosTools.jl now has its own documentation as per DynamicalSystems.jl v3.0.
+- More examples have been placed that also better highlight how to parallelize.
 - Increased the default amount of `c` in `testchaos01`.
 
 # 2.9

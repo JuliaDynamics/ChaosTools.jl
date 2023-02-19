@@ -1,44 +1,33 @@
-#=
-This file contains main functions for calculating the expansion entropy
-of dynamical systems.
-Expansion entropy is defined in (Hunt and Ott, 2015) [1] as a quantitative measure
-of chaos. For details, read the docstrings of the functions below.
-
-[1] : B. & E. Ott, ‘Defining Chaos’, [Chaos 25.9 (2015)](https://doi.org/10/gdtkcf)
-=#
-export boxregion, expansionentropy, expansionentropy_batch, expansionentropy_sample
+export expansionentropy
 using LinearAlgebra
 using Statistics
 
 """
-    expansionentropy(ds::DynamicalSystem, sampler, restraining; kwargs...)
+    expansionentropy(ds::DynamicalSystem, sampler, isinside; kwargs...)
 
-Calculate the expansion entropy[^Hunt2015] of `ds`, in the restraining region ``S`` defined by
-`restraining`, by estimating the slope of the biggest linear region
+Calculate the expansion entropy[^Hunt2015] of `ds`, in the restraining region ``S``
+by estimating the slope (via linear regression)
 of the curve ``\\log E_{t0+T, t0}(f, S)`` versus ``T`` (using [`linear_region`](@ref)).
 This is an approximation of the expansion entropy ``H_0``, according to[^Hunt2015].
+Return ``T``,  ``\\log E`` and the calculated slope.
 
-`sampler` is a 0-argument function that generates a random initial condition (a sample)
-of `ds`. `restraining` is a 1-argument function `restraining(u)` that given the state
-`u` it returns `true` if the state is inside the restraining region ``S``.
+`sampler` is a 0-argument function that generates a random initial conditions of `ds`
+and `isinside` is a 1-argument function that given a state it returns true if
+the state is inside the restraining region.
+Typically `sampler, isinside` are the output of [`statespace_sampler`](@ref).
 
-Use [`boxregion`](@ref) for an easy way to define `sampler` and `restraining` on a
-multidimension box.
+## Keyword arguments
 
-## Keyword Arguments
-* `N = 1000` : Number of samples taken at each batch (same as ``N`` of [1]).
-* `steps = 40` : The maximal steps for which the system will be run.
-* `Ttr = 0` : Transient time to evolve each initial condition before starting to comute ``E``.
-  This is `t0` of [1] and of the following notation.
-* `batches = 100` : Number of batches to run the calculation, see below.
-* `Δt = 1` : Integration step size.
-* `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
-  `init` of DifferentialEquations.jl.
-  See [`trajectory`](@ref) for examples. Only valid for continuous systems.
+* `N = 1000`: Number of samples taken at each batch (same as ``N`` of [^Hunt2015]).
+* `steps = 40`: The maximal steps for which the system will be run.
+* `batches = 100`: Number of batches to run the calculation, see below.
+* `Δt = 1`: Time evolution step size.
+* `J = nothing`: Jacobian function given to [`TangentDynamicalSystem`](@ref).
 
 ## Description
+
 `N` samples are initialized and propagated forwards in time (along with their tangent space).
-At every time ``t`` in `[t0+Δt, t0+2dt, ... t0+steps*Δt]` we calculate ``H``:
+At every time ``t`` in `[t0+Δt, t0+2Δt, ..., t0+steps*Δt]` we calculate ``H``:
 ```math
 H[t] = \\log E_{t0+T, t0}(f, S),
 ```
@@ -49,8 +38,8 @@ E_{t0+T, t0}(f, S) = \\frac 1 N \\sum_{i'} G(Df_{t0+t, t0}(x_i))
 (using same notation as [^Hunt2015]). In principle ``E`` is the average largest possible
 growth ratio within the restraining region (sampled by the initial conditions).
 The summation is only over ``x_i`` that stay inside the region ``S``
-defined by the boolean function `restraining`.
-This process is done by the [`expansionentropy_sample`](@ref) function.
+defined by the boolean function `insinside`.
+This process is done by the `ChaosTools.expansionentropy_sample` function.
 
 Then, this is repeated for `batches` amount of times, as recommended in[^Hunt2015].
 From all these batches, the mean and std of ``H`` is computed at every time point.
@@ -63,114 +52,27 @@ It is therefore *recommended* to use [`expansionentropy_batch`](@ref) directly a
 evaluate the result yourself, as this step is known to be inaccurate for
 non-chaotic systems (where ``H`` fluctuates strongly around 0).
 
-[^Hunt2015]: B. Hunt & E. Ott, ‘Defining Chaos’, [Chaos 25.9 (2015)](https://doi.org/10/gdtkcf)
+[^Hunt2015]: Hunt & Ott, ‘Defining Chaos’, [Chaos 25.9 (2015)](https://doi.org/10/gdtkcf)
 """
-function expansionentropy(system, sampler, restraining; kwargs...)
-    times, means, stds = expansionentropy_batch(system, sampler, restraining; kwargs...)
+function expansionentropy(ds::CoreDynamicalSystem, sampler, restraining; kwargs...)
+    times, means, stds = expansionentropy_batch(ds, sampler, restraining; kwargs...)
     if any(isnan, stds)
         i = findfirst(isnan, stds)
         @warn "All (or all except one) samples have escaped the given region at time = $(times[i])."
         times = times[1:i-1]
         means = means[1:i-1]
     end
-    _, slope = linear_region(times, means)
-    return slope
+    slope = ChaosTools.linreg(times, means)[2]
+    return times, means, slope
 end
+
+# TODO: Restore a `Ttr` keyword argument. Will need to also keep `ds`
+# being used in `expansionentropy_sample` so that its own state is stepped
+# without stepping the tangent space as well (for efficiency)
 
 #####################################################################################
 # Actual implementation of expansion entropy
 #####################################################################################
-"""
-    maximalexpansion(M)
-
-Calculates the maximal expansion rate of M,
-i.e. the product of all singular values of M that are greater than 1. In the
-notation of [1], it is the function ``G``.
-"""
-maximalexpansion(M) = prod(filter(x -> x > 1.0, svdvals(M)))
-
-"""
-    expansionentropy_sample(ds, sampler, restraining; kwargs...)
-
-Return `times, H` for one sample of `ds` (see [`expansionentropy`](@ref)).
-Accepts the same argumets as `expansionentropy`, besides `batches`.
-"""
-function expansionentropy_sample(system::DynamicalSystem, sampler, restraining;
-    N=1000, steps=40, Δt=1, Ttr=0, diffeq = NamedTuple(), kwargs...)
-
-    if !isempty(kwargs)
-        @warn DIFFEQ_DEP_WARN
-        diffeq = NamedTuple(kwargs)
-    end
-
-    D = dimension(system)
-    M = zeros(steps)
-    # M[t] will be Σᵢ G(Dfₜ₀,ₜ₀₊ₜ(xᵢ))
-    # The summation is over all sampled xᵢ that stay inside S during [t0, t0 + t].
-
-    times = @. (system.t0+Ttr)+Δt*(1:steps)
-    t_identity = SMatrix{D, D, Float64}(I)
-    t_integ = tangent_integrator(system; diffeq)
-    Ttr > 0 && (u_integ = integrator(system))
-
-    for i ∈ 1:N
-        u = sampler() # New sample point.
-        if Ttr > 0 # Evolve through transient time.
-            reinit!(u_integ, u)
-            step!(u_integ, Ttr, true) # stepping must be exact here for correct time vector
-            u = u_integ.u
-        end
-        reinit!(t_integ, u, t_identity; t0 = t_integ.t0 + Ttr)
-        for i ∈ 1:steps # Evolve the sample point for the duration [t0, t0+steps*Δt]
-            step!(t_integ, Δt, true)
-            u = get_state(t_integ)
-            !restraining(u) && break # Stop the integration if the orbit leaves the region.
-            Df = get_deviations(t_integ)
-            M[i] += maximalexpansion(Df)
-        end
-    end
-    return times, log.(M./N)
-end
-
-# This version only deals with 1-dimensional discrete dynamical systems, but does
-# it really fast, by avoiding `tangent_integrator` and `maximalexpansion`.
-function expansionentropy_sample(system::DiscreteDynamicalSystem{IIP, S, 1}, sampler, restraining;
-    N=1000, steps=40, Δt=1, Ttr=0, kwargs...) where {IIP, S}
-    f = system.f
-    p = system.p
-    jacob = system.jacobian
-    t0 = system.t0
-    times = @. (t0+Ttr)+Δt*(1:steps)
-
-    Δt = max(Int(floor(Δt)), 1)
-    Ttr = max(Int(floor(Ttr)), 0)
-    M = zeros(steps)
-
-    for i ∈ 1:N
-        x = sampler()
-        t = t0
-
-        # Evolve for a transient time.
-        for _ ∈ 1:Ttr
-            x = f(x, p, t)
-            t += 1
-        end
-
-        Df = 1.0
-        for step ∈ 1:steps # Evolve point x for `steps` steps.
-            for _ ∈ 1:Δt # Evolve Δt steps at a time.
-                Df = jacob(x, p, t) * Df
-                x = f(x, p, t)
-                t += 1
-            end
-
-            !restraining(x) && break
-            M[step] += max(1.0, abs(Df))
-        end
-    end
-    return times, log.(M./N)
-end
-
 """
     expansionentropy_batch(ds, sampler, restraining; kwargs...)
 
@@ -179,19 +81,18 @@ Run [`expansionentropy_sample`](@ref) `batch` times, and return
 
 Accepts the same arguments as `expansionentropy`.
 """
-function expansionentropy_batch(system, sampler, restraining; batches=100, steps=40, kwargs...)
-    # TODO: It is a mistake that `expansionentropy_batch` doen't create an integrator that
-    # us just reinited inside `expansionentropy_sample`...
+function expansionentropy_batch(ds, sampler, restraining; Δt = 1, J = nothing, batches=100, steps=40, kwargs...)
     means = fill(NaN, steps)
     stds = fill(NaN, steps)
-    eesamples = zeros(batches, steps)
     # eesamples[k, t] = The k-th sample of expansion entropy from t0 to (t0 + t)
+    eesamples = zeros(batches, steps)
+    times = initial_time(ds) .+ Δt .* (1:steps)
+    tands = TangentDynamicalSystem(ds; J)
 
-    times = undef
     # Collect all the samples
     for k in 1:batches
-        times, eesamples[k, :] = expansionentropy_sample(
-            system, sampler, restraining; steps, kwargs...
+        eesamples[k, :] = expansionentropy_sample(
+            tands, sampler, restraining; steps, Δt, kwargs...
         )
     end
 
@@ -209,3 +110,42 @@ function expansionentropy_batch(system, sampler, restraining; batches=100, steps
     end
     return times, means, stds
 end
+
+"""
+    expansionentropy_sample(tands::TangentDynamicalSystem, sampler, isinside; kwargs...)
+
+Return `times, H` for one sample of `ds` (see [`expansionentropy`](@ref)).
+Accepts the same argumets as `expansionentropy`, besides `batches`.
+"""
+function expansionentropy_sample(
+        tands::TangentDynamicalSystem, sampler, restraining;
+        N=1000, steps=40, Δt=1
+    )
+
+    M = zeros(steps)
+    reinit!(tands)
+    # M[t] will be Σᵢ G(Dfₜ₀,ₜ₀₊ₜ(xᵢ))
+    # The summation is over all sampled xᵢ that stay inside S during [t0, t0 + t].
+
+    for i ∈ 1:N
+        u = sampler() # New sample point.
+        reinit!(tands, u)
+        for i ∈ 1:steps # Evolve the sample point for the duration [t0, t0+steps*Δt]
+            step!(tands, Δt, true)
+            u = current_state(tands)
+            !restraining(u) && break # Stop the integration if the orbit leaves the region.
+            Df = current_deviations(tands)
+            M[i] += maximalexpansion(Df)
+        end
+    end
+    return log.(M./N)
+end
+
+"""
+    maximalexpansion(M)
+
+Calculate the maximal expansion rate of M,
+i.e. the product of all singular values of M that are greater than 1. In the
+notation of [1], it is the function ``G``.
+"""
+maximalexpansion(M) = prod(filter(x -> x > 1.0, svdvals(M)))

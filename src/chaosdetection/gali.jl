@@ -1,28 +1,27 @@
 export gali
 using LinearAlgebra
-#####################################################################################
-#                               Continuous GALI                                     #
-#####################################################################################
+
 """
-    gali(ds::DynamicalSystem, tmax, k::Int | Q0; kwargs...) -> GALI_k, t
-Compute ``\\text{GALI}_k``[^Skokos2007] for a given `k` up to time `tmax`.
+    gali(ds::DynamicalSystem, T, k::Int; kwargs...) -> GALI_k, t
+
+Compute ``\\text{GALI}_k``[^Skokos2007] for a given `k` up to time `T`.
 Return ``\\text{GALI}_k(t)`` and time vector ``t``.
 
-The third argument, which sets the order of `gali`, can be an integer `k`, or
-a matrix with its columns being the deviation vectors (then
-`k = size(Q0)[2]`). In the first case random orthonormal vectors are chosen.
+The third argument sets the order of `gali`.
+`gali` function simply initializes a [`TangentDynamicalSystem`](@ref) with `k`
+deviation vectors and calls the method below.
+This means that the automatic Jacobian is used by default.
+Initialize manually a [`TangentDynamicalSystem`](@ref) if you have a hand-coded Jacobian.
 
-## Keyword Arguments
-* `threshold = 1e-12` : If `GALI_k` falls below the `threshold`
+## Keyword arguments
+* `threshold = 1e-12`: If `GALI_k` falls below the `threshold`
   iteration is terminated.
-* `Δt = 1` : Time-step between deviation vector normalizations. For continuous
+* `Δt = 1`: Time-step between deviation vector normalizations. For continuous
   systems this is approximate.
-* `u0` : Initial state for the system. Defaults to `get_state(ds)`.
-* `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
-  `init` of DifferentialEquations.jl.
-  See [`trajectory`](@ref) for examples. Only valid for continuous systems.
+* `u0`: Initial state for the system. Defaults to `current_state(ds)`.
 
 ## Description
+
 The Generalized Alignment Index,
 ``\\text{GALI}_k``, is an efficient (and very fast) indicator of chaotic or regular
 behavior type in ``D``-dimensional Hamiltonian systems
@@ -50,71 +49,48 @@ then it holds
 ```
 
 Traditionally, if ``\\text{GALI}_k(t)`` does not become less than
-the `threshold` until `tmax`
+the `threshold` until `T`
 the given orbit is said to be chaotic, otherwise it is regular.
 
 Our implementation is not based on the original paper, but rather in
 the method described in[^Skokos2016b], which uses the product of the singular values of ``A``,
 a matrix that has as *columns* the deviation vectors.
 
-## Performance Notes
-This function uses a [`tangent_integrator`](@ref).
-For loops over initial conditions and/or
-parameter values one should use the low level method that accepts
-an integrator, and `reinit!` it to new initial conditions.
-See the "advanced documentation" for info on the integrator object.
-The low level method is
-```
-ChaosTools.gali(tinteg, tmax, Δt, threshold)
-```
-
 [^Skokos2007]: Skokos, C. H. *et al.*, Physica D **231**, pp 30–54 (2007)
 
-[^Skokos2016b]: Skokos, C. H. *et al.*, *Chaos Detection and Predictability* - Chapter 5
-(section 5.3.1 and ref. [85] therein), Lecture Notes in Physics **915**,
-Springer (2016)
+[^Skokos2016b]:
+    Skokos, C. H. *et al.*, *Chaos Detection and Predictability* - Chapter 5
+    (section 5.3.1 and ref. [85] therein), Lecture Notes in Physics **915**, Springer (2016)
 """
-gali(ds::DS, tmax::Real, k::Int; kwargs...) =
-    gali(ds, tmax, orthonormal(dimension(ds), k); kwargs...)
-
-function gali(ds::DS{IIP, S, D}, tmax::Real, Q0::AbstractMatrix;
-    threshold = 1e-12, Δt = 1, u0 = get_state(ds),
-    diffeq = NamedTuple(), kwargs...) where {IIP, S, D}
-
-    if !isempty(kwargs)
-        @warn DIFFEQ_DEP_WARN
-        diffeq = NamedTuple(kwargs)
-    end
-
-    size(Q0)[1] != D && throw(ArgumentError(
-    "Deviation vectors must have first dimension equal to the dimension of the "*
-    "system, $D."))
-    2 ≤ size(Q0)[2] ≤ D || throw(ArgumentError(
-    "The order of GALI_k must be 2 ≤ k ≤ $D."))
-
-    if typeof(ds) <: DDS
-        tinteg = tangent_integrator(ds, Q0; u0 = u0)
-    else
-        tinteg = tangent_integrator(ds, Q0; u0 = u0, diffeq...)
-    end
-
-    ST = stateeltype(ds)
-    TT = typeof(ds.t0)
-    gal::Vector{ST}, tvec::Vector{TT} = gali(tinteg, tmax, Δt, threshold)
-    return gal, tvec
+function gali(ds::DynamicalSystem, T::Real, k::Int;
+        u0 = current_state(ds), kwargs...
+    )
+    tands = TangentDynamicalSystem(ds; k, u0)
+    return gali(tands, T; kwargs...)
 end
 
-function gali(tinteg, tmax, Δt, threshold)
-    rett = [tinteg.t]
-    gali_k = [one(eltype(tinteg.u))]
-    t0 = tinteg.t
+"""
+    gali(tands::TangentDynamicalSystem, T; threshold = 1e-12, Δt = 1)
 
-    while tinteg.t < tmax + t0
-        step!(tinteg, Δt)
-        normalize_deviations!(tinteg)
-        zs = LinearAlgebra.svd(get_deviations(tinteg)).S
+The low-level method that is called by `gali(ds::DynamicalSystem, ...)`.
+Use this method for looping over different initial conditions or parameters by
+calling [`reinit!`](@ref) to `tands`.
+
+The order of ``\\text{GALI}_k`` computed is the amount of deviation vectors in `tands`.
+
+Also use this method if you have a hand-coded Jacobian to pass when creating `tands`.
+"""
+function gali(tands::TangentDynamicalSystem, T; threshold = 1e-12, Δt = 1)
+    rett = [current_time(tands)]
+    gali_k = [one(eltype(current_state(tands)))]
+    t0 = current_time(tands)
+
+    while current_time(tands) < T + t0
+        step!(tands, Δt)
+        normalize_deviations!(tands)
+        zs = LinearAlgebra.svd(current_deviations(tands)).S
         push!(gali_k, prod(zs))
-        push!(rett, tinteg.t)
+        push!(rett, current_time(tands))
 
         if gali_k[end] < threshold
             break
@@ -123,11 +99,24 @@ function gali(tinteg, tmax, Δt, threshold)
     return gali_k, rett
 end
 
-#####################################################################################
-#                            Normalize Deviation Vectors                            #
-#####################################################################################
-# Metaprogramming ontributed by @saschatimme
-function normalize_impl(::Type{SMatrix{D, K, T, DK}}) where {D, K, T, DK}
+function normalize_deviations!(tands::TangentDynamicalSystem)
+    Y = current_deviations(tands)
+    if Y isa SMatrix # out of place
+        Ynorm = normalize_static_deviations(Y)
+        set_deviations!(tands, Ynorm)
+    else # inplace
+        normalize_inplace!(Y)
+        set_deviations!(tands, Y)
+    end
+    return
+end
+
+# Metaprogramming ontributed by @saschatimme.
+# It is a way to create a normalized version of each column of the SMatrix
+@generated function normalize_static_deviations(A::SMatrix)
+    normalize_metaprogramming(A)
+end
+function normalize_metaprogramming(::Type{SMatrix{D, K, T, DK}}) where {D, K, T, DK}
     exprs = []
     for j = 1:K
         c_j = Symbol("c", j)
@@ -145,48 +134,54 @@ function normalize_impl(::Type{SMatrix{D, K, T, DK}}) where {D, K, T, DK}
         Expr(:call, SMatrix{D, K, T, D*K}, ops...)
         )
 end
-@generated function normalize_devs(A::SMatrix)
-    normalize_impl(A)
-end
 
-# I AM SURE THE FOLLOWING CAN BE SHORTENED USING UNIONS!!!
-
-# OOP version (either cont or disc)
-"""
-    normalize_deviations!(tinteg)
-Normalize (in-place) the deviation vectors of the tangent integrator.
-"""
-function normalize_deviations!(
-    tinteg::AbstractODEIntegrator{Alg, IIP, S}) where {Alg, IIP, S<:SMatrix}
-    norms = normalize_devs(get_deviations(tinteg))
-    set_deviations!(tinteg, norms)
-    return
-end
-function normalize_deviations!(
-    tinteg::TDI{false})
-    norms = normalize_devs(get_deviations(tinteg))
-    set_deviations!(tinteg, norms)
-    return
-end
-
-# IIP
 function normalize_inplace!(A)
     for i in 1:size(A)[2]
         LinearAlgebra.normalize!(view(A, :, i))
     end
 end
-function normalize_deviations!(tinteg::Union{
-        AbstractODEIntegrator{Alg, IIP, S},
-        MDI{Alg, S}}) where {Alg, IIP, S<:Matrix}
-    A = get_deviations(tinteg)
-    normalize_inplace!(A)
-    # no reason to call set_deviations, because
-    # get_deviations always returns views for IIP
-    u_modified!(tinteg, true)
-    return
-end
-function normalize_deviations!(tinteg::TDI{true})
-    A = get_deviations(tinteg)
-    normalize_inplace!(A)
-    return
-end
+
+
+
+
+# # I AM SURE THE FOLLOWING CAN BE SHORTENED USING UNIONS!!!
+
+# # OOP version (either cont or disc)
+# """
+#     normalize_deviations!(tands)
+# Normalize (in-place) the deviation vectors of the tangent integrator.
+# """
+# function normalize_deviations!(
+#     tands::AbstractODEIntegrator{Alg, IIP, S}) where {Alg, IIP, S<:SMatrix}
+#     norms = normalize_devs(current_deviations(tands))
+#     set_deviations!(tands, norms)
+#     return
+# end
+# function normalize_deviations!(
+#     tands::TDI{false})
+#     norms = normalize_devs(current_deviations(tands))
+#     set_deviations!(tands, norms)
+#     return
+# end
+
+# # IIP
+# function normalize_inplace!(A)
+#     for i in 1:size(A)[2]
+#         LinearAlgebra.normalize!(view(A, :, i))
+#     end
+# end
+# function normalize_deviations!(tands::Union{
+#         AbstractODEIntegrator{Alg, IIP, S},
+#         MDI{Alg, S}}) where {Alg, IIP, S<:Matrix}
+#     A = current_deviations(tands)
+#     normalize_inplace!(A)
+#     # no reason to call set_deviations, because
+#     # current_deviations always returns views for IIP
+#     u_modified!(tands, true)
+#     return
+# end
+# function normalize_deviations!(tands::TDI{true})
+#     A = current_deviations(tands)
+#     normalize_inplace!(A)
+#     return
+# end

@@ -1,35 +1,39 @@
+using Distances: Euclidean
+struct FirstElement end
+using LinearAlgebra: norm
 using Neighborhood
-using Distances: Cityblock, Euclidean
+
 export NeighborNumber, WithinRange
 export lyapunov_from_data
-struct FirstElement end
 export Euclidean, FirstElement
 
 """
-    lyapunov_from_data(R::Dataset, ks;  refstates, w, distance, ntype)
+    lyapunov_from_data(R::Dataset, ks; kwargs...)
+
 For the given dataset `R`, which is expected to represent a trajectory of a dynamical
-system, calculate and return `E = [E(k) for k ∈ ks]`. Here `E(k)` is the average logarithmic
+system, calculate and return `E(k)`, which is the average logarithmic
 distance between states of a neighborhood that are evolved in time for `k` steps
-(`k` must be integer). The slope of `E` vs `k` approximate the maximum Lyapunov exponent,
-see below.
+(`k` must be integer). The slope of `E` vs `k` approximates the maximum Lyapunov exponent.
 
-Typically `R` is the result of delay coordinates embedding of a timeseries,
-see [`embed`](@ref).
+Typically `R` is the result of delay coordinates embedding of a timeseries
+(see DelayEmbeddings.jl).
 
-## Keyword Arguments
-* `refstates = 1:(length(R) - ks[end])` : Vector of indices that notes which
+## Keyword arguments
+
+* `refstates = 1:(length(R) - ks[end])`: Vector of indices that notes which
   states of the dataset should be used as "reference states", which means
   that the algorithm is applied for all state indices contained in `refstates`.
-* `w::Int = 1` : The [Theiler window](@ref).
-* `ntype = NeighborNumber(1)` : The neighborhood type. Either [`NeighborNumber`](@ref)
+* `w::Int = 1`: The [Theiler window](@ref).
+* `ntype = NeighborNumber(1)`: The neighborhood type. Either [`NeighborNumber`](@ref)
   or [`WithinRange`](@ref). See [Neighborhoods](@ref) for more info.
-* `distance = FirstElement()` : Specifies what kind of distance function is used in the
+* `distance = FirstElement()`: Specifies what kind of distance function is used in the
   logarithmic distance of nearby states. Allowed distances values are `FirstElement()`
   or `Euclidean()`, see below for more info. The metric for finding neighbors is
   always the Euclidean one.
 
 
 ## Description
+
 If the dataset exhibits exponential divergence of nearby states, then it should hold
 ```math
 E(k) \\approx \\lambda\\cdot k \\cdot \\Delta t + E(0)
@@ -65,11 +69,7 @@ function lyapunov_from_data(R::AbstractDataset{D, T}, ks;
         distance = FirstElement(), ntype = NeighborNumber(1),
     ) where {D, T}
 
-    if distance isa Cityblock
-        @warn "Using `Cityblock()` as distance is deprecated in favor of `FirstElement()`."
-    end
-
-    @assert all(k -> 1 ≤ k ≤ length(R), ks) "Invalid time range `ks`."
+    @assert all(k -> 0 ≤ k ≤ length(R), ks) "Invalid time range `ks`."
     timethres = length(R) - ks[end]
     if maximum(refstates) > timethres
         erstr = "Maximum index of reference states is > length(R) - ks[end]. "
@@ -117,10 +117,6 @@ function lyapunov_from_data(R::AbstractDataset{D, T}, ks;
         error(ers)
     end
     E ./= (length(refstates) - skippedn)
-end
-
-@inline function delay_distance(::Cityblock, R, m, n, k)
-    @inbounds abs(R[m+k][1] - R[n+k][1])
 end
 
 @inline function delay_distance(::FirstElement, R, m, n, k)

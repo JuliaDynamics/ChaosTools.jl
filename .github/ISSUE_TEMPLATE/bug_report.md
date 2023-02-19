@@ -15,6 +15,15 @@ Please provide a piece of code that leads to the bug you encounter.
 
 If the code is **runnable**, it will help us identify the problem faster.
 
-**Agents.jl version**
+**Package versions**
 
-Please provide the version you use (you can do `Pkg.status("Agents")`.
+Please provide the versions of packages you use. To do this, run the code:
+```julia
+import Pkg
+Pkg.status([
+    "Package1", "Package2"]; # etc.
+    mode = PKGMODE_MANIFEST
+)
+```
+
+Please also include the Julia version you run.

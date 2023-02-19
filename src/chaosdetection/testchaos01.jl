@@ -4,11 +4,13 @@ export testchaos01
 
 """
     testchaos01(x::Vector [, cs, N0]) -> chaotic?
+
 Perform the so called "0-1" test for chaos introduced by Gottwald and
 Melbourne[^Gottwald2016] on the timeseries `x`.
 Return `true` if `x` is chaotic, `false` otherwise.
 
 ## Description
+
 This method tests if the given timeseries is chaotic or not by transforming
 it into a two-dimensional diffusive process like so:
 ```math

@@ -1,9 +1,11 @@
-using LinearAlgebra, Distributions, Random
+using LinearAlgebra
+using Random: Xoshiro
+using Distributions: Exponential, Geometric, UnivariateDistribution
 using Statistics: mean
 export predictability
 
 """
-    predictability(ds::DynamicalSystem; kwargs...) -> chaos_type, ν, C
+    predictability(ds::CoreDynamicalSystem; kwargs...) -> chaos_type, ν, C
 
 Determine whether `ds` displays strongly chaotic, partially-predictable chaotic
 or regular behaviour, using the method by Wernecke et al. described in[^Wernecke2017].
@@ -20,29 +22,28 @@ Typical values for `ν`, `C` and `chaos_type` are given in Table 2 of[^Wernecke2
 
 If none of these conditions apply, the return value is `:IND` (for indeterminate).
 
-## Keyword Arguments
-* `Ttr = 200` : Extra transient time to evolve the system before sampling from
+## Keyword arguments
+
+* `Ttr = 200`: Extra transient time to evolve the system before sampling from
    the trajectory. Should be `Int` for discrete systems.
-* `T_sample = 1e4` : Time to evolve the system for taking samples. Should be
+* `T_sample = 1e4`: Time to evolve the system for taking samples. Should be
   `Int` for discrete systems.
-* `n_samples = 500` : Number of samples to take for use in calculating statistics.
-* `λ_max = lyapunov(ds, 5000)` : Value to use for largest Lyapunov exponent
+* `n_samples = 500`: Number of samples to take for use in calculating statistics.
+* `λ_max = lyapunov(ds, 5000)`: Value to use for largest Lyapunov exponent
   for finding the Lyapunov prediction time. If it is less than zero a regular
   result is returned immediatelly.
-* `d_tol = 1e-3` : tolerance distance to use for calculating Lyapunov prediction time.
-* `T_multiplier = 10` : Multiplier from the Lyapunov prediction time to the evaluation time.
-* `T_max = Inf` : Maximum time at which to evaluate trajectory distance. If the internally
+* `d_tol = 1e-3`: tolerance distance to use for calculating Lyapunov prediction time.
+* `T_multiplier = 10`: Multiplier from the Lyapunov prediction time to the evaluation time.
+* `T_max = Inf`: Maximum time at which to evaluate trajectory distance. If the internally
    computed evaluation time is larger than `T_max`, stop at `T_max` instead.
    **It is strongly recommended to manually set this!**
-* `δ_range = 10.0 .^ (-9:-6)` : Range of initial condition perturbation distances
+* `δ_range = 10.0 .^ (-9:-6)`: Range of initial condition perturbation distances
    to use to determine scaling `ν`.
-* `ν_threshold = C_threshold = 0.5` : Thresholds for scaling coefficients (they become 0 or
+* `ν_threshold = C_threshold = 0.5`: Thresholds for scaling coefficients (they become 0 or
   1 if they are less or more than the threshold).
-* `diffeq` is a `NamedTuple` (or `Dict`) of keyword arguments propagated into
-  `init` of DifferentialEquations.jl.
-  See [`trajectory`](@ref) for examples. Only valid for continuous systems.
 
 ## Description
+
 The algorithm samples points from a trajectory of the system to be used as initial
 conditions. Each of these initial conditions is randomly perturbed by a distance `δ`,
 and the trajectories for both the original and perturbed initial conditions are evolved
@@ -69,17 +70,17 @@ It is operating in a different speed than e.g. [`lyapunov`](@ref).
     Wernecke, H., Sándor, B. & Gros, C. *How to test for partially predictable chaos*.
     [Scientific Reports **7**, (2017)](https://www.nature.com/articles/s41598-017-01083-x).
 """
-function predictability(ds::DynamicalSystem;
+function predictability(ds::CoreDynamicalSystem;
         Ttr::Real = 200, T_sample::Real = 1e4, n_samples::Integer = 500,
         λ_max::Real = lyapunov(ds, 5000), d_tol::Real = 1e-3, T_multiplier::Real = 10,
         T_max::Real = Inf, δ_range::AbstractArray = 10.0 .^ (-9:-6),
         ν_threshold = 0.5, C_threshold = 0.5,
-        diffeq = NamedTuple(), kwargs...
     )
-    if !isempty(kwargs)
-        @warn DIFFEQ_DEP_WARN
-        diffeq = NamedTuple(kwargs)
-    end
+
+    error("This function has not yet been updated to DynamicalSystems.jl v3.0.
+    Please consider a Pull Request :) (very easy!)")
+
+    rng = Xoshiro()
     λ_max < 0 && return :REG, 1.0, 1.0
     samples = sample_trajectory(ds, Ttr, T_sample, n_samples; diffeq)
     # Calculate initial mean position and variance of the trajectory. (eq. [1] pg. 5)
@@ -101,7 +102,7 @@ function predictability(ds::DynamicalSystem;
         Σd² = 0
         for u in samples
             # Sample perturbation from surface of sphere
-            n = rand(Random.GLOBAL_RNG, Normal(), size(u))
+            n = rand(rng, Normal(), size(u))
             n /= norm(n)
             û = u + δ*n
             # re-integrate to time T

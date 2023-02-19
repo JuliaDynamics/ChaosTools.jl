@@ -59,11 +59,11 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
         # Check whether we are too far away from the point to bother doing anything
         # TODO: I wonder if we can use the previous minimum distance and compare it
         # with current one for accelerating the search...?
-        curr_distance = evaluate(metric, get_state(integ), u0)
+        curr_distance = evaluate(metric, current_state(integ), u0)
         curr_distance > threshold_distance && continue
         # Obtain mininum distance and check which is the outermost box we are out of
         tmin, dmin = closest_trajectory_point(integ, u0, metric, crossing_method)
-        out_idx = first_outside_index(get_state(integ), u0, εs, E)
+        out_idx = first_outside_index(current_state(integ), u0, εs, E)
         out_idx_min = first_outside_index(dmin, εs)
         # if we were outside all, and min distance also outside all, we skip
         out_idx_min == 1 && all(prev_outside) && continue
@@ -109,7 +109,7 @@ function first_return_times(integ::AbstractODEIntegrator, u0, εs, T;
     t0 = integ.t
     rtimes = zeros(eltype(t0), length(εs))
     # First step until exiting the set
-    tmin, dmin = t0, zero(eltype(get_state(integ)))
+    tmin, dmin = t0, zero(eltype(current_state(integ)))
     isout = false
     while !isout
         step!(integ)

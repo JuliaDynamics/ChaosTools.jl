@@ -94,6 +94,8 @@ end
     ds = henon()
     points, tvec = trajectory(ds, 2000; Ttr = 100)
     λ = lyapunov(ds, 10_000)
+    using Random: seed!
+    seed!(1234151)
 
     λlocal = local_growth_rates(ds, points; Δt = 20, S = 20, e = 1e-12)
 

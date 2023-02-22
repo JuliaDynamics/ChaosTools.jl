@@ -1,3 +1,5 @@
+# ChaosTools.jl
+
 [![](https://img.shields.io/badge/docs-dev-lightblue.svg)](https://JuliaDynamics.github.io/ChaosTools.jl/dev)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaDynamics.github.io/ChaosTools.jl/stable)
 [![](https://img.shields.io/badge/DOI-10.1007%2F978--3--030--91032--7-purple)](https://link.springer.com/book/10.1007/978-3-030-91032-7)

@@ -78,7 +78,7 @@ function lyapunovspectrum(tands::TangentDynamicalSystem, N::Int;
         while current_time(tands) < t0 + Ttr
             step!(tands, Δt)
             Q, R = _buffered_qr(B, current_deviations(tands))
-            set_deviations!(tands, Q)
+            set_Q_as_deviations!(tands, Q)
         end
     end
 
@@ -91,7 +91,7 @@ function lyapunovspectrum(tands::TangentDynamicalSystem, N::Int;
         for j in 1:k
             @inbounds λ[j] += log(abs(R[j,j]))
         end
-        set_deviations!(tands, Q)
+        set_Q_as_deviations!(tands, Q)
         ProgressMeter.update!(progress, i)
     end
     λ ./= (current_time(tands) - t0)
@@ -108,4 +108,29 @@ function _buffered_qr(B::Matrix, Y) # Y are the deviations
     B .= Y
     Q, R = LinearAlgebra.qr!(B)
     return Q, R
+end
+
+# By definition QR decomposition will return a DxD matrix as Q,
+# but the deviation vectors are a Dxk if k < D. We need to efficiently
+# utilize only the first k columns of Q, however, how to do this depends
+# strongly on the storage type (iip/oop)
+
+# TODO: check if `if` statements make it more performant
+
+function set_Q_as_deviations!(tands::TangentDynamicalSystem{true}, Q)
+    devs = current_deviations(tands) # it is a view
+    if size(Q) ≠ size(devs)
+        copyto!(devs, LinearAlgebra.I)
+        LinearAlgebra.lmul!(Q, devs)
+        set_deviations!(tands, devs)
+    else
+        set_deviations!(tands, Q)
+    end
+end
+
+function set_Q_as_deviations!(tands::TangentDynamicalSystem{false}, Q)
+    # here `devs` is a static vector
+    devs = current_deviations(tands)
+    ks = axes(devs, 2) # it is a `StaticArrays.SOneTo(k)`
+    set_deviations!(tands, Q[:, ks])
 end

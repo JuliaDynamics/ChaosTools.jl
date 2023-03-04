@@ -35,11 +35,14 @@ p0_cont = [0.1, -0.4]
             Jf = IIP ? trivial_jac_iip : trivial_jac
             tands = TangentDynamicalSystem(ds; J = Jf)
             spec = lyapunovspectrum(tands, 100; Δt = 1)
+            spec1 = lyapunovspectrum(TangentDynamicalSystem(ds; k = 1, J = Jf), 100; Δt = 1)
         else
             spec = lyapunovspectrum(ds, 100; Δt = 1)
+            spec1 = lyapunovspectrum(ds, 100, 1; Δt = 1)
         end
 
         @test isapprox(spec[1], lyapunovs[1]; atol = 0, rtol = 1e-3)
+        @test isapprox(spec1[1], lyapunovs[1]; atol = 0, rtol = 1e-3)
         @test isapprox(spec[2], lyapunovs[2]; atol = 0, rtol = 1e-3)
     end
 

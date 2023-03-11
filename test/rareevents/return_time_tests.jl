@@ -84,7 +84,7 @@ end
     @test all(isequal(2), returns[2])
 
     # But now, the third entry is different, because it has the size of the quasiperiodic
-    # stability island torous
+    # stability island torus
     @test returns[3] ≠ returns[2]
     @test transits[3] ≠ transits[2]
     @test any(>(3), returns[3])

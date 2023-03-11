@@ -16,7 +16,7 @@ See also [`lyapunovspectrum`](@ref), [`local_growth_rates`](@ref).
 * `show_progress = false`: Display a progress bar of the process.
 * `u0 = initial_state(ds)`: Initial condition.
 * `Ttr = 0`: Extra "transient" time to evolve the trajectories before
-  starting to measure the expontent. Should be `Int` for discrete systems.
+  starting to measure the exponent. Should be `Int` for discrete systems.
 * `d0 = 1e-9`: Initial & rescaling distance between the two neighboring trajectories.
 * `d0_lower = 1e-3*d0`: Lower distance threshold for rescaling.
 * `d0_upper = 1e+3*d0`: Upper distance threshold for rescaling.

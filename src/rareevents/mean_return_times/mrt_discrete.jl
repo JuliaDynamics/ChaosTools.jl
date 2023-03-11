@@ -47,7 +47,7 @@ end
 
 function first_return_times(integ::MDI, u₀, εs, T; show_progress = false, kwargs...)
     # TODO: I'm lazy and I'm coding this by calling the normal algorithm.
-    # A bit inneficient, maybe in the future someone can write a full version here...
+    # A bit inefficient, maybe in the future someone can write a full version here...
     exits, entries = exit_entry_times(
         integ, u₀, εs, T; show_progress = false,
         internal_max_counter = 1

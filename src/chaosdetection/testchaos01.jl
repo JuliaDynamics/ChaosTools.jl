@@ -32,11 +32,11 @@ just `median(testchaos01(x, c, N0) for c in cs) > 0.5`.
 `cs` defaults to `3π/5*rand(100) + π/4` and `N0`, the length
 of the two-dimensional process, is `N0 = length(x)/10`.
 
-For data sampled from continous dynamical systems, some
+For data sampled from continuous dynamical systems, some
 care must be taken regarding the values of `cs`.
 Also note that this method performs rather poorly with even the slight amount
 of noise, returning `true` for even small amounts of noise noisy timeseries.
-Some possibilities to eliviate this exist, but are context specific on the application.
+Some possibilities to alleviate this exist, but are context specific on the application.
 See [^Gottwald2016] for more info.
 
 [^Gottwald2016]:

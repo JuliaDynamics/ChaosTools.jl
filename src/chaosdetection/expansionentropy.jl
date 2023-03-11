@@ -38,7 +38,7 @@ E_{t0+T, t0}(f, S) = \\frac 1 N \\sum_{i'} G(Df_{t0+t, t0}(x_i))
 (using same notation as [^Hunt2015]). In principle ``E`` is the average largest possible
 growth ratio within the restraining region (sampled by the initial conditions).
 The summation is only over ``x_i`` that stay inside the region ``S``
-defined by the boolean function `insinside`.
+defined by the boolean function `isinside`.
 This process is done by the `ChaosTools.expansionentropy_sample` function.
 
 Then, this is repeated for `batches` amount of times, as recommended in[^Hunt2015].
@@ -115,7 +115,7 @@ end
     expansionentropy_sample(tands::TangentDynamicalSystem, sampler, isinside; kwargs...)
 
 Return `times, H` for one sample of `ds` (see [`expansionentropy`](@ref)).
-Accepts the same argumets as `expansionentropy`, besides `batches`.
+Accepts the same arguments as `expansionentropy`, besides `batches`.
 """
 function expansionentropy_sample(
         tands::TangentDynamicalSystem, sampler, restraining;

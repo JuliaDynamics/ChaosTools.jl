@@ -34,7 +34,7 @@ as a start of a continuation process. See also [`periodicorbits`](@ref).
 
 ## Keyword arguments
 - `method = IntervalRootFinding.Krawczyk` configures the root finding method,
-  see the docs of IntervalRootFinding.jl for all posibilities.
+  see the docs of IntervalRootFinding.jl for all possibilities.
 - `tol = 1e-15` is the root-finding tolerance.
 - `warn = true` throw a warning if no fixed points are found.
 """

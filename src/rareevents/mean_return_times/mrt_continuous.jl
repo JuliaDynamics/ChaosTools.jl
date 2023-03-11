@@ -7,7 +7,7 @@ I've kept the callback source code at the end of this file for future reference.
 
 The docstring of `exit_entry_times` describes how the current setup works.
 
-To find the closest point we do a minimization/optmization using the integrator
+To find the closest point we do a minimization/optimization using the integrator
 For minimization Chris suggested to use Nlopt (on Slack). The derivative choice matters,
 and Chris recommended AD. We can use the generic interface of Optimization.jl.
 
@@ -38,7 +38,7 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
     metric = eltype(εs) <: Real ? Euclidean() : Chebyshev()
     if metric isa Chebyshev
         error("""
-        Hyper-rectangles are not yet supported in continous systems. If you need this,
+        Hyper-rectangles are not yet supported in continuous systems. If you need this,
         please make a PR that tests, and corrects, the distance logic with hyper-rectangles!
         """)
         # The code will error or do wonky stuff with rectangles, I haven't had the time
@@ -61,7 +61,7 @@ function exit_entry_times(integ::AbstractODEIntegrator, u0, εs, T;
         # with current one for accelerating the search...?
         curr_distance = evaluate(metric, current_state(integ), u0)
         curr_distance > threshold_distance && continue
-        # Obtain mininum distance and check which is the outermost box we are out of
+        # Obtain minimum distance and check which is the outermost box we are out of
         tmin, dmin = closest_trajectory_point(integ, u0, metric, crossing_method)
         out_idx = first_outside_index(current_state(integ), u0, εs, E)
         out_idx_min = first_outside_index(dmin, εs)
@@ -96,7 +96,7 @@ function first_return_times(integ::AbstractODEIntegrator, u0, εs, T;
     metric = maxε isa Real ? Euclidean() : Chebyshev()
     if metric isa Chebyshev
         error("""
-        Hyper-rectangles are not yet supported in continous systems. If you need this,
+        Hyper-rectangles are not yet supported in continuous systems. If you need this,
         please make a PR that tests, and corrects, the distance logic with hyper-rectangles!
         """)
         # The code will error or do wonky stuff with rectangles, I haven't had the time
@@ -120,7 +120,7 @@ function first_return_times(integ::AbstractODEIntegrator, u0, εs, T;
     while (integ.t - t0) < T
         step!(integ)
         ProgressMeter.update!(prog, round(Int, integ.t - t0))
-        # Obtain mininum distance and check if we are out the box
+        # Obtain minimum distance and check if we are out the box
         tmin, dmin = closest_trajectory_point(integ, u0, metric, crossing_method)
         isout = isoutside(dmin, maxε)
         while !isout
@@ -430,7 +430,7 @@ end
 
 # There seem to be fundamental problems with this method. It runs very slow,
 # and does not seem to terminate........
-# Furthermore, I have a suspision that calling a callback
+# Furthermore, I have a suspicion that calling a callback
 # affects the trajectory solution EVEN IF NO MODIFICATION IS DONE to the `integ` object.
 # I confirmed this by simply evolving the trajectory and looking at the plotting code
 # at the `transit_time_tests.jl` file.

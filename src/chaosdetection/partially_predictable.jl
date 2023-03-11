@@ -31,7 +31,7 @@ If none of these conditions apply, the return value is `:IND` (for indeterminate
 * `n_samples = 500`: Number of samples to take for use in calculating statistics.
 * `λ_max = lyapunov(ds, 5000)`: Value to use for largest Lyapunov exponent
   for finding the Lyapunov prediction time. If it is less than zero a regular
-  result is returned immediatelly.
+  result is returned immediately.
 * `d_tol = 1e-3`: tolerance distance to use for calculating Lyapunov prediction time.
 * `T_multiplier = 10`: Multiplier from the Lyapunov prediction time to the evaluation time.
 * `T_max = Inf`: Maximum time at which to evaluate trajectory distance. If the internally

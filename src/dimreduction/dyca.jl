@@ -2,7 +2,7 @@ export dyca
 using LinearAlgebra
 
 """
-    dyca(data, eig_thresold) -> eigenvalues, proj_mat, projected_data
+    dyca(data, eig_threshold) -> eigenvalues, proj_mat, projected_data
 Compute the Dynamical Component analysis (DyCA) of the given `data` [^Uhl2018]
 used for dimensionality reduction.
 
@@ -45,7 +45,7 @@ is projected onto.
 """
 dyca(A::AbstractDataset, e) = dyca(Matrix(A), e)
 
-function dyca(data, eig_thresold::AbstractFloat; norm_eigenvectors::Bool=false)
+function dyca(data, eig_threshold::AbstractFloat; norm_eigenvectors::Bool=false)
     derivative_data = matrix_gradient(data)  #get the derivative of the data
     time_length = size(data,1) #for time averaging
 
@@ -59,7 +59,7 @@ function dyca(data, eig_thresold::AbstractFloat; norm_eigenvectors::Bool=false)
     #solve the generalized eigenproblem
     eigenvalues, eigenvectors = eigen(C1*inv(C0)*transpose(C1),C2)
     norm_eigenvectors && normalize_eigenvectors!(eigenvectors)
-    eigenvectors = eigenvectors[:, vec(eig_thresold .< abs.(eigenvalues) .<= 1.0)]
+    eigenvectors = eigenvectors[:, vec(eig_threshold .< abs.(eigenvalues) .<= 1.0)]
     if size(eigenvectors, 2) > 0
         mul!(C3, inv(C1), C2)
         proj_mat = hcat(eigenvectors,mapslices(x -> C3*x,eigenvectors,dims=[1]))
@@ -89,7 +89,7 @@ second order approximation by using:
 ```
 The returned gradient matrix hence has the same shape as the input array. Here we compute
 the gradient along axis=1 (row-wise), so to compute gradient along axis=2 (column-wise),
-the tranpose of the input matrix must be given.
+the transpose of the input matrix must be given.
 """
 function matrix_gradient(matrix::Matrix)
     gradient = copy(matrix)

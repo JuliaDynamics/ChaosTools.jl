@@ -41,9 +41,9 @@ The reason to input multiple `εs` at once is purely for performance optimizatio
 
 ### Discrete time systems
 
-For discrete systems, exit time is recorded immediatelly after exitting of the set, and
-re-entry is recorded immediatelly on re-entry. This means that if an orbit needs
-1 step to leave the set and then it re-enters immediatelly on the next step,
+For discrete systems, exit time is recorded immediately after exiting of the set, and
+re-entry is recorded immediately on re-entry. This means that if an orbit needs
+1 step to leave the set and then it re-enters immediately on the next step,
 the return time is 1.
 
 ### Continuous time systems

@@ -32,10 +32,10 @@ Initialize manually a [`TangentDynamicalSystem`](@ref) if you have a hand-coded 
 The method we employ is "H2" of [^Geist1990], originally stated in [^Benettin1980],
 and explained in educational form in [^DatserisParlitz2022].
 
-The deviation vectors defining a `D`-dimensional parallepiped in tangent space
+The deviation vectors defining a `D`-dimensional parallelepiped in tangent space
 are evolved using the tangent dynamics of the system (see [`TangentDynamicalSystem`](@ref)).
 A QR-decomposition at each step yields the local growth rate for each dimension
-of the parallepiped. At each step the parallepiped is re-normalized to be orthonormal.
+of the parallelepiped. At each step the parallelepiped is re-normalized to be orthonormal.
 The growth rates are then averaged over `N` successive steps,
 yielding the lyapunov exponent spectrum.
 

@@ -42,7 +42,7 @@ The DynamicalSystems.jl v3 changelog summarizes the highlights. Here we will lis
 * The old `basins_of_attraction` function has been completely deprecated in favor of using the version `basins_of_attraction(mapper::AttractorMapper, grid)`, which utilizes the new `AttractorMapper` interface and is more intuitive and generalizable.
 * New method for mapping initial conditions to known attractors using proximity.
 * Old functions related to clustering via featurizing have been removed in favor of just using `AttractorsViaFeaturizing`.
-* **BREAKINNG** Function `basin_fractions_clustering` is removed.
+* **BREAKING** Function `basin_fractions_clustering` is removed.
 * `basin_fractions` is deprecated in favor of `basins_fractions`.
 
 # 2.7
@@ -286,7 +286,7 @@ the documentation strings of each function before using it.
 * Updated everything to be on par with the changes of DynamicalSystemsBase v0.5
 
 ## Non-breaking
-* Minor bug fixes resulting from misstypos.
+* Minor bug fixes resulting from typos.
 * New method for permutation entropy: `permentropy` !
 
 # v0.4.3

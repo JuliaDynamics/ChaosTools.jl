@@ -130,7 +130,7 @@ end
 
 """
 Applies the threshold step described in [^1]. It returns index (period) corresponding to the
-first minimum below the `harmonic_threshod`. If that doesn't exist, it regurns the index of the
+first minimum below the `harmonic_threshod`. If that doesn't exist, it returns the index of the
 global minimum.
 """
 function absolute_threshold(localminima, τ_min, τ_max, harmonic_threshold=0.1)
@@ -143,7 +143,7 @@ function absolute_threshold(localminima, τ_min, τ_max, harmonic_threshold=0.1)
 end
 
 """
-Calculates the parabolic (quadratic) interpolation for all the indixes of `y` given in
+Calculates the parabolic (quadratic) interpolation for all the indices of `y` given in
 idxs_interpolate, and returns the coordinates of the respective parabola's minimum.
 Assumes space all adjacent x values of `y` is 1.
 """
@@ -152,7 +152,7 @@ function parabolic_interpolation(y, idxs_interpolate)
     x1 = @view y[idxs_interpolate .- 1]
     x2 = @view y[idxs_interpolate]
     x3 = @view y[idxs_interpolate .+ 1]
-    #calculate the vertix coordinates (xv, yv) for each triplet
+    #calculate the vertex coordinates (xv, yv) for each triplet
     a = @. (x1 - 2x2 + x3)/2
     b = @. (x3 - x1) / 2
     xv = @. -b/2a

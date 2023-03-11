@@ -111,7 +111,7 @@ function normalize_deviations!(tands::TangentDynamicalSystem)
     return
 end
 
-# Metaprogramming ontributed by @saschatimme.
+# Metaprogramming contributed by @saschatimme.
 # It is a way to create a normalized version of each column of the SMatrix
 @generated function normalize_static_deviations(A::SMatrix)
     normalize_metaprogramming(A)

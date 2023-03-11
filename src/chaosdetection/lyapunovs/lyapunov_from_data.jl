@@ -41,8 +41,8 @@ E(k) \\approx \\lambda\\cdot k \\cdot \\Delta t + E(0)
 for a *well defined region* in the ``k`` axis, where ``\\lambda`` is
 the approximated maximum Lyapunov exponent. ``\\Delta t`` is the time between samples in the
 original timeseries. You can use [`linear_region`](@ref) with arguments `(ks .* Δt, E)` to
-identify the slope (= ``\\lambda``) immediatelly, assuming you
-have choosen sufficiently good `ks` such that the linear scaling region is bigger
+identify the slope (= ``\\lambda``) immediately, assuming you
+have chosen sufficiently good `ks` such that the linear scaling region is bigger
 than the saturated region.
 
 The algorithm used in this function is due to Parlitz[^Skokos2016], which itself

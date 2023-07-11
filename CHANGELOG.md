@@ -1,5 +1,8 @@
 # main
 
+# v3.1
+- `fixedpoints` can now be called without a Jacobian (giving `nothing` as third argument, also the default value). In this case a Jacobian is estimated automatically via ForwardDiff.jl.
+
 # v3.0
 
 Major release part of the DynamicalSystems.jl v3.

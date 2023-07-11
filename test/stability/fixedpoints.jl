@@ -13,7 +13,6 @@ using ChaosTools, Test
     henon_fp = hmfp(current_parameters(ds)...)
 
     @testset "J=$(J)" for J in (nothing, henon_jacob)
-        isnothing(J) && continue
         fp, eigs, stable = fixedpoints(ds, box, J)
         @test size(fp) == (2,2)
         @test stable == [false, false]
@@ -75,7 +74,6 @@ end
     afps = lorenzfp(22,8/3)
 
     @testset "J=$(J)" for J in (nothing, lorenz_jacob)
-        isnothing(J) && continue
         fp, eigs, stable = fixedpoints(ds, box, J)
         @test length(fp) == 3
         for p in fp

@@ -80,9 +80,7 @@ function predictability(ds::CoreDynamicalSystem;
         ν_threshold = 0.5, C_threshold = 0.5
     )
 
-    #error("This function has not yet been updated to DynamicalSystems.jl v3.0.
-    #Please consider a Pull Request :) (very easy!)")
-
+	reinit!(ds)
     rng = Xoshiro()
     λ_max < 0 && return :REG, 1.0, 1.0
     samples = sample_trajectory(ds, Ttr, T_sample, n_samples)
@@ -94,9 +92,7 @@ function predictability(ds::CoreDynamicalSystem;
     # Calculate cross-distance scaling and correlation scaling
     distances = Float64[] # Mean distances at time T for different δ
     correlations = Float64[] # Cross-correlation at time T for different δ
-    # TODO: p_integ is type unstable, the rest of the code should be moved
-    # into a separate function. It's also good todo for more readable code...
-    p_sys = ParallelDynamicalSystem(ds, samples[1:2])
+    
     for δ in δ_range
         # TODO: some kind of warning should be thrown for very large Tλ
         Tλ = log(d_tol/δ)/λ_max
@@ -173,7 +169,7 @@ function sample_trajectory(ds::DynamicalSystem,
     samples = typeof(current_state(ds))[]
     while current_time(ds) < Ttr + T_sample
         step!(ds, rand(D_sample))
-        push!(samples, current_state(ds))
+        push!(samples, deepcopy(current_state(ds)))
     end
     samples
 end

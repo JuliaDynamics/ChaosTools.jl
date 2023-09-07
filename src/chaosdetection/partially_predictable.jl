@@ -92,7 +92,7 @@ function predictability(ds::CoreDynamicalSystem;
     # Calculate cross-distance scaling and correlation scaling
     distances = Float64[] # Mean distances at time T for different δ
     correlations = Float64[] # Cross-correlation at time T for different δ
-    
+    p_sys = ParallelDynamicalSystem(ds, samples[1:2])
     for δ in δ_range
         # TODO: some kind of warning should be thrown for very large Tλ
         Tλ = log(d_tol/δ)/λ_max

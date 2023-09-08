@@ -22,7 +22,7 @@ include("timeevolution/orbitdiagram.jl")
 
 testfile("chaosdetection/lyapunovs.jl")
 testfile("chaosdetection/gali.jl")
-# include("chaosdetection/partially_predictable_tests.jl")
+include("chaosdetection/partially_predictable.jl")
 include("chaosdetection/01test.jl")
 testfile("chaosdetection/expansionentropy.jl")
 

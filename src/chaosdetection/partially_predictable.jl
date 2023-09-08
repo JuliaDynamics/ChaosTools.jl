@@ -1,8 +1,11 @@
 using LinearAlgebra
 using Random: Xoshiro
-using Distributions: Exponential, Geometric, UnivariateDistribution
+using Distributions: Exponential, Geometric, Normal, UnivariateDistribution
 using Statistics: mean
 export predictability
+
+slope(x, y) = linreg(x, y)[2]
+
 
 """
     predictability(ds::CoreDynamicalSystem; kwargs...) -> chaos_type, ν, C
@@ -74,15 +77,13 @@ function predictability(ds::CoreDynamicalSystem;
         Ttr::Real = 200, T_sample::Real = 1e4, n_samples::Integer = 500,
         λ_max::Real = lyapunov(ds, 5000), d_tol::Real = 1e-3, T_multiplier::Real = 10,
         T_max::Real = Inf, δ_range::AbstractArray = 10.0 .^ (-9:-6),
-        ν_threshold = 0.5, C_threshold = 0.5,
+        ν_threshold = 0.5, C_threshold = 0.5
     )
 
-    error("This function has not yet been updated to DynamicalSystems.jl v3.0.
-    Please consider a Pull Request :) (very easy!)")
-
+	reinit!(ds)
     rng = Xoshiro()
     λ_max < 0 && return :REG, 1.0, 1.0
-    samples = sample_trajectory(ds, Ttr, T_sample, n_samples; diffeq)
+    samples = sample_trajectory(ds, Ttr, T_sample, n_samples)
     # Calculate initial mean position and variance of the trajectory. (eq. [1] pg. 5)
     # using random samples approach instead of direct integration
     μ = mean(samples)
@@ -91,9 +92,7 @@ function predictability(ds::CoreDynamicalSystem;
     # Calculate cross-distance scaling and correlation scaling
     distances = Float64[] # Mean distances at time T for different δ
     correlations = Float64[] # Cross-correlation at time T for different δ
-    # TODO: p_integ is type unstable, the rest of the code should be moved
-    # into a separate function. It's also good todo for more readable code...
-    p_integ = parallel_integrator(ds, samples[1:2]; diffeq)
+    p_sys = ParallelDynamicalSystem(ds, samples[1:2])
     for δ in δ_range
         # TODO: some kind of warning should be thrown for very large Tλ
         Tλ = log(d_tol/δ)/λ_max
@@ -106,11 +105,11 @@ function predictability(ds::CoreDynamicalSystem;
             n /= norm(n)
             û = u + δ*n
             # re-integrate to time T
-            reinit!(p_integ, [u, û])
-            step!(p_integ, T)
+            reinit!(p_sys, [u, û])
+            step!(p_sys, T)
             # Accumulate distance and square-distance
             # TODO: This integrator access is not using the API!
-            d = norm(p_integ.u[1]-p_integ.u[2], 2)
+            d = norm(current_states(p_sys)[1]-current_states(p_sys)[2], 2)
             Σd  += d
             Σd² += d^2
         end
@@ -144,36 +143,33 @@ end
 # Samples *approximately* `n_samples` points via exponential distribution sampling times
 function sample_trajectory(ds::ContinuousDynamicalSystem,
                            Ttr::Real, T_sample::Real,
-                           n_samples::Real;
-                           diffeq = NamedTuple())
+                           n_samples::Real)
     β = T_sample/n_samples
     D_sample = Exponential(β)
-    sample_trajectory(ds, Ttr, T_sample, D_sample; diffeq)
+    sample_trajectory(ds, Ttr, T_sample, D_sample)
 end
 # Same as above but geometric distribution due to discrete nature of time
 function sample_trajectory(ds::DiscreteDynamicalSystem,
                            Ttr::Real, T_sample::Real,
-                           n_samples::Real;
-                           diffeq = NamedTuple())
+                           n_samples::Real) 
+                           
     @assert n_samples < T_sample "discrete systems must satisfy n_samples < T_sample"
     # Samples *approximately* `n_samples` points.
     p = n_samples/T_sample
     D_sample = Geometric(p)
-    sample_trajectory(ds, Ttr, T_sample, D_sample; diffeq)
+    sample_trajectory(ds, Ttr, T_sample, D_sample)
 end
 
 function sample_trajectory(ds::DynamicalSystem,
                            Ttr::Real, T_sample::Real,
-                           D_sample::UnivariateDistribution;
-                           diffeq = NamedTuple())
+                           D_sample::UnivariateDistribution)
     # Simulate initial transient
-    integ = integrator(ds; diffeq)
-    step!(integ, Ttr)
+    step!(ds, Ttr)
     # Time to the next sample is sampled from the distribution D_sample
-    samples = typeof(integ.u)[]
-    while integ.t < Ttr + T_sample
-        step!(integ, rand(D_sample))
-        push!(samples, integ.u)
+    samples = typeof(current_state(ds))[]
+    while current_time(ds) < Ttr + T_sample
+        step!(ds, rand(D_sample))
+        push!(samples, deepcopy(current_state(ds)))
     end
     samples
 end

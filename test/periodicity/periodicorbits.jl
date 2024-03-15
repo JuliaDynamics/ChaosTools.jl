@@ -71,7 +71,7 @@ indss = [[1,2]] # <- must be container of vectors!!!
 λs = 0.005 # <- only this allowed to not be vector (could also be vector)
 
 @testset "order = $o" for o in [2, 3]
-    FP = periodicorbits(ds, o, ics, λs, indss, singss; roundtol = 4)
+    FP = periodicorbits(ds, o, ics, λs, indss, singss; spacetol = 1e-7)
     for fp in FP
         @test round(fp[1], digits = 4) ∈ ox[o]
         @test round(fp[2], digits = 4) ∈ oy[o]

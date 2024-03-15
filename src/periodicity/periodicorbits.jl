@@ -1,5 +1,6 @@
 using Combinatorics: permutations, multiset_permutations
 using Random: randperm
+using DataStructures: RBTree
 
 export lambdamatrix, lambdaperms, periodicorbits
 
@@ -30,11 +31,10 @@ a random permutation will be chosen for them, with `λ=0.001`.
    the next one is `≤ disttol` then it has converged to a fixed point.
 * `inftol = 10.0`: If a state reaches `norm(state) ≥ inftol` it is assumed that
    it has escaped to infinity (and is thus abandoned).
-* `roundtol::Int = 4`: The found fixed points are rounded
-   to `roundtol` digits before pushed into the list of returned fixed points `FP`,
-   *if* they are not already contained in `FP`.
-   This is done so that `FP` doesn't contain duplicate fixed points (notice
-   that this has nothing to do with `disttol`).
+* `spacetol = 1e-8`: A detected fixed point is stored if it is at least `spacetol` 
+   far from all other stored fixed points `FP`. Distance is measured by euclidian norm.
+   This limits the number of duplicate fixed points in the output `FP`. If you are 
+   getting duplicate fixed points, decrease this value.
 
 ## Description
 
@@ -67,15 +67,16 @@ function periodicorbits(
         maxiters::Int = 100000,
         disttol::Real = 1e-10,
         inftol::Real = 10.0,
-        roundtol::Int = 4
+        spacetol::Real = 1e-8,
     )
 
-    FP = typeof(current_state(ds))[]
+    type = typeof(current_state(ds))
+    FP = RBTree{DummyStructure{type}}()
     for λ in λs, inds in indss, sings in singss
         Λ = lambdamatrix(λ, inds, sings)
-        append!(FP, _periodicorbits!(ds, o, ics, Λ, maxiters, disttol, inftol, roundtol))
+        _periodicorbits!(FP, ds, o, ics, Λ, maxiters, disttol, inftol, spacetol)
     end
-    return Dataset(FP)
+    return Dataset(tovector(FP))
 end
 
 function periodicorbits(
@@ -85,17 +86,17 @@ function periodicorbits(
         maxiters::Int = 100000,
         disttol::Real = 1e-10,
         inftol::Real = 10.0,
-        roundtol::Int = 4
+        spacetol::Real = 1e-8,
     )
 
-    FP = typeof(current_state(ds))[]
+    type = typeof(current_state(ds))
+    FP = RBTree{DummyStructure{type}}()
     Λ = lambdamatrix(0.001, dimension(ds))
-    FP = _periodicorbits!(ds, o, ics, Λ, maxiters, disttol, inftol, roundtol)
-    return Dataset(FP)
+    _periodicorbits!(FP, ds, o, ics, Λ, maxiters, disttol, inftol, spacetol)
+    return Dataset(tovector(FP))
 end
 
-function _periodicorbits!(ds, o, ics, Λ, maxiter, disttol, inftol, roundtol)
-    FP = typeof(current_state(ds))[]
+function _periodicorbits!(FP, ds, o, ics, Λ, maxiter, disttol, inftol, spacetol)
     for st in ics
         reinit!(ds, st)
         prevst = st
@@ -104,14 +105,12 @@ function _periodicorbits!(ds, o, ics, Λ, maxiter, disttol, inftol, roundtol)
             norm(st) > inftol && break
 
             if norm(prevst - st) < disttol
-                unist = round.(st, digits = roundtol)
-                unist ∉ FP && push!(FP, unist)
+                push!(FP, DummyStructure{typeof(st)}(st, spacetol))
                 break
             end
             prevst = st
         end
     end
-    return FP
 end
 
 function Sk(ds::DeterministicIteratedMap, prevst, o::Int, Λ)

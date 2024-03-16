@@ -69,6 +69,9 @@ function periodicorbits(
         roundtol::Int = nothing,
         absintol::Real = 1e-8, # absolute intolerance
     )
+    if !isnothing(roundtol)
+        warn("`roundtol` keyword has been removed in favor of `absintol`")
+    end
 
     type = typeof(current_state(ds))
     FP = RBTree{DummyStructure{type}}()
@@ -88,6 +91,9 @@ function periodicorbits(
         inftol::Real = 10.0,
         absintol::Real = 1e-8, # absolute intolerance
     )
+    if !isnothing(roundtol)
+        warn("`roundtol` keyword has been removed in favor of `absintol`")
+    end
 
     type = typeof(current_state(ds))
     FP = RBTree{DummyStructure{type}}()

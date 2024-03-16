@@ -31,10 +31,9 @@ a random permutation will be chosen for them, with `λ=0.001`.
    the next one is `≤ disttol` then it has converged to a fixed point.
 * `inftol = 10.0`: If a state reaches `norm(state) ≥ inftol` it is assumed that
    it has escaped to infinity (and is thus abandoned).
-* `spacetol = 1e-8`: A detected fixed point is stored if it is at least `spacetol` 
-   far from all other stored fixed points `FP`. Distance is measured by euclidian norm.
-   This limits the number of duplicate fixed points in the output `FP`. If you are 
-   getting duplicate fixed points, decrease this value.
+* `absintol = 1e-8`: A detected fixed point isn't stored if it is in `absintol` 
+   neighborhood of some previously detected point. Distance is measured by 
+   euclidian norm. If you are getting duplicate fixed points, decrease this value.
 
 ## Description
 
@@ -67,14 +66,15 @@ function periodicorbits(
         maxiters::Int = 100000,
         disttol::Real = 1e-10,
         inftol::Real = 10.0,
-        spacetol::Real = 1e-8,
+        roundtol::Int = nothing,
+        absintol::Real = 1e-8, # absolute intolerance
     )
 
     type = typeof(current_state(ds))
     FP = RBTree{DummyStructure{type}}()
     for λ in λs, inds in indss, sings in singss
         Λ = lambdamatrix(λ, inds, sings)
-        _periodicorbits!(FP, ds, o, ics, Λ, maxiters, disttol, inftol, spacetol)
+        _periodicorbits!(FP, ds, o, ics, Λ, maxiters, disttol, inftol, absintol)
     end
     return Dataset(tovector(FP))
 end
@@ -86,17 +86,17 @@ function periodicorbits(
         maxiters::Int = 100000,
         disttol::Real = 1e-10,
         inftol::Real = 10.0,
-        spacetol::Real = 1e-8,
+        absintol::Real = 1e-8, # absolute intolerance
     )
 
     type = typeof(current_state(ds))
     FP = RBTree{DummyStructure{type}}()
     Λ = lambdamatrix(0.001, dimension(ds))
-    _periodicorbits!(FP, ds, o, ics, Λ, maxiters, disttol, inftol, spacetol)
+    _periodicorbits!(FP, ds, o, ics, Λ, maxiters, disttol, inftol, absintol)
     return Dataset(tovector(FP))
 end
 
-function _periodicorbits!(FP, ds, o, ics, Λ, maxiter, disttol, inftol, spacetol)
+function _periodicorbits!(FP, ds, o, ics, Λ, maxiter, disttol, inftol, absintol)
     for st in ics
         reinit!(ds, st)
         prevst = st
@@ -105,7 +105,7 @@ function _periodicorbits!(FP, ds, o, ics, Λ, maxiter, disttol, inftol, spacetol
             norm(st) > inftol && break
 
             if norm(prevst - st) < disttol
-                push!(FP, DummyStructure{typeof(st)}(st, spacetol))
+                push!(FP, DummyStructure{typeof(st)}(st, absintol))
                 break
             end
             prevst = st

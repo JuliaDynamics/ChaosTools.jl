@@ -1,6 +1,10 @@
 using DataStructures: RBTree
 import Base: <, ==
 
+# This structure is used to overload the behavior of < and == for the use in a binary tree.
+# This way binary tree will store inserted values only if they are at least `eps` away from each other.
+# For example if the root is 0.0 and `eps` is 1.0 then 1.1 will be stored as a child on the right.
+# However, 0.9 won't be stored because it is in the `eps` neighborhood of 0.0.
 struct DummyStructure{T}
     value::T
     eps::Float64

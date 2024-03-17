@@ -74,6 +74,11 @@ function periodicorbits(
     end
 
     type = typeof(current_state(ds))
+    # Binary tree is used for fast insertion and searching of fixed points.
+    # DummyStructure wrapper ensures that each point in the binary
+    # tree is at least `abstol` away from each other. This eliminated duplicate
+    # fixed points in the output.
+    # Look at the custombintree.jl file for details about DummyStructure.
     FP = RBTree{DummyStructure{type}}()
     for λ in λs, inds in indss, sings in singss
         Λ = lambdamatrix(λ, inds, sings)
@@ -97,6 +102,11 @@ function periodicorbits(
     end
 
     type = typeof(current_state(ds))
+    # Binary tree is used for fast insertion and searching of fixed points.
+    # DummyStructure wrapper ensures that each point in the binary
+    # tree is at least `abstol` away from each other. This eliminated duplicate
+    # fixed points in the output.
+    # Look at the custombintree.jl file for details about DummyStructure.
     FP = RBTree{DummyStructure{type}}()
     Λ = lambdamatrix(0.001, dimension(ds))
     _periodicorbits!(FP, ds, o, ics, Λ, maxiters, disttol, inftol, abstol)
@@ -112,6 +122,8 @@ function _periodicorbits!(FP, ds, o, ics, Λ, maxiter, disttol, inftol, abstol)
             norm(st) > inftol && break
 
             if norm(prevst - st) < disttol
+                # DummyStructure eliminates duplicate fixed points.
+                # Look at the custombintree.jl file for details about DummyStructure.
                 push!(FP, DummyStructure{typeof(st)}(st, abstol))
                 break
             end

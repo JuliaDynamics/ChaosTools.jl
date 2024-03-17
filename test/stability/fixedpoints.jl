@@ -52,11 +52,7 @@ end
         set_state!(ds, x0)
         step!(ds, o)
         xn = current_state(ds)
-        if isapprox(x0, xn; atol = tol)
-            @test true
-        else
-            @test false
-        end
+        @test isapprox(x0, xn; atol = tol)
     end
 end
 

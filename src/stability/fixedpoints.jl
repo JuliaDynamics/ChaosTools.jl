@@ -111,15 +111,13 @@ function to_root_J(Jf, ds::DeterministicIteratedMap, p, o::Int)
     c = Diagonal(ones(typeof(current_state(ds))))
     d = dimension(ds)
     u -> begin
-        trajectory = Vector{Any}(undef, o) # has to be any to work with IntervalRootFinding
-        trajectory[1] = u
+        J = Jf(u, p, 0.0)
+        x = ds.f(u, p, 0.0)
         for i in 2:o
-            trajectory[i] = ds.f(trajectory[i-1], p, 0.0) # trajectory from DynamicalSystemsBase won't work because of IntervalRootFinding
+            J = Jf(x, p, 0.0) * J
+            x = ds.f(x, p, 0.0)
         end
-        reverse!(trajectory)
-        jacobians = map(x -> Jf(x, p, 0.0), trajectory)
-        jacob_of_composition = reduce(*, jacobians)
-        return jacob_of_composition .- c
+        return J .- c
     end
 end
 

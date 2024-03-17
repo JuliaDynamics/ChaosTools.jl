@@ -37,14 +37,29 @@ as a start of a continuation process. See also [`periodicorbits`](@ref).
   see the docs of IntervalRootFinding.jl for all possibilities.
 - `tol = 1e-15` is the root-finding tolerance.
 - `warn = true` throw a warning if no fixed points are found.
+- `order = nothing` search for fixed points of the n-th iterate of 
+  [`DeterministicIteratedMap`](@ref). Must be a positive integer or `nothing`.
+  Select `nothing` or 1 to search for the fixed points of the original map.
+
+## Performance notes
+
+Setting `order` to a value greater than 5 can be very slow. Consider using 
+more suitable algorithms for periodic orbit detection, such as 
+[`periodicorbits`](@ref).
+
 """
 function fixedpoints(ds::DynamicalSystem, box, J = nothing;
         method = IntervalRootFinding.Krawczyk, tol = 1e-15, warn = true,
-        order = nothing, # the keyword `order` will be the period in a future version...
+        order = nothing,
     )
     if isinplace(ds)
         error("`fixedpoints` currently works only for out-of-place dynamical systems.")
     end
+
+    if !(isnothing(order) || (isa(order, Int) && order > 0))
+        error("`order` must be a positive integer or `nothing`.")
+    end
+
     # Jacobian: copy code from `DynamicalSystemsBase`
     f = dynamic_rule(ds)
     p = current_parameters(ds)
@@ -83,15 +98,30 @@ end
 function to_root_f(ds::DeterministicIteratedMap, p, o::Int)
     f = dynamic_rule(ds)
     u -> begin
-        v = copy(u) # copy is free for `SVector`
+        v = u
         for _ in 1:o
             v = f(v, p, 0)
         end
         return v - u
     end
 end
-# TODO: Estimate periodic orbits of period `o` for discrete systems.
-# What's left is to create the Jacobian for higher iterates.
+
+# this can be derived from chain rule : J(f(g(x))) = Jf(g(x))*Jg(x)
+function to_root_J(Jf, ds::DeterministicIteratedMap, p, o::Int)
+    c = Diagonal(ones(typeof(current_state(ds))))
+    d = dimension(ds)
+    u -> begin
+        trajectory = Vector{Any}(undef, o) # has to be any to work with IntervalRootFinding
+        trajectory[1] = u
+        for i in 2:o
+            trajectory[i] = ds.f(trajectory[i-1], p, 0.0) # trajectory from DynamicalSystemsBase won't work because of IntervalRootFinding
+        end
+        reverse!(trajectory)
+        jacobians = map(x -> Jf(x, p, 0.0), trajectory)
+        jacob_of_composition = reduce(*, jacobians)
+        return jacob_of_composition .- c
+    end
+end
 
 
 function roots_to_dataset(r, D, warn)

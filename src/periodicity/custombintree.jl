@@ -5,21 +5,21 @@ import Base: <, ==
 # This way binary tree will store inserted values only if they are at least `eps` away from each other.
 # For example if the root is 0.0 and `eps` is 1.0 then 1.1 will be stored as a child on the right.
 # However, 0.9 won't be stored because it is in the `eps` neighborhood of 0.0.
-struct DummyStructure{T}
+struct VectorWithEpsRadius{T}
     value::T
     eps::Float64
 end
 
-function <(a::DummyStructure, b::DummyStructure)
+function <(a::VectorWithEpsRadius, b::VectorWithEpsRadius)
     abs_diff = norm(a.value - b.value)
     return abs_diff > a.eps && a.value < b.value
 end
 
-function ==(a::DummyStructure, b::DummyStructure)
+function ==(a::VectorWithEpsRadius, b::VectorWithEpsRadius)
     return norm(a.value - b.value) <= a.eps
 end
 
-function tovector(tree::RBTree{DummyStructure{T}}) where T
+function tovector(tree::RBTree{VectorWithEpsRadius{T}}) where T
     len = length(tree)
     type = typeof(tree).parameters[1].parameters[1]
     vect = Vector{type}(undef, len)
@@ -41,13 +41,13 @@ end
 # gererates datastructure for storing fixed points
 function fpcollection(type)
     # Binary tree is used for fast insertion and searching of fixed points.
-    # DummyStructure wrapper ensures that each point in the binary
+    # VectorWithEpsRadius wrapper ensures that each point in the binary
     # tree is at least `abstol` away from each other. This eliminated duplicate
     # fixed points in the output.
-    collection = RBTree{DummyStructure{type}}()
+    collection = RBTree{VectorWithEpsRadius{type}}()
     return collection
 end
 
 function storefp!(collection, fp, abstol)
-    push!(collection, DummyStructure{typeof(fp)}(fp, abstol))
+    push!(collection, VectorWithEpsRadius{typeof(fp)}(fp, abstol))
 end

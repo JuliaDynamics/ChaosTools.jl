@@ -38,6 +38,23 @@ end
 #         end
 #     end
 # end
+@testset "Henon map (n-th order)" begin
+    henon_rule(x, p, n) = SVector{2}(1.0 - p[1]*x[1]^2 + x[2], p[2]*x[1])
+    henon_jacob(x, p, n) = SMatrix{2,2}(-2*p[1]*x[1], p[2], 1.0, 0.0)
+    ds = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3])
+    x = interval(-3.0, 3.0)
+    y = interval(-10.0, 10.0)
+    box = x × y
+    o = 4
+    fp, eigs, stable = fixedpoints(ds, box, henon_jacob; order=o)
+    tol = 1e-8
+    for x0 in fp
+        set_state!(ds, x0)
+        step!(ds, o)
+        xn = current_state(ds)
+        @test isapprox(x0, xn; atol = tol)
+    end
+end
 
 @testset "Lorenz system" begin
     function lorenz_rule(u, p, t)

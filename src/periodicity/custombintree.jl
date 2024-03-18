@@ -37,3 +37,17 @@ function _tovector!(node, vect::Vector{T}, index::Int64) where T
     end
     return index
 end
+
+# gererates datastructure for storing fixed points
+function fpcollection(type)
+    # Binary tree is used for fast insertion and searching of fixed points.
+    # DummyStructure wrapper ensures that each point in the binary
+    # tree is at least `abstol` away from each other. This eliminated duplicate
+    # fixed points in the output.
+    collection = RBTree{DummyStructure{type}}()
+    return collection
+end
+
+function storefp!(collection, fp, abstol)
+    push!(collection, DummyStructure{typeof(fp)}(fp, abstol))
+end

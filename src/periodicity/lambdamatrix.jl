@@ -39,18 +39,8 @@ orbits from e.g. least unstable to most unstable, see[^Diakonos1998] for details
 """
 function lambdamatrix(λ::Real, inds::AbstractVector{<:Integer},
     sings::AbstractVector{<:Real})
-    # this function seems to be super inefficient
-
-    D = length(inds)
-    D != length(sings) && throw(ArgumentError("inds and sings must have equal size."))
     0 < λ < 1 || throw(ArgumentError("λ must be in (0,1)"))
-    unique(inds)!=inds && throw(ArgumentError("All elements of inds must be unique."))
-    # This has to be improved to not create intermediate arrays!!!
-    a = zeros(typeof(λ), (D,D))
-    for i in 1:D
-        a[(i-1)*D + inds[i]] = λ*(sings[i] > 0 ? +1 : -1)
-    end
-    return SMatrix{D,D}(a)
+    return cmatrix(λ, inds, sings)
 end
 
 function lambdamatrix(λ::T, D::Integer) where {T<:Real}
@@ -75,3 +65,25 @@ function lambdaperms(D::Integer)
     return indperms, singperms
 end
 
+
+"""
+# TO-DO
+"""
+function cmatrix(constant::Real, inds::AbstractVector{<:Integer},
+    sings::AbstractVector{<:Real})
+    # this function seems to be super inefficient
+    D = length(inds)
+    D != length(sings) && throw(ArgumentError("inds and sings must have equal size."))
+    unique(inds)!=inds && throw(ArgumentError("All elements of inds must be unique."))
+    # This has to be improved to not create intermediate arrays!!!
+    a = zeros(typeof(constant), (D,D))
+    for i in 1:D
+        a[(i-1)*D + inds[i]] = constant*(sings[i] > 0 ? +1 : -1)
+    end
+    return SMatrix{D,D}(a)
+end
+
+"""
+TO-DO
+"""
+cmatrix(inds::AbstractVector{<:Integer}, signs::AbstractVector{<:Real}) = cmatrix(1.0, inds, signs)

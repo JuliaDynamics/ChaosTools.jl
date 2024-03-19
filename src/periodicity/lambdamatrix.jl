@@ -68,9 +68,6 @@ function lambdaperms(D::Integer)
 end
 
 
-"""
-# TO-DO
-"""
 function cmatrix(constant::Real, inds::AbstractVector{<:Integer},
     sings::AbstractVector{<:Real})
     # this function seems to be super inefficient
@@ -85,7 +82,4 @@ function cmatrix(constant::Real, inds::AbstractVector{<:Integer},
     return SMatrix{D,D}(a)
 end
 
-"""
-TO-DO
-"""
 cmatrix(inds::AbstractVector{<:Integer}, signs::AbstractVector{<:Real}) = cmatrix(1.0, inds, signs)

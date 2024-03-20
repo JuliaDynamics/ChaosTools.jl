@@ -1,4 +1,4 @@
-using DataStructures: RBTree
+using DataStructures: RBTree, search_node
 import Base: <, ==
 
 # This structure is used to overload the behavior of < and == for the use in a binary tree.
@@ -50,4 +50,8 @@ end
 
 function storefp!(collection, fp, abstol)
     push!(collection, VectorWithEpsRadius{typeof(fp)}(fp, abstol))
+end
+
+function previously_detected(tree, fp, abstol)
+    return !isnothing(search_node(tree, VectorWithEpsRadius{typeof(fp)}(fp, abstol)).data)
 end

@@ -58,9 +58,13 @@ of low dimensional dynamical systems is affected by the position and the stabili
 
 Finding unstable (or stable) periodic orbits of a discrete mapping analytically
 rapidly becomes impossible for higher orders of fixed points.
-Fortunately there is a numeric algorithm due to
-Schmelcher & Diakonos which allows such a computation. Notice that even though
-the algorithm can find stable fixed points, it is mainly aimed at *unstable* ones.
+Fortunately there are numerical algorithms that allow their detection.
+
+### Schmelcher & Diakonos
+
+First of the algorithms was proposed by Schmelcher & Diakonos[^Schmelcher1997].
+Notice that even though the algorithm can find stable fixed points, it is mainly 
+aimed at *unstable* ones.
 
 The functions `periodicorbits` and `lambdamatrix` implement the algorithm:
 ```@docs
@@ -69,7 +73,7 @@ lambdamatrix
 lambdaperms
 ```
 
-### Standard Map example
+#### Standard Map example
 For example, let's find the fixed points of the Standard map of order 2, 3, 4, 5, 6
 and 8. We will use all permutations for the `signs` but only one for the `inds`.
 We will also only use one `λ` value, and a 21×21 density of initial conditions.
@@ -151,6 +155,126 @@ Okay, this output is great, and we can tell that it is correct because:
 2. Besides fixed points of previous orders, *original* fixed points of
    order $n$ come in (possible multiples of) $2n$-sized pairs (see e.g. order 5).
    This is a direct consequence of the Poincaré–Birkhoff theorem.
+
+### Davidchack & Lai
+
+An extension of the previous algorithm was proposed by Davidchack & Lai[^Davidchack1999].
+It works similarly, but it uses smarter seeding and improved transformation rule.
+
+The functions `davidchacklai` implements the algorithm:
+```@docs
+davidchacklai
+```
+
+#### Logistic Map example
+
+The idea of periodic orbits can be illustrated easily on 1D maps. Fixed points of a 
+map $f$ is a point $x$ such that $f(x) = x$. Hence finding roots of $f(x)-x = 0$ 
+yields the fixed points. If we graph $f$ and an identity line $y=x$, their intersection 
+is exactly the fixed points. Periodic point is a point $x$ such that $f^{n}(x)=x$, where 
+$f^{n}$ is $n$-th composition of $f$. Naturally, solving $f^{n}(x)-x=0$ would yield the 
+periodic points. However, this is impossible analytically. Let's see how `davidchacklai` 
+deals with it:
+
+First let's start with finding first $9$ periodic orbits of logistic map for parameter $3.72$.
+
+```@example MAIN
+using ChaosTools
+using CairoMakie
+
+logistic_rule(x, p, n) = @inbounds SVector(p[1]*x[1]*(1 - x[1]))
+ds = DeterministicIteratedMap(logistic_rule, SVector(0.4), [3.72])
+seeds = [SVector(i) for i in LinRange(0.0, 1.0, 10)]
+output = davidchacklai(ds, 9, seeds, 6; abstol=1e-6, disttol=1e-12)
+```
+
+Now to check the results, let's plot the periodic orbits of period $6$, $7$, $8$ and $9$. 
+
+```@example MAIN
+function ydata(ds, order, xdata)
+    ydata = typeof(current_state(ds)[1])[]
+    for x in xdata
+        reinit!(ds, x)
+        step!(ds, order)
+        push!(ydata, current_state(ds)[1])
+    end
+    return ydata
+end
+
+fig = Figure()
+x = LinRange(0.0, 1.0, 1000)
+for (order, position)  in zip([6,7,8,9], [(1,1), (1,2), (2,1), (2,2)])
+    fpsx = output[order]
+    y = ydata(ds, order, [SVector(x0) for x0 in x])
+    fpsy = ydata(ds, order, fpsx)
+    axis = Axis(fig[position...])
+    axis.title = "Order $order"
+    lines!(axis, x, x, color=:black, linewidth=0.5)
+    lines!(axis, x, y, color = :blue, linewidth=0.7)
+    scatter!(axis, [i[1] for i in fpsx], fpsy, color = :red, markersize=5)
+end
+fig
+```
+The result is correct because all the intersection between identity and logistic 
+map were found.
+
+#### Henon Map example
+
+Let's try to use `davidchacklai` in higher dimension. We will try to detect 
+all periodic points of henon map of period `1` to `14`.
+
+```@example MAIN
+using ChaosTools
+using CairoMakie
+
+function henon(u0=zeros(2); a = 1.4, b = 0.3)
+    return DeterministicIteratedMap(henon_rule, u0, [a,b])
+end
+henon_rule(x, p, n) = SVector{2}(1.0 - p[1]*x[1]^2 + x[2], p[2]*x[1])
+
+ds = henon()
+xs = LinRange(-3.0, 3.0, 10)
+ys = LinRange(-10.0, 10.0, 10)
+seeds = [SVector{2}(x,y) for x in xs for y in ys]
+n = 14
+m = 6
+output = davidchacklai(ds, n, seeds, m; abstol=1e-7, disstol=1e-10)
+
+fig = Figure()
+ax = Axis(fig[1,1])
+for result in output
+    scatter!(ax, [x[1] for x in result], [x[2] for x in result], markersize=8, color=:blue)
+end
+fig
+```
+
+Note that in this case parameter `m` has to be set to at least `6`. Otherwise, the algorithm 
+fails to detect orbits of higher periods correctly.
+
+To check if the detected points are indeed periodic, we can do the following test:
+
+```@example MAIN
+    orbit14 = output[end]
+    c = 0
+    for x in orbit14
+        set_state!(ds, x)
+        step!(ds, 14)
+        xn = current_state(ds)
+        if ChaosTools.norm(xn - x) > 1e-10
+            c += 1
+        end
+    end
+    println("$c non-periodic points found in the 14th order orbit.")
+```
+
+The same test can be applied to orbits of lower periods.
+
+
+[^Davidchack1999]:
+    Ruslan L. Davidchack and Ying-Cheng Lai, Phys. Rev. E 60, 6172 – Published 1 November 1999
+
+[^Schmelcher1997]:
+    P. Schmelcher & F. K. Diakonos, Phys. Rev. Lett. **78**, pp 4733 (1997)
 
 ## Estimating the Period
 

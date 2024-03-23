@@ -1,5 +1,7 @@
 cd(@__DIR__)
-using ChaosTools, DynamicalSystemsBase, Neighborhood
+using ChaosTools
+using ChaosTools.DynamicalSystemsBase
+using ChaosTools.Neighborhood
 
 pages = [
     "index.md",
@@ -18,4 +20,18 @@ Downloads.download(
 )
 include("build_docs_with_style.jl")
 
-build_docs_with_style(pages, ChaosTools, DynamicalSystemsBase, Neighborhood)
+# TODO: Port all citations to use this:
+# using DocumenterCitations
+
+# bib = CitationBibliography(
+#     joinpath(@__DIR__, "refs.bib");
+#     style=:authoryear
+# )
+
+build_docs_with_style(pages, ChaosTools, DynamicalSystemsBase, Neighborhood;
+    # bib, # TODO: Enable bib
+    # TODO: Fix warnings so that instead of:
+    warnonly = true,
+    # we can have:
+    # warnonly = [:doctest, :missing_docs, :cross_references],
+)

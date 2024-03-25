@@ -11,6 +11,7 @@ pages = [
     "dimreduction.md",
     "periodicity.md",
     "rareevents.md",
+    "references.md",
 ]
 
 import Downloads
@@ -20,16 +21,15 @@ Downloads.download(
 )
 include("build_docs_with_style.jl")
 
-# TODO: Port all citations to use this:
-# using DocumenterCitations
+using DocumenterCitations
 
-# bib = CitationBibliography(
-#     joinpath(@__DIR__, "refs.bib");
-#     style=:authoryear
-# )
+bib = CitationBibliography(
+    joinpath(@__DIR__, "refs.bib");
+    style=:authoryear
+)
 
 build_docs_with_style(pages, ChaosTools, DynamicalSystemsBase, Neighborhood;
-    # bib, # TODO: Enable bib
+    bib,
     # TODO: Fix warnings so that instead of:
     warnonly = true,
     # we can have:

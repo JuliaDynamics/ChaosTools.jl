@@ -62,7 +62,7 @@ Fortunately there are numerical algorithms that allow their detection.
 
 ### Schmelcher & Diakonos
 
-First of the algorithms was proposed by Schmelcher & Diakonos[^Schmelcher1997].
+First of the algorithms was proposed by Schmelcher & Diakonos [Schmelcher1997](@cite).
 Notice that even though the algorithm can find stable fixed points, it is mainly 
 aimed at *unstable* ones.
 
@@ -158,8 +158,8 @@ Okay, this output is great, and we can tell that it is correct because:
 
 ### Davidchack & Lai
 
-An extension of the previous algorithm was proposed by Davidchack & Lai[^Davidchack1999].
-It works similarly, but it uses smarter seeding and improved transformation rule.
+An extension of the previous algorithm was proposed by Davidchack & Lai [Davidchack1999](@cite).
+It works similarly, but it uses smarter seeding and an improved transformation rule.
 
 The functions `davidchacklai` implements the algorithm:
 ```@docs
@@ -168,15 +168,11 @@ davidchacklai
 
 #### Logistic Map example
 
-The idea of periodic orbits can be illustrated easily on 1D maps. Fixed points of a 
-map $f$ is a point $x$ such that $f(x) = x$. Hence finding roots of $f(x)-x = 0$ 
-yields the fixed points. If we graph $f$ and an identity line $y=x$, their intersection 
-is exactly the fixed points. Periodic point is a point $x$ such that $f^{n}(x)=x$, where 
-$f^{n}$ is $n$-th composition of $f$. Naturally, solving $f^{n}(x)-x=0$ would yield the 
-periodic points. However, this is impossible analytically. Let's see how `davidchacklai` 
-deals with it:
+The idea of periodic orbits can be illustrated easily on 1D maps. Finding all periodic orbits of period
+$n$ is equivalent to finding all points $x$ such that $f^{n}(x)=x$, where $f^{n}$ is $n$-th composition of $f$. Hence, solving $f^{n}(x)-x=0$ yields such points. However, this is impossible analytically. 
+Let's see how `davidchacklai` deals with it:
 
-First let's start with finding first $9$ periodic orbits of logistic map for parameter $3.72$.
+First let's start with finding first $9$ periodic orbits of the logistic map for parameter $3.72$.
 
 ```@example MAIN
 using ChaosTools
@@ -215,17 +211,15 @@ for (order, position)  in zip([6,7,8,9], [(1,1), (1,2), (2,1), (2,2)])
 end
 fig
 ```
-The result is correct because all the intersection between identity and logistic 
-map were found.
+Points $x$ which fulfill $f^{n}(x)=x$ can be interpreted as an intersection of the function $f^{n}(x)$ and the identity $x$. Our result is correct because all the points of the intersection between the identity and the logistic map were found.
 
 #### Henon Map example
 
 Let's try to use `davidchacklai` in higher dimension. We will try to detect 
-all periodic points of henon map of period `1` to `14`.
+all periodic points of Henon map of period `1` to `14`.
 
 ```@example MAIN
-using ChaosTools
-using CairoMakie
+using ChaosTools, CairoMakie
 
 function henon(u0=zeros(2); a = 1.4, b = 0.3)
     return DeterministicIteratedMap(henon_rule, u0, [a,b])
@@ -238,7 +232,7 @@ ys = LinRange(-10.0, 10.0, 10)
 seeds = [SVector{2}(x,y) for x in xs for y in ys]
 n = 14
 m = 6
-output = davidchacklai(ds, n, seeds, m; abstol=1e-7, disstol=1e-10)
+output = davidchacklai(ds, n, seeds, m; abstol=1e-7, disttol=1e-10)
 
 fig = Figure()
 ax = Axis(fig[1,1])
@@ -247,6 +241,8 @@ for result in output
 end
 fig
 ```
+
+The theory of periodic orbits states that UPOs form sort of a skeleton of the chaotic attractor. Our results supports this claim since it closely resembles the Henon attractor.
 
 Note that in this case parameter `m` has to be set to at least `6`. Otherwise, the algorithm 
 fails to detect orbits of higher periods correctly.
@@ -264,17 +260,13 @@ To check if the detected points are indeed periodic, we can do the following tes
             c += 1
         end
     end
-    println("$c non-periodic points found in the 14th order orbit.")
+    "$c non-periodic points found in the 14th order orbit."
 ```
 
 The same test can be applied to orbits of lower periods.
 
 
-[^Davidchack1999]:
-    Ruslan L. Davidchack and Ying-Cheng Lai, Phys. Rev. E 60, 6172 – Published 1 November 1999
 
-[^Schmelcher1997]:
-    P. Schmelcher & F. K. Diakonos, Phys. Rev. Lett. **78**, pp 4733 (1997)
 
 ## Estimating the Period
 

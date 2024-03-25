@@ -4,7 +4,7 @@ export davidchacklai
     davidchacklai(ds::DeterministicIteratedMap, n::Int, ics, m::Int; kwargs...) -> fps
 
 Find periodic orbits `fps` of orders `1` to `n` for the map `ds`
-using the algorithm propesed by Davidchack & Lai[^Davidchack1999].
+using the algorithm propesed by Davidchack & Lai[Davidchack1999](@cite).
 `ics` is a collection of initial conditions (container of vectors) to be evolved.
 `ics` will be used to detect periodic orbits of orders `1` to `m`. These `m` 
 periodic orbits will be used to detect periodic orbits of order `m+1` to `n`.
@@ -14,7 +14,7 @@ periodic orbits will be used to detect periodic orbits of order `m+1` to `n`.
 
 * `β = nothing`: If it is nothing, then `β(n) = 10*1.2^n`. Otherwise can be a 
    function that takes period `n` and return a number. It is a parameter mentioned
-   in the paper[^Davidchack1999].
+   in the paper[Davidchack1999](@cite).
 * `maxiters = nothing`: If it is nothing, then initial condition will be iterated
   `max(100, 4*β(p))` times (where `p` is the order of the periodic orbit)
    before claiming it has not converged. If an integer, then it is the maximum 
@@ -29,7 +29,7 @@ periodic orbits will be used to detect periodic orbits of order `m+1` to `n`.
 
 ## Description
 
-The algorithm is an extension of Schmelcher & Diakonos[^Schmelcher1997] 
+The algorithm is an extension of Schmelcher & Diakonos[Schmelcher1997](@cite)
 implemented in [`periodicorbits`](@ref).
 
 The algorithm can detect periodic orbits
@@ -48,10 +48,10 @@ and
 J(\\mathbf{x}_{n}) = \\frac{\\partial g(\\mathbf{x}_{n})}{\\partial \\mathbf{x}_{n}}
 ````
 
-The main difference between Schmelcher & Diakonos[^Schmelcher1997] and 
-Davidchack & Lai[^Davidchack1999] is that the latter uses periodic points of
+The main difference between Schmelcher & Diakonos[Schmelcher1997](@cite) and 
+Davidchack & Lai[Davidchack1999](@cite) is that the latter uses periodic points of
 previous period as seeds to detect periodic points of the next period.
-Additionally, `periodicorbits` only detects periodic points of a given order, 
+Additionally, [`periodicorbits`](@ref) only detects periodic points of a given order, 
 while `davidchacklai` detects periodic points of all orders up to `n`.
 
 
@@ -62,12 +62,6 @@ detect periodic orbits correctly. For higher periods, you can select `m` as 6.
 You can use initial grid of points for `ics`. Increase `m` in case the orbits are 
 not being detected correctly.
 
-
-[^Davidchack1999]:
-    Ruslan L. Davidchack and Ying-Cheng Lai, Phys. Rev. E 60, 6172 – Published 1 November 1999
-
-[^Schmelcher1997]:
-    P. Schmelcher & F. K. Diakonos, Phys. Rev. Lett. **78**, pp 4733 (1997)
 """
 function davidchacklai(
         ds::DeterministicIteratedMap,

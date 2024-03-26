@@ -1,5 +1,10 @@
 # main
 
+# v3.2
+ - `periodicorbits` uses new internal datastructure to avoid duplicates in the output. New keyword argument `abstol` is introduced and keyword argument `roundtol` is deprecated.
+ - `fixedpoints` can now use `order` keyword argument to compute fixed points of n-th order iterations of `DeterministicIteratedMap`.
+ - New algorithm `davidchacklai` for detection of UPOs using stabilizing transformations.
+
 # v3.1
 - `fixedpoints` can now be called without a Jacobian (giving `nothing` as third argument, also the default value). In this case a Jacobian is estimated automatically via ForwardDiff.jl.
 

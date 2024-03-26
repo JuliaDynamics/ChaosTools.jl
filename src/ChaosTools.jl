@@ -19,7 +19,9 @@ include("stability/fixedpoints.jl")
 include("periodicity/period.jl")
 include("periodicity/yin.jl")
 include("periodicity/custombintree.jl")
+include("periodicity/lambdamatrix.jl")
 include("periodicity/periodicorbits.jl")
+include("periodicity/davidchacklai.jl")
 
 include("rareevents/mean_return_times/mrt_api.jl")
 

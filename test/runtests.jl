@@ -28,6 +28,7 @@ testfile("chaosdetection/expansionentropy.jl")
 
 include("stability/fixedpoints.jl")
 include("periodicity/periodicorbits.jl")
+include("periodicity/davidchacklai.jl")
 include("periodicity/period.jl")
 
 # testfile("rareevents/return_time_tests.jl", "Return times")

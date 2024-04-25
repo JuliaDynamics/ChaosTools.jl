@@ -15,7 +15,7 @@ function exit_entry_times(integ::MDI, u₀, εs, T; show_progress = false,
         step!(integ)
         # here i gives the index of the largest ε-set that the trajectory is out of.
         # It is guaranteed that the trajectory is thus outside all other boxes
-        i = first_outside_index(get_state(integ), u₀, εs, E)
+        i = first_outside_index(current_state(integ), u₀, εs, E)
         curr_outside[i:end] .= true
         curr_outside[1:(i - 1)] .= false
         update_exit_times!(exits, i, prev_outside, curr_outside, integ.t)
@@ -47,7 +47,7 @@ end
 
 function first_return_times(integ::MDI, u₀, εs, T; show_progress = false, kwargs...)
     # TODO: I'm lazy and I'm coding this by calling the normal algorithm.
-    # A bit inneficient, maybe in the future someone can write a full version here...
+    # A bit inefficient, maybe in the future someone can write a full version here...
     exits, entries = exit_entry_times(
         integ, u₀, εs, T; show_progress = false,
         internal_max_counter = 1

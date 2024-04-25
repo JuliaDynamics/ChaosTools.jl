@@ -1,13 +1,31 @@
 # main
-**The following will become the 3.0 - Major release.**
+
+# v3.2
+ - `periodicorbits` uses new internal datastructure to avoid duplicates in the output. New keyword argument `abstol` is introduced and keyword argument `roundtol` is deprecated.
+ - `fixedpoints` can now use `order` keyword argument to compute fixed points of n-th order iterations of `DeterministicIteratedMap`.
+ - New algorithm `davidchacklai` for detection of UPOs using stabilizing transformations.
+
+# v3.1
+- `fixedpoints` can now be called without a Jacobian (giving `nothing` as third argument, also the default value). In this case a Jacobian is estimated automatically via ForwardDiff.jl.
+
+# v3.0
+
+Major release part of the DynamicalSystems.jl v3.
+The DynamicalSystems.jl v3 changelog summarizes the highlights. Here we will list all changes to _this specific package_.
+
+## Breaking
+- All `diffeq` keywords to all functions have been removed as per update to DynamicalSystems v3.0. Arguments to DifferentialEquations.jl solvers are now given in system construction when making a `CoupledODEs` (previously `ContinuousDynamicalSystem`).
+- The dependency list of ChaosTools.jl has been reduced by half; many things that used to be exported from here are no longer (see refactoring).
+- Low-level call signatures have been adjusted to fit DynamicalSystems.jl v3.0
 
 ## Refactoring/removal
 - All functionality related to attractors and basins of attraction (e.g., `AttractorMapper`, `basins_fractions`) has been moved to a new package Attractors.jl. Notice that functions such as `fixedpoints` and `periodicorbits` stay in ChaosTools.jl because they aren't only about attractors; they also find unstable fixed points and/or periodic orbits.
 - All functionality related to Poincare maps has been moved to DynamicalSystemsBase.jl
 - The state space samplers have been moved to StateSpaceSets.jl
+- All fractal dimension related functionality has been moved to a new package FractalDimensions.jl. This includes the functionality for finding linear regions and fitting them.
 
 ## Rare events
-- New dedicated folder structure and functionality targeting rare events in ChaosTools.jl. If it becomes extensive, it can be split off to a different package.
+- New dedicated folder structure and functionality targeting rare events in ChaosTools.jl. If it becomes extensive, it can be split off to a new package.
 - Source code for `exit_entry_times` has been completely overhauled and is now
   much much clearer.
 - Algorithm for `exit_entry_times` for continuous systems has been re-written from
@@ -16,10 +34,12 @@
 - `mean_return_times` is now just a wrapper function.
 - New function `first_return_times` for efficiently computing only the first time to return to sets.
 
-## Other
-- New method for fractal dimension: `higuchi`
-- Improved the documentation of chaos detection methods overall.
+## Other enhancements
+- `orbitdiagram` is a completely generic function that works for any kind of `DynamicalSystem`. `produce_orbitdiagram` is deprecated as it is now practically useless.
+- ChaosTools.jl now has its own documentation as per DynamicalSystems.jl v3.0.
+- More examples have been placed that also better highlight how to parallelize.
 - Increased the default amount of `c` in `testchaos01`.
+- Tests have been overhauled and never use predefined systems (which is a really bad practice when it comes to testing)
 
 # 2.9
 * Improved the `AttractorsViaFeaturizing` algorithm by improving the method for finding the optimal radius used in the clustering. This consisted in (i) maximizing the average silhouette values, instead of minimum (slight improvement), (ii) min-max rescaling the features for the clustering (big improvement); (iii) adding an alternative method ,called elbow method, that is faster but worse at clustering.
@@ -30,7 +50,7 @@
 * The old `basins_of_attraction` function has been completely deprecated in favor of using the version `basins_of_attraction(mapper::AttractorMapper, grid)`, which utilizes the new `AttractorMapper` interface and is more intuitive and generalizable.
 * New method for mapping initial conditions to known attractors using proximity.
 * Old functions related to clustering via featurizing have been removed in favor of just using `AttractorsViaFeaturizing`.
-* **BREAKINNG** Function `basin_fractions_clustering` is removed.
+* **BREAKING** Function `basin_fractions_clustering` is removed.
 * `basin_fractions` is deprecated in favor of `basins_fractions`.
 
 # 2.7
@@ -274,7 +294,7 @@ the documentation strings of each function before using it.
 * Updated everything to be on par with the changes of DynamicalSystemsBase v0.5
 
 ## Non-breaking
-* Minor bug fixes resulting from misstypos.
+* Minor bug fixes resulting from typos.
 * New method for permutation entropy: `permentropy` !
 
 # v0.4.3

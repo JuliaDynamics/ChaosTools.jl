@@ -1,6 +1,5 @@
 using ChaosTools, Test, Statistics
 using ChaosTools.DynamicalSystemsBase
-using ChaosTools.DelayEmbeddings
 
 println("\n Return time tests...")
 
@@ -85,7 +84,7 @@ end
     @test all(isequal(2), returns[2])
 
     # But now, the third entry is different, because it has the size of the quasiperiodic
-    # stability island torous
+    # stability island torus
     @test returns[3] ≠ returns[2]
     @test transits[3] ≠ transits[2]
     @test any(>(3), returns[3])
@@ -219,7 +218,7 @@ function visual_guidance(ro, times, u0, diffeq, εs, crossing_method)
         integ = integrator(ro, u0; diffeq)
         while integ.t < times[4]
             step!(integ)
-            push!(tr4, get_state(integ))
+            push!(tr4, current_state(integ))
         end
         tr4 = Dataset(tr4)
     else

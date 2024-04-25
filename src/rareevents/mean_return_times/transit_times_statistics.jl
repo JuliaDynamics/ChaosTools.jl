@@ -31,9 +31,9 @@ box size is `2εs[i]`!).
 
 The reason to input multiple `εs` at once is purely for performance.
 
-For discrete systems, exit time is recorded immediatelly after exitting of the set, and
-re-entry is recorded immediatelly on re-entry. This means that if an orbit needs
-1 step to leave the set and then it re-enters immediatelly on the next step, the return time
+For discrete systems, exit time is recorded immediately after exiting of the set, and
+re-entry is recorded immediately on re-entry. This means that if an orbit needs
+1 step to leave the set and then it re-enters immediately on the next step, the return time
 is 1. For continuous systems high-order
 interpolation is done to accurately record the time of exactly crossing the `ε`-ball/box.
 
@@ -58,7 +58,7 @@ the meaning of `u₀` and `εs`.
 
 This function supports both discrete and continuous systems, however the optimizations
 done in discrete systems (where all nested `ε`-sets are checked at the same time),
-are not done here yet, which leads to disproportionally lower performance since
+are not done here yet, which leads to disproportionately lower performance since
 each `ε`-related set is checked individually from start.
 
 Continuous systems allow for the following keywords:

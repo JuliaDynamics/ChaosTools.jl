@@ -5,7 +5,7 @@ using Random
 using CairoMakie
 using ProgressMeter
 
-include("stagger.jl")
+# include("stagger.jl")
 
 function F!(du, u ,p, n)
     x,y,u,v = u
@@ -30,11 +30,11 @@ x0 = sampler()
 
 @show x0
 df = DeterministicIteratedMap(F!, x0) 
-xi = stagger_trajectory(x0, df, 2., 30, isinside) 
-@show Tp = escape_time!(xi, df, isinside)
+xi = stagger_trajectory(x0, df, isinside; δ = 2., Tm = 30) 
+# @show Tp = escape_time!(xi, df, isinside)
 
 
-v = stagger_and_step(xi, df, 1e-10, 30, 120000, isinside) 
+v = stagger_and_step(xi, df, 10000, isinside) 
 v = hcat(v...)'
 scatter(v[:,1], v[:,3]; markersize = 3)
 

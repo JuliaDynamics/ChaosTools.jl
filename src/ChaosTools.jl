@@ -34,6 +34,8 @@ include("chaosdetection/expansionentropy.jl")
 include("chaosdetection/partially_predictable.jl")
 include("chaosdetection/testchaos01.jl")
 
+include("stagger/stagger.jl")
+
 # Copy linear regression from FractalDimensions.jl
 import Statistics
 function linreg(x::AbstractVector, y::AbstractVector)

@@ -1,3 +1,8 @@
+export stagger_and_step, stagger_trajectory
+using LinearAlgebra:norm
+using Random
+using ProgressMeter
+
 function escape_time!(x0, ds, isinside) 
     x = deepcopy(x0) 
     set_state!(ds,x)
@@ -44,8 +49,11 @@ This function returns a point `xi` which _guarantees_ `T(xi) >
 Tm`. This is an auxiliary function for [`stagger_and_step`](@
 ref). Keyword arguments and definitions are identical for both 
 functions. 
+
+The initial search radius is much bigger, `δ = 1.` by default.
+
 """
-function stagger_trajectory(x0 ,ds, isinside; δ = 1e-10, Tm = 30, stagger_mode = :exp, max_steps = Int(1e5))
+function stagger_trajectory(x0 ,ds, isinside; δ = 1., Tm = 30, stagger_mode = :exp, max_steps = Int(1e5))
     T = escape_time!(x0, ds, isinside)
     xi = deepcopy(x0) 
     while T < Tm 
@@ -128,13 +136,15 @@ stable manifold of the chaotic saddle.
     * `:exp`: An candidate following an truncated exponential 
       distribution in a random direction `u` around the current
       `x` such that `x_c = x + u*r`. `r = 10^-s` with `s` taken
-      from a uniform distribution in [-15, δ].
+      from a uniform distribution in [-15, δ]. This mode fails
+      often but stills manage to provide long enough stretch of
+      trajectories. 
 
     * `:unif`: The next candidate is `x_c = x + u*r` with `r` 
       taken from a uniform distribution [0,δ]. 
 """
 function stagger_and_step(x0 ,ds, N, isinside; δ = 1e-10, Tm  = 30, max_steps = Int(1e5), stagger_mode = :exp)
-    xi = stagger_trajectory(x0, ds, 1., Tm, isinside) 
+    xi = stagger_trajectory(x0, ds, isinside; δ = 1., Tm, stagger_mode, max_steps) 
     v = Vector{Vector{Float64}}(undef,N)
     v[1] = xi
 @showprogress   for n in 1:N
@@ -144,7 +154,7 @@ function stagger_and_step(x0 ,ds, N, isinside; δ = 1e-10, Tm  = 30, max_steps =
             xp, Tp = get_stagger!(xi, ds, δ, Tm, isinside; stagger_mode, max_steps)
             # The stagger step may fail. We reinitiate the algorithm from a new initial condition.
             if Tp < 0
-                xp = stagger_trajectory(x0, ds, 1., Tm, isinside) 
+                xp = stagger_trajectory(x0, ds, isinside; δ = 1., Tm, stagger_mode, max_steps) 
             end
             set_state!(ds,xp)
         end 

@@ -1,4 +1,4 @@
-export stagger_and_step, stagger_trajectory
+export stagger_and_step!, stagger_trajectory!
 using LinearAlgebra:norm
 using Random
 using ProgressMeter

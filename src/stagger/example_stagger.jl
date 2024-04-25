@@ -24,11 +24,11 @@ x0 = sampler()
 
 @show x0
 df = DeterministicIteratedMap(F!, x0) 
-xi = stagger_trajectory(x0, df, isinside; δ = 2., Tm = 30) 
+xi = stagger_trajectory!(x0, df, isinside; δ = 2., Tm = 30) 
 # @show Tp = escape_time!(xi, df, isinside)
 
 
-v = stagger_and_step(xi, df, 10000, isinside; stagger_mode = :adaptive, δ = 0.1, Tm = 10, max_steps = Int(1e4)) 
+v = stagger_and_step!(xi, df, 10000, isinside; stagger_mode = :adaptive, δ = 0.1, Tm = 10, max_steps = Int(1e4)) 
 v = hcat(v...)'
 scatter(v[:,1], v[:,3]; markersize = 3)
 

@@ -1,11 +1,5 @@
-using DynamicalSystemsBase
 using ChaosTools
-using LinearAlgebra:norm
-using Random
 using CairoMakie
-using ProgressMeter
-
-# include("stagger.jl")
 
 function F!(du, u ,p, n)
     x,y,u,v = u

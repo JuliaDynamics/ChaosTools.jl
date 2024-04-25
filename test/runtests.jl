@@ -31,6 +31,8 @@ include("periodicity/periodicorbits.jl")
 include("periodicity/davidchacklai.jl")
 include("periodicity/period.jl")
 
+include("stagger/test_stagger.jl")
+
 # testfile("rareevents/return_time_tests.jl", "Return times")
 
 testfile("dimreduction/broomhead_king.jl")

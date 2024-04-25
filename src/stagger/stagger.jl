@@ -70,7 +70,7 @@ function rand_u(δ, n; stagger_mode = :exp)
         u = u/norm(u)
         return u*10^-s
     else 
-        s = δ*rand(n)
+        s = δ*rand()
         u = (rand(n).- 0.5)
         u = u/norm(u)
         return u*s

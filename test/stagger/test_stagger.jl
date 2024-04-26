@@ -39,6 +39,12 @@ for u in v
     @test ChaosTools.escape_time!(u, df, isinside) ≥ 30
 end
 
+# Test if all the points have escape time ≥ Tm 
+# :adaptive mode
+v = stagger_and_step!(xi, df, 10, isinside; δ = 1e-3, stagger_mode = :adaptive) 
+for u in v
+    @test ChaosTools.escape_time!(u, df, isinside) ≥ 30
+end
 end
 
 

@@ -107,10 +107,10 @@ end
 """
     stagger_and_step!(x0, ds::DynamicalSystem , N::Int, isinside::function; kwargs...) -> trajectory
 
-This function implements the stagger and step method to
-approximate the invariant non-attracting set governing the 
-chaotic transient dynamics of a system, namely the stable 
-manifold of a chaotic saddle. 
+This function implements the stagger-and-step method 
+[^Sweet2001] to approximate the invariant non-attracting set 
+governing the chaotic transient dynamics of a system, namely 
+the stable manifold of a chaotic saddle. 
 
 Given the dynamical system `ds` and a initial guess `x0` in a 
 region *with no attractors* defined by the membership function 
@@ -179,6 +179,9 @@ to the stable manifold of the chaotic saddle.
       when it succeeds.    
 * `f = 1.1`: It is the free parameter for the adaptive stagger
   method. 
+
+[^Sweet2001]: D. Sweet, *et al.*, Phys. Rev. Lett. **86**, pp 2261  (2001)
+[^Sala2016]: M. Sala, *et al.*, Chaos **26**, pp 123124 (2016)
 """
 function stagger_and_step!(x0 ,ds, N, isinside; δ = 1e-10, Tm  = 30, f = 1.1, max_steps = Int(1e5), stagger_mode = :exp)
     xi = stagger_trajectory!(x0, ds, isinside; δ = 1., Tm, stagger_mode = :exp, max_steps) 

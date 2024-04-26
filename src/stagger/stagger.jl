@@ -133,12 +133,16 @@ from a region defined by the user (see the argument
 
 Given the dynamical mapping `F`, if the iteration `x_{n+1} = 
 F(x_n)` respects the condition `T(x_{n+1}) > Tm` we accept 
-this next point. If not, the method search randomly the next 
-point in a neighborhood following a given probability 
-distribution (see the keyword argument `stagger_mode`).   
+this next point, this is the _step_ part of the method. If 
+not, the method search randomly the next point in a 
+neighborhood following a given probability distribution, this 
+is the _stagger_ part. This part sometimes fails to find a new 
+candidate and a new starting point of the trajectory is chosen 
+within the defined region. See the keyword argument 
+`stagger_mode` for the different available methods.   
 
-The method produces a trajectory of `N` points close to the 
-stable manifold of the chaotic saddle. 
+The method produces a pseudo-trajectory of `N` points δ-close
+to the stable manifold of the chaotic saddle. 
 
 ## Keyword arguments
 * `δ = 1e-10`: it is a small number constraining the random

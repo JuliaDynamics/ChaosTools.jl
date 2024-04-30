@@ -3,81 +3,6 @@ using LinearAlgebra:norm
 using Random
 using ProgressMeter
 
-function escape_time!(x0, ds, isinside) 
-    x = deepcopy(x0) 
-    set_state!(ds,x)
-    ds.t = 1
-    k = 1; max_step = 10000;
-    while isinside(x) 
-        k > max_step && break
-        step!(ds)
-        x = get_state(ds)
-        k += 1
-    end
-    return ds.t
-end
-
-function rand_u(δ, n; stagger_mode = :exp)
-    if stagger_mode == :exp 
-        a = -log10(δ)
-        s = (15-a)*rand() + a
-        u = (rand(n).- 0.5)
-        u = u/norm(u)
-        return u*10^-s
-    elseif stagger_mode == :unif
-        s = δ*rand()
-        u = (rand(n).- 0.5)
-        u = u/norm(u)
-        return u*s
-    elseif stagger_mode == :adaptive
-        s = δ*randn()
-        u = (rand(n).- 0.5)
-        u = u/norm(u)
-        return u*s
-    end
-end
-
-# This function searches a new candidate in a neighborhood of x0 
-# with a random search depending on some distribution. 
-# If the search fails it returns a negative time.
-function get_stagger!(x0, ds, δ, Tm, isinside; max_steps = Int(1e6), f = 1.1, stagger_mode = :exp)
-    Tp = 0; xp = zeros(length(x0)); k = 1; 
-    T0 = escape_time!(x0, ds, isinside)
-    if !isinside(x0)
-        error("x0 must be in grid")
-    end
-    while Tp ≤ Tm 
-        xp = x0 .+ rand_u(δ,length(x0); stagger_mode)
-        while !isinside(xp)
-            xp = x0 .+ rand_u(δ,length(x0); stagger_mode)
-        end
-
-        if k > max_steps
-           # @show Tp, Tm, δ, xp, x0
-           # @warn "Stagger search fails, δ is too small or T is too large. 
-    # We reinitiate the algorithm
-    #        "
-           return 0,-1
-        end
-        Tp = escape_time!(xp, ds, isinside)
-        if stagger_mode == :adaptive
-            # We adapt the variance of the search
-            # if the alg. can't find a candidate
-            if Tp < T0
-                δ = δ/f
-            elseif Tp == T0
-                δ = δ*f
-            end
-            if Tp == Tm
-                # The adaptive alg. accepts T == Tp
-                return xp, Tp
-            end
-        end
-        k = k + 1
-    end
-    return xp, Tp
-end
-
 
 """
     stagger_trajectory!(x0 ,ds, isinside; kwargs...) -> xi
@@ -93,10 +18,10 @@ The initial search radius is much bigger, `δ = 1.` by default.
 function stagger_trajectory!(x0 ,ds, isinside; δ = 1., Tm = 30, stagger_mode = :exp, max_steps = Int(1e5), f = 1.1)
     T = escape_time!(x0, ds, isinside)
     xi = deepcopy(x0) 
-    while T < Tm  # we must have T ≥ Tm 
+    while T < Tm  # we must have T ≥ Tm at each step 
         xi, T = get_stagger!(xi, ds, δ, T, isinside; f, stagger_mode, max_steps)
         if T < 0
-            error("Cannot find a stagger trajectory. Choose a different starting point or δ.")
+            error("Cannot find a stagger trajectory. Choose a different starting point or search radius δ.")
         end 
             
     end
@@ -183,7 +108,9 @@ to the stable manifold of the chaotic saddle.
 [^Sweet2001]: D. Sweet, *et al.*, Phys. Rev. Lett. **86**, pp 2261  (2001)
 [^Sala2016]: M. Sala, *et al.*, Chaos **26**, pp 123124 (2016)
 """
-function stagger_and_step!(x0 ,ds, N, isinside; δ = 1e-10, Tm  = 30, f = 1.1, max_steps = Int(1e5), stagger_mode = :exp)
+function stagger_and_step!(x0 ,ds, N, isinside; δ = 1e-10, Tm  = 30, 
+    f = 1.1, max_steps = Int(1e5), stagger_mode = :exp)
+
     xi = stagger_trajectory!(x0, ds, isinside; δ = 1., Tm, stagger_mode = :exp, max_steps) 
     v = Vector{Vector{Float64}}(undef,N)
     v[1] = xi
@@ -208,3 +135,77 @@ end
 
 
     
+function escape_time!(x0, ds, isinside) 
+    x = deepcopy(x0) 
+    set_state!(ds,x)
+    ds.t = 1
+    k = 1; max_step = 10000;
+    while isinside(x) 
+        k > max_step && break
+        step!(ds)
+        x = get_state(ds)
+        k += 1
+    end
+    return ds.t
+end
+
+function rand_u(δ, n; stagger_mode = :exp)
+    if stagger_mode == :exp 
+        a = -log10(δ)
+        s = (15-a)*rand() + a
+        u = (rand(n).- 0.5)
+        u = u/norm(u)
+        return u*10^-s
+    elseif stagger_mode == :unif
+        s = δ*rand()
+        u = (rand(n).- 0.5)
+        u = u/norm(u)
+        return u*s
+    elseif stagger_mode == :adaptive
+        s = δ*randn()
+        u = (rand(n).- 0.5)
+        u = u/norm(u)
+        return u*s
+    end
+end
+
+# This function searches a new candidate in a neighborhood of x0 
+# with a random search depending on some distribution. 
+# If the search fails it returns a negative time.
+function get_stagger!(x0, ds, δ, Tm, isinside; max_steps = Int(1e6), f = 1.1, stagger_mode = :exp, verbose = false)
+
+    Tp = 0; xp = zeros(length(x0)); k = 1; 
+    T0 = escape_time!(x0, ds, isinside)
+    if !isinside(x0)
+        error("x0 must be in grid")
+    end
+    while Tp ≤ Tm 
+        xp = x0 .+ rand_u(δ,length(x0); stagger_mode)
+
+        if k > max_steps 
+           if verbose 
+           @warn "Stagger search fails, δ is too small or T is too large. 
+                We reinitiate the algorithm
+           "
+           end
+           return 0,-1
+        end
+        Tp = escape_time!(xp, ds, isinside)
+        if stagger_mode == :adaptive
+            # We adapt the variance of the search
+            # if the alg. can't find a candidate
+            if Tp < T0
+                δ = δ/f
+            elseif Tp == T0
+                δ = δ*f
+            end
+            if Tp == Tm
+                # The adaptive alg. accepts T == Tp
+                return xp, Tp
+            end
+        end
+        k = k + 1
+    end
+    return xp, Tp
+end
+

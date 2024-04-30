@@ -1,6 +1,4 @@
-using DynamicalSystemsBase
 using ChaosTools
-
 using Test
 
 @testset "Stagger Tests" begin

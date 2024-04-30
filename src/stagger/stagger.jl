@@ -127,7 +127,7 @@ function stagger_and_step!(x0 ,ds, N, isinside; δ = 1e-10, Tm  = 30,
             set_state!(ds,xp)
         end 
         step!(ds)
-        xi = get_state(ds)
+        xi = current_state(ds)
         v[n] = xi
     end
     return v
@@ -143,7 +143,7 @@ function escape_time!(x0, ds, isinside)
     while isinside(x) 
         k > max_step && break
         step!(ds)
-        x = get_state(ds)
+        x = current_state(ds)
         k += 1
     end
     return ds.t

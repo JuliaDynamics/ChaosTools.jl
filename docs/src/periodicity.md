@@ -169,7 +169,7 @@ davidchacklai
 #### Logistic Map example
 
 The idea of periodic orbits can be illustrated easily on 1D maps. Finding all periodic orbits of period
-$n$ is equivalent to finding all points $x$ such that $f^{n}(x)=x$, where $f^{n}$ is $n$-th composition of $f$. Hence, solving $f^{n}(x)-x=0$ yields such points. However, this is impossible analytically. 
+$n$ is equivalent to finding all points $x$ such that $f^{n}(x)=x$, where $f^{n}$ is $n$-th composition of $f$. Hence, solving $f^{n}(x)-x=0$ yields such points. However, this is often impossible analytically. 
 Let's see how `davidchacklai` deals with it:
 
 First let's start with finding first $9$ periodic orbits of the logistic map for parameter $3.72$.

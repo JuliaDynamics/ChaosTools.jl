@@ -157,7 +157,7 @@ end
 
 
 function detect_orbits(
-        fps::RBTree{VectorWithEpsRadius{T}},
+        fps::Set{T},
         ds::DeterministicIteratedMap,
         n::Integer,
         seed::AbstractVector{D},
@@ -171,16 +171,16 @@ function detect_orbits(
 end
 
 function detect_orbits(
-        fps::RBTree{VectorWithEpsRadius{T}},
+        fps::Set{T},
         ds::DeterministicIteratedMap,
         n::Integer,
-        seed::RBTree{VectorWithEpsRadius{T}},
+        seed::Set{T},
         β,
         C_matrices;
         kwargs...
     ) where {T}
     for C in C_matrices
-        _detect_orbits!(fps, ds, n, tovector(seed), C, β; kwargs...)
+        _detect_orbits!(fps, ds, n, collect(seed), C, β; kwargs...)
     end
 end
 
@@ -204,15 +204,15 @@ end
 function output(fps, type, n)
     output = Vector{Vector{type}}(undef, n)
     for i in 1:n # not including periodic orbit n+1 because it may be incomplete
-        output[i] = tovector(fps[i])
+        output[i] = collect(fps[i])
     end
     return output
 end
 
 function storage(type, n)
-    storage = Vector{RBTree{VectorWithEpsRadius{type}}}(undef, n+1)
+    storage = Vector{Set{type}}(undef, n+1)
     for i in 1:n+1
-        storage[i] = fpcollection(type)
+        storage[i] = Set{type}()
     end
     return storage
 end

@@ -25,7 +25,7 @@ periodic orbits will be used to detect periodic orbits of order `m+1` to `n`.
    is an `n`-periodic point.
 * `abstol = 1e-8`: A detected periodic point isn't stored if it is in `abstol` 
    neighborhood of some previously detected point. Distance is measured by 
-   euclidian norm. If you are getting duplicate periodic points, decrease this value.
+   euclidian norm. If you are getting duplicate periodic points, increase this value.
 
 ## Description
 
@@ -37,7 +37,7 @@ by turning fixed points of the original
 map `ds` to stable ones, through the transformation
 ```math
 \\mathbf{x}_{n+1} = \\mathbf{x}_{n} + 
-[\\beta |g(\\mathbf{x}_{n}| C^{T} - J(\\mathbf{x}_{n})]^{-1} g(\\mathbf{x}_{n})
+[\\beta |g(\\mathbf{x}_{n})| C^{T} - J(\\mathbf{x}_{n})]^{-1} g(\\mathbf{x}_{n})
 ```
 where
 ```math
@@ -46,7 +46,7 @@ g(\\mathbf{x}_{n}) = f^{n}(\\mathbf{x}_{n}) - \\mathbf{x}_{n}
 and
 ```math
 J(\\mathbf{x}_{n}) = \\frac{\\partial g(\\mathbf{x}_{n})}{\\partial \\mathbf{x}_{n}}
-````
+```
 
 The main difference between Schmelcher & Diakonos[Schmelcher1997](@cite) and 
 Davidchack & Lai[Davidchack1999](@cite) is that the latter uses periodic points of
@@ -58,9 +58,12 @@ while `davidchacklai` detects periodic points of all orders up to `n`.
 ## Important note
 
 For low periods `n` circa less than 6, you should select `m = n` otherwise the algorithm 
-detect periodic orbits correctly. For higher periods, you can select `m` as 6. 
-You can use initial grid of points for `ics`. Increase `m` in case the orbits are 
-not being detected correctly.
+won't detect periodic orbits correctly. For higher periods, you can select `m` as 6. 
+We recommend experimenting with `m` as it may depend on the specific problem. 
+Increase `m` in case the orbits are not being detected correctly.
+
+Initial conditions `ics` can be selected as a uniform grid of points in the state space or 
+subset of a chaotic trajectory.
 
 """
 function davidchacklai(

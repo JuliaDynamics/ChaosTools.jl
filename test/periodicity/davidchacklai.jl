@@ -40,7 +40,7 @@ end
     sort!(fps[3])
     fps[3] = [round.(x, digits=7) for x in fps[3]]
     @test length(fps[3]) == 5
-    @test isapprox(SVector(0.0), fps[1][1]; atol = tol)
+    @test isapprox(SVector(0.0), fps[3][1]; atol = tol)
     @test isapprox(SVector(0.1599288), fps[3][2]; atol = tol)
     @test isapprox(SVector(0.5143553), fps[3][3]; atol = tol)
     @test isapprox(SVector(0.7387961), fps[3][4]; atol = tol)

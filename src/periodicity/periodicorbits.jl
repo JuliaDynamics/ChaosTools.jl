@@ -73,12 +73,12 @@ function periodicorbits(
     end
 
     type = typeof(current_state(ds))
-    FP = fpcollection(type)
+    FP = Set{type}()
     for λ in λs, inds in indss, sings in singss
         Λ = lambdamatrix(λ, inds, sings)
         _periodicorbits!(FP, ds, o, ics, Λ, maxiters, disttol, inftol, abstol)
     end
-    return Dataset(tovector(FP))
+    return Dataset(collect(FP))
 end
 
 function periodicorbits(
@@ -96,10 +96,10 @@ function periodicorbits(
     end
 
     type = typeof(current_state(ds))
-    FP = fpcollection(type)
+    FP = Set{type}()
     Λ = lambdamatrix(0.001, dimension(ds))
     _periodicorbits!(FP, ds, o, ics, Λ, maxiters, disttol, inftol, abstol)
-    return Dataset(tovector(FP))
+    return Dataset(collect(FP))
 end
 
 function _periodicorbits!(FP, ds, o, ics, Λ, maxiter, disttol, inftol, abstol)

@@ -43,7 +43,7 @@ is projected onto.
     10.1109/mlsp.2018.8517024, 2018 IEEE 28th International Workshop on Machine Learning
     for Signal Processing (MLSP)
 """
-dyca(A::AbstractDataset, e) = dyca(Matrix(A), e)
+dyca(A::AbstractStateSpaceSet, e) = dyca(Matrix(A), e)
 
 function dyca(data, eig_threshold::AbstractFloat; norm_eigenvectors::Bool=false)
     derivative_data = matrix_gradient(data)  #get the derivative of the data

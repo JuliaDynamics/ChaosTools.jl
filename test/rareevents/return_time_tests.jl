@@ -220,7 +220,7 @@ function visual_guidance(ro, times, u0, diffeq, εs, crossing_method)
             step!(integ)
             push!(tr4, current_state(integ))
         end
-        tr4 = Dataset(tr4)
+        tr4 = StateSpaceSet(tr4)
     else
         tr4 = trajectory(ro, times[4], u0; diffeq)
     end

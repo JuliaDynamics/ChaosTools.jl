@@ -14,7 +14,8 @@ using ChaosTools, Test
 
     @testset "J=$(J)" for J in (nothing, henon_jacob)
         fp, eigs, stable = fixedpoints(ds, box, J)
-        @test size(fp) == (2,2)
+        @test length(fp) == 2
+        @test dimension(fp) == 2
         @test stable == [false, false]
         @test (henon_fp ≈ fp[1]) || (henon_fp ≈ fp[2])
     end

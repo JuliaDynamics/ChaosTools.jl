@@ -8,7 +8,7 @@ export lyapunov_from_data
 export Euclidean, FirstElement
 
 """
-    lyapunov_from_data(R::Dataset, ks; kwargs...)
+    lyapunov_from_data(R::StateSpaceSet, ks; kwargs...)
 
 For the given dataset `R`, which is expected to represent a trajectory of a dynamical
 system, calculate and return `E(k)`, which is the average logarithmic
@@ -64,7 +64,7 @@ the absolute distance of *only the first elements* of the points of `R`
 
 [^Kantz1994]: Kantz, H., Phys. Lett. A **185**, pp 77–87 (1994)
 """
-function lyapunov_from_data(R::AbstractDataset{D, T}, ks;
+function lyapunov_from_data(R::AbstractStateSpaceSet{D, T}, ks;
         refstates = 1:(length(R) - ks[end]), w = 1,
         distance = FirstElement(), ntype = NeighborNumber(1),
     ) where {D, T}

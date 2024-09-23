@@ -30,8 +30,8 @@ a random permutation will be chosen for them, with `λ=0.001`.
    the next one is `≤ disttol` then it has converged to a fixed point.
 * `inftol = 10.0`: If a state reaches `norm(state) ≥ inftol` it is assumed that
    it has escaped to infinity (and is thus abandoned).
-* `abstol = 1e-8`: A detected fixed point isn't stored if it is in `abstol` 
-   neighborhood of some previously detected point. Distance is measured by 
+* `abstol = 1e-8`: A detected fixed point isn't stored if it is in `abstol`
+   neighborhood of some previously detected point. Distance is measured by
    euclidian norm. If you are getting duplicate fixed points, decrease this value.
 
 ## Description
@@ -78,7 +78,7 @@ function periodicorbits(
         Λ = lambdamatrix(λ, inds, sings)
         _periodicorbits!(FP, ds, o, ics, Λ, maxiters, disttol, inftol, abstol)
     end
-    return Dataset(collect(FP))
+    return StateSpaceSet(collect(FP))
 end
 
 function periodicorbits(
@@ -99,7 +99,7 @@ function periodicorbits(
     FP = Set{type}()
     Λ = lambdamatrix(0.001, dimension(ds))
     _periodicorbits!(FP, ds, o, ics, Λ, maxiters, disttol, inftol, abstol)
-    return Dataset(collect(FP))
+    return StateSpaceSet(collect(FP))
 end
 
 function _periodicorbits!(FP, ds, o, ics, Λ, maxiter, disttol, inftol, abstol)

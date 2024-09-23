@@ -1,7 +1,7 @@
 export local_growth_rates
 
 """
-    local_growth_rates(ds::DynamicalSystem, points::Dataset; kwargs...) → λlocal
+    local_growth_rates(ds::DynamicalSystem, points::StateSpaceSet; kwargs...) → λlocal
 
 Compute the local exponential growth rate(s) of perturbations of the dynamical system
 `ds` for initial conditions given in `points`. For each initial condition `u ∈ points`,

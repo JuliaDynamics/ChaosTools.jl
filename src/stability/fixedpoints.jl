@@ -55,6 +55,10 @@ function fixedpoints(ds::DynamicalSystem, box, J = nothing;
     if isinplace(ds)
         error("`fixedpoints` currently works only for out-of-place dynamical systems.")
     end
+    if box isa Vector
+        # since the code only works for out of place we can always convert
+        box = SVector{length(box)}(box)
+    end
 
     if !(isnothing(order) || (isa(order, Int) && order > 0))
         error("`order` must be a positive integer or `nothing`.")

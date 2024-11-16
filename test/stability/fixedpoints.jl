@@ -1,8 +1,8 @@
 using ChaosTools, Test
 
 @testset "Henon map" begin
-    henon_rule(x, p, n) = SVector{2}(1.0 - p[1]*x[1]^2 + x[2], p[2]*x[1])
-    henon_jacob(x, p, n) = SMatrix{2,2}(-2*p[1]*x[1], p[2], 1.0, 0.0)
+    henon_rule(x, p, n = 0) = SVector{2}(1.0 - p[1]*x[1]^2 + x[2], p[2]*x[1])
+    henon_jacob(x, p, n = 0) = SMatrix{2,2}(-2*p[1]*x[1], p[2], 1.0, 0.0)
     ds = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3])
     x = interval(-1.5, 1.5)
     y = interval(-0.5, 0.5)

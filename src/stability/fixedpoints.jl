@@ -64,14 +64,14 @@ function fixedpoints(ds::DynamicalSystem, box, J = nothing;
     f = dynamic_rule(ds)
     p = current_parameters(ds)
     if isnothing(J)
-        Jf(u, p, t) = DynamicalSystemsBase.ForwardDiff.jacobian(x -> f(x, p, 0.0), u)
+        Jf(u, p, t = 0) = DynamicalSystemsBase.ForwardDiff.jacobian(x -> f(x, p, t), u)
     else
         Jf = J
     end
     # Find roots via IntervalRootFinding.jl
     fun = to_root_f(ds, p, order)
     jac = to_root_J(Jf, ds, p, order)
-    r = IntervalRootFinding.roots(fun, jac, box, method, tol)
+    r = IntervalRootFinding.roots(fun, box; abstol = tol, derivative = jac, contractor = method)
     D = dimension(ds)
     fp = roots_to_dataset(r, D, warn)
     # Find eigenvalues and stability
@@ -86,7 +86,8 @@ function fixedpoints(ds::DynamicalSystem, box, J = nothing;
 end
 
 to_root_f(ds::CoupledODEs, p, ::Nothing) = u -> dynamic_rule(ds)(u, p, 0.0)
-to_root_J(Jf, ::CoupledODEs, p, ::Nothing) = u -> Jf(u, p, 0.0)
+to_root_J(Jf, ::CoupledODEs, p, ::Nothing) = u -> Jf(u, p, 0)
+to_root_J(Jf::Nothing, args...) = nothing
 
 to_root_f(ds::DeterministicIteratedMap, p, ::Nothing) = u -> dynamic_rule(ds)(u, p, 0) - u
 function to_root_J(Jf, ds::DeterministicIteratedMap, p, ::Nothing)
@@ -132,7 +133,7 @@ function roots_to_dataset(r, D, warn)
     end
     F = zeros(length(r), D)
     for (j, root) in enumerate(r)
-        F[j, :] .= map(i -> (i.hi + i.lo)/2, root.interval)
+        F[j, :] .= map(i -> (i.bareinterval.hi + i.bareinterval.lo)/2, root.region)
     end
     return StateSpaceSet(F; warn = false)
 end

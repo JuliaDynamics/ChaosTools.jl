@@ -18,18 +18,18 @@ defaultname(file) = uppercasefirst(replace(splitext(basename(file))[1], '_' => '
 
 @testset "ChaosTools" begin
 
-include("timeevolution/orbitdiagram.jl")
+testfile("timeevolution/orbitdiagram.jl")
 
 testfile("chaosdetection/lyapunovs.jl")
 testfile("chaosdetection/gali.jl")
-include("chaosdetection/partially_predictable.jl")
-include("chaosdetection/01test.jl")
+testfile("chaosdetection/partially_predictable.jl")
+testfile("chaosdetection/01test.jl")
 testfile("chaosdetection/expansionentropy.jl")
 
-include("stability/fixedpoints.jl")
-include("periodicity/periodicorbits.jl")
-include("periodicity/davidchacklai.jl")
-include("periodicity/period.jl")
+testfile("stability/fixedpoints.jl")
+testfile("periodicity/periodicorbits.jl")
+testfile("periodicity/davidchacklai.jl")
+testfile("periodicity/period.jl")
 
 # testfile("rareevents/return_time_tests.jl", "Return times")
 

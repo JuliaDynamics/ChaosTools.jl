@@ -1,5 +1,10 @@
 # main
 
+# v3.3
+
+- Updated IntervalRootFinding.jl to v0.6 which [has breaking changes](https://github.com/JuliaIntervals/IntervalRootFinding.jl/releases/tag/v0.6.0) regarding
+  the `fixedpoints` function (no more `IntervalBox` type).
+
 # v3.2
  - `periodicorbits` uses new internal datastructure to avoid duplicates in the output. New keyword argument `abstol` is introduced and keyword argument `roundtol` is deprecated.
  - `fixedpoints` can now use `order` keyword argument to compute fixed points of n-th order iterations of `DeterministicIteratedMap`.

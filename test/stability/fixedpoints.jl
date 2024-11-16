@@ -6,7 +6,7 @@ using ChaosTools, Test
     ds = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3])
     x = interval(-1.5, 1.5)
     y = interval(-0.5, 0.5)
-    box = x × y
+    box = [x, y]
 
     # henon fixed points analytically
     hmfp(a, b) = (x = -(1-b)/2a - sqrt((1-b)^2 + 4a)/2a; return SVector(x, b*x))
@@ -45,7 +45,7 @@ end
     ds = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3])
     x = interval(-3.0, 3.0)
     y = interval(-10.0, 10.0)
-    box = x × y
+    box = [x, y]
     o = 4
     fp, eigs, stable = fixedpoints(ds, box, henon_jacob; order=o)
     tol = 1e-8
@@ -74,10 +74,10 @@ end
         end
     end
 
-    x = -20..20
-    y = -20..20
-    z = 0.0..40
-    box = x × y × z
+    x = interval(-20, 20)
+    y = interval(-20, 20)
+    z = interval(0, 40)
+    box = [x, y, z]
     σ = 10.0
     β = 8/3
     lorenzfp(ρ, β) = [

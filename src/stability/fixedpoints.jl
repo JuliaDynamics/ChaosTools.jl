@@ -60,22 +60,21 @@ function fixedpoints(ds::DynamicalSystem, box, J = nothing;
         error("`order` must be a positive integer or `nothing`.")
     end
 
-    # Jacobian: copy code from `DynamicalSystemsBase`
-    f = dynamic_rule(ds)
     p = current_parameters(ds)
+    # Find roots via IntervalRootFinding.jl
+    fun = to_root_f(ds, p, order)
+    jac = to_root_J(J, ds, p, order)
+    r = IntervalRootFinding.roots(fun, box; abstol = tol, derivative = jac, contractor = method)
+    D = dimension(ds)
+    fp = roots_to_dataset(r, D, warn)
+    # extract eigenvalues and stability
+    eigs = Vector{Vector{Complex{Float64}}}(undef, length(fp))
     if isnothing(J)
+        f = dynamic_rule(ds)
         Jf(u, p, t = 0) = DynamicalSystemsBase.ForwardDiff.jacobian(x -> f(x, p, t), u)
     else
         Jf = J
     end
-    # Find roots via IntervalRootFinding.jl
-    fun = to_root_f(ds, p, order)
-    jac = to_root_J(Jf, ds, p, order)
-    r = IntervalRootFinding.roots(fun, box; abstol = tol, derivative = jac, contractor = method)
-    D = dimension(ds)
-    fp = roots_to_dataset(r, D, warn)
-    # Find eigenvalues and stability
-    eigs = Vector{Vector{Complex{Float64}}}(undef, length(fp))
     Jm = zeros(dimension(ds), dimension(ds)) # `eigvals` doesn't work with `SMatrix`
     for (i, u) in enumerate(fp)
         Jm .= Jf(u, p, 0) # notice that we use the "pure" jacobian, no -u!
@@ -85,12 +84,13 @@ function fixedpoints(ds::DynamicalSystem, box, J = nothing;
     return fp, eigs, stable
 end
 
+to_root_J(Jf::Nothing, ::DynamicalSystem, args...) = nothing
+
 to_root_f(ds::CoupledODEs, p, ::Nothing) = u -> dynamic_rule(ds)(u, p, 0.0)
-to_root_J(Jf, ::CoupledODEs, p, ::Nothing) = u -> Jf(u, p, 0)
-to_root_J(Jf::Nothing, args...) = nothing
+to_root_J(Jf::Function, ::CoupledODEs, p, ::Nothing) = u -> Jf(u, p, 0)
 
 to_root_f(ds::DeterministicIteratedMap, p, ::Nothing) = u -> dynamic_rule(ds)(u, p, 0) - u
-function to_root_J(Jf, ds::DeterministicIteratedMap, p, ::Nothing)
+function to_root_J(Jf::Function, ds::DeterministicIteratedMap, p, ::Nothing)
     c = Diagonal(ones(typeof(current_state(ds))))
     return u -> Jf(u, p, 0) - c
 end

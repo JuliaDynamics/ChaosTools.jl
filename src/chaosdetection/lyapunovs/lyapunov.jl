@@ -82,7 +82,7 @@ function lyapunov(pds::ParallelDynamicalSystem, T;
     )
     # transient
     while current_time(pds) - initial_time(pds) < Ttr
-        step!(pds, Δt, true)
+        step!(pds, Δt)
         d = λdist(pds)
         # We do the rescaling to orient the difference vector
         d0_lower ≤ d ≤ d0_upper || λrescale!(pds, d/d0)

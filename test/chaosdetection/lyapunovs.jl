@@ -51,8 +51,8 @@ end
 @testset "Negative λ, continuous" begin
     f(u, p, t) = -0.9u
     ds = ContinuousDynamicalSystem(f, rand(SVector{3}), nothing)
-    λ1 = lyapunov(ds, 1000)
-    @test λ1 < 0
+    λ1 = lyapunov(ds, 10000)
+    @test λ1 ≈ -0.9 atol = 1e-2 rtol = 1e-2
 
     @testset "Lorenz stable" begin
         function lorenz_rule(u, p, t)

@@ -21,7 +21,6 @@ See also [`lyapunovspectrum`](@ref), [`local_growth_rates`](@ref).
 * `d0_lower = 1e-3*d0`: Lower distance threshold for rescaling.
 * `d0_upper = 1e+3*d0`: Upper distance threshold for rescaling.
 * `Δt = 1`: Time of evolution between each check rescaling of distance.
-  For continuous time systems this is approximate.
 * `inittest = (u1, d0) -> u1 .+ d0/sqrt(length(u1))`: A function that given `(u1, d0)`
   initializes the test state with distance `d0` from the given state `u1`
    (`D` is the dimension of the system). This function can be used when you want to avoid
@@ -31,7 +30,7 @@ See also [`lyapunovspectrum`](@ref), [`local_growth_rates`](@ref).
 ## Description
 
 Two neighboring trajectories with initial distance `d0` are evolved in time.
-At time ``t_i`` if their distance ``d(t_i)`` either exceeds the `d0_upper`,
+At time ``t_i = t_{i-1} + \\Delta t``, if their distance ``d(t_i)`` either exceeds the `d0_upper`,
 or is lower than `d0_lower`, the test trajectory is rescaled back to having distance
 `d0` from the reference one, while the rescaling keeps the difference vector along the maximal
 expansion/contraction direction: `` u_2 \\to u_1+(u_2−u_1)/(d(t_i)/d_0)``.
@@ -46,6 +45,10 @@ The maximum Lyapunov exponent is the average of the time-local Lyapunov exponent
 
 This function simply initializes a [`ParallelDynamicalSystem`](@ref) and calls
 the method below.
+
+The reason we only conditionally rescale the neighboring trajectories is computational:
+the averaging will give correct result overall if the trajectories
+never diverge or converge (i.e., for periodic orbits).
 
 [^Benettin1976]: G. Benettin *et al.*, Phys. Rev. A **14**, pp 2338 (1976)
 """
@@ -102,15 +105,15 @@ function lyapunov(pds::ParallelDynamicalSystem, T;
         end
         # evolve until rescaling
         while d0_lower ≤ d ≤ d0_upper
-            step!(pds, Δt)
+            step!(pds, Δt, true)
             d = λdist(pds)
             current_time(pds) ≥ t0 + T && break
+            ProgressMeter.update!(progress, round(Int, current_time(pds)-t0))
         end
         # local lyapunov exponent is the relative distance of the trajectories
         a = d/d0
         λ += log(a)
         λrescale!(pds, a)
-        ProgressMeter.update!(progress, round(Int, current_time(pds)))
     end
     # Do final rescale, in case no other happened
     d = λdist(pds)

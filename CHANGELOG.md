@@ -1,5 +1,9 @@
 # main
 
+# v3.3.1
+
+After 7 years, we only now realized that `lyapunov` gave incorrect results for fixed points of continuous time systems. We've now fixed that. Unfortunately this decreases the computational performance of the function overall, but correctness is more important.
+
 # v3.3
 
 - Updated IntervalRootFinding.jl to v0.6 which [has breaking changes](https://github.com/JuliaIntervals/IntervalRootFinding.jl/releases/tag/v0.6.0) regarding

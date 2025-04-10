@@ -1,15 +1,18 @@
-export EAPD,lyapunov_instant
+export ensemble_averaged_pairwise_distance,lyapunov_instant
 
 #slopefit to ρ(t) curve -> instantaneous Lyapunov exponent
 function lyapunov_instant(ρ,times;interval=1:length(times))
-    s,_,_ = slopefit(times[interval], ρ[interval]) #return estimated slope and confidence intervals 
+    _,s = linreg(times[interval], ρ[interval]) #return estimated slope and confidence intervals 
     return s
 end
 
 #Ensemble-averaged pairwise distance (EAPD) -> ρ(t),t
-function EAPD(ds,init_states::Matrix,T;sliding_param_rate_index=0,initial_params = deepcopy(current_parameters(ds)),Ttr,Δt = 1,ϵ=sqrt(2)*1e-10)
+function ensemble_averaged_pairwise_distance(ds,init_states::StateSpaceSet,T;sliding_param_rate_index=0,
+    initial_params = deepcopy(current_parameters(ds)),Ttr=0,perturbation=perturbation_uniform,Δt = 1,ϵ=sqrt(2)*1e-10)
+
 	set_parameters!(ds,initial_params)
-    N,d = size(init_states)
+    N = length(init_states)
+    d = dimension(ds)
     dimension(ds) != d && throw(AssertionError("Dimension of `ds` doesn't match dimension of states in init_states!"))
     
     nt = length(0:Δt:T) #number of time steps
@@ -25,8 +28,7 @@ function EAPD(ds,init_states::Matrix,T;sliding_param_rate_index=0,initial_params
     pds = ParallelDynamicalSystem(ds,init_states_plus_copies)
 
 	#set to non-drifting for initial ensemble
-    set_parameter!(pds,sliding_param_rate_index,0.0) 
-    @show current_parameters(pds)
+    sliding_param_rate_index != 0 && set_parameter!(pds,sliding_param_rate_index,0.0) 
 
     #step system pds to reach attractor(non-drifting)
     #system starts to drift at t0=0.0
@@ -51,22 +53,22 @@ function EAPD(ds,init_states::Matrix,T;sliding_param_rate_index=0,initial_params
 
 	#function barrier here?
     #calculate EAPD for each time step
-    EAPD!(ρ,times,pds,T,Δt)
+    ensemble_averaged_pairwise_distance!(ρ,times,pds,T,Δt)
     return ρ,times
 
 end
 
 #calc distance for every time step until T
-function EAPD!(ρ,times,pds,T,Δt)
+function ensemble_averaged_pairwise_distance!(ρ,times,pds,T,Δt)
     for (i,t) in enumerate(0:Δt:T)
-        ρ[i] = EAPD(pds)
+        ρ[i] = ensemble_averaged_pairwise_distance(pds)
         times[i] = current_time(pds)
         step!(pds,Δt,true)
     end
 end
 
 #calc distance for current states of pds
-function EAPD(pds)
+function ensemble_averaged_pairwise_distance(pds)
 
     states = current_states(pds)
     N = Int(length(states)/2)
@@ -80,8 +82,8 @@ function EAPD(pds)
 
 end
 
-function perturbation(ds,ϵ)
+function perturbation_uniform(ds,ϵ)
     D, T = dimension(ds), eltype(ds)
-    Q0 = randn(SVector{D, T})
-    Q0 = ϵ * Q0 / norm(Q0)  
+    p0 = randn(SVector{D, T})
+    p0 = ϵ * p0 / norm(p0)  
 end

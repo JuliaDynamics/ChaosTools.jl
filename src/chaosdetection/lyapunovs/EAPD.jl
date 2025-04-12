@@ -1,14 +1,42 @@
 export ensemble_averaged_pairwise_distance,lyapunov_instant
 
-#slopefit to ρ(t) curve -> instantaneous Lyapunov exponent
+"""
+    lyapunov_instant(ρ,times;interval=1:length(times)) -> λ(t)
+
+Convenience function that calculates the instantaneous Lyapunov exponent by taking the slope of 
+the ensemble-averaged pairwise distance function `ρ` wrt. to the saved time points `times` in `interval`.
+"""
 function lyapunov_instant(ρ,times;interval=1:length(times))
-    _,s = linreg(times[interval], ρ[interval]) #return estimated slope and confidence intervals 
+    _,s = linreg(times[interval], ρ[interval]) #return estimated slope  
     return s
 end
 
-#Ensemble-averaged pairwise distance (EAPD) -> ρ(t),t
+"""
+    ensemble_averaged_pairwise_distance(ds,init_states::StateSpaceSet,T;kwargs...) -> ρ,t
+
+Calculate the ensemble-averaged pairwise distance function `ρ` for non-autonomous dynamical systems 
+with a time-dependent parameter. Time-dependence is assumed to be linear (sliding). To every member 
+of the ensemble `init_states`, a perturbed initial condition is assigned. `ρ(t)` is the natural log 
+of phase space distance between the original and perturbed states averaged over all pairs, calculated 
+for all time steps up to `T`. 
+
+This function implements the method described in 
+https://doi.org/10.1016/j.physrep.2024.09.003.
+
+## Keyword arguments
+
+* `sliding_param_rate_index = 0`: index of the sliding parameter
+* `initial_params = deepcopy(current_parameters(ds))`: initial parameters 
+* `Ttr = 0`: transient time used to evolve initial states to reach 
+    initial autonomous attractor (without sliding)
+* `perturbation = perturbation_uniform`: if given, it should be a function `perturbation(ds,ϵ)`,
+   which outputs perturbed state vector of `ds` (preferrably `SVector`). If not given, a normally distributed 
+   random perturbation with norm `ϵ` is added.
+*  `Δt = 1`: step size 
+*  `ϵ = sqrt(dimension(ds))*1e-10`: initial distance between pairs of original and perturbed initial conditions 
+"""
 function ensemble_averaged_pairwise_distance(ds,init_states::StateSpaceSet,T;sliding_param_rate_index=0,
-    initial_params = deepcopy(current_parameters(ds)),Ttr=0,perturbation=perturbation_uniform,Δt = 1,ϵ=sqrt(2)*1e-10)
+    initial_params = deepcopy(current_parameters(ds)),Ttr=0,perturbation=perturbation_uniform,Δt = 1,ϵ=sqrt(dimension(ds))*1e-10)
 
 	set_parameters!(ds,initial_params)
     N = length(init_states)
@@ -51,7 +79,6 @@ function ensemble_averaged_pairwise_distance(ds,init_states::StateSpaceSet,T;sli
     #set back time to t0 = 0
     reinit!(pds,current_states(pds))
 
-	#function barrier here?
     #calculate EAPD for each time step
     ensemble_averaged_pairwise_distance!(ρ,times,pds,T,Δt)
     return ρ,times

@@ -25,7 +25,7 @@ https://doi.org/10.1016/j.physrep.2024.09.003.
 
 ## Keyword arguments
 
-* `sliding_param_rate_index = 0`: index of the sliding parameter
+* `sliding_param_rate_index = 0`: index of the parameter that gives the rate of change of the sliding parameter
 * `initial_params = deepcopy(current_parameters(ds))`: initial parameters 
 * `Ttr = 0`: transient time used to evolve initial states to reach 
     initial autonomous attractor (without sliding)

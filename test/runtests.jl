@@ -25,6 +25,7 @@ testfile("chaosdetection/gali.jl")
 testfile("chaosdetection/partially_predictable.jl")
 testfile("chaosdetection/01test.jl")
 testfile("chaosdetection/expansionentropy.jl")
+testfile("chaosdetection/EAPD.jl")
 
 testfile("stability/fixedpoints.jl")
 testfile("periodicity/periodicorbits.jl")

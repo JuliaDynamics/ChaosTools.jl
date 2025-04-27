@@ -7,7 +7,7 @@ However, the convergence of the Lyapunov exponent can be slow, or even misleadin
 There are some alternatives, some more efficient and some more accurate in characterizing chaotic and regular motion.
 
 ## Generalized Alignment Index
-"GALI" for sort, is a method that relies on the fact that initially orthogonal deviation vectors tend to align towards the direction of the maximum Lyapunov exponent for chaotic motion.
+"GALI" for short, is a method that relies on the fact that initially orthogonal deviation vectors tend to align towards the direction of the maximum Lyapunov exponent for chaotic motion.
 It is one of the most recent and cheapest methods for distinguishing chaotic and regular behavior, introduced first in 2007 by Skokos, Bountis & Antonopoulos.
 ```@docs
 gali

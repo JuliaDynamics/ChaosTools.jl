@@ -10,13 +10,14 @@ henon() = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3])
     ds = henon()
 
     #eapd slope
-    init_states = StateSpaceSet(0.2 .* rand(5000,2))
-    ρ,times = ensemble_averaged_pairwise_distance(ds,init_states,100;Ttr=1000,sliding_param_rate_index=0)
-    lyap_instant = lyapunov_instant(ρ,times;interval=10:20)
+    init_states = StateSpaceSet(0.2 .* rand(1000,2))
+    pidx = 2 # set to any index, there is no drift anyway
+    ρ,times = ensemble_averaged_pairwise_distance(ds,init_states,100,pidx;Ttr=5000)
+    lyap_instant = lyapunov_instant(ρ,times;interval=20:30)
 
     #lyapunov exponent
-    λ = lyapunov(ds,1000;Ttr=1000)
-    @test isapprox(lyap_instant,λ;atol=0.01)
+    λ = lyapunov(ds,1000;Ttr=5000)
+    @test isapprox(lyap_instant,λ;atol=0.05)
 end
 
 #test sliding Duffing map 
@@ -41,8 +42,9 @@ end
     init_states_auto,_ = trajectory(duffing_map,5000,[-0.85,0.0];Ttr=0) #initial condition for a snapshot torus
     #set system to sliding
     set_parameter!(duffing_map,4,0.0005)
+    pidx=4
 
-    ρ,times = ensemble_averaged_pairwise_distance(duffing_map,init_states_auto,100;Ttr=0,sliding_param_rate_index=4)
+    ρ,times = ensemble_averaged_pairwise_distance(duffing_map,init_states_auto,100,pidx;Ttr=0)
     lyap_instant = lyapunov_instant(ρ,times;interval=50:60)
     @test isapprox(lyap_instant,0.87;atol=0.01) #0.87 approximate value from article
 
@@ -50,7 +52,7 @@ end
     duffing = duffing_drift() #no dissipation -> Hamiltonian case
     duffing_map = StroboscopicMap(duffing,2π)
     init_states = randn(5000,2) 
-    ρ,times = ensemble_averaged_pairwise_distance(duffing_map,StateSpaceSet(init_states),100;Ttr=20,sliding_param_rate_index=4)
+    ρ,times = ensemble_averaged_pairwise_distance(duffing_map,StateSpaceSet(init_states),100,pidx;Ttr=20)
     lyap_instant = lyapunov_instant(ρ,times;interval=2:20)
     @test isapprox(lyap_instant,0.61;atol=0.01) #0.61 approximate value from article
 

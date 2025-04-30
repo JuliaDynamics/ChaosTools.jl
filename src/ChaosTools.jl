@@ -26,6 +26,7 @@ include("periodicity/davidchacklai.jl")
 include("rareevents/mean_return_times/mrt_api.jl")
 
 include("chaosdetection/lyapunovs/lyapunov.jl")
+include("chaosdetection/lyapunovs/EAPD.jl")
 include("chaosdetection/lyapunovs/lyapunov_from_data.jl")
 include("chaosdetection/lyapunovs/lyapunovspectrum.jl")
 include("chaosdetection/lyapunovs/local_growth_rates.jl")

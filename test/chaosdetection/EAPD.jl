@@ -2,7 +2,7 @@ using ChaosTools, Test
 using LinearAlgebra
 
 henon_rule(x, p, n) = SVector{2}(1.0 - p[1]*x[1]^2 + x[2], p[2]*x[1])
-henon() = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3])
+henon() = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3, 0.0]) # add third dummy parameter
 
 #test if ensemble averaging gives the same as 
 #the usual lyapunov exponent for autonomous system
@@ -11,13 +11,13 @@ henon() = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3])
 
     #eapd slope
     init_states = StateSpaceSet(0.2 .* rand(1000,2))
-    pidx = 2 # set to any index, there is no drift anyway
+    pidx = 3 # set to dummy, not used anywhere (no drift)
     ρ,times = ensemble_averaged_pairwise_distance(ds,init_states,100,pidx;Ttr=5000)
     lyap_instant = lyapunov_instant(ρ,times;interval=20:30)
 
     #lyapunov exponent
     λ = lyapunov(ds,1000;Ttr=5000)
-    @test isapprox(lyap_instant,λ;atol=0.05)
+    @test isapprox(lyap_instant,λ;atol=0.01)
 end
 
 #test sliding Duffing map 

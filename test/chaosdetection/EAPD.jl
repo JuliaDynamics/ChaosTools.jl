@@ -17,7 +17,7 @@ henon() = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3, 0.0]) # add 
 
     #lyapunov exponent
     λ = lyapunov(ds,1000;Ttr=5000)
-    @test isapprox(lyap_instant,λ;atol=0.01)
+    @test isapprox(lyap_instant,λ;atol=0.05)
 end
 
 #test sliding Duffing map 

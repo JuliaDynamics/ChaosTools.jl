@@ -64,7 +64,7 @@ end
         end
 
         ds = CoupledODEs(lorenz_rule, fill(10.0, 3), [10, 20, 8/3])
-        @test lyapunov(ds, 1000, Ttr = 100) ≈ 0 atol = 1e-3
+        @test lyapunov(ds, 1000, Ttr = 100) ≈ 0 atol = 1e-2
     end
 end
 

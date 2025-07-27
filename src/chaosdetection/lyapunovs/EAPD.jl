@@ -1,25 +1,14 @@
 export ensemble_averaged_pairwise_distance,lyapunov_instant
 
 """
-    lyapunov_instant(ρ,times;interval=1:length(times)) -> λ(t)
-
-Convenience function that calculates the instantaneous Lyapunov exponent by taking the slope of 
-the ensemble-averaged pairwise distance function `ρ` wrt. to the saved time points `times` in `interval`.
-"""
-function lyapunov_instant(ρ,times;interval=1:length(times))
-    _,s = linreg(times[interval], ρ[interval]) #return estimated slope  
-    return s
-end
-
-"""
     ensemble_averaged_pairwise_distance(ds, init_states::StateSpaceSet, T, pidx;kwargs...) -> ρ,t
 
 Calculate the ensemble-averaged pairwise distance function `ρ` for non-autonomous dynamical systems 
-with a time-dependent parameter, using the metod described by [^Jánosi, Tél]. Time-dependence is assumed to be a linear drift. The rate of change
+with a time-dependent parameter, using the metod described by [^Jánosi,Tél2024]. Time-dependence is assumed to be a linear drift. The rate of change
 of the parameter needs to be stored in the parameter container of the system `p = current_parameters(ds)`,
 at the index `pidx`. In case of autonomous systems (with no drift), `pidx` can be set to any index as a dummy.
 To every member of the ensemble `init_states`, a perturbed initial condition is assigned.
-`ρ(t)` is the natural log of phase space distance between the original and perturbed states averaged 
+`ρ(t)` is the natural log of state space distance between the original and perturbed states averaged 
 over all pairs, calculated for all time steps up to `T`. 
 
 
@@ -39,11 +28,11 @@ over all pairs, calculated for all time steps up to `T`.
 In non-autonomous systems with parameter drift, long time averages are less useful to assess chaoticity.
 Thus, quantities using time averages are rather calculated using ensemble averages. Here, a new 
 quantity called the Ensemble-averaged pairwise distance (EAPD) is used to measure chaoticity of 
-the snapshot attractor/ phase space object traced out by the ensemble [^Jánosi, Tél].
+the snapshot attractor/ state space object traced out by the ensemble [^Jánosi, Tél].
 
 To any member of the original ensemble (`init_states`) a close neighbour (test) is added at an initial distance `ϵ`. Quantity `d(t)` is the 
-dimensionless phase space distance between a test particle and an ensemble member at time t .
-If `init_states`` are randomly initialized (far from the attractor at the initial parameter), and there's no transient, 
+state space distance between a test particle and an ensemble member at time t .
+If `init_states` are randomly initialized (far from the attractor at the initial parameter), and there's no transient, 
 the first few time steps cannot be used to calculate any reliable averages.
 The function of the EAPD `ρ(t)` is defined as the average logarithmic distance between original and 
 perturbed initial conditions at every time step: `ρ(t) = ⟨ln d(t)⟩`
@@ -70,7 +59,7 @@ ds = DeterministicIteratedMap(drifting_logistic, [0.1], p)
 ρ,times = ensemble_averaged_pairwise_distance(ds,init_states,100,2;Ttr=1000)
 ```
 
-[^Jánosi, Tél]: Dániel Jánosi, Tamás Tél, Physics Reports **1092**, pp 1-64 (2024)
+[^Jánosi,Tél2024]: Dániel Jánosi, Tamás Tél, Phys. Rep. **1092**, pp 1-64 (2024)
 
 """
 function ensemble_averaged_pairwise_distance(ds,init_states::StateSpaceSet,T,pidx;
@@ -152,4 +141,16 @@ function perturbation_normal(ds,ϵ)
     D, T = dimension(ds), eltype(ds)
     p0 = randn(SVector{D, T})
     p0 = ϵ * p0 / norm(p0)  
+end
+
+"""
+    lyapunov_instant(ρ,times;interval=1:length(times)) -> λ(t)
+
+Calculates the instantaneous Lyapunov exponent by taking the slope of 
+the ensemble-averaged pairwise distance function `ρ` wrt. to the saved time points `times` in `interval`.
+
+"""
+function lyapunov_instant(ρ,times;interval=eachindex(times))
+    _,s = linreg(times[interval], ρ[interval]) #return estimated slope  
+    return s
 end

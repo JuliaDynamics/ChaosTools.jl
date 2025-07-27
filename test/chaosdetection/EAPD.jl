@@ -49,7 +49,7 @@ end
     @test isapprox(lyap_instant,0.87;atol=0.01) #0.87 approximate value from article
 
     #-----------------------------------dissipative case------------------------------------
-    duffing = duffing_drift() #no dissipation -> Hamiltonian case
+    duffing = duffing_drift() 
     duffing_map = StroboscopicMap(duffing,2π)
     init_states = randn(5000,2) 
     ρ,times = ensemble_averaged_pairwise_distance(duffing_map,StateSpaceSet(init_states),100,pidx;Ttr=20)

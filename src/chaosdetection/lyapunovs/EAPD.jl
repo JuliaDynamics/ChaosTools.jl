@@ -28,7 +28,7 @@ over all pairs, calculated for all time steps up to `T`.
 In non-autonomous systems with parameter drift, long time averages are less useful to assess chaoticity.
 Thus, quantities using time averages are rather calculated using ensemble averages. Here, a new 
 quantity called the Ensemble-averaged pairwise distance (EAPD) is used to measure chaoticity of 
-the snapshot attractor/ state space object traced out by the ensemble [^Jánosi, Tél].
+the snapshot attractor/ state space object traced out by the ensemble [^JánosiTél2024].
 
 To any member of the original ensemble (`init_states`) a close neighbour (test) is added at an initial distance `ϵ`. Quantity `d(t)` is the 
 state space distance between a test particle and an ensemble member at time t .
@@ -59,8 +59,7 @@ ds = DeterministicIteratedMap(drifting_logistic, [0.1], p)
 ρ,times = ensemble_averaged_pairwise_distance(ds,init_states,100,2;Ttr=1000)
 ```
 
-[^Jánosi,Tél2024]: Dániel Jánosi, Tamás Tél, Phys. Rep. **1092**, pp 1-64 (2024)
-
+[^JánosiTél2024]: Dániel Jánosi, Tamás Tél, Phys. Rep. **1092**, pp 1-64 (2024)
 """
 function ensemble_averaged_pairwise_distance(ds,init_states::StateSpaceSet,T,pidx;
     initial_params = deepcopy(current_parameters(ds)),Ttr=0,perturbation=perturbation_normal,Δt = 1,ϵ=sqrt(dimension(ds))*1e-10)

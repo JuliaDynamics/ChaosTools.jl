@@ -1,5 +1,9 @@
 # main
 
+# v3.5
+
+- `lyapunov` function no longer errors but returns `NaN` for various scenarios.
+
 # v3.4
 
  - Added instantaneous Lyapunov exponent for systems with parameter drift: `lyapunov_instant` uses slope of the ensemble-averaged pairwise distance function returned by `ensemble_averaged_pairwise_distance` to assess chaoticity at a certain time

@@ -136,7 +136,6 @@ Colorbar(fig[1,2], obj)
 fig
 ```
 
-
 ## Lyapunov exponent from data
 
 ```@docs
@@ -195,3 +194,74 @@ fig
 As you can see, using `τ = 15` is not a great choice! The estimates with
 `τ = 7` though are very good (the actual value is around `λ ≈ 0.89...`).
 Notice that above a linear regression was done over the whole curves, which doesn't make sense. One should identify a linear scaling region and extract the slope of that one. The function `linear_region` from [FractalDimensions.jl](https://github.com/JuliaDynamics/FractalDimensions.jl) does this!
+
+
+## Instantaneous Lyapunov exponent for non-autonomous systems
+```@docs
+ensemble_averaged_pairwise_distance
+```
+
+```@docs
+lyapunov_instant
+```
+
+Let's see first if the ensemble approach is equivalent to the usual time-averaging case (Benettin algorithm) in the autonomous case.
+Here is a simple example using the Henon map:
+```@example MAIN
+henon_rule(x, p, n) = SVector{2}(1.0 - p[1]*x[1]^2 + x[2], p[2]*x[1])
+ds = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3, 0.0])
+
+init_states = StateSpaceSet(0.2 .* rand(1000,2))
+pidx = 3 # set to dummy, not used anywhere (no drift)
+ρ,times = ensemble_averaged_pairwise_distance(ds,init_states,100,pidx;Ttr=5000)
+λ_inst = lyapunov_instant(ρ,times;interval=20:30) #fit to middle part of the curve (slope is constant until saturation)
+λ = lyapunov(ds,1000;Ttr=5000) #standard (Benettin) way
+@show λ_inst, λ   
+```
+
+Now look at the nonautonomous Duffing map with drifting ε parameter:
+```@example MAIN
+
+using CairoMakie
+using ChaosTools
+
+function duffing_drift(u0 = [0.1, 0.25]; ω = 1.0, β = 0.2, ε0 = 0.4, α=0.00045)
+    return CoupledODEs(duffing_drift_rule, u0, [ω, β, ε0, α])
+end
+
+@inbounds function duffing_drift_rule(x, p, t)
+    ω, β, ε0, α = p
+    dx1 = x[2]
+    dx2 = (ε0+α*t)*cos(ω*t) + x[1] - x[1]^3 - 2β * x[2]
+    return SVector(dx1, dx2)
+end
+
+duffing = duffing_drift() 
+duffing_map = StroboscopicMap(duffing,2π)
+init_states = randn(5000,2) #use an ensemble of 5000 
+pidx = 4 #ε is the fourth parameter
+ρ,times = ensemble_averaged_pairwise_distance(duffing_map,StateSpaceSet(init_states),100,pidx;Ttr=20)
+
+#measure slope of ρ at two places  
+λ_inst = lyapunov_instant(ρ,times;interval=5:10)
+λ_inst2 = lyapunov_instant(ρ,times;interval=22:25)
+
+fig,ax,obj = scatter(times, ρ, 
+    markersize = 6,
+    color = :gray10,
+    label = L"\omega = 1, \beta = 0.2, \epsilon_0 = 0.4, \alpha=0.00045",
+    axis = (xlabel = L"t", ylabel = L"\rho(t)",xlabelsize = 20,ylabelsize = 20))
+
+lines!(ax, times[5:10], ρ[5] .+ λ_inst*[0:5;], color = (:red, 0.7),linewidth = 3)
+lines!(ax, times[22:25], ρ[22] .+ λ_inst2*[0:3;],color = (:red, 0.7), linewidth = 3)
+
+text!(ax, times[5]+8, ρ[10],text = L"\lambda = %$(round(λ_inst;digits=3))",
+color = :red,align = (:left, :center),fontsize = 18)
+
+text!(ax, times[22]+8, ρ[24],text = L"\lambda = %$(round(λ_inst2;digits=3))", 
+color = :red, align = (:left, :center), fontsize = 18)
+
+axislegend(ax, position = :rb, nbanks = 2,labelsize = 18)
+fig
+```
+

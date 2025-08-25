@@ -1,4 +1,4 @@
-using ChaosTools, Test
+using ChaosTools, Test, DynamicalSystemsBase
 using DelayEmbeddings: embed
 import Statistics
 
@@ -64,7 +64,7 @@ end
         end
 
         ds = CoupledODEs(lorenz_rule, fill(10.0, 3), [10, 20, 8/3])
-        @test lyapunov(ds, 1000, Ttr = 100) ≈ 0 atol = 1e-2
+        @test lyapunov(ds, 2000, Ttr = 100) ≈ 0 atol = 1e-3
     end
 end
 
@@ -106,4 +106,11 @@ end
     @test all(λlocal .< 1.0)
     mean_local = Statistics.mean(λlocal)
     @test λ-0.1 ≤ mean_local ≤ λ+0.1
+end
+
+@testset "testSuccessfulStep" begin
+    u0 = [NaN, 0]
+    p0 = [0.1, -0.4]
+    ds = CoupledODEs(trivial_rule, u0, p0) 
+    @test isnan(lyapunov(ds, 10; Ttr = 0, Δt = 0.5))
 end

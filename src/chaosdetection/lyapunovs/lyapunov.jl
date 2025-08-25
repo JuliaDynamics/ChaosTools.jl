@@ -83,6 +83,7 @@ function lyapunov(pds::ParallelDynamicalSystem, T;
     # transient
     while current_time(pds) - initial_time(pds) < Ttr
         step!(pds, Δt)
+        successful_step(pds) || return NaN
         d = λdist(pds)
         # We do the rescaling to orient the difference vector
         d0_lower ≤ d ≤ d0_upper || λrescale!(pds, d/d0)
@@ -90,21 +91,26 @@ function lyapunov(pds::ParallelDynamicalSystem, T;
     # Set up algorithm
     t0 = current_time(pds)
     d = λdist(pds)
-    d == 0 && error("Initial distance between states is zero!!!")
+    if d == 0
+        @warn "Initial distance between states is zero!!!"*
+            "Returning NaN."
+        return NaN
+    end
     d != d0 && λrescale!(pds, d/d0)
     λ = zero(d)
     # Perform algorithm
     while current_time(pds) < t0 + T
         d = λdist(pds)
         if !(d0_lower ≤ d ≤ d0_upper)
-            error(
-                "After rescaling, the distance of reference and test states "*
-                "was not `d0_lower ≤ d ≤ d0_upper` as expected. "*
-                "Perhaps you are using a dynamical system where the algorithm doesn't work."
-            )
+            @warn "After rescaling, the distance of reference and test states "*
+                    "was not `d0_lower ≤ d ≤ d0_upper` as expected."*
+                    "Perhaps you are using a dynamical system where the algorithm doesn't work."*
+                    "Returning NaN."
+            return NaN
         end
         # evolve until rescaling
         while d0_lower ≤ d ≤ d0_upper
+            successful_step(pds) || return NaN
             step!(pds, Δt, true)
             d = λdist(pds)
             current_time(pds) ≥ t0 + T && break

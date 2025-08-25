@@ -1,6 +1,7 @@
 # main
 
-# v3.3.2
+# v3.4
+
  - Added instantaneous Lyapunov exponent for systems with parameter drift: `lyapunov_instant` uses slope of the ensemble-averaged pairwise distance function returned by `ensemble_averaged_pairwise_distance` to assess chaoticity at a certain time
 
 # v3.3.1

@@ -109,6 +109,8 @@ henon = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3])
 λ = lyapunov(henon, 10000; d0 = 1e-7, d0_upper = 1e-4, Ttr = 100)
 ```
 
+The [`lyapunov`](@ref) function can return `NaN` in two cases: (1) if integration fails to converge at any time; and (2) if during rescaling, the initial distance $d_0$ is not in the interval $d_{0, \rm{lower}} \leq d_0 \leq d_{0, \rm{upper}}$. In both cases, a warning is displayed and you must check your integrator and dynamical system definition and parameters to ensure they fit the algorithm.
+
 
 ## Local Growth Rates
 ```@docs

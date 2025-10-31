@@ -109,22 +109,20 @@ tands = TangentDynamicalSystem(ds; J = standardmap_jacob)
 dens = 101
 θs = ps = range(0, stop = 2π, length = dens)
 ics = vec(SVector{2, Float64}.(Iterators.product(θs, ps)))
-# Initialize as many systems as threads
-systems = [deepcopy(tands) for _ in 1:Threads.nthreads()-1]
-pushfirst!(systems, tands)
-# Perform threaded loop
+# Perform loop
 regularity = zeros(size(ics))
-Threads.@threads for i in eachindex(ics)
+for i in eachindex(ics)
     u0 = ics[i]
-    system = systems[Threads.threadid()]
-    reinit!(system, u0)
-    regularity[i] = gali(system, 500)[2][end]
+    reinit!(ds, u0)
+    regularity[i] = gali(ds, 500)[2][end]
 end
 # Visualize
 fig, ax, sc = scatter(ics; color = regularity)
 Colorbar(fig[1,2], sc; label = "regularity")
 fig
 ```
+
+You can parallelize this code as well, see the main tutorial of DynamicalSystems.jl for an example.
 
 ## Predictability of a chaotic system
 

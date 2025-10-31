@@ -1,4 +1,4 @@
-using ChaosTools, Test, DynamicalSystemsBase
+using ChaosTools, Test
 using DelayEmbeddings: embed
 import Statistics
 
@@ -111,6 +111,6 @@ end
 @testset "testSuccessfulStep" begin
     u0 = [NaN, 0]
     p0 = [0.1, -0.4]
-    ds = CoupledODEs(trivial_rule, u0, p0) 
+    ds = CoupledODEs(trivial_rule, u0, p0)
     @test isnan(lyapunov(ds, 10; Ttr = 0, Δt = 0.5))
 end

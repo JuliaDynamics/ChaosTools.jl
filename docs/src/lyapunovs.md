@@ -60,8 +60,7 @@ tands = TangentDynamicalSystem(ds; J = towel_jacob)
   966.500 μs (10 allocations: 576 bytes) # on my laptop
 ```
 
-Here is an example of using [`reinit!`](@ref) to efficiently iterate over different parameter values, and parallelize via `Threads`, to compute the exponents over a given parameter range.
-
+Here is an example of using [`reinit!`](@ref) to iterate over different parameter values to compute the exponents over a given parameter range.
 
 ```@example MAIN
 using ChaosTools, CairoMakie
@@ -74,14 +73,9 @@ tands = TangentDynamicalSystem(ds; J = henon_jacob)
 as = 0.8:0.005:1.225;
 λs = zeros(length(as), 2)
 
-# Since `DynamicalSystem`s are mutable, we need to copy to parallelize
-systems = [deepcopy(tands) for _ in 1:Threads.nthreads()-1]
-pushfirst!(systems, tands)
-
-Threads.@threads for i in eachindex(as)
-    system = systems[Threads.threadid()]
-    set_parameter!(system, 1, as[i])
-    λs[i, :] .= lyapunovspectrum(system, 10000; Ttr = 500)
+for i in eachindex(as)
+    set_parameter!(ds, 1, as[i])
+    λs[i, :] .= lyapunovspectrum(ds, 10000; Ttr = 500)
 end
 
 fig = Figure()
@@ -91,6 +85,8 @@ for j in 1:2
 end
 fig
 ```
+
+You can parallelize this code as well, see the main tutorial of DynamicalSystems.jl for an example.
 
 ## Maximum Lyapunov Exponent
 
@@ -216,7 +212,7 @@ pidx = 3 # set to dummy, not used anywhere (no drift)
 ρ,times = ensemble_averaged_pairwise_distance(ds,init_states,100,pidx;Ttr=5000)
 λ_inst = lyapunov_instant(ρ,times;interval=20:30) #fit to middle part of the curve (slope is constant until saturation)
 λ = lyapunov(ds,1000;Ttr=5000) #standard (Benettin) way
-@show λ_inst, λ   
+@show λ_inst, λ
 ```
 
 Now look at the nonautonomous Duffing map with drifting ε parameter:
@@ -236,17 +232,17 @@ end
     return SVector(dx1, dx2)
 end
 
-duffing = duffing_drift() 
+duffing = duffing_drift()
 duffing_map = StroboscopicMap(duffing,2π)
-init_states = randn(5000,2) #use an ensemble of 5000 
+init_states = randn(5000,2) #use an ensemble of 5000
 pidx = 4 #ε is the fourth parameter
 ρ,times = ensemble_averaged_pairwise_distance(duffing_map,StateSpaceSet(init_states),100,pidx;Ttr=20)
 
-#measure slope of ρ at two places  
+#measure slope of ρ at two places
 λ_inst = lyapunov_instant(ρ,times;interval=5:10)
 λ_inst2 = lyapunov_instant(ρ,times;interval=22:25)
 
-fig,ax,obj = scatter(times, ρ, 
+fig,ax,obj = scatter(times, ρ,
     markersize = 6,
     color = :gray10,
     label = L"\omega = 1, \beta = 0.2, \epsilon_0 = 0.4, \alpha=0.00045",
@@ -258,7 +254,7 @@ lines!(ax, times[22:25], ρ[22] .+ λ_inst2*[0:3;],color = (:red, 0.7), linewidt
 text!(ax, times[5]+8, ρ[10],text = L"\lambda = %$(round(λ_inst;digits=3))",
 color = :red,align = (:left, :center),fontsize = 18)
 
-text!(ax, times[22]+8, ρ[24],text = L"\lambda = %$(round(λ_inst2;digits=3))", 
+text!(ax, times[22]+8, ρ[24],text = L"\lambda = %$(round(λ_inst2;digits=3))",
 color = :red, align = (:left, :center), fontsize = 18)
 
 axislegend(ax, position = :rb, nbanks = 2,labelsize = 18)

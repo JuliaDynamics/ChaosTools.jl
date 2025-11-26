@@ -14,7 +14,7 @@ The signal `sig` is a vector of points uniformly sampled at a rate `sr`.
 * `f0_max`: Maximum fundamental frequency that can be detected [linear frequency]
 * `harmonic_threshold`: Threshold of detection. The algorithm returns the first minimum of
   the CMNDF function below this threshold.
-* `diffference_function`: The difference function to be used (by default
+* `difference_function`: The difference function to be used (by default
   `ChaosTools.difference_function_original`).
 
 ## Description

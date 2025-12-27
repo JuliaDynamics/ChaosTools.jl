@@ -29,6 +29,7 @@ include("chaosdetection/lyapunovs/lyapunov.jl")
 include("chaosdetection/lyapunovs/EAPD.jl")
 include("chaosdetection/lyapunovs/lyapunov_from_data.jl")
 include("chaosdetection/lyapunovs/lyapunovspectrum.jl")
+include("chaosdetection/lyapunovs/lyapunovvectors.jl")
 include("chaosdetection/lyapunovs/local_growth_rates.jl")
 include("chaosdetection/gali.jl")
 include("chaosdetection/expansionentropy.jl")
@@ -40,8 +41,8 @@ import Statistics
 function linreg(x::AbstractVector, y::AbstractVector)
     mx = Statistics.mean(x)
     my = Statistics.mean(y)
-    b = Statistics.covm(x, mx, y, my)/Statistics.varm(x, mx)
-    a = my - b*mx
+    b = Statistics.covm(x, mx, y, my) / Statistics.varm(x, mx)
+    a = my - b * mx
     return a, b
 end
 

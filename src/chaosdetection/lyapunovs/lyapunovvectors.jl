@@ -107,7 +107,7 @@ function clv(tands::TangentDynamicalSystem, N::Int;
     # --- Phase 2: Forward pass (store Q and R for N + Ttr_bkw steps) ---
     total_store = N + Ttr_bkw
     T = eltype(current_deviations(tands))
-    StateType = typeof(current_state(tands))
+    StateType = typeof(recursivecopy(current_state(tands)))
     D = size(current_deviations(tands), 1)
     Q_history = Vector{Matrix{T}}(undef, N)           # Only store Q for kept window
     R_history = Vector{Matrix{T}}(undef, total_store) # Store R for all
@@ -133,7 +133,7 @@ function clv(tands::TangentDynamicalSystem, N::Int;
         # Store Q, state, and time for the kept window (first N steps)
         if i <= N
             Q_history[i] = copy(Q_buffer)
-            x_history[i] = current_state(tands)
+            x_history[i] = recursivecopy(current_state(tands))
             t_history[i] = current_time(tands)
         end
 

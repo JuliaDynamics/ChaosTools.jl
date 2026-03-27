@@ -1,7 +1,7 @@
 name = "ChaosTools"
 uuid = "608a59af-f2a3-5ad4-90b4-758bdf3122a7"
 repo = "https://github.com/JuliaDynamics/ChaosTools.jl.git"
-version = "3.5.3"
+version = "3.5.4"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
@@ -33,7 +33,7 @@ DynamicalSystemsBase = "3"
 IntervalRootFinding = "0.6"
 LombScargle = "1"
 Neighborhood = "0.2.2"
-Optim = "1.7"
+Optim = "1.7, 2"
 ProgressMeter = "1.7"
 Reexport = "1"
 Roots = "0.7, 0.8, 1.0, 2"

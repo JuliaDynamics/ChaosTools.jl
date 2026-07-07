@@ -261,3 +261,123 @@ axislegend(ax, position = :rb, nbanks = 2,labelsize = 18)
 fig
 ```
 
+## Covariant Lyapunov Vectors
+Covariant Lyapunov vectors (CLVs) are tangent vectors of a dynamical system corresponding to the directions of contraction and expansion described by the Lyapunov exponents. In 2007, Ginelli et al. [Ginelli2007](@cite) introduced a numerical method for computing CLVs, based on the Benettin method used for computing Lyapunov exponents. We do not currently implement the alternative algorithm from the 2007 Wolfe and Samelson paper.
+
+Note that the most non-central directions converge first, and the least expanding/contracting directions converge last. In particular, the most contracting direction converges first in the forward pass, and the most expanding direction converges first in the backward pass (both passes are computed in `clv()`). To see if you're getting the correct CLVs, you can check the Lyapunov exponents of the computed CLVs against a much longer trajectory using `lyapunovspectrum`, and in continuous-time systems you can check that the CLV corresponding to the flow direction is parallel to the flow direction at each point in the trajectory; if not, try the following:
+
+- Use a different integrator
+- Increase the length of forward or backward transients
+- Decrease the timestep size
+- Increase the orthonormalization/QR frequency by decreasing `Δt`
+
+```@docs
+clv
+```
+
+### Example: Discrete-time CLVs on the Hénon attractor
+
+Here we visualize the covariant Lyapunov vectors on the chaotic [Hénon attractor](https://en.wikipedia.org/wiki/H%C3%A9non_map). The expanding direction (first CLV) is shown in red, and the contracting direction (second CLV) is shown in blue.
+
+```@example MAIN
+using ChaosTools, CairoMakie
+
+henon_rule(x, p, n) = SVector{2}(1.0 - p[1]*x[1]^2 + x[2], p[2]*x[1])
+ds = DeterministicIteratedMap(henon_rule, zeros(2), [1.4, 0.3])
+
+# Compute CLVs (this also gives us the trajectory points in result.x)
+result = clv(ds, 3000; Ttr = 1000, Ttr_bkw = 200)
+
+# Extract trajectory points from CLV result
+xs = [pt[1] for pt in result.x]
+ys = [pt[2] for pt in result.x]
+
+fig = Figure()
+ax = Axis(fig[1, 1]; xlabel = L"x", ylabel = L"y")
+
+# Plot the attractor as black points
+scatter!(ax, xs, ys; color = :black, markersize = 2)
+
+# Plot CLV arrows at every 80th point
+arrow_scale = 0.15
+for i in 1:80:length(result.x)
+    x, y = result.x[i]
+    # First CLV (expanding direction) in red
+    v1 = result.V[i][:, 1]
+    arrows!(ax, [x], [y], [arrow_scale * v1[1]], [arrow_scale * v1[2]];
+        color = :red, linewidth = 1.5, arrowsize = 8)
+    # Second CLV (contracting direction) in blue
+    v2 = result.V[i][:, 2]
+    arrows!(ax, [x], [y], [arrow_scale * v2[1]], [arrow_scale * v2[2]];
+        color = :blue, linewidth = 1.5, arrowsize = 8)
+end
+
+# Manual legend with colored line elements (Makie doesn't propagate colors from `arrows!` to the legend)
+Legend(fig[1, 2],
+    [LineElement(color = :red, linewidth = 5),
+     LineElement(color = :blue, linewidth = 5)],
+    ["Expansion", "Contraction"])
+
+fig
+```
+
+Around the middle of the attractor where the greatest "bending" or folding takes place, we can see that the contracting and expanding directions become very close to parallel. This indicates the existence of homoclinic tangencies, suggesting that small perturbations of the system dynamics can produce stable periodic orbits.
+
+### Example: Continuous-time CLVs on the Lorenz attractor
+
+For continuous-time systems like the Lorenz system, CLVs can be computed in the same way. Here we visualize all three CLVs: the expanding direction (red), the neutral direction along the flow (green), and the contracting direction (blue).
+
+```@example MAIN
+using ChaosTools, CairoMakie
+
+function lorenz_rule(u, p, t)
+    σ, ρ, β = p
+    return SVector{3}(σ*(u[2]-u[1]), u[1]*(ρ-u[3]) - u[2], u[1]*u[2] - β*u[3])
+end
+
+ds = CoupledODEs(lorenz_rule, [1.0, 0.0, 0.0], [10.0, 28.0, 8/3]; diffeq = (reltol = 1e-9, abstol = 1e-9))
+
+# Generate a dense trajectory for plotting the attractor
+traj = trajectory(ds, 200; Ttr = 200, Δt = 0.01)[1]
+
+# Compute CLVs
+result = clv(ds, 500; Ttr = 1_000, Ttr_bkw = 1_000, Δt = 0.05)
+
+fig = Figure()
+ax = Axis3(fig[1, 1];
+    xlabel = L"x",
+    ylabel = L"y",
+    zlabel = L"z",
+    azimuth = 5π/7,
+    elevation = π/8
+)
+
+# Plot the attractor from the dense trajectory
+lines!(ax, traj[:, 1], traj[:, 2], traj[:, 3]; color = :gray60, linewidth = 0.5)
+
+# Plot CLV arrows at a few points
+arrow_scale = 5.0
+for i in 1:30:length(result.x)
+    x, y, z = result.x[i]
+    # First CLV (expanding) in red
+    v1 = result.V[i][:, 1]
+    arrows!(ax, [x], [y], [z], [arrow_scale*v1[1]], [arrow_scale*v1[2]], [arrow_scale*v1[3]];
+        color = :red, linewidth = 0.01, arrowsize = 0.03)
+    # Second CLV (neutral/flow direction) in green
+    v2 = result.V[i][:, 2]
+    arrows!(ax, [x], [y], [z], [arrow_scale*v2[1]], [arrow_scale*v2[2]], [arrow_scale*v2[3]];
+        color = :green, linewidth = 0.01, arrowsize = 0.03)
+    # Third CLV (contracting) in blue
+    v3 = result.V[i][:, 3]
+    arrows!(ax, [x], [y], [z], [arrow_scale*v3[1]], [arrow_scale*v3[2]], [arrow_scale*v3[3]];
+        color = :blue, linewidth = 0.01, arrowsize = 0.03)
+end
+
+Legend(fig[1, 2],
+    [LineElement(color = :red, linewidth = 5),
+     LineElement(color = :green, linewidth = 5),
+     LineElement(color = :blue, linewidth = 5)],
+    ["Expansion", "Neutral", "Contraction"])
+
+fig
+```

@@ -3,21 +3,25 @@ import ProgressMeter
 
 """
     orbitdiagram(ds::DynamicalSystem, i, p_index, pvalues; kwargs...) → od
+    orbitdiagram(ds::DynamicalSystem, i, pcurve; kwargs...) → od
 
 Compute the orbit diagram (sometimes wrongly called bifurcation diagram)
 of the given dynamical system,
 saving the `i` variable(s) for parameter values `pvalues`. The `p_index` specifies
 which parameter to change via `set_parameter!(ds, p_index, pvalue)`.
-Works for any kind of `DynamicalSystem`, although it mostly makes sense with
-one of `DeterministicIteratedMap, StroboscopicMap, PoincareMap`.
+Alternative, you can provide an arbitrary curve in parameter space
+(same as in global continuation of Attractors.jl), by providing a
+vector of dictionaries mapping parameter indices to values.
 
 An orbit diagram is simply a collection of the last `n` states of `ds` as `ds` is
 evolved. This is done for each parameter value.
+It works for any kind of `DynamicalSystem`, although it mostly makes sense with
+one of `DeterministicIteratedMap, StroboscopicMap, PoincareMap`.
 
 `i` can be `Int` or `AbstractVector{Int}`. If `i` is `Int`, `od` is a vector of vectors.
 Else `od` is a vector of vectors of vectors.
-Each entry od `od` are the points at each parameter value,
-so that `length(od) == length(pvalues)` and `length(od[j]) == n, ∀ j`.
+Each entry of `od` are the points at each parameter curve entry,
+so that `length(od) == length(pcurve)` and `length(od[j]) == n, ∀ j`.
 
 ## Keyword arguments
 
@@ -36,24 +40,27 @@ so that `length(od) == length(pvalues)` and `length(od[j]) == n, ∀ j`.
   a container with same layout as `pvalues`. Provides a value for the `period` for each
   parameter value. Useful in case the orbit diagram is produced versus a driving frequency.
 """
+function orbitdiagram(ds::DynamicalSystem, idxs, p_index, pvalues; kw...)
+    pcurve = [[p_index => p] for p in pvalues]
+    return orbidiagram(ds, idxs, pcurve; kw...)
+end
+
 function orbitdiagram(
-        ds::DynamicalSystem, idxs, p_index, pvalues; n::Int = 100, kwargs...
+        ds::DynamicalSystem, idxs, pcurve::AbstractVector; n::Int = 100, kwargs...
     )
-    i = idxs isa Int ? idxs : SVector{length(idxs), Int}(idxs...)
-    output = initialize_od_output(current_state(ds), i, n, length(pvalues))
-    fill_orbitdiagram!(output, ds, i, pvalues, p_index; n, kwargs...)
+    output = initialize_od_output(current_state(ds), idxs, n, length(pvalues))
+    fill_orbitdiagram!(output, ds, idxs, pcurve; n, kwargs...)
     return output
 end
 
-function initialize_od_output(u::S, i::Int, n, l) where {S}
-    return [zeros(typeof(u[i]), n) for k in 1:l]
+function initialize_od_output(u, i::Int, n, l)
+    return [zeros(eltype(u), n) for _ in 1:l]
 end
-function initialize_od_output(u::S, i::SVector, n, l) where {S}
-    s = u[i]
-    return [Vector{typeof(s)}(undef, n) for k in 1:l]
+function initialize_od_output(u, i::AbstractVector, n, l)
+    return [[zeros(eltype(u), length(i) for _ in 1:n] for _ in 1:l]
 end
 
-function fill_orbitdiagram!(output, ds::DynamicalSystem, i, pvalues, p_index;
+function fill_orbitdiagram!(output, ds::DynamicalSystem, idxs, pcurve;
         n::Int = 100, Ttr::Int = 10, u0 = nothing, Δt = 1, ulims = nothing,
         show_progress = false, periods = nothing,
     )

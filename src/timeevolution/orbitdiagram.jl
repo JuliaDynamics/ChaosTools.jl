@@ -7,18 +7,22 @@ import ProgressMeter
 
 Compute the orbit diagram (sometimes wrongly called bifurcation diagram)
 of the given dynamical system,
-saving the `i` variable(s) for parameter values `pvalues`. The `p_index` specifies
+saving the `i` variable(s) for parameter values `pvalues`.
+The `p_index` specifies
 which parameter to change via `set_parameter!(ds, p_index, pvalue)`.
 Alternative, you can provide an arbitrary curve in parameter space
 (same as in global continuation of Attractors.jl), by providing a
 vector of dictionaries mapping parameter indices to values.
+
+## Description
 
 An orbit diagram is simply a collection of the last `n` states of `ds` as `ds` is
 evolved. This is done for each parameter value.
 It works for any kind of `DynamicalSystem`, although it mostly makes sense with
 one of `DeterministicIteratedMap, StroboscopicMap, PoincareMap`.
 
-`i` can be `Int` or `AbstractVector{Int}`. If `i` is `Int`, `od` is a vector of vectors.
+`i` can be an integer or a vector of anything acceptable by `observe_state`.
+If `i` is `Int`, `od` is a vector of vectors.
 Else `od` is a vector of vectors of vectors.
 Each entry of `od` are the points at each parameter curve entry,
 so that `length(od) == length(pcurve)` and `length(od[j]) == n, ∀ j`.
@@ -48,7 +52,7 @@ end
 function orbitdiagram(
         ds::DynamicalSystem, idxs, pcurve::AbstractVector; n::Int = 100, kwargs...
     )
-    output = initialize_od_output(current_state(ds), idxs, n, length(pvalues))
+    output = initialize_od_output(current_state(ds), idxs, n, length(pcurve))
     fill_orbitdiagram!(output, ds, idxs, pcurve; n, kwargs...)
     return output
 end
@@ -57,7 +61,7 @@ function initialize_od_output(u, i::Int, n, l)
     return [zeros(eltype(u), n) for _ in 1:l]
 end
 function initialize_od_output(u, i::AbstractVector, n, l)
-    return [[zeros(eltype(u), length(i) for _ in 1:n] for _ in 1:l]
+    return [[zeros(eltype(u), length(i)) for _ in 1:n] for _ in 1:l]
 end
 
 function fill_orbitdiagram!(output, ds::DynamicalSystem, idxs, pcurve;
@@ -76,7 +80,7 @@ function fill_orbitdiagram!(output, ds::DynamicalSystem, idxs, pcurve;
 
     for (j, pidx) in enumerate(eachindex(pcurve))
         # reset to current parameter/state/Ttr
-        set_parameter!(ds, p_index, pcurve[pidx])
+        set_parameters!(ds, pcurve[pidx])
         if !isnothing(periods) && ds isa StroboscopicMap
             set_period!(ds, periods[pidx])
         end
@@ -84,10 +88,12 @@ function fill_orbitdiagram!(output, ds::DynamicalSystem, idxs, pcurve;
         reinit!(ds, st)
         Ttr > 0 && step!(ds, Ttr)
         # collect `n` states
-        if i isa AbstractVector || isnothing(ulims) # if-clause gets compiled away
+        if idxs isa AbstractVector
             @inbounds for k in 1:n
                 step!(ds, Δt)
-                output[j][k] = current_state(ds)[i]
+                for (ii, i) in enumerate(idxs)
+                    output[j][k][ii] = observe_state(ds, i)
+                end
             end
         else
             k = 1
@@ -108,9 +114,7 @@ end
 function orbitdiagram_starting_state(u0, j)
     if u0 isa AbstractVector{<:AbstractVector}
         u0[j]
-    elseif isnothing(u0)
-        nothing # `reinit!` accepts `nothing`!
     else
-        u0
+        u0 # this can also be `nothing` (default), which resumes from prior state
     end
 end

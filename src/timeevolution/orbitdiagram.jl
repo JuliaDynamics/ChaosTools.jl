@@ -67,17 +67,16 @@ function fill_orbitdiagram!(output, ds::DynamicalSystem, idxs, pcurve;
 
     # Sanity check
     if u0 isa AbstractVector{<:AbstractVector}
-        length(u0) != length(pvalues) && error("Need length(u0) == length(pvalues)")
+        length(u0) != length(pcurve) && error("Need length(u0) == length(pcurve)")
     end
 
-    progress = ProgressMeter.Progress(length(pvalues);
+    progress = ProgressMeter.Progress(length(pcurve);
         desc = "Orbit diagram: ", dt = 1.0, enabled = show_progress
     )
 
-    for (j, pidx) in enumerate(eachindex(pvalues))
-        p = pvalues[pidx]
+    for (j, pidx) in enumerate(eachindex(pcurve))
         # reset to current parameter/state/Ttr
-        set_parameter!(ds, p_index, p)
+        set_parameter!(ds, p_index, pcurve[pidx])
         if !isnothing(periods) && ds isa StroboscopicMap
             set_period!(ds, periods[pidx])
         end

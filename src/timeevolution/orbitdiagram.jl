@@ -46,7 +46,7 @@ so that `length(od) == length(pcurve)` and `length(od[j]) == n, ∀ j`.
 """
 function orbitdiagram(ds::DynamicalSystem, idxs, p_index, pvalues; kw...)
     pcurve = [[p_index => p] for p in pvalues]
-    return orbidiagram(ds, idxs, pcurve; kw...)
+    return orbitdiagram(ds, idxs, pcurve; kw...)
 end
 
 function orbitdiagram(

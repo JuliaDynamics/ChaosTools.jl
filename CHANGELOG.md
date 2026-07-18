@@ -1,5 +1,11 @@
 # main
 
+# 3.6
+
+- `orbitdiagram` has been improved:
+  - it now allows a `pcurve`: a sequence of parameters to go through, like global continuation does
+  - it now allows the provided indices to be anything `observe_state` accepts.
+
 # v3.5
 
 - `lyapunov` function no longer errors but returns `NaN` for various scenarios.
